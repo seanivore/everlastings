@@ -130,8 +130,10 @@
       - I provided G a 'Emotionally driven copywriting' SOP we created years ago now, but we can can also get into that since they'll be able to handle majority of that prep work 
       - Meaning **PROCESS WISE** when it comes to implementation, we need to have them set up with the JSON so they can be really working on perfecting project entries, etc. while we build everything out; we should create an initial JSON product with filler text so that we can share how many words looks like what, text sizes, etc. 
       - Not sure if they mention fonts, but you probably remember my feelings on those -- we should use as much system UI aas possible and then choose one decorative font to use tactfully because it really is wild how one font slows down the loading of a webpage 
-      - OH and we'll want to define how we'll handle images asap so they can prepare them; let's work smart, I don't want them put in Google Drive if that isn't where we'll need them. I mean they can use that for storage of course if they want, but for our timeline we need them placing images wherever they'll be used from -- I also have only seen a handful and the quality was so far subpar -- but I suppose that could be a high urgency post launch item that honestly I should probably offer as an add-on service as it is another whole animal; I mean a good price for sure because I want this thing to be perfect, but I need to manage my bandwidth  
-  3. Then we should have enough to at least put together the structure of the defined documents 
+      - OH and we'll want to define how we'll handle images asap so they can prepare them; let's work smart, I don't want them put in Google Drive if that isn't where we'll need them. I mean they can use that for storage of course if they want, but for our timeline we need them placing images wherever they'll be used from -- I also have only seen a handful and the quality was so far subpar -- but I suppose that could be a high urgency post launch item that honestly I should probably offer as an add-on service as it is another whole animal; I mean a good price for sure because I want this thing to be perfect, but I need to manage my bandwidth 
+  3. We'll want to be sure we properly learn how and then clearly document how to integrate Stripe payments 
+     `/Users/seanivore/Development/everlastings-website/assets/docs/STRIPE_API_REFERENCE.md` 
+  4. Then we should have enough to at least put together the structure of the defined documents 
     + Important people, email addresses, names, etc. 
     + Emy and her company 
       - Emaline Hoff "emyh@everlastingsbyemaline.com" 
@@ -144,18 +146,18 @@
       - 102 Lunenburg Ave., West Townsend, MA 01474 
       - Email with admin access to Google Workspaces "sean@everlastingsbyemaline.com"
       - Setup alias that goes to Sean's Everlasting's email to set up Stripe, etc. "admin@everlastingsbyemaline.com" 
-  4. Sean will share documents 
+  5. Sean will share documents 
     + Define options for all decisions 
       - Define roles of myself 
       - My planned tools of architect plan with Claude.ai and then Build in Anti-Gravity Gemini or Claude Code Opus (must consider costs)
       - Anything we would like from G (Project Management GPT AI); copy, work with Emy to create JSON or database entries 
     + Gather any other details needed for creating the contract and invoice 
     + Bring back decisions to finalize scope and implementation document 
-  5. Finish all defined documents; invoice Emy 
+  6. Finish all defined documents; invoice Emy 
     + Due to discount we'll require full payment 
     + Whatever signatures, digitally, that are also needed 
     + Define and schedule any necessary milestone meetings or formal updates 
-  6. Finalize architecture planning and start agentic build 
+  7. Finalize architecture planning and start agentic build 
 
 ### Architecture We're Modeling Website After Model 
 
