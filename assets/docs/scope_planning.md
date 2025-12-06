@@ -100,7 +100,7 @@
 
 ## Procedure 
 
-  1. Before reviewing most the files at paths below, it is important for us to understand what of the scope we do have
+  1. Before reviewing most the files at paths below, it is important for us to understand what has been defined 
     + Group Chat: `/Users/seanivore/Development/everlastings-website/assets/docs/group_chat_thread.md` *fair warning: heavy sycophancy at times*
     + Architecture Model Context Primer Only: `/Users/seanivore/Development/360-design/assets/docs/AI_CONTEXT_PRIMER.md` 
     + Create a comprehensive first draft that will give us one space to gather all information
