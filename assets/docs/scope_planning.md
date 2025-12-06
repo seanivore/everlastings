@@ -132,7 +132,8 @@
       - Not sure if they mention fonts, but you probably remember my feelings on those -- we should use as much system UI aas possible and then choose one decorative font to use tactfully because it really is wild how one font slows down the loading of a webpage 
       - OH and we'll want to define how we'll handle images asap so they can prepare them; let's work smart, I don't want them put in Google Drive if that isn't where we'll need them. I mean they can use that for storage of course if they want, but for our timeline we need them placing images wherever they'll be used from -- I also have only seen a handful and the quality was so far subpar -- but I suppose that could be a high urgency post launch item that honestly I should probably offer as an add-on service as it is another whole animal; I mean a good price for sure because I want this thing to be perfect, but I need to manage my bandwidth 
   3. We'll want to be sure we properly learn how and then clearly document how to integrate Stripe payments 
-     `/Users/seanivore/Development/everlastings-website/assets/docs/STRIPE_API_REFERENCE.md` 
+     `https://docs.stripe.com/`
+     `/Users/seanivore/Development/_resources/ai_docs/workspace-tools/STRIPE_LLM_DOCS.txt`
   4. Then we should have enough to at least put together the structure of the defined documents 
     + Important people, email addresses, names, etc. 
     + Emy and her company 
