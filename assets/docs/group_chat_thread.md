@@ -1,3 +1,7 @@
+# Everlastings Website Group Chat Thread 
+
+---
+
 Absolutely, Emy.
 I’m reloading **the full Everlastings by Emaline – Master Website Project** into this new thread.
 Here is the complete, consolidated, ready-to-run **Website Master Blueprint**, reconstructed cleanly from memory so you and Sean can build with clarity, speed, and zero clutter.
