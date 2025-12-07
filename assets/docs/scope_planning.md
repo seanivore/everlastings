@@ -4,7 +4,7 @@
 
   * **Everlastings by Emaline** 
 
-    + Client is Emy 
+    + Company of client named Emy 
     + Her project manager is "G" a ChatGPT Projects section AI 
 
   * **Brand and product in short** 
@@ -17,22 +17,11 @@
       - He sits at the kitchen table with her
       - She creates tiny little worlds 
       - They relearn what it is like being in each others company 
-
-  * **Current placement** 
-
-    + Brick and mortar shop displays for sale 
-    + Location is local to me near Townsend, MA 
-
-  * **Digital placement upcoming** 
-    
-    + Details start in chat at this path  
-      `/Users/seanivore/Development/everlastings-website/assets/docs/group_chat_thread.md`
-    + To be sorted as defined in outline below 
-    + Mimic the architecture of my portfolio 
+    + Currently on display for sale in a brick and mortar shop locally here in Massachusetts
 
 ### Objective 
 
-  * **Create web development client formal documentation**
+  * **Create formal documentation for web development client**
 
     + GPT thread shared by website design client, Emy to start creation of numbered items below 
       - Analyze the thread to pull out what plan we have so far, which includes feedback from me 
@@ -111,7 +100,8 @@
       - Let's price the blog and newsletter one strategically because I do want her to have it it is important 
       - But also we do need to have things held for after holiday like sure gather emails during but we need to divvy up rush work 
       - Similarly we do want to include the more interactive homepage described but we should define a simple method first so we can be live asap
-  2. Then, because of how many files there are, we'll want to create a plan of processing through the below paths 
+    + Include details in the [Considerations](#considerations) and [Add-ons](#add-ons-to-mention) sections before digging into all the paths in the architecture model section below this section 
+  2. Then, because of how many files there are, we'll want to create a plan for processing through the below paths 
     + We did have a decent handful of debugging days so I'd like to be sure we pull as much as we can from the functional files below 
     + As we go through them, we will discuss the page types and media needs of the new website 
       - What the differences in the section pages would look like 
@@ -160,7 +150,7 @@
     + Define and schedule any necessary milestone meetings or formal updates 
   7. Finalize architecture planning and start agentic build 
 
-### Architecture We're Modeling Website After Model 
+### Architecture We're Modeling Website After 
 
   * **My JSON project entry, 404-fake-out, GitHub Pages, dynamic SPA portfolio**
 
@@ -177,8 +167,13 @@
       - Entry page `/Users/seanivore/Development/360-design/entry.html` 
       - Homepage `/Users/seanivore/Development/360-design/index.html` 
       - Section page `/Users/seanivore/Development/360-design/section.html` 
-      - Styles structure `/Users/seanivore/Development/360-design/styles.css` 
-        (share thoughts on improving, Re: Dia's new release update HTML/CSS naming strategy)
+
+    + Styles Structure 
+      - From my portfolio `/Users/seanivore/Development/360-design/styles.css` 
+      - CSS from Dia Browser's release landing page because the class structure seemed so flexible and logical, 
+      but what are pros and cons of this? Is it long because of the way they did the classes or some other reason? 
+      Would it be helpful or annoying to a future developer? It seemed at a glance like such an easy logic to pick up quick 
+      `/Users/seanivore/Development/everlastings-website/assets/docs/reference-files/dia-css-class-naming-inspiration.css` 
     
     + Rebuild on push using headless Claude Code in GitHub 
       - Python code `/Users/seanivore/Development/360-design/generate_manifest.py` 
@@ -225,3 +220,41 @@
       - For a website store even if it is small artisanal 
       - But it would be good to show as one no-cost option 
       `/Users/seanivore/Development/360-design/assets/docs/image_galleries/github_as_cdn.md` 
+
+### Considerations 
+
+  + For the interactive homepage 
+    - Obviously we'll want to include anything from the chat
+    - But I also love this Smart, multi-layered, perspective scrolling website background `https://cora.computer/`
+    - Do we have a tool that you can use to see that website structure? Or should I grab the files? 
+
+  + Other website hosting options, i.e. they mentioned Squarespace E-commerce 
+    - What is Netfliy? 
+    - Logistics for possible future migration option needs because of growth 
+    ^ e.g. moving from JSON entry to database and/or CMS that is more robust 
+    ^ ^ like a headless CMS, Hostinger, etc. 
+    - Alternatives and reasons to consider alternatives for site hosting, Re: GitHub Pages 
+    - Risk considerations for running checkout on GitHub Pages site 
+
+  + Organize whatever technical stack or tools currently being used and paid for 
+    - E.g. Google Workspace, Canva, etc.
+    - I'm curious because I'm looking to include integration option considerations after researching discounts or ecosystem tools
+    - To provide along side of risk considerations for different options provided in the build and overall architecture of the sales ecosystem 
+
+  + Great UX trick I came across for About Pages, etc. 
+    - Four small icons align right and lower in same flex-horizontal div 
+        1. Long form content 
+        2. Bullet points, but detailed 
+        3. Short form content 
+        4. Truly short bullet points 
+    - UX win -- four ways to consume the content 
+    - I like it *almost* as much as when blog posts let you hit play on an audio version while scrolling down through images 
+
+### Add-ons to Mention 
+
+  + Website features such as selective social video post feed 
+  + Various purposed triggers that have an LLM write copy on the fly anywhere on the site 
+    - This could get interestingly personalized with pixels/cookies tracking 
+    - I did something similar but that was with Make.com 
+  + Automated research, assessment, and copywriting of SEO and SERP content updates 
+  + Automated social content production sourced from website content 
