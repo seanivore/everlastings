@@ -227,15 +227,22 @@
 
 ## Site Structure & Content
 
-### The Strategic Decision: One Long Landing Page
+### Proposed Strategic Decision: One Long Landing Page
 
-**Why we combined multiple pages into one scrolling experience:**
+  * **Why we combined multiple pages into one scrolling experience**
+    
+    + Traditional websites make you click around from Home, then About, then Collection, then Philosophy 
+    + Each click is a moment where visitors might leave 
+    + We're creating a **narrative journey** instead and maintaining control over the experience 
+      - With one continuous scroll that controls the story we want to tell 
+      - Still let user use standard "About" or "Philosophy" links from anywhere to jump to that part of the page (anchor)
 
-Traditional websites make you click around — Home, then About, then Collection, then Philosophy. Each click is a moment where visitors might leave. We're creating a **narrative journey** instead: one continuous scroll that controls the story we want to tell.
+  * **Think of it like opening a book or a miniature scene** 
+  
+    + You discover elements in the order that creates the most emotional impact 
+    + This is what premium brands and SaaS companies do because they have the data that shows it works 
 
-Think of it like opening a book or a miniature scene — you discover elements in the order that creates the most emotional impact. This is what premium brands and SaaS companies do because it works.
-
-  * **The flow**
+  * **The flow, with each part flagged using the powerful tagline as a heading**
   
     + Hero: "Enter Elsewhere" — breath-catching first impression
     + Story: "When the world cracked open, I made something small enough to hold"
@@ -244,65 +251,82 @@ Think of it like opening a book or a miniature scene — you discover elements i
     + Commissions: How to work with you
     + Contact: Simple, elegant
 
-  * **Then separate pages for**
+  * **Other pages are separate, but all build instantly, dynamically, from one of two templates**
   
-    + **Product Pages**: Individual miniature showcases (the heart of the site)
-    + **Collection Grid**: Filterable catalog (All Products + themed sections)
-    + **Blog/Newsletter** (Phase 2 — different architecture, added later)
+    + Product Pages 
+      - Individual miniature showcases 
+      - Each a heart of the site 
+    + Product Collection Grid(s)
+      - Filterable catalog with one major for 'All Products' 
+      - Each themed section will feature images from selected randomize products 
 
-**Pre-holiday version:** Single landing page complete, simplified copy with Lorem ipsum showing word count needs so you can see what length feels right
+  * **Blog/Newsletters, mentioned in the chat thread, are a different architecture that is outside of this projects scope** 
+
+
+*Pre-holiday version: Single landing page complete, simplified copy with Lorem ipsum showing word count needs so you can see what length feels right*
 
 ---
 
-### Homepage Experience: Opening a Miniature
+### Homepage Experience Is Like Opening a Miniature
 
-When someone lands on everlastingsbyemaline.com, they should feel like they're **leaning into a tiny world** — like peering into one of your actual miniatures IRL.
+  * **Here's how we'd like to make sure that when someone lands on `everlastingsbyemaline.com`, they feel like they're peering into one of the miniatures IRL**
 
-  * **The theatrical reveal**
+    + Create a theatrical reveal with perspective shift magic 
+      - Opening animation: box opening, book opening, dollhouse hinge
+      - Reveals the scene behind it (a miniature world)
+      - Not actual 3D — it's **perceptual depth through lighting**
+
+    + Creating depth through lighting as a signature, classic and timeless, powerful but simple, interaction 
+      - As you scroll, CSS-based spotlight shifts
+      - Illuminates different parts of the hero image
+      - Creates sensation of moving closer/farther from the miniature
+      - Like theater spotlights scrolling across stage
+      - Subtle, elegant, magical
+      - All done with CSS transforms, masks, gradients (no heavy JavaScript for design, only content placement)
+
+  * **Dynamic homepage themes mean every time a visitor comes to the page, one of a select collection of themes will be displayed**
   
-    + Opening animation: box opening, book opening, dollhouse hinge
-    + Reveals the scene behind it (a miniature world)
-    + Not actual 3D — it's **perceptual depth through lighting**
+    + Homepage can feature different seasonal palettes or whatever product you'd like 
+      - Controlled from values that every product's JSON file has 
+      - Changes the "world" visitors enter; different gradient colors, other objects with interactive lighting 
+      - Makes returning visitors feel fresh magic 
 
-  * **Depth through lighting** (your signature interaction)
-  
-    + As you scroll, CSS-based spotlight shifts
-    + Illuminates different parts of the hero image
-    + Creates sensation of moving closer/farther from the miniature
-    + Like theater spotlights scrolling across stage
-    + Subtle, elegant, magical
-    + All done with CSS transforms, masks, gradients (no heavy JavaScript)
-
-  * **Dynamic homepage themes**
-  
-    + Homepage can feature different seasonal palettes
-    + Winter theme, Spring theme, Autumn theme
-    + Controlled from product JSON files
-    + Changes the "world" visitors enter
-    + Makes returning visitors feel fresh magic
-
-**Pre-holiday version:** Hero with static featured image, simplified opening animation, lighting effects deferred to Phase 2
+*Pre-holiday version: Hero with static featured image, simplified opening animation, lighting effects deferred to Phase 2* 
 
 ---
 
-### Collection Grid Pages
+### Collection Grid Pages 
 
-These are your themed sections AND your "All Products" browse page.
+  * **Two user experiences from one page theme** 
 
-  * **Themed sections** (work like Shopify collections)
-  
-    + Portals to Peace
-    + Winter Favorites
-    + Book Nooks & Story Lofts
-    + Magical / Fantasy
-    + Architectural
-    + Sold Archive
-    + **Any new section you create in JSON automatically appears**
+    1. Your themed "Section" tagged pages 
+      
+      + Much like Shopify collections that are more visual 
+        - Large hero image from featured product in that section
+        - Storytelling introduction
+ 
+      + Automatically created by simply adding a novel section tag to a product JSON
+        - Portals to Peace
+        - Winter Favorites
+        - Book Nooks & Story Lofts
+        - Magical / Fantasy
+        - Architectural
+
+    2. The essential "All Products" page 
+
+      + For users who just want to jump into everything 
+        - Fairly standard on shopping sites, this page wouldn't have the featured image header 
+        - Wildly user friendly dropdowns and sorting options let the user explore 
+
+  * **Universally familiar interface** 
+
+    + Navigate product tiles 
+      - 
+
+
 
   * **Each section page includes**
   
-    + Large hero image from featured product in that section
-    + Storytelling introduction
     + Filterable product grid below
     + Sort controls (newest, price, title)
 
@@ -480,7 +504,7 @@ Each product JSON includes:
 
   * **Core identification**
   
-    + `uid`: Unique identifier (auto-generated)
+    + `sku`: Unique identifier created 
     + `title`: Full display name (your formatting, we transform to URLs)
     + `tagline`: Short poetic line
     + `url_slug`: Auto-generated from title
@@ -1045,3 +1069,13 @@ You won't outgrow this system. It grows with you.
 **End of Comprehensive Reference Document**
 
 *Next: Await timeline decision, then create Design Scope and Implementation Plan documents*
+
+Google Business integration
+Google Analytics 
+Pinterest Business using pixel integration or API that automatically adds new products to Pinterest 
+META Business Catalog -> Facebook and Instagram Shop 
+TikTok Business & Shop 
+
+
+Product Type tag
+Create logic that hides the dropdown checkbox filter UI if any one type of tag contains only a single tag 
