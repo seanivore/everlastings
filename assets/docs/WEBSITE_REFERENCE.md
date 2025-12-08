@@ -1,15 +1,58 @@
 # Comprehensive Website Reference for Everlastings by Emaline 
 *Living document, updated 7 December 2025* 
 
-## Overview 
+## Objective 
 
-  * **This document represents a gathering of data used to create the scope and other developmental documents** 
+  - This document represents a gathering of data used so that we have a comprehensive resource to pull from when creating other essential documents like the design scope, implementation plans, and even styles files. We should fill in gaps, identify missing elements, refine and perfect this document. 
 
-    + Claude identified unrealistic timeline constraints described below and proposed in `PROJECT_PROPOSALS.md`
+### High Level Attention Areas 
+
+  * **Claude identified unrealistic timeline constraints described below and proposed in `PROJECT_PROPOSALS.md`**
     + Look for *Pre-holiday version* annotations throughout this document showing simplified scope 
     + I offer my professional opinion and strategy below 
 
-### Let's Talk Timeline Options 
+  * **A few notable best practice e-commerce design essentials** 
+
+    + Most of the document is a fleshing out of provided layout, via the group chat 
+      - Which is why I'm pulling up some of the notable changes for acknowledgement 
+      - Sometimes the best place to gather understanding and inspiration is looking at Amazon's layout or Target's layout 
+
+      1. Product with price always visible above the fold 
+        - Strategically integrated into the homepage hero 
+        - Featured in the section product grid pages 
+      2. Buy now and an add to cart icon always on product tiles 
+      3. "Accessory" type pages are often better condensed to a single, long, dynamic page 
+        - It can double as a landing page alternative to the homepage where narrative might be stronger than conversion focus 
+        - Any footer or menu links can use page anchors to jump to the part of page anyway 
+        - It keeps us in control of the user journey rather than users getting lost in segmented pages 
+        - It provides the opportunity to integrate more narrative, engaging, perspective motion background elements 
+      4. There are many types of tags 
+        - The logic and behavior of them are defined in the JSON product info section 
+        - As noted there, please DO NOT USE OR CREATE THE SCHEMA YET 
+        - We all need to really pause and think on if there are other values that we might need in the future 
+        - A good example was that I just found the API values that Stripe requires for adding to their catalog and their timestamps are weird 
+        - Some values indeed might serve multiple purposes 
+        - But then there are also places like Google Shop and Meta Business Catalog that require specifics 
+      5. Need to see product page content to finalize layout 
+        - I cannot picture it right now, there are so many elements
+        - Not that I'm in any way saying it won't work
+        - I just need something tangible 
+
+  * **Other document purposes and action items for YOU** 
+
+    + This document very intentionally pulls from your own wording 
+      - We want to get the branding down perfectly 
+      - By editing things, adding, or removing brand copy here, we are creating a go-to resource 
+      - So please be very aware of brand copy, check it
+      - We should also create a Google Drive folder for brand copywriting 
+      - We've yet to touch on much that really cuts to the heart of the emotion and gut check selling factor of Emy's personal story 
+
+    + Similarly, but for my own future benefit, I'm trying to define this architecture to be packaged and sold to clients 
+      - There are sections where we are singing the benefits 
+      - From you, it would help helpful if you point out anything that doesn't effectively define itself in the writing 
+      - That way I can address and better explain things both for you, and for my own future use cases 
+
+### Timeline Options 
 
   1. **Option A: Rush Pre-Holiday Phase Production** 
     + Launch target is 16 December 2025
@@ -78,12 +121,13 @@
   2. [Technical Architecture Magic](#technical-architecture-magic)
   3. [Site Structure & Content](#site-structure--content)
   4. [Brand Identity & Voice](#brand-identity--voice)
-  5. [Product Catalog System](#product-catalog-system)
-  6. [E-Commerce Integration](#e-commerce-integration)
-  7. [Hosting & Infrastructure](#hosting--infrastructure)
-  8. [Content Deliverables](#content-deliverables)
-  9. [Success Metrics](#success-metrics)
-  10. [Next Steps](#next-steps)
+  5. [Design System & Typography](#design-system--typography)
+  6. [Automations & Integrations](#automations--integrations)
+  7. [E-Commerce Integration](#e-commerce-integration)
+  8. [Hosting & Infrastructure](#hosting--infrastructure)
+  9. [Content Deliverables](#content-deliverables)
+  10. [Success Metrics](#success-metrics)
+  11. [Next Steps](#next-steps)
 
 ---
 
@@ -169,7 +213,7 @@
   
     + Proven architecture from Sean's portfolio 
       - See `august.style` 
-      - Hit refresh a few times 
+      - Click through to website section and then refresh a few times 
       - We're going to do the same, but really lean into those capabilities 
     + We host on static servers that are either virtually or completely free 
       - "Tricking" the browser by using a 404-redirect page 
@@ -358,7 +402,16 @@
       - Note that some of these might not be blatantly on the JSON just for UI filtering (newest)
       - Not sure we'll necessarily actually want to use "Title" FYI 
 
-  * **Let's be sure to use some kind of very high-bar, pretty UI like from shadcn** 
+  * **UI Component Library: shadcn/ui**
+  
+    + Using shadcn/ui for polished, accessible components
+    + Benefits: Production-grade quality, fully customizable, no runtime overhead
+    + Why this matters: Expected standard in modern web dev, perfect for portfolio showcase
+    + Components: Dropdowns, checkboxes, buttons, cards
+    + Customization freedom: Can add personality without breaking accessibility
+    + Matches minimalist aesthetic perfectly
+    + Accessible by default (ARIA labels, keyboard navigation)
+    + Note: His collection is extensive - we can find components with subtle quirk/character
 
   * **Universally familiar product tile design**
 
@@ -367,10 +420,10 @@
       - Price 
       - Title
       - Category 
-    
+
     + Active filters stay visible
     + Filter counts update live
-    
+
     + It is very important that we have 
       - A "buy now" button 
       - Which would pair well with an add to cart icon on tile front 
@@ -379,9 +432,7 @@
 
 ---
 
-### Individual Product Pages (The Heart of Everything)
-
-This is where the magic happens. These pages need to be **breathtaking**.
+### Individual Product Pages 
 
   * **Left column: The Story**
   
@@ -411,42 +462,72 @@ This is where the magic happens. These pages need to be **breathtaking**.
     + Optional: Video of lighting modes
     + Related pieces (algorithm)
 
-  * **Stripe features to highlight**
-  
-    + Link (auto-login if they've purchased before)
-    + All payment methods (credit, debit, Apple Pay, Google Pay, etc)
-    + Secure checkout
-    + Automatic inventory sync (one-of-ones mark sold instantly)
-
-**Pre-holiday version:** Core layout complete, may use placeholder Lorem ipsum for story length examples, fewer photos initially (you add more over time)
+*Pre-holiday version: Core layout complete, may use placeholder Lorem ipsum for story length examples, fewer photos initially (you add more over time)*
 
 ---
 
-### Newsletter Strategy
+### Headers, Footers, Navigation 
 
-**Start collecting emails IMMEDIATELY** — even before you have blog infrastructure.
-
-  * **Homepage CTA** (prominent, above fold)
+  * **Header (minimalist, unobtrusive)**
   
-    + "Step Into Elsewhere — Join the Newsletter"
-    + Brief description of what they'll receive
-    + Simple email signup (Stripe can handle this initially)
+    + Logo (left aligned, links to homepage)
+    + Main navigation (right aligned, horizontal)
+      - Home
+      - Collections (dropdown or mega-menu showing sections)
+      - About
+      - Commissions
+      - Contact
+    + Icons (far right)
+      - Search (opens search overlay)
+      - Cart (with item count badge)
+      - Newsletter (optional quick signup)
+    + Mobile: Hamburger menu, logo center, cart icon right
+    + Sticky on scroll (collapses slightly for more screen space)
+    + Background: Subtle fog gray with transparency effect
 
-  * **Footer signup** (on every page)
+  * **Footer (comprehensive, organized)**
   
-    + Subtle, always accessible
-    + "Never miss a new miniature"
+    + **Column 1: About Everlastings**
+      - Logo
+      - Brief tagline: "Handcrafted havens for the stories that stay"
+      - Newsletter signup (inline form)
+    
+    + **Column 2: Shop**
+      - All Products
+      - Portals to Peace
+      - Book Nooks
+      - Winter Collection
+      - Sold Archive
+      - Commissions
+    
+    + **Column 3: Support**
+      - Contact
+      - Shipping & Returns
+      - Care Instructions
+      - FAQ
+      - Privacy Policy
+    
+    + **Column 4: Connect**
+      - Instagram: ________________ (CLIENT DELIVERABLE)
+      - Facebook: ________________ (CLIENT DELIVERABLE)
+      - Pinterest: ________________ (CLIENT DELIVERABLE)
+      - TikTok: ________________ (CLIENT DELIVERABLE)
+      - Email: emyh@everlastingsbyemaline.com
+    
+    + **Bottom bar**
+      - Copyright © 2025 Everlastings by Emaline. All rights reserved.
+      - Site by Sean August Horvath (optional link to august.style)
+      - Terms of Service | Privacy Policy
 
-  * **Why this matters NOW**
+  * **Navigation patterns**
   
-    + Your existing customers from the shop are already engaged
-    + Holiday season = high traffic
-    + Email list = direct line to collectors
-    + Future blog/newsletter integration is easier with existing list
+    + Smooth scroll to page anchors (for single-page sections)
+    + Hover states: subtle color shift to plum/lavender
+    + Active page indicator: underline or color accent
+    + Breadcrumbs on product pages: Home > Collection > Product
+    + "Back to Collections" link on product pages
 
-**Blog/Newsletter platform recommendation:** Beehiiv (after holidays). This is a SEPARATE architecture because blog content management needs different tooling than product management. We'll integrate it later, but starting collection now is essential.
-
-**Pre-holiday version:** Newsletter signup active, Beehiiv integration deferred to Phase 2
+*Pre-holiday version: Simplified footer (fewer links), basic header navigation*
 
 ---
 
@@ -524,7 +605,193 @@ Examples from your existing voice:
 
 ---
 
-## Product Catalog System 
+## Design System & Typography
+
+### Typography Strategy
+
+  * **System UI fonts for body text** (performance + readability)
+  
+    + Primary stack: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
+    + Benefits: Zero load time, OS-optimized rendering, accessibility
+    + Use for: Body copy, navigation, product descriptions, UI elements
+
+  * **One exceptional accent font** (brand personality)
+  
+    + For: Headlines, taglines, story card titles, special moments
+    + Character: Elegant, slightly vintage, warm with subtle quirk
+    + **CLIENT DELIVERABLE**: Send screenshots of fonts you love
+      - We'll review your preferences
+      - Cross-reference with Sean's curated local collection (fresher options)
+      - Find that balance: classic/timeless but with personality
+      - Not too loud, but not generic either
+      - Slightly eccentric without being occult
+    + Suggestions to test if nothing jumps out:
+      - **Crimson Text** (Google Fonts, free, elegant serif)
+      - **Lora** (Google Fonts, free, warm serif with personality)
+      - **Cormorant** (Google Fonts, free, fashion-editorial feel)
+      - **EB Garamond** (Google Fonts, free, classic book typography)
+    + Load only one weight + italic to keep performance pristine
+
+### CSS Custom Properties (Design Tokens)
+
+```css
+:root {
+  /* Colors */
+  --color-plum-primary: #6B3A5B;
+  --color-lavender: #B4A5C4;
+  --color-fog: #D7D3D3;
+  --color-cream: #FDF8F5;
+  --color-gold: #C9A962;
+  --color-ink: #1A1A1A;
+  --color-star-blue: #2C3E5A;
+  --color-amethyst: #9966CC;
+  
+  /* Backgrounds */
+  --bg-primary: var(--color-cream);
+  --bg-secondary: var(--color-fog);
+  --bg-dark: var(--color-ink);
+  
+  /* Text */
+  --text-primary: var(--color-ink);
+  --text-secondary: #5A5A5A;
+  --text-muted: #8A8A8A;
+  --text-inverse: var(--color-cream);
+  
+  /* Accents */
+  --accent-primary: var(--color-plum-primary);
+  --accent-hover: var(--color-lavender);
+  --accent-gold: var(--color-gold);
+  
+  /* Typography */
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-accent: "Crimson Text", Georgia, serif;
+  
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;      /* 16px */
+  --font-size-lg: 1.125rem;    /* 18px */
+  --font-size-xl: 1.25rem;     /* 20px */
+  --font-size-2xl: 1.5rem;     /* 24px */
+  --font-size-3xl: 2rem;       /* 32px */
+  --font-size-4xl: 2.5rem;     /* 40px */
+  --font-size-5xl: 3rem;       /* 48px */
+  
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Spacing */
+  --space-xs: 0.25rem;    /* 4px */
+  --space-sm: 0.5rem;     /* 8px */
+  --space-md: 1rem;       /* 16px */
+  --space-lg: 1.5rem;     /* 24px */
+  --space-xl: 2rem;       /* 32px */
+  --space-2xl: 3rem;      /* 48px */
+  --space-3xl: 4rem;      /* 64px */
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+  
+  /* Z-index layers */
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+```
+
+### Component Styling Guidelines
+
+  * **Buttons**
+  
+    + Primary (Buy Now, Add to Cart):
+      - Background: `var(--accent-primary)`
+      - Text: `var(--text-inverse)`
+      - Hover: Darken 10%, slight scale (1.02)
+      - Border radius: `var(--radius-md)`
+      - Padding: `var(--space-md) var(--space-xl)`
+    
+    + Secondary (View Details, Learn More):
+      - Background: transparent
+      - Border: 2px solid `var(--accent-primary)`
+      - Text: `var(--accent-primary)`
+      - Hover: Fill background
+    
+    + Ghost (subtle actions):
+      - Background: transparent
+      - Text: `var(--text-secondary)`
+      - Hover: `var(--bg-secondary)`
+
+  * **Cards (Product tiles)**
+  
+    + Background: `var(--bg-primary)`
+    + Border: 1px solid `var(--color-fog)`
+    + Shadow: `var(--shadow-md)` on hover
+    + Padding: `var(--space-lg)`
+    + Border radius: `var(--radius-lg)`
+    + Transition: all `var(--transition-base)`
+
+  * **Forms**
+  
+    + Input fields:
+      - Border: 1px solid `var(--color-fog)`
+      - Focus: 2px solid `var(--accent-primary)`, glow effect
+      - Padding: `var(--space-md)`
+      - Border radius: `var(--radius-sm)`
+    
+    + Labels:
+      - Font: `var(--font-body)`
+      - Size: `var(--font-size-sm)`
+      - Weight: 600
+      - Margin bottom: `var(--space-xs)`
+
+  * **Hover micro-interactions**
+  
+    + Images: Slight zoom (scale: 1.05) with overflow hidden
+    + Links: Underline appears with slide-in animation
+    + Icons: Rotate or bounce subtly
+    + Buttons: Lift with shadow increase
+    + Cards: Elevate with shadow `var(--shadow-lg)`
+
+### Responsive Breakpoints
+
+```css
+/* Mobile first approach */
+--breakpoint-sm: 640px;   /* Small tablets */
+--breakpoint-md: 768px;   /* Tablets */
+--breakpoint-lg: 1024px;  /* Small desktops */
+--breakpoint-xl: 1280px;  /* Large desktops */
+--breakpoint-2xl: 1536px; /* Extra large */
+```
+
+### Accessibility Considerations
+
+  * **Color contrast**: All text meets WCAG AA standards (4.5:1 minimum)
+  * **Focus indicators**: Visible 2px outline with offset
+  * **Touch targets**: Minimum 44x44px on mobile
+  * **Alt text**: Every image has descriptive alt
+  * **Semantic HTML**: Proper heading hierarchy (h1 → h2 → h3)
+  * **Aria labels**: For icon-only buttons and complex interactions
+
+--- 
 
 ### API Catalog Syncing 
 
@@ -679,6 +946,176 @@ Each product JSON includes:
 
 ---
 
+## Automations & Integrations
+
+### Core Automation Architecture
+
+  * **GitHub Actions (Primary automation engine)**
+  
+    + Trigger: Push to `/assets/products/` directory
+    + Actions:
+      1. Rebuild manifest.json with new product mappings
+      2. Validate JSON schema compliance
+      3. Optimize images (if not CDN-hosted yet)
+      4. Deploy to hosting
+      5. Purge CDN cache
+    + Runtime: 30-60 seconds
+    + Cost: $0 (GitHub Actions free tier)
+
+  * **Stripe Webhooks (Inventory sync)**
+  
+    + Trigger: `checkout.session.completed` event
+    + Action:
+      1. Identify purchased product by SKU
+      2. Update corresponding JSON file
+      3. Change `availability` to "sold"
+      4. Commit change to repository
+      5. Trigger GitHub Action rebuild
+    + Alternative: Manual webhook endpoint if GitHub isn't viable
+    + Cost: $0 (part of Stripe)
+
+### Future Automation Opportunities
+
+  * **Product catalog sync across platforms**
+  
+    + **Phase 2 consideration**: GitHub webhook → API calls
+    + When product JSON added/updated:
+      - Create Stripe Product + Price automatically
+      - Add to Google Shopping feed
+      - Add to Meta Business Catalog (Facebook/Instagram Shop)
+      - Add to Pinterest Product Pins
+      - Add to TikTok Shop (if applicable)
+    + **Why NOT Zapier**: 
+      - Cost: $700/year for necessary tier
+      - Limited flexibility vs custom code
+      - We build better automation solutions in-house
+      - Same reason we avoid Squarespace/Webflow/Framer
+
+  * **AI-powered content automation**
+  
+    + Trigger: New product JSON committed
+    + AI generates:
+      - Social media post copy (platform-specific)
+      - SEO-optimized meta descriptions
+      - Alt text for images if missing
+      - Related product suggestions
+    + Posts to social APIs automatically (optional)
+    + Cost: API calls only (~$1-5/month)
+
+  * **Email automation** (with newsletter platform)
+  
+    + New product launch announcements
+    + Sold product notifications (scarcity marketing)
+    + Back in stock alerts (if applicable)
+    + Seasonal collection reveals
+    + Integration: Beehiiv API or Stripe customer exports
+
+### Platform Integrations (Setup Required)
+
+  * **Google ecosystem** (CLIENT DELIVERABLE: API keys/access)
+  
+    + **Google Analytics 4**
+      - Track pageviews, conversions, user flow
+      - E-commerce events (view_item, add_to_cart, purchase)
+      - Already accessible in Google Workspace account
+    
+    + **Google Search Console**
+      - Submit sitemap
+      - Monitor search performance
+      - Fix indexing issues
+      - Already accessible in Google Workspace account
+    
+    + **Google Business Profile** (if applicable)
+      - Physical shop location
+      - Operating hours
+      - Reviews integration
+    
+    + **Google Shopping Feed** (Phase 2)
+      - Product catalog XML/JSON feed
+      - Automated updates from product JSONs
+      - Requires Merchant Center account
+
+  * **Meta Business Suite** (CLIENT DELIVERABLE: Access)
+  
+    + **Facebook Pixel**
+      - Track conversions
+      - Retargeting audiences
+      - Custom audiences from purchasers
+    
+    + **Instagram Shopping**
+      - Product tagging in posts
+      - Shop tab on profile
+      - Checkout integration
+    
+    + **Meta Business Catalog**
+      - Centralized product feed
+      - Powers Facebook/Instagram shops
+      - Auto-sync from website possible
+
+  * **Pinterest Business** (CLIENT DELIVERABLE: Access)
+  
+    + **Pinterest Tag**
+      - Track conversions
+      - Create shopping audiences
+    
+    + **Product Pins**
+      - Rich pins with pricing
+      - Direct website links
+      - Automated from product feed
+
+  * **TikTok** (CLIENT DELIVERABLE: Access if pursuing)
+  
+    + **TikTok Pixel**
+      - Track website visitors from TikTok
+      - Retargeting
+    
+    + **TikTok Shop** (if expanding)
+      - In-app purchasing
+      - Live shopping features
+      - Product catalog sync
+
+### Avoided Costs Through Custom Automation
+
+  * **Zapier alternative**: Save $700/year
+  * **Shopify/CMS**: Save $350+/year
+  * **Marketing automation tools**: Save $300-1200/year
+  * **Inventory management tools**: Save $200-500/year
+  * **Total savings through custom solution**: ~$1,550-2,750/year
+
+### API Keys & Access Needed (CLIENT DELIVERABLE)
+
+  1. **Stripe** (already setup ✓)
+     - Publishable key (frontend)
+     - Secret key (backend/webhooks)
+     - Webhook signing secret
+  
+  2. **Cloudflare R2** (Sean to setup)
+     - Account ID
+     - Access Key ID
+     - Secret Access Key
+     - Bucket name
+  
+  3. **Google Analytics**
+     - Measurement ID (G-XXXXXXXXXX)
+     - Already in Workspace account
+  
+  4. **Google Search Console**
+     - Domain verification
+     - Already in Workspace account
+  
+  5. **Social Media Platforms** (Phase 2)
+     - Facebook/Instagram: App ID, App Secret, Access Token
+     - Pinterest: App ID, App Secret, Access Token
+     - TikTok: App Key, App Secret (if applicable)
+  
+  6. **Email/Newsletter** (Phase 2)
+     - Beehiiv API key
+     - Or Stripe Customer export automation
+
+
+
+---
+
 ## E-Commerce Integration
 
 ### Stripe Checkout Strategy
@@ -724,6 +1161,109 @@ We're using **Stripe Prebuilt Checkout** (Checkout Sessions API) — the same sy
 
 **Pre-holiday version:** Stripe Checkout functional, initial 5-10 products enabled, webhook tested
 
+### Supported Payment Methods
+
+Stripe Checkout automatically presents the optimal payment methods based on customer location and device. All methods enabled by default:
+
+  * **Card payments**
+    + Credit cards (Visa, Mastercard, Amex, Discover)
+    + Debit cards
+    + International cards
+
+  * **Digital wallets**
+    + Apple Pay (iOS/Mac devices)
+    + Google Pay (Android/Chrome)
+    + Link (Stripe's save-and-autofill service)
+
+  * **Buy Now, Pay Later**
+    + Affirm
+    + Afterpay/Clearpay
+    + Klarna
+
+  * **Bank payments**
+    + ACH Direct Debit (US bank accounts)
+    + Cash App Pay
+
+  * **International**
+    + WeChat Pay
+    + Alipay
+    + Many regional options
+
+  * **Future considerations**
+    + PayPal (separate integration, 3.49% + $0.49 fee)
+    + Amazon Pay (separate integration)
+    + Cryptocurrency/Stablecoins (via Stripe or separate)
+
+### Shipping Strategy & Calculations
+
+**Important decision point:** How to handle shipping costs. Three approaches:
+
+  1. **Calculated real-time shipping** (Most transparent)
+     + Stripe can integrate with shipping carriers
+     + Customer sees exact cost at checkout
+     + Requires: Carrier account (USPS, UPS, FedEx) or Shippo/EasyPost
+     + Pro: Fair, accurate, professional
+     + Con: Slightly complex setup, costs visible
+     + Best for: Higher-priced items where shipping is proportionally small
+
+  2. **Flat-rate shipping** (Simplest)
+     + Single price for all US orders (e.g., $15) **I haven't seen them IRL but I have a feeling this is not enough to cover shipping**
+     + International calculated separately or disabled initially
+     + Pro: Dead simple, can advertise rate
+     + Con: May lose money on far destinations, overcharge nearby
+     + Best for: Consistent item sizes, want simplicity
+     + Marketing angle: "Free shipping over $300" promos possible
+
+  3. **Shipping included in product price** (Premium positioning)
+     + No separate shipping line item
+     + Price absorbs average shipping cost
+     + Pro: Cleanest checkout, "free shipping" appeal
+     + Con: Harder to adjust, inflates product price perception
+     + Best for: Luxury positioning, gift purchases
+
+  * **Recommendation for Everlastings:** Start with approach #2 (Flat-rate)
+    + Simple to implement
+    + Easy to understand for customers
+    + Can test and adjust based on actual shipping costs
+    + Can run "Free shipping" promos later without repricing products
+    + Can switch to calculated shipping in Phase 2 if needed
+    + **NOTE**: Need Emy's input on typical weights - these pieces are substantial!
+
+  * **International shipping:** Start US-only, add Canada later, then international on request
+
+  * **Packaging considerations**
+    + Miniatures are fragile, need careful packing
+    + Cost includes: Box, bubble wrap, tissue, branded touches
+    + Factor $3-8 packaging cost into shipping strategy
+    + **CLIENT CONSULTATION NEEDED**: Actual shipping costs for pieces like the example (substantial corner diorama with lighting)
+
+### Dynamic Pricing & Promotions Strategy
+
+This JSON architecture makes advanced pricing strategies possible:
+
+  * **Product-level shipping control**
+    + JSON field: `shipping_strategy: "flat" | "calculated" | "free"`
+    + Different products can have different approaches
+    + Example: Large pieces = calculated, small pieces = flat
+
+  * **Seasonal promotions**
+    + JSON field: `promo_active: true` with date ranges
+    + Discount pricing without creating duplicate Stripe products
+    + Banner displays on product pages
+    + Examples: "Holiday Special", "Launch Week Discount"
+
+  * **Bundle discounts** (Phase 2)
+    + "Buy 2, get free shipping"
+    + Discount codes via Stripe Coupons API
+    + Can test different strategies without rebuilding
+
+  * **Newsletter subscriber perks**
+    + Email signup = coupon code
+    + Tracked via Stripe customer metadata
+    + "5% off first purchase for newsletter subscribers"
+
+**Reference documentation:** `/Users/seanivore/Development/everlastings-website/assets/docs/reference-files/stripe_dynamic_shipping_integration.md`
+
 ---
 
 ## Hosting & Infrastructure
@@ -758,21 +1298,25 @@ We're using **Stripe Prebuilt Checkout** (Checkout Sessions API) — the same sy
   
     + **Cost:** $0-19/month
     + **Benefits:** More generous size limits, great build system
-    + **Drawback:** More features than needed
+    + **Drawback:** More features than needed 
+    + Never heard of and hard to out-vote Hostinger 
 
   * **Vercel**
   
     + **Cost:** $0-20/month
     + **Benefits:** Excellent performance, generous free tier
     + **Drawback:** Overkill for static site
+    + Trendy for good reason, but typically sought after for staging and not deploying production product 
 
   * **Hostinger**
   
     + **Cost:** ~$3/month
     + **Benefits:** Traditional hosting, more familiar
-    + **Drawback:** Less automated than GitHub/Netlify
+    + **Drawback:** Less automated than GitHub/Netlify 
+    + This seems like a good one to have on record as an option for down the line if we have heavy traffic increases 
+    + "Less automated" just means that we'd to spend more time developing solutions for automation, not that it wouldn't be automated. 
 
-**Recommendation:** Start with GitHub Pages + Cloudflare R2. If repo size becomes issue, migrate to Netlify (takes ~1 hour, we handle it).
+**Recommendation:** Start with GitHub Pages + Cloudflare R2. If repo size becomes issue, migrate to ~~Netlify~~ (takes ~1 hour, we handle it) Hostinger if the time comes to become bigger and badder and faster. 
 
 ### Domain & DNS
 
@@ -785,19 +1329,77 @@ We're using **Stripe Prebuilt Checkout** (Checkout Sessions API) — the same sy
 
   * **Google Workspace**
   
-    + Active: emyh@everlastingsbyemaline.com
-    + Cost: $72/year
+    + Active: emyh@everlastingsbyemaline.com (+ 3 additional seats)
+    + Cost: $400/year (4 seats)
     + Sean has admin access ✓
 
 ### Operating Costs Summary
 
-  * Domain: $12/year
-  * Google Workspace: $72/year
+  * **Fixed annual costs:**
+    + Domain (Squarespace): $12/year
+    + Google Workspace (4 seats): $400/year
+    + Image CDN (Cloudflare R2): ~$12-60/year
+    + **Total: ~$424-472/year**
+
+  * **Transaction costs:**
+    + Stripe fees: 2.9% + $0.30 per transaction
+    + Example: $200 sale = $6.10 fee, you keep $193.90
+
+  * **Comparison to Squarespace + Workspace:**
+    + Squarespace Commerce Basic: $350/year
+    + Google Workspace: $400/year
+    + **Squarespace total: $750/year**
+    + **Our solution: ~$424-472/year**
+    + **Direct savings: $278-326/year**
+
+  * **Additional avoided costs through custom architecture:**
+    + Zapier (automation tier): $700/year saved
+    + Shopify/premium CMS: $350-500/year saved
+    + Marketing automation tools: $300-1200/year saved
+    + Inventory management SaaS: $200-500/year saved
+    + **Total potential savings: $1,550-2,750/year**
+
+  * **Why these savings matter:**
+    + Custom > SaaS: We build exactly what you need
+    + Future-proof: Own your infrastructure
+    + Scalable: Growth doesn't increase costs proportionally
+    + Flexible: Can add features without subscription tiers
+    + Professional: Better than cookie-cutter solutions
   * Image CDN: ~$12-60/year
   * Stripe fees: 2.9% + $0.30 per transaction
   * **Total fixed: ~$96-144/year** vs $350/year Squarespace Tier 2
 
 **Savings: $206-254/year** (plus you own your infrastructure)
+
+---
+
+## Out-Of-Scope 
+
+### Newsletter Strategy
+
+**Start collecting emails IMMEDIATELY** — even before you have blog infrastructure.
+
+  * **Homepage CTA** (prominent, above fold)
+  
+    + "Step Into Elsewhere — Join the Newsletter"
+    + Brief description of what they'll receive
+    + Simple email signup (Stripe can handle this initially)
+
+  * **Footer signup** (on every page)
+  
+    + Subtle, always accessible
+    + "Never miss a new miniature"
+
+  * **Why this matters NOW**
+  
+    + Your existing customers from the shop are already engaged
+    + Holiday season = high traffic
+    + Email list = direct line to collectors
+    + Future blog/newsletter integration is easier with existing list
+
+**Blog/Newsletter platform recommendation:** Beehiiv (after holidays). This is a SEPARATE architecture because blog content management needs different tooling than product management. We'll integrate it later, but starting collection now is essential.
+
+**Pre-holiday version:** Newsletter signup active, Beehiiv integration deferred to Phase 2
 
 ---
 
@@ -1107,6 +1709,14 @@ These are SEPARATE projects, not included in initial build, available when you'r
     + Smooth scrolling
     + Loading states
 
+  * **Smart filter UI logic**
+  
+    + If a tag type contains only ONE tag, hide that filter dropdown
+    + Example: If all products are "Lighted", don't show "Product Type" filter
+    + Reduces UI clutter automatically
+    + Dynamically adapts as catalog grows
+    + Keeps interface clean and purposeful
+
 ### Future-Proofing Notes
 
 This architecture is prepared for:
@@ -1123,29 +1733,8 @@ You won't outgrow this system. It grows with you.
 
 ---
 
-**End of Comprehensive Reference Document**
+**End of Comprehensive Website Reference Document**
 
-*Next: Await timeline decision, then create Design Scope and Implementation Plan documents*
+*This document will continue to evolve as we refine specifications and make architectural decisions. All major changes will be tracked and communicated.*
 
-Google Business integration
-Google Analytics 
-Pinterest Business using pixel integration or API that automatically adds new products to Pinterest 
-META Business Catalog -> Facebook and Instagram Shop 
-TikTok Business & Shop 
-
-
-Product Type tag
-Create logic that hides the dropdown checkbox filter UI if any one type of tag contains only a single tag 
-
-payment forms allowed 
-Card
-Link (dynamicly populated if your email or phone has a link account setup)
-Google Pay/Apple Pay (dynamic based on device)
-Affirm
-Afterpay
-Klarna
-Cash App Pay
-US bank account
-WeChat Pay
-
-As well as Amazon Pay, PayPal, StableCoins and so very many more. 
+*Last updated: December 7, 2025*
