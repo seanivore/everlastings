@@ -230,7 +230,7 @@ These are separate projects you can add whenever you're ready.
 
 ## Investment & Pricing
 
-*[Pricing details to be added after timeline decision]*
+*Pricing details to be added after timeline decision*
 
 Both options represent **85-90% discount** from professional market rates ($3,800-5,700 value). This project is priced as portfolio-building, relationship-supporting work for an artisan brand with a powerful story.
 

@@ -576,7 +576,7 @@ Each product JSON includes:
   
     + `price`: Dollar amount
     + `stripe_price_id`: Auto-populated by our script
-    + `dimensions`: [length, width, height] or string
+    + `dimensions`: length, width, height or string
     + `weight`: For shipping
     + `materials`: Array of materials used
     + `power_supply`: If applicable
