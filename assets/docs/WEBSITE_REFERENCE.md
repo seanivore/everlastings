@@ -225,7 +225,14 @@
 
 ---
 
-## Site Structure & Content
+## Site Structure & Content 
+
+  * **The entire site must be exceptional across all device sizes** 
+
+    + No development page, stage, feature can move on until tested across various sizes 
+      - Test while building instead of waiting until the desktop design is complete 
+      - Waiting and fixing a list of things is inherently not designing mobile-first 
+    + Remember that Shopify is perfect on mobile so we have zero room for clunk or friction 
 
 ### Proposed Strategic Decision: One Long Landing Page
 
@@ -295,7 +302,7 @@
 
 ---
 
-### Collection Grid Pages 
+### Product Collection Grid Pages 
 
   * **Two user experiences from one page theme** 
 
@@ -305,12 +312,26 @@
         - Large hero image from featured product in that section
         - Storytelling introduction
  
-      + Automatically created by simply adding a novel section tag to a product JSON
+      + Automatically created by simply adding a totally new "section" tag to a product JSON
         - Portals to Peace
         - Winter Favorites
         - Book Nooks & Story Lofts
         - Magical / Fantasy
         - Architectural
+
+      + Note regarding "Sold" section tag that was in the group chat 
+        - There are many different types of tags 
+        - Most tags can overlap 
+        - The section tags cannot overlap                **<-- please correct me if I'm wrong**
+        - "Sold" will technically a boolean 
+        - The boolean can still be an available tag to apply as a filter for sure 
+        - But this way we will maintain sold out products in their sections 
+        - This seems best based on "creating a feeling of scarcity" 
+        - But at some point human or AI will probably want to go an delete product JSONs, OR 
+        - Or we could have another boolean for "archived" 
+        - In any case, I don't think we actually want the "Sold" filtered products to have a featured/themed product grid 
+        - As in no hero image and storytelling intro like the above 
+        **You'll learn more about tags, tag and filter types, and behavior logic in the JSON section coming up below**
 
     2. The essential "All Products" page 
 
@@ -318,34 +339,43 @@
         - Fairly standard on shopping sites, this page wouldn't have the featured image header 
         - Wildly user friendly dropdowns and sorting options let the user explore 
 
-  * **Universally familiar interface** 
+  * **Universally familiar interface to navigate through product tiles** 
 
-    + Navigate product tiles 
-      - 
+    + UI filtering dropdowns have checkmark beside tags (multi-select like Shopify)
+      - Most grouped by type of tag 
+      - A few odds and ends that are boolean (available versus sold) 
+      - Dropdown filter types defined with visuals 
+      `https://www.justinmind.com/ui-design/drop-down-list` 
+    
+    + UI filtering of single selection dropdown tags 
+      - These would be the section tags 
+      - Selecting one must refresh the page to apply it
+      - On reload any products with that section tag that also have "featured" selected would
+      - Provide a collection of imagery that is randomly selected from that pool 
 
+    + UI sorting selectors 
+      - Sort controls (newest, price, title)
+      - Note that some of these might not be blatantly on the JSON just for UI filtering (newest)
+      - Not sure we'll necessarily actually want to use "Title" FYI 
 
+  * **Let's be sure to use some kind of very high-bar, pretty UI like from shadcn** 
 
-  * **Each section page includes**
-  
-    + Filterable product grid below
-    + Sort controls (newest, price, title)
+  * **Universally familiar product tile design**
 
-  * **"All Products" page**
-  
-    + No hero image (less storytelling, more browsing)
-    + Pure grid of all miniatures
-    + Same filter system
-    + For people who want to see everything fast
-
-  * **Tag filter system** (multi-select like Shopify)
-  
-    + Tags have TYPES: section, category, product-type, general, availability
-    + Can toggle multiple filters at once (Winter + Book Nooks)
+    + Product Tile Design 
+      - Collection of tile images (or one but I figure why not multiple)
+      - Price 
+      - Title
+      - Category 
+    
     + Active filters stay visible
     + Filter counts update live
-    + Mobile-friendly condensed design
+    
+    + It is very important that we have 
+      - A "buy now" button 
+      - Which would pair well with an add to cart icon on tile front 
 
-**Pre-holiday version:** Core grid functional, basic filters, hero images may be placeholders
+*Pre-holiday version: Core grid functional, basic filters, hero images may be placeholders*
 
 ---
 
@@ -494,7 +524,34 @@ Examples from your existing voice:
 
 ---
 
-## Product Catalog System
+## Product Catalog System 
+
+### API Catalog Syncing 
+
+#### Stripe Product Object 
+
+```json
+{
+  "id": "prod_NWjs8kKbJWmuuc",
+  "object": "product",
+  "active": true,
+  "created": 1678833149,
+  "default_price": null,
+  "description": null,
+  "images": [],
+  "marketing_features": [],
+  "livemode": false,
+  "metadata": {},
+  "name": "Gold Plan",
+  "package_dimensions": null,
+  "shippable": null,
+  "statement_descriptor": null,
+  "tax_code": null,
+  "unit_label": null,
+  "updated": 1678833149,
+  "url": null
+}
+```
 
 ### JSON Schema (Your Content Template)
 
@@ -504,7 +561,7 @@ Each product JSON includes:
 
   * **Core identification**
   
-    + `sku`: Unique identifier created 
+    + `sku`: Unique identifier  
     + `title`: Full display name (your formatting, we transform to URLs)
     + `tagline`: Short poetic line
     + `url_slug`: Auto-generated from title
@@ -1079,3 +1136,16 @@ TikTok Business & Shop
 
 Product Type tag
 Create logic that hides the dropdown checkbox filter UI if any one type of tag contains only a single tag 
+
+payment forms allowed 
+Card
+Link (dynamicly populated if your email or phone has a link account setup)
+Google Pay/Apple Pay (dynamic based on device)
+Affirm
+Afterpay
+Klarna
+Cash App Pay
+US bank account
+WeChat Pay
+
+As well as Amazon Pay, PayPal, StableCoins and so very many more. 
