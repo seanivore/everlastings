@@ -150,7 +150,7 @@
     + Lighting mode demonstrations
     + Story cards (2–8 paragraphs, poetic)
 
-  * **A brand home — A sacred Elsewhere**
+  * **A brand new home — A sacred Elsewhere**
   
     + Visitors immediately feel: Magic, Sanctuary, Nostalgia
     + Tone: warm, poetic, emotionally resonant
@@ -177,9 +177,11 @@
 
   * **Your space online is your gallery, your story, your sanctuary**
 
-  1. The website becomes the **center of your miniature world**, the heart 
-  2. Social media, ads, community sharing stories in the newsletters, **all point back here**, the arms 
-  3. Brick and mortar is just that, feet, where community you can meet, get their email, **so they find your heart** 
+    1. The website becomes the **center of your miniature world**, the heart 
+    2. Social media, ads, community sharing stories in the newsletters, **all point back here**, the arms 
+    3. Brick and mortar is just that, feet, where community you can meet, get their email, **so they find your heart** 
+
+  * **When ready to transmute your story into something more, find more goals to consider in the `BRAND_STRATEGY.md` document**
 
 ---
 
@@ -516,7 +518,7 @@
     
     + **Bottom bar**
       - Copyright © 2025 Everlastings by Emaline. All rights reserved.
-      - Site by Sean August Horvath (optional link to august.style)
+      - Site by Sean August Horvath of https://august.style
       - Terms of Service | Privacy Policy
 
   * **Navigation patterns**
@@ -940,9 +942,7 @@ Each product JSON includes:
      + Product page updates automatically
      + "Sold" collection now includes it
 
-**Future enhancement:** Google Form → Zapier → JSON pipeline (you fill form, we commit file)
-
-**Pre-holiday version:** Manual JSON creation for initial 5-10 products, automated pipeline deferred to Phase 2
+*Pre-holiday version: Manual JSON creation for initial 5-10 products, automated pipeline deferred to Phase 2*
 
 ---
 
@@ -1112,8 +1112,6 @@ Each product JSON includes:
      - Beehiiv API key
      - Or Stripe Customer export automation
 
-
-
 ---
 
 ## E-Commerce Integration
@@ -1157,9 +1155,9 @@ We're using **Stripe Prebuilt Checkout** (Checkout Sessions API) — the same sy
     + No monthly subscription
     + Example: $200 miniature = $6.10 fee, you keep $193.90
 
-**Phase 2 enhancement:** Migrate to Stripe Embedded Components for fully branded checkout (no redirect to Stripe's page)
+*Phase 2 enhancement: Migrate to Stripe Embedded Components for fully branded checkout (no redirect to Stripe's page)*
 
-**Pre-holiday version:** Stripe Checkout functional, initial 5-10 products enabled, webhook tested
+*Pre-holiday version: Stripe Checkout functional, initial 5-10 products enabled, webhook tested*
 
 ### Supported Payment Methods
 

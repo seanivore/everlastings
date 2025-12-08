@@ -10,7 +10,7 @@
 
 You're building more than a website — you're creating **a digital home for Elsewhere**. A place where visitors can step into your miniature worlds, feel the magic, read the stories, and bring home a haven of their own.
 
-This proposal outlines two paths forward, each with different timelines and scope. Both deliver a professional, custom-built e-commerce website that saves you $200-300/year compared to Squarespace while giving you complete ownership and unlimited scalability.
+This proposal outlines two paths forward, each with different timelines and scope. Both deliver a professional, custom-built e-commerce website that saves you $200-300/year compared to Squarespace while giving you complete ownership and unlimited scalability, without paying $700/year to connect all the various tools needed to market and grow. 
 
 **The choice is yours:** Rush to launch before Christmas, or take the comfortable path with a refined January launch.
 
@@ -147,8 +147,8 @@ This proposal outlines two paths forward, each with different timelines and scop
     + Google Workspace: $72/year (already active)
     + Image CDN: ~$12-60/year
     + Stripe fees: 2.9% + $0.30 per transaction (standard)
-    + **Total: ~$96-144/year** vs $350/year Squarespace
-    + **Savings: $206-254/year**
+    + **Total: ~$96/year** vs $350/year Squarespace + $700/year Zapier 
+    + **Savings: $954/year**
 
 ### Design & User Experience
 
@@ -199,8 +199,8 @@ This proposal outlines two paths forward, each with different timelines and scop
 
   * **Professional photography session** — $300-500
   * **Blog/newsletter platform setup** — $200
-  * **Social media integrations** — $150-300 each
-  * **Marketplace integrations** (Etsy, Faire) — $200-500
+  * **Social media integrations** — $300 for core four (IG, FB, TikTok, Pinterest)
+  * **Other marketplace integrations** (Etsy, Faire, etc.) — $200-500
   * **Ongoing maintenance retainer** — $100/month (optional)
 
 These are separate projects you can add whenever you're ready.
@@ -211,11 +211,10 @@ These are separate projects you can add whenever you're ready.
 
 ### Choose Option A (Rush) if:
 
-  * You absolutely need to capture 2024 holiday sales
-  * You're comfortable with MVP launch and post-holiday enhancements
+  * You absolutely need to capture 2025 holiday sales
+  * You're comfortable with MVP (Minimum Viable Product) launch and post-holiday enhancements
   * You have 5-10 products ready with photos and stories NOW
   * You're willing to pay premium for compressed timeline
-  * Squarespace expiration on Dec 16 is a hard deadline
 
 ### Choose Option B (Comprehensive) if:
 
@@ -228,11 +227,10 @@ These are separate projects you can add whenever you're ready.
 
 ---
 
-## Investment & Pricing
+## Cost Packages 
 
-*Pricing details to be added after timeline decision*
-
-Both options represent **85-90% discount** from professional market rates ($3,800-5,700 value). This project is priced as portfolio-building, relationship-supporting work for an artisan brand with a powerful story.
+  * Option A: $571.80 - Paid in full before development begins
+  * Option B: $825.00 - Photography session for $0 = $525.00 (included) - Paid as $400 deposit before development begins and $125.00 before launch
 
 ---
 

@@ -369,38 +369,38 @@ This is the technical companion to the Comprehensive Reference Document. It cont
 
 ### Option A: Rush MVP (Dec 16 Launch)
 
-| Task | Hours |
-|------|-------|
-| Architecture Setup | 3 |
-| JSON Schema | 2 |
-| Design System | 3 |
-| Homepage (Simple) | 4 |
-| Collection Grid | 3 |
-| Product Pages | 4 |
-| Stripe Integration | 3 |
-| Header/Footer | 2 |
-| Testing & QA | 3 |
-| Content Integration | 2 |
-| Documentation | 1.5 |
-| **Total** | **30.5 hours** |
+| Task                | Hours    |
+|---------------------|----------|
+| Architecture Setup  | 3        |
+| JSON Schema         | 2        |
+| Design System       | 3        |
+| Homepage (Simple)   | 4        |
+| Collection Grid     | 3        |
+| Product Pages       | 4        |
+| Stripe Integration  | 3        |
+| Header/Footer       | 2        |
+| Testing & QA        | 3        |
+| Content Integration | 2        |
+| Documentation       | 1.5      |
+| **Total**           | **30.5** |
 
 ### Option B: Comprehensive Build (January Launch)
 
-| Task | Hours |
-|------|-------|
-| Architecture Setup | 4 |
-| JSON Schema | 3 |
-| Design System | 4 |
-| Homepage (Full) | 8 |
-| Collection Grid | 4 |
-| Product Pages | 5 |
-| Stripe Integration | 4 |
-| Header/Footer | 3 |
-| Testing & QA | 4 |
-| Content Integration | 3 |
-| Documentation | 2 |
+| Task                | Hours    |
+|---------------------|----------|
+| Architecture Setup  | 4        |
+| JSON Schema         | 3        |
+| Design System       | 4        |
+| Homepage (Full)     | 8        |
+| Collection Grid     | 4        |
+| Product Pages       | 5        |
+| Stripe Integration  | 4        |
+| Header/Footer       | 3        |
+| Testing & QA        | 4        |
+| Content Integration | 3        |
+| Documentation       | 2        |
 | Photography Session | (Add-on) |
-| **Total** | **44 hours** |
+| **Total**           | **44**   |
 
 ---
 
@@ -411,13 +411,11 @@ This is the technical companion to the Comprehensive Reference Document. It cont
   * Option A: 30.5 hrs × $125 = $3,812
   * Option B: 44 hrs × $125 = $5,500
 
-**Portfolio/relationship discount**: 85-90% off
+**Portfolio/relationship discount**: 85% off
 
-**Actual pricing** (to be determined):
-  * Based on timeline choice
-  * Rush premium vs comfortable pace
-  * Relationship investment consideration
-  * Portfolio value for Sean
+**Actual pricing** 
+  * Option A: $571.80
+  * Option B: $825.00 - Photography session for $0 = $525.00 (included)
 
 ---
 
