@@ -1,5 +1,10 @@
 # Reference & Planning 
 
+1. Note that clean version of our core planning and reference documents have been uploaded to the Project Knowledge documents, this means G will be able to answer any questions 
+2. Review the Contract and invoice which I've sent over using document sign service; contents are all pulled from our planning and reference documents, just added here in a more concise form to make the scope of the project clear for the contract, and the rest of the contract is pulled from a very standard design template, so there shouldn't be anything weird or surprising but let me know if you have questions about anything; it is primarily for liability and makes taxes easier 
+3. First task we need from you and G is to go through the JSON product file template and create one for a product; we just need one to be done urgently, even if it isn't perfected, so that we can make sure we have all the values on the form needed, from which I'll be able to start creating a template page layout. It is super important that we do all we can to really pause and consider what is on the JSON for each product because any changes we make later will need to be made to every file for every product. Anywhere we can imagine something about the project being pulled to be used on the website or even on social media shop descriptions, etc. should be considered now. 
+4. Once the JSON is created and confirmed so that we can start building the various dynamic site pages from it, we'll be able to set you up with any other items we need — however the primary deliverable from you and G will just be filling ou these JSON product files 
+
 ## Do Next Planning 
 
   + Get JSON together ASAP 
