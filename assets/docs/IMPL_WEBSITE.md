@@ -36,11 +36,11 @@ This is the technical implementation guide for building the Everlastings by Emal
 **Estimated Time:** 4 hours
 
 **Tasks:**
-- Repository structure setup
-- GitHub Pages configuration
-- Cloudflare R2 CDN setup and integration
-- GitHub Actions workflow configuration
-- Environment variables and secrets management
+- Repository structure setup ✓
+- GitHub Pages configuration .... **directory files included but needs setup when going live**
+- Cloudflare R2 CDN setup and integration .... **urgent; required step for creating JSON files** 
+- GitHub Actions workflow configuration .... **we have example from portfolio project but it needs to be updated**
+- Environment variables and secrets management .... **Stripe, Cloudflare...** 
 - Initial deployment pipeline testing
 - Verify automated manifest generation
 
