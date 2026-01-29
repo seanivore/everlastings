@@ -1,7 +1,23 @@
-# Everlastings Website — Client Action Items
+# Action Items 
 
-**For:** Emy & G  
-**Updated:** December 12, 2025
+## Summary 
+
+  + This document is simply to: 
+    - Get things in order to get started 
+    - Define required support tasks 
+    - Tracking progress to meet milestones 
+    - Communicate as needed 
+
+## Contract & Initial Payment 
+
+**PLEASE PROVIDE** 
+  
+  + Billin
+    - Address line1 
+    - City 
+    - State
+    - Postal Code 
+
 
 ---
 

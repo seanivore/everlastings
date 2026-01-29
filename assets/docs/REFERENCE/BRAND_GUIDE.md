@@ -339,7 +339,7 @@ Everlastings offers handcrafted miniature worlds that serve as tangible anchors 
 ### Homepage Hero
 
 **Formula:**  
-[Invitational statement] + [Emotional promise] + [Visual wonder]
+(Invitational statement) + (Emotional promise) + (Visual wonder)
 
 **Example:**  
 *"Welcome to Elsewhere — where loss transforms into something you can hold, and memory becomes miniature magic."*
@@ -347,7 +347,7 @@ Everlastings offers handcrafted miniature worlds that serve as tangible anchors 
 ### Collection Page Intro
 
 **Formula:**  
-[Collection name] + [Unifying theme] + [Invitation to explore]
+(Collection name) + (Unifying theme) + (Invitation to explore)
 
 **Example:**  
 *"Portals to Peace: Each piece in this series offers quiet passage to somewhere gentler. Step through."*
@@ -355,7 +355,7 @@ Everlastings offers handcrafted miniature worlds that serve as tangible anchors 
 ### Newsletter Signup
 
 **Formula:**  
-[Benefit] + [Community feel] + [Clear action]
+(Benefit) + (Community feel) + (Clear action)
 
 **Example:**  
 *"Join the Firelight Council for studio updates, new releases, and stories from the workbench. Your inbox deserves a little magic."*
