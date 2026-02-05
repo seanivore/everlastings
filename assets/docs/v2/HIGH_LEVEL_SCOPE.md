@@ -63,7 +63,7 @@ Deliver a professional, custom-built e-commerce website for Everlastings by Emal
 + Client Name: Emy Hoff
 + Contact Email: emyh@everlastingsbyemaline.com
 + Business Name: Everlastings by Emaline
-+ Business Address: 123 Main St, Anytown, USA
++ Business Address: 90 North End Rd, Townsend, MA 01469
 + Contact Phone: 978-996-7375
 
 ### Contractor 
