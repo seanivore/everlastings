@@ -39,3 +39,7 @@ rusty-tags.vi
 
 # Logistical Files 
 .archive/
+
+# Design Spec Images 
+.agent/apple-ui-design/**.jpeg
+.agent/apple-ui-design/**.jpg
