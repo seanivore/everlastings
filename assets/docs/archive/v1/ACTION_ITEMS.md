@@ -1,27 +1,17 @@
 # Action Items 
 
-## Summary 
-
-  + This document is simply to: 
-    - Get things in order to get started 
-    - Define required support tasks 
-    - Tracking progress to meet milestones 
-    - Communicate as needed 
-
-## Contract & Initial Payment 
-
-**PLEASE PROVIDE** 
-  
-  + Billin
-    - Address line1 
-    - City 
-    - State
-    - Postal Code 
-
+**Created**: 2026-03-08
+**Updated**: 2026-03-10 
+**Version**: v0.2 
+**Status**: Pre-development assessments
 
 ---
 
 ## Overview
+
+Initial development planning was completed four months ago during client pitch and booking. Our architecture planning was based on 
+
+ four months ago must be processed through, reassess based on build experience of Freelance Payments project
 
 This document outlines everything we need from you to build your website, organized by priority and timing. Don't worry about doing everything at once — we'll work together to gather content as we build.
 

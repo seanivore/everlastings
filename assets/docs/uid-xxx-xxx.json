@@ -1,0 +1,20 @@
+{
+  "content": {
+    "title": "",
+    "story_card": "",
+    "description": "",
+    "features": "",
+    "photos": [
+      "array of 7-15 photo relative paths"
+    ],
+    "price": 0,
+    "care_instructions": "",
+    "shipping_details": ""
+  },
+  "tags": {
+    "product_type": "miniature, printable, storybook",
+    "collection": "null, Portals to Peace, Book Nooks, Story Lofts, Seasonal, Limited Edition",
+    "available": "boolean for in-stock (yes) or sold-out (no)",
+    "quantity": 0
+  }
+}
