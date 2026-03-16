@@ -1,9 +1,46 @@
 # Everlastings by Emaline Website
 
-**Created**: 2026-03-10 
+**Created**: 2026-03-16 
 **Domain**: `everlastingsbyemaline.com` 
 **Version**: v0.2 
 **Status**: Editing 
+
+---
+
+## Agent Message Prepped
+
+Hello. I have a very large, very system design / organizational brained task for the start of this website project. Months ago, to sign the client, we prepared implementation documents based on all understandings at that time. The architecture needs to be addressed, and all previous documents need to be carefully reviewed to pull out only the most necessary content in the most concise way possible for our main build planning document `assets/docs/archive/v1/v1_1_PREP.md` and then eventually our exclusively executable implementation guide. This should walk us through the development process in a very simple way. It should contain snippets of her voice, but only where needed, placed with intention because we should also have and maintain a new `assets/docs/archive/v1/v1_1_BRAND.md` guide with her voice, copy snippets and all that stuff. I would like you to take your time and iterate on this plan to make sure it is in the most efficiently structured pathway possible. We'll also then need to discuss and make final decisions on architecture. There are a lot of documents that need to be processed so that I can confirm that they do not need to be looked at again — cut down on the noise and help me find signal. This is a great example of why I think we'll need you and agents to iterate on the plan — `assets/docs/archive/v0/ACTION_ITEMS.md` — because this list is bulky and intimidating. This needs to be made for ADHD brain, approachable, easy to jump into, no unnecessary details or extra explaining, keep information that was for them in a final separate document just for us to archive and know it is still a keeper separate of the rest of this mess. After the planning and decisions we'll need to package up the plan so that it can be applicable to other clients — I have two on deck and as of now they don't need a store but you never know. 
+
+EAT, PROCESS, ALLOW ME TO IGNORE FOR THE REST OF TIME: 
+`assets/docs/archive/v0/must-process-from-first-session/BRAND_GUIDE.md`
+`assets/docs/archive/v0/must-process-from-first-session/BRAND_STRATEGY.md`
+`assets/docs/archive/v0/must-process-from-first-session/BUILD_GUIDE.md`
+`assets/docs/archive/v0/must-process-from-first-session/CHAT_PLANS_01-general.md`
+`assets/docs/archive/v0/must-process-from-first-session/CHAT_PLANS_02-interactive.md`
+`assets/docs/archive/v0/must-process-from-first-session/CONTENT_PLANNING.md`
+`assets/docs/archive/v0/must-process-from-first-session/DOC_PREP_SPEC.md`
+`assets/docs/archive/v0/must-process-from-first-session/HIGH_LEVEL_SCOPE.md`
+`assets/docs/archive/v0/must-process-from-first-session/HOW_IT_WORKS_BASICS.md`
+`assets/docs/archive/v0/must-process-from-first-session/IMPL_PLAN_MASTER.md`
+`assets/docs/archive/v0/must-process-from-first-session/IMPL_STRIPE_DYNAMIC_SHIPPING.md`
+`assets/docs/archive/v0/must-process-from-first-session/IMPL_WEBSITE.md`
+`assets/docs/archive/v0/must-process-from-first-session/PLANNING_GUIDE.md`
+`assets/docs/archive/v0/1_BUILD_INSPO.md`
+`assets/docs/archive/v0/2_BUILD_INSPO.md`
+
+CREATE/UPDATE/FINISH: 
+`assets/docs/archive/v1/v1_1_IMPL_GUIDE.md` — exclusively executable 
+`assets/docs/archive/v1/v1_1_BRAND.md` — reference for voice, copy, visual design, etc, though they'll be writing all content
+`assets/docs/EVERLASTINGS_STORE.md` — our one stop shop doc, template already inside 
+`README.md` — template already inside 
+
+GUIDES/REFERENCE: 
+`.agent/DEV_RULES.md` — we should follow our protocol 
+`.agent/2026_MOBILE_DESIGN_SPECS.md` — and design with intention ACTUAL mobile first 
+
+START/NOT-TO-FINISH-YET: 
+`assets/docs/uid-xxx-xxx.json`
+`assets/docs/GUIDE_uid-xxx-xxx.json.md`
 
 ---
 
@@ -44,48 +81,104 @@ These are thoughts, questions, or notes Sean had while organizing development re
     - Real time updates 
     - Adding "Sold" on item in shop when sold 
     - Updating quantity if applicable 
-* Compressed images
-* WebP conversion
-* Lazy loading
-* Google Business integration
-Google Analytics
-Stripe (has PayPal option)
 
-[emyh@everlastingsbyemaline.com](mailto:emyh@everlastingsbyemaline.com)
-future support@ if needed
+### Performance 
 
-
-### Future 
-*Items that are not in this build scope but we should be aware of to accommodate in advance*
-
-Instagram shopping (META Catalog)
+  + Lazy image loading from CDN 
+  + Lighthouse testing 
 
 ---
 
-## Entry JSON Planning 
+## Preparation
+
+### Admin Setup 
+
+- [ ] - Cloudflare for CDN 
+- [ ] - Google 
+      - Analytics, Search Console 
+      - Business Integration (?)
+      - Create Google Cloud Project for OAuth email 
+- [ ] - Stripe (has PayPal option) 
+- [ ] - Create support@ or other alias 
+      - Contact form 
+      - From email address for confirmation emails, etc. 
+      - Marketing emails from address 
+
+  + Future FYIs 
+    - Instagram Shop (META Catalog)
+
+### Scripts 
+
+- [ ] - Create custom command to generate product JSON from a template with SKU using the UID script 
+
+### Images 
+
+- [ ] - Crop, downsize, save as webp, compress 
+- [ ] - Upload to CDN Cloudflare 
+
+### Products 
+
+  + Identifying all JSON values needed 
+
+  1. [ ] Continue through documentation to finalize page value needs
+  2. [ ] Consider and create values for dynamic theme homepage components 
+  3. [ ] Consider needs for Stripe API calls 
+  4. [ ] Marry Stripe needs into list sharing any possible values
+  5. [ ] Gather placeholders for all required values 
+  6. [ ] Design *product page* prototype based on value placeholders 
+  7. [ ] Design *homepage* prototype based on value placeholders 
+  8. [ ] Design *catalog page* prototype 
+  9. [ ] Get approval of basic design to finalize schema 
+  10. [ ] Share schema with directions to have Emy create entries 
+
+---
+
+## Planning Product JSON Values
+
+  1. Product page values
+  2. Stripe catalog values
+  3. Homepage dynamic components values
+  4. Catalog page collection features values
+  5. Values for tagging needs 
+
+### Product Page Values
+
+  - Only use 'null' for values that are not required 
+  - Always put currency as pennies for Stripe 
+  - Put any times as ISO 8601 format 
+  - Images require final CDN URL 
 
 ```json
 {
-  "content": {
-    "title": "",
-    "story_card": "",
-    "description": "",
-    "features": "",
-    "photos": [
-      "array of 7-15 photo relative paths"
-    ],
-    "price": 0, // required; provided in pennies (just remove decimal for Stripe)
-    "care_instructions": "",
-    "shipping_details": ""
+  "_meta": {
+    "created_at": "", // required; ISO 8601
+    "updated_at": "", // required; ISO 8601
+    "template": "product_entry", // required; identifies JSON
+    "version": "", // required; schema's semantic versioning
+    "update": "" // this versions changes
   },
-  "tags": { // all tags are created equal, separation is for dynamic copy display needs
-    "product_type": "", // required; miniature | printable | storybook
-    "series": "", // required; null | Portals to Peace | Book Nooks | Story Lofts | Seasonal | Limited Edition
-    "available": "", // required; boolean for in-stock (yes) or sold-out (no)
-    "quantity": 0 // required; number of pieces in stock
-  }
+  "sku": "", // required; UID
+  "headline": "", // required; short, snappy, not SEO length
+  "teaser": "", // required; 5-7 words
+  "story_card": "", // required; provided 
+  "description": "", // required; provided
+  "features": [], // required; array to be formatted into bullet points
+  "img": [], // required; CDN URLs, 5-7 images, various ratio
+  "img_alt": [], // required; alt text for images, in same order
+  "seo_title": "", // required; proper SEO title 
+  "seo_description": "", // required, proper SEO description
+  "thumb": "", // required; SEO ratio, thumb via CDN URL
+  "thumb_alt": "", // required; alt text for thumbnail
+  "price": 0, // required; in pennies for Stripe 
+  "care_instructions": [], // required; array for unordered list formatting
+  "shipping_details": [], // required; array for unordered list formatting
+  "type": [], // required, array of product type tags, miniature | printable | storybook
+  "series": "", // required; null | Portals to Peace | Book Nooks | Story Lofts | Seasonal | Limited Edition
+  "available": "", // required; boolean for in-stock (yes) or sold-out (no)
+  "quantity": 0 // required; number of pieces in stock
 }
 ```
+
 ---
 
 ## Navigation Content 
