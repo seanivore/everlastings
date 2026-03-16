@@ -1,26 +1,26 @@
-# Project Name Architecture Overview
-`project.website-if-applicable.com`
+# Everlastings by Emaline Architecture Overview
+`everlastingsbyemaline.com`
 
-**Last Updated**: YYYY-MM-DD
+**Last Updated**: 2026-03-16
 **Version**: v1.0.0
-**Status**: Status of project
+**Status**: Pre-development, architecture finalized
 
 ---
 
-## Executive Summary 
+## Executive Summary
 
-  + **Purpose**: this document provides everything a new AI instance needs to understand and work on this project effectively; it also serves as comprehensive technical documentation
-  + **Use**: read this first before making any changes
+  + **Purpose**: This document provides everything a new AI instance needs to understand and work on this project effectively; it also serves as comprehensive technical documentation
+  + **Use**: Read this first before making any changes
 
 ---
 
 ## Table of Contents
 
   1. [Project Overview](#project-overview)
-  2. [Recent Updates](#recent-updates)
-  3. [Architecture Explained](#architecture-explained)
-  4. [How to Run & Test Locally](#how-to-run--test-locally)
-  5. [File Structure & Key Files](#file-structure--key-files)
+  2. [Architecture Overview](#architecture-overview)
+  3. [How to Run & Test Locally](#how-to-run--test-locally)
+  4. [File Structure & Key Files](#file-structure--key-files)
+  5. [Data Flow](#data-flow)
   6. [Design System & Styling](#design-system--styling)
   7. [Common Pitfalls & Important Notes](#common-pitfalls--important-notes)
   8. [Deployment](#deployment)
@@ -29,42 +29,77 @@
 
 ## Architecture Overview
 
-### Architecture Overview Diagrams
+### System Diagram
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    Important Architecture File                   │
-│              File naming convention and location                 │
-│  What file does and provides to the project and this diagram     │
-└──────────────────────────────────────────────────────────────────┘
-                          ↕
+│              FRONTEND — Vanilla HTML/CSS/JS on Vercel            │
+│                                                                  │
+│  index.html   shop.html   product.html   checkout.html           │
+│  about.html   contact.html   /admin (protected)                  │
+│                                                                  │
+│  - JS fetches product data from Supabase REST API                │
+│  - Stripe.js renders embedded checkout                           │
+│  - CSS custom properties for theming                             │
+│  - Mobile-first responsive design                                │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+                             ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│              Layer of Build Stack Architecture                   │
-│                    File that controls this                       │
-│  - What file and layer does                                      │
-│  - What file and layer does                                      │
-│  - What file and layer does                                      │
-└──────────────────────────────────────────────────────────────────┘
-                          ↕
-┌──────────────────────────────────────────────────────────────────┐
-│              Another Layer of The Application                    │
-│  - File that works within this layer giving it functionality     │
-│  - File that works within this layer giving it functionality     │
-│  - File that works within this layer giving it functionality     │
-└──────────────────────────────────────────────────────────────────┘
-                          ↕
-┌──────────────────────────────────────────────────────────────────┐
-│           Layer of Build Architecture                            │
-│  - File that works within this layer giving it functionality     │
-│  - File that works within this layer giving it functionality     │
-└──────────────────────────────────────────────────────────────────┘
-                          ↕
-┌──────────────────────────────────────────────────────────────────┐
-│                    End State Of The Flow                         │
-│  - Element that indicates end state of flow                      │
-│  - Element that indicates end state of flow                      │
-└──────────────────────────────────────────────────────────────────┘
+│          VERCEL SERVERLESS FUNCTIONS — TypeScript                │
+│                                                                  │
+│  /api/checkout.ts      → Create Stripe session (no customer)     │
+│  /api/webhook.ts       → Handle Stripe payment events            │
+│  /api/stripe-sync.ts   → Create Stripe Product + Price on INSERT │
+│  /api/products.ts      → Product CRUD (admin auth required)      │
+│  /api/upload.ts        → Image upload to Cloudflare R2           │
+│  /api/subscribe.ts     → Newsletter email capture                │
+│  /api/contact.ts       → Contact form handler                    │
+└──────────┬─────────────────────────────────┬─────────────────────┘
+           │                                 │
+           ▼                                 ▼
+┌──────────────────────────┐   ┌────────────────────────────────────┐
+│       SUPABASE           │   │       CLOUDFLARE R2                │
+│                          │   │                                    │
+│  Tables:                 │   │  /products/{slug}/                 │
+│    products              │   │    hero.webp                       │
+│    orders                │   │    gallery-01.webp ... gallery-15  │
+│    subscribers           │   │    thumbnail.webp                  │
+│    site_config           │   │                                    │
+│                          │   │  /brand/                           │
+│  Auth: admin login       │   │    logo.svg, favicon, etc.         │
+│  RLS: row-level security │   │                                    │
+│  DB Webhooks: on INSERT  │   │  Public CDN access                 │
+└──────────────────────────┘   └────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│       STRIPE            │
+│                         │
+│  Products + Prices      │
+│  Checkout Sessions      │
+│  Payment Intents        │
+│  Webhooks               │
+└─────────────────────────┘
 ```
+
+### Key Architectural Decisions
+
+  1. **Vanilla HTML/CSS/JS over React** — No framework overhead. Emy's catalog will never exceed hundreds of products. Static HTML is faster, simpler to debug, and easier for future developers. Proven pattern from 360-design portfolio.
+
+  2. **Supabase over JSON files in git** — The original v0 plan used JSON files on GitHub Pages with GitHub Actions for automation. This failed in practice: Actions are buggy (phantom files, wrong commits), and the client (Emy) cannot use git. Supabase provides a Postgres database with REST API, auth, row-level security, and a web UI for direct editing — all on the free tier.
+
+  3. **Vercel over GitHub Pages** — Vercel auto-deploys on push (developer only), provides serverless functions for Stripe integration, and requires zero custom CI/CD. GitHub Pages cannot run server-side code.
+
+  4. **Cloudflare R2 over images in git** — Product images (7-15 per product) would bloat the repository. R2 provides CDN-hosted storage at ~$1-5/month with public access URLs.
+
+  5. **Stripe Embedded Checkout over Payment Links** — `stripe.initEmbeddedCheckout()` keeps the customer on-site, matches brand styling, and handles shipping address collection. Pattern proven in freelance-payments project.
+
+  6. **No GitHub Actions** — Hard constraint from experience. Too buggy for production automation.
+
+  7. **No git for client** — Emy manages products through admin UI or Supabase Studio. Changes reflect instantly via database, no deploy needed.
+
+  8. **Supabase Database Webhook for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync.ts`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, GPT skill).
 
 ---
 
@@ -72,77 +107,30 @@
 
 ### What This Is
 
-* **One sentence description**
+  * **Custom e-commerce website for a handcrafted miniature diorama artist**
 
-  + Core functionality point 1
-  + Core functionality point 2
-  + Technical approach summary
+  + Artisan storefront with rich storytelling (poetic story cards per product)
+  + Stripe Embedded Checkout for purchasing one-of-a-kind pieces
+  + Admin UI for non-technical client to manage products
+  + Dynamic homepage with rotating themes pulled from product data
+  + Template-friendly architecture for two upcoming non-store client sites
 
 ### The Core Innovation
 
-* **What makes this different from conventional approaches**
+  * **Database-driven static site with embedded checkout**
 
-  + Key insight 1
-  + Key insight 2
-  + Why this matters
+  + Products live in Supabase, not in code — client edits content, site reflects instantly
+  + Stripe catalog auto-syncs when products are added (via database webhook)
+  + No CMS subscription, no framework overhead, no git knowledge required
+  + Vercel free tier + Supabase free tier + R2 ≈ $15-75/year total
 
-### Message & Purpose
+### Client & Purpose
 
-* **Problem**: What problem does this solve
-* **Solution**: How this project solves it
-
-  + User goal 1: description
-  + User goal 2: description
-
----
-
-## Recent Changes
-
-### YYYY-MM Updates 
-
-* **Feature/Fix Category**
-
-  + Specific change 1
-  + Specific change 2
-  + Specific change 3
-
-* **Technical Improvements**
-
-  + Change with rationale
-  + Performance optimization details
-  + Schema/API version notes (e.g., "Schema v3.2")
-
----
-
-## Architecture Explained
-
-### High-Level Overview
-
-* **Describe the overall architecture pattern**
-
-  ```
-  [Diagram or flow representation]
-  Component A → Component B → Component C
-  ```
-
-### Key Architectural Decisions
-
-  1. **Decision 1** — Rationale for why this approach was chosen
-  2. **Decision 2** — Trade-offs considered
-  3. **Decision 3** — Future implications
-
-### How It Actually Works
-
-* **Flow or process explanation**
-
-  ```javascript
-  // Example code showing the core pattern
-  const example = async () => {
-      // Step 1: ...
-      // Step 2: ...
-      // Step 3: ...
-  };
-  ```
+  * **Client**: Emy Hoff, Everlastings by Emaline
+  * **Domain**: everlastingsbyemaline.com
+  * **Business**: Handcrafted miniature scenes (dioramas, book nooks, story lofts)
+  * **Problem**: Needs professional online store. Non-technical. Previous Squarespace was expensive and limiting.
+  * **Solution**: Custom site with admin panel. Near-zero operating costs. Full brand control.
 
 ---
 
@@ -150,130 +138,216 @@
 
 ### Prerequisites
 
-  + Dependency 1 — install with `command`
-  + Dependency 2 — version requirements
-  + Environment setup notes
+  + Node.js 18+ (for Vercel CLI)
+  + `npm install -g vercel` (Vercel CLI)
+  + Stripe CLI (`stripe listen --forward-to localhost:3000/api/webhook`)
+  + Supabase project with tables created
+  + Cloudflare R2 bucket with public access
 
-### Local Development Server
+### Environment Variables
 
-  ```bash
-  # Start local server
-  [command to run]
-  ```
+Create `.env.local`:
 
-### Testing Different Scenarios
+```bash
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
 
-* **Scenario 1**
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-  ```
-  [How to test this scenario]
-  ```
+# Cloudflare R2
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=everlastings
+R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
+```
 
-* **Scenario 2**
+### Local Development
 
-  ```
-  [How to test this scenario]
-  ```
+```bash
+# Install dependencies
+npm install
 
-### Testing Workflow
+# Start Vercel dev server (serves static files + API functions)
+vercel dev
 
-  1. Start the dev server
-  2. Test scenario 1 — expected behavior
-  3. Test scenario 2 — expected behavior
-  4. Verify specific functionality
+# In a separate terminal, forward Stripe webhooks
+stripe listen --forward-to localhost:3000/api/webhook
+```
+
+### Testing Checkout Flow
+
+  1. Start local server
+  2. Navigate to a product page
+  3. Click "Buy Now" — embedded checkout should appear
+  4. Use Stripe test card: `4242 4242 4242 4242`
+  5. Verify webhook fires and product updates in Supabase
 
 ---
 
 ## File Structure & Key Files
 
-  ```text 
-  ~/Development/project-name/
-  ├── file.html           # Description
-  ├── file.js             # Description
-  ├── config.json         # Description
+```text
+~/Development/everlastings-website/
+├── index.html              # Homepage (long landing page)
+├── shop.html               # Product grid with filters
+├── product.html            # Individual product page template
+├── checkout.html           # Embedded Stripe checkout
+├── about.html              # About Emaline
+├── contact.html            # Contact + commissions
+├── admin/                  # Admin panel (Supabase Auth protected)
+│   └── index.html          # Product management UI
+│
+├── assets/
+│   ├── css/
+│   │   └── styles.css      # All styles, CSS custom properties
+│   ├── js/
+│   │   ├── main.js         # Shared utilities, Supabase client init
+│   │   ├── product.js      # Product page: fetch + render from Supabase
+│   │   ├── shop.js         # Shop grid: filters, sort, tile rendering
+│   │   ├── homepage.js     # Homepage: featured carousel, theme rotation
+│   │   ├── checkout.js     # Stripe embedded checkout mount
+│   │   ├── admin.js        # Admin panel: CRUD, image upload
+│   │   └── newsletter.js   # Newsletter signup handler
+│   ├── docs/               # Project documentation
+│   │   ├── EVERLASTINGS_STORE.md   # This file
+│   │   ├── PRODUCT_GUIDE.md        # Client-facing product guide
+│   │   └── archive/                # v0 and v1 planning docs
+│   ├── favicon/            # Favicon files
+│   ├── fonts/              # Cormorant Garamond font files
+│   └── products/           # (Legacy, unused — products in Supabase)
+│
+├── api/                    # Vercel serverless functions
+│   ├── checkout.ts         # Create Stripe checkout session
+│   ├── webhook.ts          # Handle Stripe webhooks
+│   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
+│   ├── products.ts         # Product CRUD (admin authenticated)
+│   ├── upload.ts           # Image upload to R2
+│   ├── subscribe.ts        # Newsletter email capture
+│   └── contact.ts          # Contact form handler
+│
+├── vercel.json             # Vercel config: rewrites, headers
+├── package.json            # Dependencies (stripe, @supabase/supabase-js)
+├── tsconfig.json           # TypeScript config for API functions
+├── .env.example            # Environment variable template
+├── .env.local              # Local env vars (gitignored)
+│
+├── .agent/                 # AI agent instructions
+│   ├── AGENTS.md           # Core agent rules and human profile
+│   ├── DEV_RULES.md        # Git branching, dev protocols
+│   └── 2026_MOBILE_DESIGN_SPECS.md  # iOS/iPadOS viewport specs
+│
+├── CNAME                   # Custom domain config
+├── README.md               # Public-facing README
+└── .gitignore              # Ignores .env.local, node_modules, etc.
+```
 
-  ├── src/
-  │   ├── component.js    # Description
-  │   └── module.js       # Description
+### Key Frontend Files
 
-  ├── assets/
-  │   ├── js/             # Description of contents
-  │   ├── media/          # Description of contents
-  │   └── docs/           # Description of contents
-  ```
+**`assets/js/main.js`** — Supabase client initialization, shared utilities
+  + Creates Supabase client with anon key
+  + Shared functions: formatPrice(), slugify(), etc.
+  + Cart state management (localStorage)
 
-### Key Module Files
+**`assets/js/product.js`** — Product page controller
+  + Fetches product by slug from Supabase
+  + Renders two-column layout (story + details)
+  + Image gallery with lightbox
+  + Stripe checkout button handler
 
-**`module-name.js`** — What it does, key functions
-  + Details about what the file does 
-  + Key function of the file 
-  + Important note about the file
+**`assets/js/shop.js`** — Shop grid controller
+  + Fetches all products from Supabase
+  + Multi-select filter by series, product_type, availability
+  + Sort by price, date, name
+  + Smart filter: hides single-option dropdowns
 
-**`module-name.js`** — What it does, key functions
-  + Details about what the file does 
-  + Key function of the file 
-  + Important note about the file
+**`assets/js/homepage.js`** — Homepage controller
+  + Fetches featured products for carousel
+  + Loads theme config from site_config table
+  + Theatrical lighting effects (CSS masks + scroll transforms)
+  + Theme rotation on return visits
 
-### Key Setup Files
+### Key API Functions
 
-**`config.json`** — What it configures, schema version
-  + Details about what the file does 
-  + Key function of the file 
-  + Important note about the file
+**`api/checkout.ts`** — Stripe session creation
+  + Creates checkout session with `ui_mode: 'embedded'`
+  + NO pre-created Stripe Customer (anonymous checkout)
+  + Stripe collects email/shipping during checkout
+  + Returns client_secret for frontend mount
 
-### Key Important File Group
+**`api/webhook.ts`** — Stripe event handler
+  + Validates webhook signature
+  + On `checkout.session.completed`: creates order in Supabase, updates product (available=false, quantity--)
+  + On `payment_intent.succeeded`: confirmation logging
 
-**`another-file-any-type.ts`** — What it does, key functions
-  + Details about what the file does 
-  + Key function of the file 
-  + Important note about the file
-
-**`another-file-any-type.ts`** — What it does, key functions
-  + Details about what the file does 
-  + Key function of the file 
-  + Important note about the file
+**`api/stripe-sync.ts`** — Product catalog sync
+  + Called by Supabase database webhook on products INSERT
+  + Creates Stripe Product + Price via API
+  + Writes stripe_product_id + stripe_price_id back to row
 
 ---
 
-## Data Flow Illustrated Visually
+## Data Flow
 
-### End-to-End Flow
+### Product Creation (Any Entry Method)
 
 ```
-ENTRY POINT
+Emy adds product via Admin UI / Supabase Studio / GPT Skill
   ↓
-(01) WHAT ENTRY POINT CONTAINS
+(01) Row inserted into Supabase `products` table
   ↓
-(02) HOW ENTRY POINT TRIGGERS THE FLOW
+(02) Supabase Database Webhook fires on INSERT
   ↓
-(03) FIRST STEP IN THE FLOW 
+(03) POST to /api/stripe-sync.ts (Vercel function)
   ↓
-(04) SECOND STEP IN THE FLOW 
+(04) Function creates Stripe Product via API
   ↓
-(05) THIRD STEP IN THE FLOW 
+(05) Function creates Stripe Price linked to Product
   ↓
-(06) FOURTH STEP IN THE FLOW 
-  ↓  ↓
-SECONDARY DATA OR USER ENTRY POINT
+(06) Function writes stripe_product_id + stripe_price_id back to Supabase row
   ↓
-(08) WHAT ENTRY POINT CONTAINS 
-  ↓
-(09) HOW ENTRY POINT TRIGGERS THE FLOW
-  ↓
-(10) FIRST STEP IN THE FLOW
-  ↓
-(11) SECOND STEP IN THE FLOW
-  ↓
-(12) RESULT OF SOMETHING FROM THE FLOW 
-  ↓
-RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION 
+PRODUCT IS NOW LIVE AND PURCHASABLE
+(No deploy needed — frontend fetches from Supabase at runtime)
 ```
 
-### Data Or User States
+### Purchase Flow
 
-1. **Important state of data or user**: Implications of the state 
-2. **Result of this state activated**: Change provides what results and benefit 
-3. **Next Step In Flow**: Explanation of the step in the flow
+```
+Shopper clicks "Buy Now" on product page
+  ↓
+(01) Frontend sends POST to /api/checkout.ts with price_id
+  ↓
+(02) API creates Stripe Checkout Session (ui_mode: 'embedded')
+  ↓
+(03) Returns client_secret to frontend
+  ↓
+(04) Frontend calls stripe.initEmbeddedCheckout({clientSecret})
+  ↓
+(05) Checkout form mounts in DOM — Stripe collects email + shipping + payment
+  ↓
+(06) Customer completes payment
+  ↓
+(07) Stripe fires checkout.session.completed webhook
+  ↓
+(08) /api/webhook.ts receives event, validates signature
+  ↓
+(09) Creates order record in Supabase `orders` table
+  ↓
+(10) Updates product: available=false, quantity--
+  ↓
+PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
+```
+
+### Data States
+
+1. **Product available**: `available=true, quantity>0` — Buy Now button active
+2. **Product sold**: `available=false, quantity=0` — "Sold" badge, button disabled, appears in Sold Archive
+3. **Product featured**: `featured=true` — Appears in homepage carousel
 
 ---
 
@@ -281,41 +355,59 @@ RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION
 
 ### Color Scheme
 
-  ```css
-  :root {
-      --color-primary: #[hex];
-      --color-secondary: #[hex];
-      --color-bg: #[hex];
-      --color-text: #[hex];
-  }
-  ```
+```css
+:root {
+    --color-plum: #4A1942;
+    --color-lavender: #B8A5C8;
+    --color-fog: #D4D4D4;
+    --color-cream: #FFF8E7;
+    --color-gold: #D4AF7A;
+    --color-ink: #1A1A1A;
+    --color-star-blue: #1B3A52;
+    --color-amethyst: #9B6B9E;
+}
+```
 
 ### Design Principles
 
-  1. Principle 1 
-    - How it manifests in the design
+  1. **Minimalist Elegance**
+    - Clean layouts with generous white space
+    - Let the miniatures be the focal point
+    - Typography creates hierarchy without clutter
 
-  2. Principle 2
-    - Implementation approach
+  2. **Theatrical Depth**
+    - CSS-based lighting effects (masks + scroll transforms)
+    - Spotlight motion creates perceived depth
+    - "Not actual parallax — CSS motion against scroll direction with elements masked by a frame"
 
-### Typography Scale
+  3. **Mobile-First**
+    - All layouts designed for 393px first, scaled up
+    - Touch targets minimum 44x44px
+    - See `.agent/2026_MOBILE_DESIGN_SPECS.md` for iOS/iPadOS viewport specs
 
-  ```css
-  /* Headings */
-  h1 { font-size: [size]; }
-  h2 { font-size: [size]; }
+### Typography
 
-  /* Body */
-  body { font-size: [size]; }
-  ```
+```css
+:root {
+    --font-display: "Cormorant Garamond", Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+```
+
+- Cormorant Garamond: hero text, section headings, product titles, taglines
+- System fonts: body copy, navigation, UI elements, buttons
 
 ### Responsive Breakpoints
 
-  ```css
-  /* Mobile-first */
-  @media (min-width: 768px) { /* Tablet */ }
-  @media (min-width: 1024px) { /* Desktop */ }
-  ```
+```css
+/* Mobile-first */
+/* Base: 393px (iPhone) */
+@media (min-width: 768px) { /* Tablet */ }
+@media (min-width: 1024px) { /* Desktop */ }
+@media (min-width: 1440px) { /* Large desktop */ }
+```
+
+### Full brand reference: `assets/docs/archive/v1/v1_1_BRAND.md`
 
 ---
 
@@ -323,33 +415,43 @@ RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION
 
 ### Things That Look Like Bugs But Aren't
 
-  1. Behavior 
-    - Why it's intentional
+  1. **No React, no build step for frontend**
+    - This is intentional. Vanilla HTML/CSS/JS served as static files. Only the `/api` functions are TypeScript compiled by Vercel.
 
-  2. Behavior 
-    - Why it's intentional
+  2. **Products appear without deploy**
+    - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
+
+  3. **No Stripe Customer created before checkout**
+    - Unlike freelance-payments, shoppers are anonymous. Stripe creates the Customer record automatically during checkout.
 
 ### Common Mistakes to Avoid
 
-* **Don't**
+  * **Don't use GitHub Actions for any automation**
+    + Hard constraint. Too buggy. Vercel handles deploy, Supabase handles data, webhooks handle sync.
 
-  + Thing not to do 
-  + Why
+  * **Don't store images in git**
+    + All product images go to Cloudflare R2. Repository stays small.
 
-* **Do**
+  * **Don't expect Emy to use git**
+    + All client-facing operations happen through admin UI or Supabase Studio web interface.
 
-  + Correct approach 
-  + Benefit
+  * **Don't create Stripe Products/Prices manually**
+    + The database webhook handles this automatically. Manual creation causes ID mismatches.
 
 ### Important Conventions
 
-  + **Convention 1** — Why it matters for consistency
-  + **Convention 2** — How to maintain it
+  + **Price is always in cents** — $245.00 = 24500 in the database and Stripe
+  + **Slug is auto-generated** from title — "The Sunkeeper" → "the-sunkeeper"
+  + **Images follow CDN path pattern** — `{R2_PUBLIC_URL}/products/{slug}/hero.webp`
+  + **All API functions are TypeScript** — frontend is vanilla JS
+  + **Database webhooks vs Stripe webhooks** — both are used but for different purposes. DB webhook syncs to Stripe on INSERT. Stripe webhook updates DB on payment.
 
 ### Performance Considerations
 
-  + Critical performance note
-  + Optimization that must be maintained
+  + Lazy load all product images below the fold
+  + Cormorant Garamond loaded via Google Fonts with display=swap
+  + Product grid fetches from Supabase with pagination
+  + Homepage featured products cached in site_config for faster initial load
 
 ---
 
@@ -359,12 +461,6 @@ RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION
 
 **Core Principle**: Understand everything upfront, resolve unknowns before coding, create complete plan before execution.
 
-**Why This Works**:
-- AI can generate 20 files in minutes (old process would take days)
-- But AI can also generate 20 WRONG files in minutes
-- Planning prevents wrong files
-- Planning is faster than debugging wrong code
-
 **Process**:
 1. Understand the full system
 2. Plan every detail upfront
@@ -372,49 +468,25 @@ RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION
 4. Write complete, correct code
 5. Test once, it works
 
-**Benefits**:
-- Front-load the thinking, back-load the execution
-- Avoid debugging nightmare
-- Write fresh code with confidence
-- No "unknown unknowns" hiding in old code
+### What Changed from v0
 
-### Planning vs Debugging
+| v0 Plan (Dec 2025)                     | v1 Architecture (Mar 2026)        | Why                                                  |
+| -------------------------------------- | --------------------------------- | ---------------------------------------------------- |
+| GitHub Pages hosting                   | Vercel hosting                    | Need serverless functions for Stripe                 |
+| JSON files in git as database          | Supabase PostgreSQL               | Client can't use git; need web UI                    |
+| GitHub Actions for automation          | Eliminated entirely               | Too buggy, phantom files, wrong commits              |
+| Python scripts for Stripe sync         | Supabase DB webhook → TS function | Single automation point, works for all entry methods |
+| Client manages content via git/ChatGPT | Admin UI + Supabase Studio        | Non-technical client needs browser-based workflow    |
+| Stripe Prebuilt Checkout (redirect)    | Stripe Embedded Checkout          | Keep customer on-site, matches brand                 |
+| React (briefly considered)             | Vanilla HTML/CSS/JS               | No framework overhead needed at this scale           |
 
-**Old Development Process** (Debugging-Heavy):
-  1. Write code
-  2. Test it
-  3. Find bugs
-  4. Fix bugs one by one
-  5. Repeat until it works
-  6. **Problem**: Each bug blocks testing, takes hours/days
+### What's Reused from freelance-payments
 
-**Modern AI-Assisted Process** (Planning-Heavy):
-  1. Understand the full system
-  2. Plan every detail upfront
-  3. Identify unknowns and resolve them
-  4. Write complete, correct code
-  5. Test once, it works
-  6. **Benefit**: Front-load the thinking, back-load the execution
-
-### Rewriting vs Patching
-
-**Previous Agent's Work**:
-  - ❌ Didn't understand Vercel until the end
-  - ❌ Converted to React without full understanding
-  - ❌ Made assumptions that were wrong
-  - ❌ Left broken code expecting us to fix it
-
-**Our Approach**:
-  - ✅ Full understanding before coding
-  - ✅ Complete plan before execution
-  - ✅ Write fresh code with confidence
-  - ✅ Test after everything works
-
-**Why This is Better**:
-  - If we need full understanding to fix bugs, we need it to write code anyway
-  - Writing fresh code is faster than debugging broken code
-  - We'll have confidence it's correct
-  - No "unknown unknowns" hiding in old code
+- Vercel serverless function pattern (`/api/*.ts`)
+- Stripe `ui_mode: 'embedded'` session creation pattern
+- Webhook handling pattern (receive → validate → update data)
+- TypeScript for all server-side code
+- Environment variable management via Vercel dashboard
 
 ---
 
@@ -422,103 +494,134 @@ RESULT OF FLOW AND ENDPOINT OF DATA TRANSFORMATION
 
 ### Build Process
 
-  ```bash
-  # Commands to build for production
-  [build commands]
-  ```
+No build step for frontend — static HTML/CSS/JS files served directly by Vercel. API functions are compiled by Vercel's TypeScript support automatically.
+
+```bash
+# Deploy (from developer machine only)
+git push origin main
+# Vercel auto-deploys on push
+```
 
 ### Hosting Configuration
 
-  + **Platform**: GitHub Pages / Vercel / etc.
-  + **Build source**: Branch or directory
-  + **Custom domain**: `domain-if-applicable.com`
-
-### CI/CD Notes
-
-  + Workflow or action notes
-  + Environment variables needed
-
-### Post-Deploy Verification
-
-  1. Check specific functionality
-  2. Verify critical path
-  3. Test edge case
-
----
-
-## Quick Reference / Appendix / Useful Information
-
-### CLI Commands
-
-| Command         | Description              |
-|-----------------|--------------------------|
-| `npm run dev`   | Start development server |
-| `npm run build` | Build for production     |
-| `[custom]`      | Description              |
+  + **Platform**: Vercel (free tier)
+  + **Auto-deploy**: On push to main branch
+  + **Custom domain**: `everlastingsbyemaline.com`
+  + **SSL**: Automatic via Vercel
+  + **Serverless functions**: `/api/*.ts` auto-detected
 
 ### Environment Variables
 
-| Variable   | Purpose            | Required |
-|------------|--------------------|----------|
-| `VAR_NAME` | What it configures | Yes/No   |
-| `VAR_NAME` | What it configures | Yes/No   |
+Set in Vercel Dashboard → Settings → Environment Variables:
 
-### Schema/App/Api/Etc. Versions
+| Variable                 | Purpose                             | Required |
+| ------------------------ | ----------------------------------- | -------- |
+| `SUPABASE_URL`           | Supabase project URL                | Yes      |
+| `SUPABASE_ANON_KEY`      | Supabase anonymous key (frontend)   | Yes      |
+| `SUPABASE_SERVICE_KEY`   | Supabase service key (backend only) | Yes      |
+| `STRIPE_SECRET_KEY`      | Stripe API secret                   | Yes      |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe frontend key                 | Yes      |
+| `STRIPE_WEBHOOK_SECRET`  | Webhook signature validation        | Yes      |
+| `R2_ACCOUNT_ID`          | Cloudflare account                  | Yes      |
+| `R2_ACCESS_KEY_ID`       | R2 access credentials               | Yes      |
+| `R2_SECRET_ACCESS_KEY`   | R2 secret credentials               | Yes      |
+| `R2_BUCKET_NAME`         | R2 bucket name                      | Yes      |
+| `R2_PUBLIC_URL`          | CDN public base URL                 | Yes      |
 
-| Version | Date         | Changes            |
-|---------|--------------|--------------------|
-| v3.2    | `YYYY-MM-DD` | Summary of changes |
-| v3.1    | `YYYY-MM-DD` | Summary of changes |
+### Post-Deploy Verification
 
----
-
-## Common Tasks & Debugging
-
-### Using Common Tool
-
-Use common tool for regular task. It works in this way, by doing this other thing, and then this final thing. Novel resilience that is beneficial to be know about hte common use tool. 
-
-### Debugging App Function
-
-**Symptoms**: App bug issues explain in short 
-
-**Check**:
-  1. **Suggestion**: What to do with the suggestion 
-  2. **Suggestion**: How the suggestion could help eliminate the issue 
-
-**Common Issues**:
-  - **Reoccurring Bug**: How to identify and fix the reoccurring bug
-  - **Reoccurring Bug**: How to identify and fix the reoccurring bug
-
-### Debugging App Function
-
-**Symptoms**: App bug issues explain in short 
-
-**Check**:
-  1. **Suggestion**: What to do with the suggestion 
-  2. **Suggestion**: How the suggestion could help eliminate the issue 
-
-**Common Issues**:
-  - **Reoccurring Bug**: How to identify and fix the reoccurring bug
-  - **Reoccurring Bug**: How to identify and fix the reoccurring bug
+  1. Visit homepage — loads featured products from Supabase
+  2. Navigate to shop — products render in grid
+  3. Click product — full page renders with images from R2
+  4. Test checkout with Stripe test card
+  5. Verify webhook updates product status in Supabase
+  6. Check admin UI login and product creation
 
 ---
 
-## Key Principles - **REMEMBER THIS**
+## Supabase Schema
 
-  1. **Novel App functionality**: How not to break the app functionality 
-  2. **Other App functionality**: How the app functionality can be monitored 
-  3. **Another App Functionality**: 
-    - A type of this app functionality: What this type of the functionality is
-    - A type of this app functionality: What this type of the functionality is
+### `products` table
+
+| Column            | Type        | Notes                                          |
+| ----------------- | ----------- | ---------------------------------------------- |
+| id                | uuid        | PK, auto-generated                             |
+| sku               | text        | Unique, auto-generated                         |
+| slug              | text        | Unique, auto-generated from title              |
+| title             | text        | NOT NULL                                       |
+| headline          | text        | 5-7 word tagline                               |
+| story_card        | text        | 2-8 paragraphs, poetic                         |
+| description       | text        | Short summary                                  |
+| features          | jsonb       | Array of feature strings                       |
+| price             | integer     | In cents ($245 = 24500)                        |
+| dimensions        | text        | e.g. "8\" W x 6\" D x 10\" H"                  |
+| weight            | text        | e.g. "2.5 lbs"                                 |
+| materials         | text[]      | Array of materials                             |
+| power_supply      | text        | Nullable                                       |
+| care_instructions | text[]      | Array of care steps                            |
+| shipping_details  | text[]      | Array of shipping info                         |
+| product_type      | text        | miniature, printable, storybook                |
+| series            | text        | Nullable — Portals to Peace, etc.              |
+| available         | boolean     | Default true                                   |
+| quantity          | integer     | Default 1                                      |
+| featured          | boolean     | Default false                                  |
+| images            | jsonb       | Array of {url, alt} objects                    |
+| thumbnail         | text        | CDN URL                                        |
+| thumbnail_alt     | text        |                                                |
+| video_url         | text        | Nullable                                       |
+| seo_title         | text        |                                                |
+| seo_description   | text        |                                                |
+| artist_note       | text        | Nullable                                       |
+| stripe_product_id | text        | Nullable, auto-populated                       |
+| stripe_price_id   | text        | Nullable, auto-populated                       |
+| homepage_theme    | jsonb       | Nullable — {colors, mood} for dynamic homepage |
+| created_at        | timestamptz | Auto                                           |
+| updated_at        | timestamptz | Auto                                           |
+
+### `orders` table
+
+| Column                | Type        | Notes               |
+| --------------------- | ----------- | ------------------- |
+| id                    | uuid        | PK                  |
+| stripe_session_id     | text        | Checkout session ID |
+| stripe_payment_intent | text        | Payment intent ID   |
+| product_id            | uuid        | FK to products      |
+| customer_email        | text        | From Stripe         |
+| amount                | integer     | In cents            |
+| status                | text        | completed, refunded |
+| shipping_address      | jsonb       | From Stripe         |
+| created_at            | timestamptz | Auto                |
+
+### `subscribers` table
+
+| Column     | Type        | Notes                      |
+| ---------- | ----------- | -------------------------- |
+| id         | uuid        | PK                         |
+| email      | text        | Unique                     |
+| source     | text        | homepage, footer, checkout |
+| created_at | timestamptz | Auto                       |
+
+### `site_config` table
+
+| Column     | Type        | Notes                                               |
+| ---------- | ----------- | --------------------------------------------------- |
+| id         | uuid        | PK                                                  |
+| key        | text        | Unique — e.g. "homepage_theme", "featured_products" |
+| value      | jsonb       | Configuration data                                  |
+| updated_at | timestamptz | Auto                                                |
 
 ---
 
 ## Related Documentation
 
-- **Name of Documentation**: `location/of/document/` 
-- **Name of Documentation**: `location/of/document/` 
-- **Name of Documentation**: `location/of/document/` 
+- **Brand Guide**: `assets/docs/archive/v1/v1_1_BRAND.md`
+- **Implementation Guide**: `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md`
+- **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
+- **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
+- **Dev Rules**: `.agent/DEV_RULES.md`
+- **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
+- **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`
 
 ---
-*Note about updates, purpose, need-to-knows, etc.*
+
+*This document is the single source of truth for the Everlastings project architecture. Keep it updated as development progresses.*

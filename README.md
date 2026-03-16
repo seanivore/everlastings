@@ -1,16 +1,15 @@
-# Project Name
+# Everlastings by Emaline
 
-**One compelling sentence that captures the core value proposition**
-
-Optional: Badge row for build status, version, license, etc.
+**Handcrafted havens for the stories that stay** — A custom e-commerce site for artisan miniature dioramas.
 
 ---
 
 ## What Makes This Special
 
-  + **Key differentiator 1** — Brief explanation of why it matters
-  + **Key differentiator 2** — Brief explanation of unique approach
-  + **Key differentiator 3** — Brief explanation of innovation
+  + **Database-driven static site** — Products live in Supabase, not in code. Client edits content through a web UI, site reflects instantly.
+  + **Near-zero operating costs** — Vercel free tier + Supabase free tier + Cloudflare R2 = ~$15-75/year total.
+  + **Embedded checkout** — Stripe Embedded Checkout keeps customers on-site with full brand experience.
+  + **Template-friendly** — Architecture designed for reuse across multiple client projects.
 
 ---
 
@@ -18,76 +17,77 @@ Optional: Badge row for build status, version, license, etc.
 
 ```bash
 # Clone the repository
-git clone [repo-url]
-cd [project-name]
+git clone https://github.com/seanivore/everlastings-website.git
+cd everlastings-website
 
 # Install dependencies
-[install command]
+npm install
 
-# Start development
-[dev command]
+# Set up environment variables
+cp .env.example .env.local
+# Fill in Supabase, Stripe, R2 credentials
+
+# Start development server
+vercel dev
 ```
 
-**Preview at** `http://localhost:[port]`
+**Preview at** `http://localhost:3000`
 
 ---
 
 ## Key Features
 
-  + **Feature 1** — What it does and why it's valuable
-  + **Feature 2** — What it does and why it's valuable
-  + **Feature 3** — What it does and why it's valuable
-  + **Feature 4** — What it does and why it's valuable
+  + **Product catalog** — Rich product pages with 7-15 photo galleries, poetic story cards, and embedded checkout
+  + **Admin panel** — Non-technical client manages products through browser-based UI
+  + **Dynamic homepage** — Rotating themes and featured product carousel driven by database
+  + **Stripe integration** — Embedded checkout, automatic inventory updates via webhooks
+  + **Smart filters** — Shop grid with multi-select filtering by series, type, and availability
+
+---
+
+## Technology Stack
+
+  + **Frontend**: Vanilla HTML/CSS/JS (no framework)
+  + **Backend**: Vercel Serverless Functions (TypeScript)
+  + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
+  + **Payments**: Stripe Embedded Checkout
+  + **Images**: Cloudflare R2 (CDN)
+  + **Hosting**: Vercel (auto-deploy on push)
 
 ---
 
 ## Project Structure
 
 ```
-[project-name]/
-├── [primary-dir]/        # What's in here
-├── [secondary-dir]/      # What's in here
-├── [assets-dir]/         # What's in here
-└── [config-files]        # Purpose
+everlastings-website/
+├── *.html                   # Frontend pages
+├── api/                     # Vercel serverless functions (TypeScript)
+├── assets/
+│   ├── css/                 # Styles + design tokens
+│   ├── js/                  # Frontend controllers
+│   └── docs/                # Project documentation
+├── admin/                   # Admin panel
+└── .agent/                  # AI agent instructions
 ```
 
-**Full documentation**: [PROJECT_NAME.md](/assets/docs/PROJECT_NAME.md)
+**Full documentation**: [EVERLASTINGS_STORE.md](/assets/docs/EVERLASTINGS_STORE.md)
 
 ---
 
 ## Documentation
 
-| Document                                     | Description                  |
-|----------------------------------------------|------------------------------|
-| [Architecture](/assets/docs/PROJECT_NAME.md) | Complete technical reference |
-| [Updates](/assets/docs/NEXT_STEPS.md)        | How to extend the project    |
-| [Other Doc](/path/to/doc.md)                 | Purpose                      |
-
----
-
-## Technology Stack
-
-  + **Category**: Technologies used
-  + **Category**: Technologies used
-  + **Category**: Technologies used
-
----
-
-## Contributing
-
-Brief contribution guidelines or link to CONTRIBUTING.md
-
----
-
-## License
-
-License type — See [LICENSE](/LICENSE) for details.
+| Document                                                           | Description                       |
+| ------------------------------------------------------------------ | --------------------------------- |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                 | Complete technical reference      |
+| [Brand Guide](/assets/docs/archive/v1/v1_1_BRAND.md)               | Voice, colors, typography, copy   |
+| [Implementation Guide](/assets/docs/archive/v1/v1_1_IMPL_GUIDE.md) | 10-session build plan             |
+| [Product Guide](/assets/docs/PRODUCT_GUIDE.md)                     | Client-facing product entry guide |
 
 ---
 
 ## About
 
-**Project Name** was created by *Author/Team* to *solve problem / achieve goal*.
+**Everlastings by Emaline** was built by [Sean August Horvath](https://august.style) for artist Emy Hoff — creating miniature sanctuaries where loss transforms into something you can hold.
 
-  + Contact or portfolio link
-  + Social or professional link
+  + Client: [everlastingsbyemaline.com](https://everlastingsbyemaline.com)
+  + Developer: [august.style](https://august.style)

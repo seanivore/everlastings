@@ -1,9 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 <!-- BEGIN:about-human -->
 ## ABOUT THE HUMAN 
 Sean August Horvath here. Born 1987 and learned I'm ASD1 and ADHD at 30-years old; AI facilitates pattern recognition. 
