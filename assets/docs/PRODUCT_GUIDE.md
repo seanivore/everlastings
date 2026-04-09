@@ -3,7 +3,7 @@
 **For**: Emy (and G)
 **Purpose**: How to add products to the website
 **Created**: 2026-03-16
-**Updated**: 2026-03-24 — reviewed; needs clean-up, simple single option, accurate table
+**Updated**: 2026-04-09 — v1.2: added photo aspect ratio, slug immutability, price clarification
 
 ---
 
@@ -80,7 +80,7 @@ Here's what a full product entry looks like. Every field is explained below.
 
 | Field                 | What It Is                                          |
 | --------------------- | --------------------------------------------------- |
-| **slug**              | URL-friendly version of the title (auto-generated)  |
+| **slug**              | URL-friendly version of the title (auto-generated, never changes)  |
 | **sku**               | Unique product ID (auto-generated)                  |
 | **seo_title**         | Search engine title (we write this)                 |
 | **seo_description**   | Search engine description (we write this)           |
@@ -93,6 +93,10 @@ Here's what a full product entry looks like. Every field is explained below.
 ---
 
 ## Photo Requirements
+
+### Aspect Ratio
+
+All product photos must be **4:5 portrait orientation**. This prevents messy grids on the shop page. We handle cropping if needed, but shooting in portrait helps.
 
 ### How Many
 

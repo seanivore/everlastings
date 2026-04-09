@@ -1,9 +1,0 @@
-permalink: /:basename/
-title: SEO TITLE 
-description: SEO META TEXT DESCRIPTION 
-baseurl: "/"
-url: "https://www.everlastingsbyemaline.com"
-collections:
-  pages:
-    output: true
-    permalink: /:basename/

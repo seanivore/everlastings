@@ -2,8 +2,8 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-03-24 — review and formatting cleanup by Sean 
-**Version**: v1.0.0
+**Updated**: 2026-04-09 — v1.2: ui_mode corrected to custom, locked decisions added, error states added
+**Version**: v1.2.0
 **Status**: Pre-development, architecture finalized
 
 ---
@@ -40,7 +40,7 @@
 │  about.html   contact.html   /admin (protected)                  │
 │                                                                  │
 │  - JS fetches product data from Supabase REST API                │
-│  - Stripe.js renders embedded checkout                           │
+│  - Stripe.js renders custom checkout (ui_mode: 'custom')         │
 │  - CSS custom properties for theming                             │
 │  - Mobile-first responsive design                                │
 └────────────────────────────┬─────────────────────────────────────┘
@@ -49,11 +49,12 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │          VERCEL SERVERLESS FUNCTIONS — TypeScript                │
 │                                                                  │
-│  /api/checkout.ts      → Create Stripe session (no customer)     │
+│  /api/checkout.ts      → Create Stripe session (cart items)      │
+│  /api/session-status.ts→ Return page: verify payment status      │
 │  /api/webhook.ts       → Handle Stripe payment events            │
 │  /api/stripe-sync.ts   → Create Stripe Product + Price on INSERT │
-│  /api/products.ts      → Product CRUD (admin auth required)      │
 │  /api/upload.ts        → Image upload to Cloudflare R2           │
+│  /api/cart-recovery.ts  → Sold-in-cart: promo code + email capture│
 │  /api/subscribe.ts     → Newsletter email capture                │
 │  /api/contact.ts       → Contact form handler                    │
 └──────────┬─────────────────────────────────┬─────────────────────┘
@@ -94,7 +95,7 @@
 
   4. **Cloudflare R2 over images in git** — Product images (7-15 per product) would bloat the repository. R2 provides CDN-hosted storage at ~$1-5/month with public access URLs.
 
-  5. **Stripe Embedded Checkout over Payment Links** — `stripe.initEmbeddedCheckout()` keeps the customer on-site, matches brand styling, and handles shipping address collection. Pattern proven in freelance-payments project.
+  5. **Stripe Custom Checkout over Payment Links** — `ui_mode: 'custom'` with Stripe Elements keeps the customer on-site with full UI control. Checkout Sessions API manages tax, shipping, and payment. Pattern proven in freelance-payments project via Stripe quickstart guide.
 
   6. **No GitHub Actions** — Hard constraint from experience. Too buggy for production automation.
 
@@ -111,14 +112,14 @@
   * **Custom e-commerce website for a handcrafted miniature diorama artist**
 
   + Artisan storefront with rich storytelling (poetic story cards per product)
-  + Stripe Embedded Checkout for purchasing one-of-a-kind pieces
+  + Stripe Custom Checkout (ui_mode: 'custom') for purchasing one-of-a-kind pieces with standard cart flow
   + Admin UI for non-technical client to manage products
   + Dynamic homepage with rotating themes pulled from product data
   + Template-friendly architecture for two upcoming non-store client sites
 
 ### The Core Innovation
 
-  * **Database-driven static site with embedded checkout**
+  * **Database-driven static site with custom on-site checkout**
 
   + Products live in Supabase, not in code — client edits content, site reflects instantly
   + Stripe catalog auto-syncs when products are added (via database webhook)
@@ -185,7 +186,7 @@ stripe listen --forward-to localhost:3000/api/webhook
 
   1. Start local server
   2. Navigate to a product page
-  3. Click "Buy Now" — embedded checkout should appear
+  3. Add item to cart, navigate to checkout — Stripe payment form should appear
   4. Use Stripe test card: `4242 4242 4242 4242`
   5. Verify webhook fires and product updates in Supabase
 
@@ -212,7 +213,7 @@ stripe listen --forward-to localhost:3000/api/webhook
 │   │   ├── product.js      # Product page: fetch + render from Supabase
 │   │   ├── shop.js         # Shop grid: filters, sort, tile rendering
 │   │   ├── homepage.js     # Homepage: featured carousel, theme rotation
-│   │   ├── checkout.js     # Stripe embedded checkout mount
+│   │   ├── checkout.js     # Stripe custom checkout mount
 │   │   ├── admin.js        # Admin panel: CRUD, image upload
 │   │   └── newsletter.js   # Newsletter signup handler
 │   ├── docs/               # Project documentation
@@ -220,15 +221,15 @@ stripe listen --forward-to localhost:3000/api/webhook
 │   │   ├── PRODUCT_GUIDE.md        # Client-facing product guide
 │   │   └── archive/                # v0 and v1 planning docs
 │   ├── favicon/            # Favicon files
-│   ├── fonts/              # Cormorant Garamond font files
-│   └── products/           # (Legacy, unused — products in Supabase)
+│   └── fonts/              # Cormorant Garamond font files
 │
 ├── api/                    # Vercel serverless functions
-│   ├── checkout.ts         # Create Stripe checkout session
+│   ├── checkout.ts         # Create Stripe checkout session (cart items)
+│   ├── session-status.ts   # Return page payment verification
 │   ├── webhook.ts          # Handle Stripe webhooks
 │   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
-│   ├── products.ts         # Product CRUD (admin authenticated)
 │   ├── upload.ts           # Image upload to R2
+│   ├── cart-recovery.ts    # Sold-in-cart promo code + email
 │   ├── subscribe.ts        # Newsletter email capture
 │   └── contact.ts          # Contact form handler
 │
@@ -251,9 +252,9 @@ stripe listen --forward-to localhost:3000/api/webhook
 ### Key Frontend Files
 
 **`assets/js/main.js`** — Supabase client initialization, shared utilities
-  + Creates Supabase client with anon key
-  + Shared functions: formatPrice(), slugify(), etc.
-  + Cart state management (localStorage)
+  + Loads Supabase via CDN script tag, creates client with hardcoded anon key (public, RLS-protected)
+  + Shared functions: formatPrice(), slugify(), getProductBySlug(), getProducts()
+  + Cart state management (localStorage): addToCart(), removeFromCart(), getCart(), clearCart(), updateCartBadge()
 
 **`assets/js/product.js`** — Product page controller
   + Fetches product by slug from Supabase
@@ -276,15 +277,21 @@ stripe listen --forward-to localhost:3000/api/webhook
 ### Key API Functions
 
 **`api/checkout.ts`** — Stripe session creation
-  + Creates checkout session with `ui_mode: 'embedded'`
+  + Checks product availability in Supabase before creating session
+  + Creates checkout session with `ui_mode: 'custom'`
   + NO pre-created Stripe Customer (anonymous checkout)
-  + Stripe collects email/shipping during checkout
-  + Returns client_secret for frontend mount
+  + Passes metadata: `{ product_id, product_slug }` for webhook identification
+  + Enables shipping address collection (US only)
+  + Returns client_secret for frontend Stripe Elements mount
 
 **`api/webhook.ts`** — Stripe event handler
-  + Validates webhook signature
-  + On `checkout.session.completed`: creates order in Supabase, updates product (available=false, quantity--)
-  + On `payment_intent.succeeded`: confirmation logging
+  + Reads raw body via `request.text()` for signature verification
+  + Validates webhook signature with `stripe.webhooks.constructEvent()`
+  + On `checkout.session.completed`: extracts metadata, marks product sold (available=false), creates order record
+
+**`api/session-status.ts`** — Checkout return page verification
+  + Retrieves Checkout Session by ID
+  + Returns session status for the completion page UI
 
 **`api/stripe-sync.ts`** — Product catalog sync
   + Called by Supabase database webhook on products INSERT
@@ -319,36 +326,43 @@ PRODUCT IS NOW LIVE AND PURCHASABLE
 ### Purchase Flow
 
 ```
-Shopper clicks "Buy Now" on product page
+Shopper adds item(s) to cart, then clicks checkout
   ↓
-(01) Frontend sends POST to /api/checkout.ts with price_id
+(01) Frontend loads checkout.html, reads cart from localStorage
   ↓
-(02) API creates Stripe Checkout Session (ui_mode: 'embedded')
+(02) checkout.js sends POST to /api/checkout.ts
   ↓
-(03) Returns client_secret to frontend
+(03) API checks availability for ALL cart items in Supabase (blocks if any sold)
   ↓
-(04) Frontend calls stripe.initEmbeddedCheckout({clientSecret})
+(04) API creates Stripe Checkout Session (ui_mode: 'custom', metadata: {items: [...]})
   ↓
-(05) Checkout form mounts in DOM — Stripe collects email + shipping + payment
+(05) Returns client_secret to frontend
   ↓
-(06) Customer completes payment
+(06) Frontend calls stripe.initCheckout({clientSecret}), mounts PaymentElement
   ↓
-(07) Stripe fires checkout.session.completed webhook
+(07) Customer enters email + shipping + payment, clicks pay
   ↓
-(08) /api/webhook.ts receives event, validates signature
+(08) Frontend calls actions.confirm() → Stripe processes payment
   ↓
-(09) Creates order record in Supabase `orders` table
+(09) Stripe redirects to complete.html?session_id=...
   ↓
-(10) Updates product: available=false, quantity--
+(10) Stripe fires checkout.session.completed webhook to /api/webhook.ts
+  ↓
+(11) Webhook validates signature, extracts items from metadata
+  ↓
+(12) Updates each product: available=false, quantity=0
+  ↓
+(13) Creates order record per product in Supabase orders table
   ↓
 PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 ```
 
 ### Data States
 
-  1. **Product available**: `available=true, quantity>0` — Buy Now button active
-  2. **Product sold**: `available=false, quantity=0` — "Sold" badge, button disabled, appears in Sold Archive
+  1. **Product available**: `available=true, quantity>0` — Add to Cart button active
+  2. **Product sold**: `available=false, quantity=0` — "Sold" badge, buttons disabled, appears in Sold Archive
   3. **Product featured**: `featured=true` — Appears in homepage carousel
+  4. **In cart**: Product stored in localStorage cart — availability re-checked at checkout creation
 
 ---
 
@@ -479,16 +493,17 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 | GitHub Actions for automation  | Eliminated entirely               | Buggy, phantom files, commits  |
 | Python scripts for Stripe sync | Supabase DB webhook → TS function | Single simple automation point |
 | Client CMS is git/ChatGPT      | Admin UI + Supabase Studio        | Non-tech UI friendly workflow  |
-| Stripe Hosted                  | Stripe Embedded Checkout          | Host user, consistent branding |
+| Stripe Hosted                  | Stripe Custom Checkout (Elements) | On-site UX, full brand control |
 | React (briefly considered)     | Vanilla HTML/CSS/JS               | No framework at this scale     |
 
 ### What's Reused from freelance-payments
 
-  - Vercel serverless function pattern (`/api/*.ts`)
-  - Stripe `ui_mode: 'embedded'` session creation pattern
-  - Webhook handling pattern (receive → validate → update data)
+  - Vercel serverless function pattern (`/api/*.ts`) — Web API `Request/Response` format
+  - Stripe `ui_mode: 'custom'` Checkout Sessions pattern (from Stripe quickstart walkthrough)
+  - Webhook handling pattern (raw body → constructEvent → extract metadata → update data)
   - TypeScript for all server-side code
   - Environment variable management via Vercel dashboard
+  - Session-status endpoint pattern for return page verification
 
 ---
 
@@ -616,8 +631,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ## Related Documentation
 
-  - **Brand Guide**: `assets/docs/archive/v1/v1_1_BRAND.md`
-  - **Implementation Guide**: `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md`
+  - **Brand Guide**: `assets/docs/BRAND.md`
+  - **Implementation Guide**: `assets/docs/archive/v1/v1_2_IMPLEMENTATION.md`
+  - **Action Steps**: `assets/docs/archive/v1/v1_2_ACTION_STEPS.md`
   - **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
   - **Dev Rules**: `.agent/DEV_RULES.md`

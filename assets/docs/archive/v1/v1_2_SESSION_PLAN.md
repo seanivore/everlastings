@@ -48,19 +48,19 @@ The quickstart is React-based (`CheckoutProvider`, `useCheckout()`, `PaymentElem
 
 ## Phase 2: Lock Decisions
 
-| # | Decision | Rationale |
-|---|----------|-----------|
-| 1 | **`ui_mode: 'custom'`** (not 'embedded') | Proven in freelance-payments. Full UI control. Checkout hosted on-site per client contract. Follows Stripe quickstart guide |
-| 2 | **Buy Now only, no cart** for v1 | Everything is 1-of-1. Cart adds race conditions and complexity for no value |
-| 3 | **Availability check on checkout creation** | Query `available === true` before creating Stripe session. Simple race condition fix |
-| 4 | **Stripe products are write-once** | No UPDATE to Stripe. Price change = archive old Price + create new. "Stripe is a payment mirror, not source of truth" |
-| 5 | **R2 path convention**: `/products/{slug}/{timestamp}.webp` | Predictable, collision-free, CDN-friendly |
-| 6 | **Image aspect ratio**: 4:5 for products | Prevents messy grids. Enforced in admin upload UI |
-| 7 | **Slug rules**: `title.toLowerCase().replaceAll(' ', '-')`, immutable | URL stability, SEO preservation |
-| 8 | **Stripe metadata**: `{ product_id, product_slug }` | Webhook can identify what to mark sold without querying line_items |
-| 9 | **Error state strategy**: fallback message + disabled buttons + console.log | Minimum viable UX for all failure modes |
-| 10 | **Supabase anon key hardcoded in main.js** | Public by design, RLS-protected. No build step = no env var injection |
-| 11 | **Stripe.js via CDN** `<script>` tag, not npm | No build step. Supabase JS also via CDN |
+| #   | Decision                                                                    | Rationale                                                                                                                   |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`ui_mode: 'custom'`** (not 'embedded')                                    | Proven in freelance-payments. Full UI control. Checkout hosted on-site per client contract. Follows Stripe quickstart guide |
+| 2   | **Buy Now only, no cart** for v1                                            | Everything is 1-of-1. Cart adds race conditions and complexity for no value                                                 |
+| 3   | **Availability check on checkout creation**                                 | Query `available === true` before creating Stripe session. Simple race condition fix                                        |
+| 4   | **Stripe products are write-once**                                          | No UPDATE to Stripe. Price change = archive old Price + create new. "Stripe is a payment mirror, not source of truth"       |
+| 5   | **R2 path convention**: `/products/{slug}/{timestamp}.webp`                 | Predictable, collision-free, CDN-friendly                                                                                   |
+| 6   | **Image aspect ratio**: 4:5 for products                                    | Prevents messy grids. Enforced in admin upload UI                                                                           |
+| 7   | **Slug rules**: `title.toLowerCase().replaceAll(' ', '-')`, immutable       | URL stability, SEO preservation                                                                                             |
+| 8   | **Stripe metadata**: `{ product_id, product_slug }`                         | Webhook can identify what to mark sold without querying line_items                                                          |
+| 9   | **Error state strategy**: fallback message + disabled buttons + console.log | Minimum viable UX for all failure modes                                                                                     |
+| 10  | **Supabase anon key hardcoded in main.js**                                  | Public by design, RLS-protected. No build step = no env var injection                                                       |
+| 11  | **Stripe.js via CDN** `<script>` tag, not npm                               | No build step. Supabase JS also via CDN                                                                                     |
 
 ---
 
@@ -197,16 +197,16 @@ After self-review, spawn a fresh Explore agent with NO prior context to:
 
 ## Key Files
 
-| File | Role |
-|------|------|
-| `assets/docs/archive/v1/v1_1_FEEDBACK.md` | Source of truth for gaps (this session's input) |
-| `assets/docs/EVERLASTINGS_STORE.md` | Architecture doc to update |
-| `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md` | Being replaced by v1.2 docs |
-| `assets/docs/archive/v1/v1_1_BRAND.md` | Being promoted to BRAND.md |
-| `assets/docs/PRODUCT_GUIDE.md` | Client-facing doc to update |
+| File                                                       | Role                                                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `assets/docs/archive/v1/v1_1_FEEDBACK.md`                  | Source of truth for gaps (this session's input)                                      |
+| `assets/docs/EVERLASTINGS_STORE.md`                        | Architecture doc to update                                                           |
+| `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md`                | Being replaced by v1.2 docs                                                          |
+| `assets/docs/archive/v1/v1_1_BRAND.md`                     | Being promoted to BRAND.md                                                           |
+| `assets/docs/PRODUCT_GUIDE.md`                             | Client-facing doc to update                                                          |
 | `freelance-payments-dev/.../QUICKSTART_CHECKOUT_SESSIONS/` | **Proven pattern** — server.js, checkoutForm.jsx, complete.jsx, API request/response |
-| `freelance-payments/api/webhook.js` | Reference: webhook raw body handling |
-| `freelance-payments/vercel.json` | Reference: Vercel config pattern |
+| `freelance-payments/api/webhook.js`                        | Reference: webhook raw body handling                                                 |
+| `freelance-payments/vercel.json`                           | Reference: Vercel config pattern                                                     |
 
 ---
 
