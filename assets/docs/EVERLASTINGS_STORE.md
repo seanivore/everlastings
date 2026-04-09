@@ -1,7 +1,8 @@
 # Everlastings by Emaline Architecture Overview
 `everlastingsbyemaline.com`
 
-**Last Updated**: 2026-03-16
+**Created**: 2026-03-16
+**Updated**: 2026-03-24 — review and formatting cleanup by Sean 
 **Version**: v1.0.0
 **Status**: Pre-development, architecture finalized
 
@@ -345,9 +346,9 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 
 ### Data States
 
-1. **Product available**: `available=true, quantity>0` — Buy Now button active
-2. **Product sold**: `available=false, quantity=0` — "Sold" badge, button disabled, appears in Sold Archive
-3. **Product featured**: `featured=true` — Appears in homepage carousel
+  1. **Product available**: `available=true, quantity>0` — Buy Now button active
+  2. **Product sold**: `available=false, quantity=0` — "Sold" badge, button disabled, appears in Sold Archive
+  3. **Product featured**: `featured=true` — Appears in homepage carousel
 
 ---
 
@@ -394,8 +395,8 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 }
 ```
 
-- Cormorant Garamond: hero text, section headings, product titles, taglines
-- System fonts: body copy, navigation, UI elements, buttons
+  - Cormorant Garamond: hero text, section headings, product titles, taglines
+  - System fonts: body copy, navigation, UI elements, buttons
 
 ### Responsive Breakpoints
 
@@ -462,31 +463,32 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 **Core Principle**: Understand everything upfront, resolve unknowns before coding, create complete plan before execution.
 
 **Process**:
-1. Understand the full system
-2. Plan every detail upfront
-3. Identify unknowns and resolve them
-4. Write complete, correct code
-5. Test once, it works
+
+  1. Understand the full system
+  2. Plan every detail upfront
+  3. Identify unknowns and resolve them
+  4. Write complete, correct code
+  5. Test once, it works
 
 ### What Changed from v0
 
-| v0 Plan (Dec 2025)                     | v1 Architecture (Mar 2026)        | Why                                                  |
-| -------------------------------------- | --------------------------------- | ---------------------------------------------------- |
-| GitHub Pages hosting                   | Vercel hosting                    | Need serverless functions for Stripe                 |
-| JSON files in git as database          | Supabase PostgreSQL               | Client can't use git; need web UI                    |
-| GitHub Actions for automation          | Eliminated entirely               | Too buggy, phantom files, wrong commits              |
-| Python scripts for Stripe sync         | Supabase DB webhook → TS function | Single automation point, works for all entry methods |
-| Client manages content via git/ChatGPT | Admin UI + Supabase Studio        | Non-technical client needs browser-based workflow    |
-| Stripe Prebuilt Checkout (redirect)    | Stripe Embedded Checkout          | Keep customer on-site, matches brand                 |
-| React (briefly considered)             | Vanilla HTML/CSS/JS               | No framework overhead needed at this scale           |
+| v0 Plan (Dec 2025)             | v1 Architecture (Mar 2026)        | Why                            |
+| ------------------------------ | --------------------------------- | ------------------------------ |
+| GitHub Pages hosting           | Vercel hosting                    | Consolidation; private repo    |
+| JSON files in git as database  | Supabase PostgreSQL               | GIT is not non-tech UI         |
+| GitHub Actions for automation  | Eliminated entirely               | Buggy, phantom files, commits  |
+| Python scripts for Stripe sync | Supabase DB webhook → TS function | Single simple automation point |
+| Client CMS is git/ChatGPT      | Admin UI + Supabase Studio        | Non-tech UI friendly workflow  |
+| Stripe Hosted                  | Stripe Embedded Checkout          | Host user, consistent branding |
+| React (briefly considered)     | Vanilla HTML/CSS/JS               | No framework at this scale     |
 
 ### What's Reused from freelance-payments
 
-- Vercel serverless function pattern (`/api/*.ts`)
-- Stripe `ui_mode: 'embedded'` session creation pattern
-- Webhook handling pattern (receive → validate → update data)
-- TypeScript for all server-side code
-- Environment variable management via Vercel dashboard
+  - Vercel serverless function pattern (`/api/*.ts`)
+  - Stripe `ui_mode: 'embedded'` session creation pattern
+  - Webhook handling pattern (receive → validate → update data)
+  - TypeScript for all server-side code
+  - Environment variable management via Vercel dashboard
 
 ---
 
@@ -614,14 +616,13 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ## Related Documentation
 
-- **Brand Guide**: `assets/docs/archive/v1/v1_1_BRAND.md`
-- **Implementation Guide**: `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md`
-- **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
-- **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
-- **Dev Rules**: `.agent/DEV_RULES.md`
-- **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
-- **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`
+  - **Brand Guide**: `assets/docs/archive/v1/v1_1_BRAND.md`
+  - **Implementation Guide**: `assets/docs/archive/v1/v1_1_IMPL_GUIDE.md`
+  - **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
+  - **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
+  - **Dev Rules**: `.agent/DEV_RULES.md`
+  - **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
+  - **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`
 
 ---
-
 *This document is the single source of truth for the Everlastings project architecture. Keep it updated as development progresses.*

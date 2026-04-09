@@ -2,7 +2,8 @@
 
 **For**: Emy (and G)
 **Purpose**: How to add products to the website
-**Updated**: 2026-03-16
+**Created**: 2026-03-16
+**Updated**: 2026-03-24 — reviewed; needs clean-up, simple single option, accurate table
 
 ---
 
@@ -10,9 +11,10 @@
 
 Every product on the website is stored in a database table (Supabase). You can add products three ways:
 
-1. **Admin UI** (simplest) — Fill out a form on the website at `/admin`
-2. **Supabase Studio** — Edit the database table directly (free web app)
-3. **GPT skill** — Tell ChatGPT the product details and it creates the entry via API
+  1. **Admin UI** (simplest manual option) — Fill out a form on the website at `/admin`
+  2. **Supabase Studio** (free web app; good for quick updates) — Edit the database table directly
+  3. **GPT skill** (most powerful; need to research MCP needs) — Tell ChatGPT the product details and it creates the entry via API
+  4. **GPT create CSV** (might be easier than MCP but lacks easy updates) — Tell GPT to create CSV file for all table entries, then you upload 
 
 All three create the same database row. When you save a product, a behind-the-scenes script automatically creates it in Stripe too — so it becomes purchasable immediately.
 
