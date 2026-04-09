@@ -12,21 +12,54 @@
 
 Every architectural question answered. No mid-session research.
 
-| # | Decision | Rationale |
-|---|----------|-----------|
-| 1 | **`ui_mode: 'custom'`** for Stripe Checkout | Proven in freelance-payments. Full UI control. On-site checkout per client contract. Follows Stripe quickstart guide |
-| 2 | **Standard cart flow** | Add to Cart → keep shopping → view cart → checkout. Normal e-commerce UX. Even 1-of-1 items benefit from cart (customers browse, plan, buy multiple). Cart stored in localStorage |
-| 3 | **Availability check at checkout for all cart items** | Query `available === true` for every item in cart before creating Stripe session. If any item sold while in cart, show message and remove it |
-| 4 | **Stripe products are write-once** | Never UPDATE Stripe products/prices. Price change = archive old Price, create new. "Stripe is a payment mirror, not source of truth" |
-| 5 | **R2 path**: `/products/{slug}/{filename}.webp` | Predictable, collision-free, CDN-friendly. Example: `/products/the-sunkeeper/hero.webp` |
-| 6 | **Image aspect ratio**: 4:5 | Prevents messy grids. Enforced in admin upload UI. All product photos must be 4:5 |
-| 7 | **Slug rules**: immutable after creation | `title.toLowerCase().replaceAll(' ', '-')` — URL stability, SEO preservation |
-| 8 | **Stripe metadata**: `items` field containing JSON array of `{ id, slug }` | Webhook identifies what to mark sold. Single item = one entry. Multi-item cart = array. Parsed with `JSON.parse(metadata.items)` |
-| 9 | **Error states**: fallback message + disabled buttons + console.log | Every page has a failure mode documented. See Error States Reference |
-| 10 | **Supabase anon key hardcoded** in main.js | Public by design, RLS-protected. No build step = no env var injection for frontend |
-| 11 | **CDN loading** for frontend libs | Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr. No npm/build step for frontend |
-| 12 | **Vercel Web API pattern** for serverless functions | `export async function POST(request: Request)` — modern pattern, not legacy `(req, res)` |
-| 13 | **R2 custom domain optional** | Use r2.dev subdomain initially. Custom domain (`cdn.everlastingsbyemaline.com`) requires Cloudflare DNS — set up later |
+| #   | Decision                                                | Rationale                                             |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | **`ui_mode: 'custom'`** for Stripe Checkout             | Proven in freelance-payments. Full UI control.        |
+|     |                                                         | On-site checkout per client contract.                 |
+|     |                                                         | Follows Stripe quickstart guide                       |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 2   | **Standard cart flow**                                  | Add to Cart → keep shopping → view cart → checkout.   |
+|     |                                                         | Normal e-commerce UX. Even 1-of-1 items benefit       |
+|     |                                                         | from cart (customers browse, plan, buy multiple).     |
+|     |                                                         | Cart stored in localStorage                           |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 3   | **Availability check at checkout for all cart items**   | Query `available === true` for every item in cart     |
+|     |                                                         | before creating Stripe session. If any item sold      |
+|     |                                                         | while in cart, show message and remove it             |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 4   | **Stripe products are write-once**                      | Never UPDATE Stripe products/prices.                  |
+|     |                                                         | Price change = archive old Price, create new.         |
+|     |                                                         | "Stripe is a payment mirror, not source of truth"     |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 5   | **R2 path**: `/products/{slug}/{filename}.webp`         | Predictable, collision-free, CDN-friendly.            |
+|     |                                                         | Example: `/products/the-sunkeeper/hero.webp`          |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 6   | **Image aspect ratio**: 4:5                             | Prevents messy grids. Enforced in admin upload UI.    |
+|     |                                                         | All product photos must be 4:5                        |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 7   | **Slug rules**: immutable after creation                | `title.toLowerCase().replaceAll(' ', '-')`            |
+|     |                                                         | URL stability, SEO preservation                       |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 8   | **Stripe metadata**: `items`                            | Webhook identifies what to mark sold.                 |
+|     | field containing JSON array of `{ id, slug }`           | Single item = one entry. Multi-item cart = array.     |
+|     |                                                         | Parsed with `JSON.parse(metadata.items)`              |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 9   | **Error states**: fallback message +                    | Every page has a failure mode documented.             |
+|     | disabled buttons + console.log                          | See Error States Reference                            |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 10  | **Supabase anon key hardcoded** in main.js              | Public by design, RLS-protected.                      |
+|     |                                                         | No build step = no env var injection for frontend     |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 11  | **CDN loading** for frontend libs                       | Stripe.js via `js.stripe.com`, Supabase.js            |
+|     |                                                         | via jsDelivr. No npm/build step for frontend          |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 12  | **Vercel Web API pattern** for serverless functions     | `export async function POST(request: Request)`        |
+|     |                                                         | modern pattern, not legacy `(req, res)`               |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| 13  | **R2 custom domain optional**                           | Use r2.dev subdomain initially.                       |
+|     |                                                         | Custom domain (`cdn.everlastingsbyemaline.com`)       |
+|     |                                                         | requires Cloudflare DNS — set up later                |
+| --- | ------------------------------------------------------- | ----------------------------------------------------- |
 
 ---
 
@@ -1757,25 +1790,25 @@ export async function POST(request: Request) {
 
 ## Error States Reference
 
-| Page | Failure | User Sees | Code Behavior |
-|------|---------|-----------|---------------|
-| Product | Product not found | "This product could not be found." + link to shop | `getProductBySlug` returns null → `showError()` |
-| Product | Supabase fetch fails | "This product could not be found." | `error` from Supabase → `showError()` |
-| Product | Image fails to load | Broken image hidden, placeholder shown | `onerror` handler on `<img>` |
-| Product | Product sold | "Sold" badge, Buy Now disabled | `available === false` → button disabled |
-| Checkout | Cart empty | "Your cart is empty." + link to shop | No items in localStorage |
-| Checkout | Items sold while in cart (409) | Recovery popup: warm apology + one-time discount offer + email capture | API returns 409 → `showSoldRecovery()` → remove items, show popup, capture email as `cart-recovery` subscriber |
-| Checkout | Session creation fails | "Something went awry. Please try again." | API returns 500 → error message |
-| Checkout | Payment declined | Stripe error message displayed | `actions.confirm()` returns error |
-| Checkout | Network error | "Unable to load checkout. Please refresh." | fetch throws → catch block |
-| Complete | Session status: complete | "Your haven is on its way." | Success state |
-| Complete | Session status: other | "Something went awry. Please try again." | Error state with retry |
-| Shop | No products found | "No products available yet." | Empty array → empty state |
-| Shop | Filters return empty | "No products match your filters." | Filtered array empty → message |
-| Newsletter | Already subscribed | "Already subscribed" (not an error) | 23505 unique constraint → friendly message |
-| Newsletter | Invalid email | "Valid email required" | Client + server validation |
-| Admin | Not authenticated | Redirect to login | Supabase auth check |
-| Admin | Upload too large | "File must be under 2MB" | File size check before upload |
+| Page       | Failure                        | User Sees                                                              | Code Behavior                                                                                                  |
+| ---------- | ------------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Product    | Product not found              | "This product could not be found." + link to shop                      | `getProductBySlug` returns null → `showError()`                                                                |
+| Product    | Supabase fetch fails           | "This product could not be found."                                     | `error` from Supabase → `showError()`                                                                          |
+| Product    | Image fails to load            | Broken image hidden, placeholder shown                                 | `onerror` handler on `<img>`                                                                                   |
+| Product    | Product sold                   | "Sold" badge, Buy Now disabled                                         | `available === false` → button disabled                                                                        |
+| Checkout   | Cart empty                     | "Your cart is empty." + link to shop                                   | No items in localStorage                                                                                       |
+| Checkout   | Items sold while in cart (409) | Recovery popup: warm apology + one-time discount offer + email capture | API returns 409 → `showSoldRecovery()` → remove items, show popup, capture email as `cart-recovery` subscriber |
+| Checkout   | Session creation fails         | "Something went awry. Please try again."                               | API returns 500 → error message                                                                                |
+| Checkout   | Payment declined               | Stripe error message displayed                                         | `actions.confirm()` returns error                                                                              |
+| Checkout   | Network error                  | "Unable to load checkout. Please refresh."                             | fetch throws → catch block                                                                                     |
+| Complete   | Session status: complete       | "Your haven is on its way."                                            | Success state                                                                                                  |
+| Complete   | Session status: other          | "Something went awry. Please try again."                               | Error state with retry                                                                                         |
+| Shop       | No products found              | "No products available yet."                                           | Empty array → empty state                                                                                      |
+| Shop       | Filters return empty           | "No products match your filters."                                      | Filtered array empty → message                                                                                 |
+| Newsletter | Already subscribed             | "Already subscribed" (not an error)                                    | 23505 unique constraint → friendly message                                                                     |
+| Newsletter | Invalid email                  | "Valid email required"                                                 | Client + server validation                                                                                     |
+| Admin      | Not authenticated              | Redirect to login                                                      | Supabase auth check                                                                                            |
+| Admin      | Upload too large               | "File must be under 2MB"                                               | File size check before upload                                                                                  |
 
 ---
 
@@ -1810,14 +1843,14 @@ Not needed for launch. Document for later:
 
 ## Reference Documents
 
-| Document | Location | Use |
-|----------|----------|-----|
-| Architecture | `assets/docs/EVERLASTINGS_STORE.md` | Full technical reference |
-| Brand Guide | `assets/docs/BRAND.md` | Colors, fonts, voice, copy |
-| Product Guide | `assets/docs/PRODUCT_GUIDE.md` | Client-facing, how to add products |
-| Action Steps | `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Checklist version of this doc |
-| Mobile Specs | `.agent/2026_MOBILE_DESIGN_SPECS.md` | iOS/iPadOS viewport measurements |
-| Dev Rules | `.agent/DEV_RULES.md` | Git branching, dev protocols |
+| Document      | Location                                      | Use                                |
+| ------------- | --------------------------------------------- | ---------------------------------- |
+| Architecture  | `assets/docs/EVERLASTINGS_STORE.md`           | Full technical reference           |
+| Brand Guide   | `assets/docs/BRAND.md`                        | Colors, fonts, voice, copy         |
+| Product Guide | `assets/docs/PRODUCT_GUIDE.md`                | Client-facing, how to add products |
+| Action Steps  | `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Checklist version of this doc      |
+| Mobile Specs  | `.agent/2026_MOBILE_DESIGN_SPECS.md`          | iOS/iPadOS viewport measurements   |
+| Dev Rules     | `.agent/DEV_RULES.md`                         | Git branching, dev protocols       |
 
 ---
 *Every code snippet is production-ready. Every checkbox is one action. Follow the sessions in order.*

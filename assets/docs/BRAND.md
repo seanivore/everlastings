@@ -48,36 +48,36 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
 
 ### Tone by Context
 
-| Context          | Tone                          | Example                                    |
-| ---------------- | ----------------------------- | ------------------------------------------ |
-| Homepage/Hero    | Invitational, wonder-filled,  | *"Step into Elsewhere. Where memory*       |
-|                  | slightly mysterious           | *becomes miniature, and loss transforms*   |
-|                  |                               | *into something you can hold."*            |
-| Product Pages    | Intimate, descriptive,        | *"The Sun-keeper watches over a garden*    |
-|                  | emotionally grounded          | *where time stands still, where*           |
-|                  |                               | *every bloom is a promise kept."*          |
-| Collection Pages | Organized but poetic,         | *"Each piece in the Portals to Peace*      |
-|                  | guiding without pushing       | *series offers passage to*                 |
-|                  |                               | *somewhere gentler."*                      |
-| About/Story      | Vulnerable, honest, human     | *"When everything changed, I needed*       |
-|                  |                               | *somewhere I could still have control.*    |
-|                  |                               | *So I built worlds small enough to hold."* |
-| Transactional    | Clear, warm, reassuring       | *"Almost there. Your haven is*             |
-|                  |                               | *ready to find its home."*                 |
+| Context          | Tone                         | Example                                    |
+| ---------------- | ---------------------------- | ------------------------------------------ |
+| Homepage/Hero    | Invitational, wonder-filled, | *"Step into Elsewhere. Where memory*       |
+|                  | slightly mysterious          | *becomes miniature, and loss transforms*   |
+|                  |                              | *into something you can hold."*            |
+| Product Pages    | Intimate, descriptive,       | *"The Sun-keeper watches over a garden*    |
+|                  | emotionally grounded         | *where time stands still, where*           |
+|                  |                              | *every bloom is a promise kept."*          |
+| Collection Pages | Organized but poetic,        | *"Each piece in the Portals to Peace*      |
+|                  | guiding without pushing      | *series offers passage to*                 |
+|                  |                              | *somewhere gentler."*                      |
+| About/Story      | Vulnerable, honest, human    | *"When everything changed, I needed*       |
+|                  |                              | *somewhere I could still have control.*    |
+|                  |                              | *So I built worlds small enough to hold."* |
+| Transactional    | Clear, warm, reassuring      | *"Almost there. Your haven is*             |
+|                  |                              | *ready to find its home."*                 |
 
 ### Error & Empty State Voice
 
-| State | Message | Tone |
-|-------|---------|------|
-| Product sold | "This piece has already found its home." | Warm, celebratory — not disappointing |
-| Product not found | "This haven could not be found." | Gentle, redirecting |
-| Checkout error | "Something went awry. Please try again." | Reassuring, not technical |
-| Payment success | "Your haven is on its way." | Warm, confirming |
+| State              | Message                                                 | Tone                                                     |
+| ------------------ | ------------------------------------------------------- | -------------------------------------------------------- |
+| Product sold       | "This piece has already found its home."                | Warm, celebratory — not disappointing                    |
+| Product not found  | "This haven could not be found."                        | Gentle, redirecting                                      |
+| Checkout error     | "Something went awry. Please try again."                | Reassuring, not technical                                |
+| Payment success    | "Your haven is on its way."                             | Warm, confirming                                         |
 | Sold while in cart | "These havens have found their homes." + discount offer | Empathetic, recovery-focused — turn loss into connection |
-| Empty shop | "New havens are being crafted. Check back soon." | Hopeful, inviting return |
-| No filter results | "No havens match your search." | Simple, factual |
-| Newsletter success | "Welcome to the Firelight Council." | Warm, community-building |
-| Already subscribed | "You're already part of the Firelight Council." | Acknowledging, not scolding |
+| Empty shop         | "New havens are being crafted. Check back soon."        | Hopeful, inviting return                                 |
+| No filter results  | "No havens match your search."                          | Simple, factual                                          |
+| Newsletter success | "Welcome to the Firelight Council."                     | Warm, community-building                                 |
+| Already subscribed | "You're already part of the Firelight Council."         | Acknowledging, not scolding                              |
 
 ### Do / Don't
 
@@ -224,8 +224,8 @@ Images are stored in Cloudflare R2 with this structure:
 | **Angles**    | Front, back, sides, top-down                       | 3-4   |
 | **Details**   | Close-ups of features, textures, tiny details      | 2-3   |
 | **Lighting**  | Each lighting mode (on/off, warm/cool)             | 2-3   |
-| **Scale**     | Next to a common object for size reference          | 1     |
-| **Lifestyle** | In its intended setting (bookshelf, desk)           | 1-2   |
+| **Scale**     | Next to a common object for size reference         | 1     |
+| **Lifestyle** | In its intended setting (bookshelf, desk)          | 1-2   |
 
 ---
 
@@ -295,19 +295,19 @@ Cute, adorable, tiny (except when necessary), perfect, flawless, pristine, sale,
 
 ## Call-to-Action Language
 
-| Context        | Options                               |
-| -------------- | ------------------------------------- |
-| **Purchasing** | "Bring This Haven Home"               |
-|                | "Make This Yours"                     |
-|                | "Claim Your Sanctuary"                |
-| **Newsletter** | "Join the Firelight Council"          |
-|                | "Stay Connected to Elsewhere"         |
-|                | "Receive Dispatches from the Studio"  |
-| **Contact**    | "Begin a Conversation"                |
-|                | "Commission Your Own Haven"           |
-|                | "Get in Touch"                        |
-| **Homepage**   | "Enter Elsewhere"                     |
-|                | "Step Into Elsewhere"                 |
+| Context        | Options                              |
+| -------------- | ------------------------------------ |
+| **Purchasing** | "Bring This Haven Home"              |
+|                | "Make This Yours"                    |
+|                | "Claim Your Sanctuary"               |
+| **Newsletter** | "Join the Firelight Council"         |
+|                | "Stay Connected to Elsewhere"        |
+|                | "Receive Dispatches from the Studio" |
+| **Contact**    | "Begin a Conversation"               |
+|                | "Commission Your Own Haven"          |
+|                | "Get in Touch"                       |
+| **Homepage**   | "Enter Elsewhere"                    |
+|                | "Step Into Elsewhere"                |
 
 ---
 

@@ -78,17 +78,17 @@ Here's what a full product entry looks like. Every field is explained below.
 
 ### What We Handle (Don't Worry About These)
 
-| Field                 | What It Is                                          |
-| --------------------- | --------------------------------------------------- |
-| **slug**              | URL-friendly version of the title (auto-generated, never changes)  |
-| **sku**               | Unique product ID (auto-generated)                  |
-| **seo_title**         | Search engine title (we write this)                 |
-| **seo_description**   | Search engine description (we write this)           |
-| **stripe_product_id** | Stripe catalog link (auto-populated)                |
-| **stripe_price_id**   | Stripe price link (auto-populated)                  |
-| **thumbnail**         | CDN URL for the grid image (we upload)              |
-| **images**            | CDN URLs for all gallery photos (we upload)         |
-| **homepage_theme**    | Dynamic homepage color/mood settings (we configure) |
+| Field                 | What It Is                                                        |
+| --------------------- | ----------------------------------------------------------------- |
+| **slug**              | URL-friendly version of the title (auto-generated, never changes) |
+| **sku**               | Unique product ID (auto-generated)                                |
+| **seo_title**         | Search engine title (we write this)                               |
+| **seo_description**   | Search engine description (we write this)                         |
+| **stripe_product_id** | Stripe catalog link (auto-populated)                              |
+| **stripe_price_id**   | Stripe price link (auto-populated)                                |
+| **thumbnail**         | CDN URL for the grid image (we upload)                            |
+| **images**            | CDN URLs for all gallery photos (we upload)                       |
+| **homepage_theme**    | Dynamic homepage color/mood settings (we configure)               |
 
 ---
 
