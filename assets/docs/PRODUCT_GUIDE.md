@@ -3,7 +3,7 @@
 **For**: Emy (and G)
 **Purpose**: How to add products to the website
 **Created**: 2026-03-16
-**Updated**: 2026-04-09 — v1.2: added photo aspect ratio, slug immutability, price clarification
+**Updated**: 2026-04-09 — v1.2r1: reformatted tables, added video/GIF section, updated image naming
 
 ---
 
@@ -50,45 +50,70 @@ Here's what a full product entry looks like. Every field is explained below.
 
 ### What You Write
 
-| Field                 | What It Is                      | Tips                                                                                                                             |
-| --------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **title**             | The name of the piece           | Your display name exactly as you want it shown                                                                                   |
-| **headline**          | 5-7 word tagline                | Short, poetic, appears under the title                                                                                           |
-| **story_card**        | The full story (2-8 paragraphs) | This is the emotional heart. Write from the heart — the poetic voice you use naturally is perfect. See the brand guide for tone. |
-| **description**       | Short summary (2-3 sentences)   | Used in previews, search results, social shares                                                                                  |
-| **features**          | List of notable features        | Write them beautifully: "Softly illuminated by warm LED glow" not "LED lights"                                                   |
-| **price**             | Price in cents                  | $245.00 = 24500. Always multiply by 100.                                                                                         |
-| **dimensions**        | Physical size                   | Format: W x D x H in inches                                                                                                      |
-| **weight**            | For shipping                    | In pounds, e.g. "2.5 lbs"                                                                                                        |
-| **materials**         | What it's made of               | List each material                                                                                                               |
-| **power_supply**      | How it's powered                | e.g. "USB-C (adapter included)" or "Battery (included)" or leave empty                                                           |
-| **care_instructions** | How to maintain it              | List each care step                                                                                                              |
-| **shipping_details**  | Shipping info                   | Timeframe, packaging notes, insurance                                                                                            |
-| **artist_note**       | Optional personal note          | Brief, from the heart. "This piece was inspired by..."                                                                           |
+#### title
+The name of the piece. Your display name exactly as you want it shown.
+
+#### headline
+5-7 word tagline. Short, poetic, appears under the title.
+
+#### story_card
+The full story (2-8 paragraphs). This is the emotional heart. Write from the heart — the poetic voice you use naturally is perfect. See the brand guide for tone.
+
+#### description
+Short summary (2-3 sentences). Used in previews, search results, social shares.
+
+#### features
+List of notable features. Write them beautifully: "Softly illuminated by warm LED glow" not "LED lights."
+
+#### price
+Price in dollars — we convert to cents for the database. $245.00 becomes 24500 on our end.
+
+#### dimensions
+Physical size. Format: W x D x H in inches (e.g. 8" W x 6" D x 10" H).
+
+#### weight
+For shipping. In pounds, e.g. "2.5 lbs."
+
+#### materials
+What it's made of. List each material.
+
+#### power_supply
+How it's powered. e.g. "USB-C (adapter included)" or "Battery (included)" or leave empty.
+
+#### care_instructions
+How to maintain it. List each care step.
+
+#### shipping_details
+Shipping info — timeframe, packaging notes, insurance.
+
+#### artist_note
+Optional personal note. Brief, from the heart. "This piece was inspired by..."
 
 ### What You Choose
 
-| Field            | Options                                                                                        | Notes                                                                                |
-| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **product_type** | `miniature`, `printable`, `storybook`                                                          | Pick one                                                                             |
-| **series**       | `Portals to Peace`, `Book Nooks`, `Story Lofts`, `Seasonal`, `Limited Edition`, or leave empty | Pick one or none. New series names you use will automatically appear on the website. |
-| **available**    | `true` or `false`                                                                              | Set to false when sold (this also happens automatically when purchased)              |
-| **quantity**     | A number                                                                                       | 1 for one-of-a-kind, 0 for sold out, higher for editions                             |
-| **featured**     | `true` or `false`                                                                              | Featured products appear on the homepage carousel                                    |
+#### product_type
+Pick one: `miniature`, `printable`, or `storybook`.
+
+#### series
+Pick one or none: `Portals to Peace`, `Book Nooks`, `Story Lofts`, `Seasonal`, `Limited Edition`. New series names you use will automatically appear on the website.
+
+#### available
+`true` or `false`. Set to false when sold (this also happens automatically when purchased).
+
+#### quantity
+A number. 1 for one-of-a-kind, 0 for sold out, higher for editions.
+
+#### featured
+`true` or `false`. Featured products appear on the homepage carousel.
 
 ### What We Handle (Don't Worry About These)
 
-| Field                 | What It Is                                                        |
-| --------------------- | ----------------------------------------------------------------- |
-| **slug**              | URL-friendly version of the title (auto-generated, never changes) |
-| **sku**               | Unique product ID (auto-generated)                                |
-| **seo_title**         | Search engine title (we write this)                               |
-| **seo_description**   | Search engine description (we write this)                         |
-| **stripe_product_id** | Stripe catalog link (auto-populated)                              |
-| **stripe_price_id**   | Stripe price link (auto-populated)                                |
-| **thumbnail**         | CDN URL for the grid image (we upload)                            |
-| **images**            | CDN URLs for all gallery photos (we upload)                       |
-| **homepage_theme**    | Dynamic homepage color/mood settings (we configure)               |
+- **slug** — URL-friendly version of the title (auto-generated, never changes)
+- **sku** — Unique product ID (auto-generated)
+- **seo_title / seo_description** — Search engine titles (we write these)
+- **stripe_product_id / stripe_price_id** — Stripe catalog links (auto-populated)
+- **thumbnail / images** — CDN URLs for photos (we upload and optimize)
+- **homepage_theme** — Dynamic homepage color/mood settings (we configure)
 
 ---
 
@@ -114,6 +139,16 @@ All product photos must be **4:5 portrait orientation**. This prevents messy gri
 | **Lighting**  | Each lighting mode (on/off, warm/cool/candle)                | 2-3   |
 | **Scale**     | Next to a common object (book, hand, mug) for size reference | 1     |
 | **Lifestyle** | On a bookshelf, desk, or in its intended setting             | 1-2   |
+
+### Videos and GIFs
+
+You can also include short videos and GIFs for your products. These appear in the gallery alongside photos.
+
+- **Videos**: Short clips showing lighting modes, detail reveals, or the piece in its setting (30-60 seconds ideal)
+- **GIFs**: Short animations showing a detail or lighting transition
+- **YouTube**: If you have a longer video on YouTube, we can embed it on the product page
+
+Just send these along with your photos — we handle the formatting and upload.
 
 ### Photo Tips
 

@@ -51,7 +51,8 @@ vercel dev
   + **Backend**: Vercel Serverless Functions (TypeScript)
   + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
   + **Payments**: Stripe Custom Checkout (ui_mode: 'custom')
-  + **Images**: Cloudflare R2 (CDN)
+  + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN)
+  + **Analytics**: Google Analytics 4 (gtag.js)
   + **Hosting**: Vercel (auto-deploy on push)
 
 ---
@@ -72,6 +73,14 @@ everlastings-website/
 
 **Full documentation**: [EVERLASTINGS_STORE.md](/assets/docs/EVERLASTINGS_STORE.md)
 
+### Branching
+
+- `main` → Production (live Stripe keys)
+- `dev` → Preview/staging (test Stripe keys)
+- `feat/*` → Feature branches (test Stripe keys)
+
+Vercel auto-scopes environment variables per branch. See implementation guide for full environment strategy.
+
 ---
 
 ## Documentation
@@ -83,6 +92,7 @@ everlastings-website/
 | [Implementation Guide](/assets/docs/archive/v1/v1_2_IMPLEMENTATION.md) | 10-session build plan with code snippets |
 | [Action Steps](/assets/docs/archive/v1/v1_2_ACTION_STEPS.md)           | Checklist version of impl guide          |
 | [Product Guide](/assets/docs/PRODUCT_GUIDE.md)                         | Client-facing product entry guide        |
+| [Creation Protocol](/assets/docs/PRODUCT_CREATION_PROTOCOL.md)         | AI-assisted product creation workflow    |
 
 ---
 

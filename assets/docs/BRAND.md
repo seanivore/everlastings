@@ -207,14 +207,18 @@ All product images: **4:5** (portrait orientation). This is enforced in the admi
 
 ### Naming Convention
 
-Images are stored in Cloudflare R2 with this structure:
+Images are stored in Cloudflare R2 with SEO-friendly filenames:
 ```
-/products/{slug}/hero.webp
-/products/{slug}/gallery-01.webp
-/products/{slug}/gallery-02.webp
+/products/{slug}/hero-{slug}.webp
+/products/{slug}/gallery-{slug}-01.webp
+/products/{slug}/gallery-{slug}-02.webp
 ...
-/products/{slug}/thumbnail.webp
+/products/{slug}/thumbnail-{slug}.webp
+/products/{slug}/video-{slug}-01.mp4
+/products/{slug}/detail-{slug}-01.gif
 ```
+
+Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before upload to R2. Videos and GIFs upload directly to R2 without transformation.
 
 ### Shot Guide
 

@@ -1,9 +1,9 @@
-# Everlastings — v1.2 Implementation Guide
+# Everlastings — v1.2 Implementation Guide (Revised)
 
-**Version**: v1.2
-**Created**: 2026-04-09
-**Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe
-**Total**: ~33 hours across 10 sessions
+**Version**: v1.2r1
+**Created**: 2026-04-09 | **Revised**: 2026-04-09
+**Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary
+**Structure**: 3 parallel tracks (A: Backend, B: Frontend Design, C: Integration)
 **Reference**: `EVERLASTINGS_STORE.md` for architecture, `BRAND.md` for design
 
 ---
@@ -12,54 +12,90 @@
 
 Every architectural question answered. No mid-session research.
 
-| #   | Decision                                                | Rationale                                             |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 1   | **`ui_mode: 'custom'`** for Stripe Checkout             | Proven in freelance-payments. Full UI control.        |
-|     |                                                         | On-site checkout per client contract.                 |
-|     |                                                         | Follows Stripe quickstart guide                       |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 2   | **Standard cart flow**                                  | Add to Cart → keep shopping → view cart → checkout.   |
-|     |                                                         | Normal e-commerce UX. Even 1-of-1 items benefit       |
-|     |                                                         | from cart (customers browse, plan, buy multiple).     |
-|     |                                                         | Cart stored in localStorage                           |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 3   | **Availability check at checkout for all cart items**   | Query `available === true` for every item in cart     |
-|     |                                                         | before creating Stripe session. If any item sold      |
-|     |                                                         | while in cart, show message and remove it             |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 4   | **Stripe products are write-once**                      | Never UPDATE Stripe products/prices.                  |
-|     |                                                         | Price change = archive old Price, create new.         |
-|     |                                                         | "Stripe is a payment mirror, not source of truth"     |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 5   | **R2 path**: `/products/{slug}/{filename}.webp`         | Predictable, collision-free, CDN-friendly.            |
-|     |                                                         | Example: `/products/the-sunkeeper/hero.webp`          |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 6   | **Image aspect ratio**: 4:5                             | Prevents messy grids. Enforced in admin upload UI.    |
-|     |                                                         | All product photos must be 4:5                        |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 7   | **Slug rules**: immutable after creation                | `title.toLowerCase().replaceAll(' ', '-')`            |
-|     |                                                         | URL stability, SEO preservation                       |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 8   | **Stripe metadata**: `items`                            | Webhook identifies what to mark sold.                 |
-|     | field containing JSON array of `{ id, slug }`           | Single item = one entry. Multi-item cart = array.     |
-|     |                                                         | Parsed with `JSON.parse(metadata.items)`              |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 9   | **Error states**: fallback message +                    | Every page has a failure mode documented.             |
-|     | disabled buttons + console.log                          | See Error States Reference                            |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 10  | **Supabase anon key hardcoded** in main.js              | Public by design, RLS-protected.                      |
-|     |                                                         | No build step = no env var injection for frontend     |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 11  | **CDN loading** for frontend libs                       | Stripe.js via `js.stripe.com`, Supabase.js            |
-|     |                                                         | via jsDelivr. No npm/build step for frontend          |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 12  | **Vercel Web API pattern** for serverless functions     | `export async function POST(request: Request)`        |
-|     |                                                         | modern pattern, not legacy `(req, res)`               |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
-| 13  | **R2 custom domain optional**                           | Use r2.dev subdomain initially.                       |
-|     |                                                         | Custom domain (`cdn.everlastingsbyemaline.com`)       |
-|     |                                                         | requires Cloudflare DNS — set up later                |
-| --- | ------------------------------------------------------- | ----------------------------------------------------- |
+| # | Decision | Rationale |
+|---|----------|-----------|
+| 1 | **`ui_mode: 'custom'`** for Stripe Checkout | Proven in freelance-payments. Full UI control. On-site checkout per client contract. Follows Stripe quickstart guide |
+| 2 | **Standard cart flow** | Add to Cart → keep shopping → view cart → checkout. Normal e-commerce UX. Cart stored in localStorage |
+| 3 | **Availability check at checkout for all cart items** | Query `available === true` for every item before creating Stripe session. If any sold, 409 + recovery flow |
+| 4 | **Stripe products are write-once** | Never UPDATE Stripe products/prices. Price change = archive old Price, create new. "Stripe is a payment mirror, not source of truth" |
+| 5 | **R2 path**: `/products/{slug}/{role}-{slug}.webp` | SEO-friendly, predictable, collision-free. Example: `/products/the-sunkeeper/hero-the-sunkeeper.webp` |
+| 6 | **Image aspect ratio**: 4:5 | Prevents messy grids. Enforced via Cloudinary transform on upload |
+| 7 | **Slug rules**: immutable after creation | `title.toLowerCase().replaceAll(' ', '-')`. URL stability, SEO preservation |
+| 8 | **Stripe metadata**: `items` field | JSON array of `{ id, slug }`. Parsed with `JSON.parse(metadata.items)` |
+| 9 | **Error states**: fallback message + disabled buttons + console.log | Every page has a failure mode documented. See Error States Reference |
+| 10 | **Supabase anon key hardcoded** in main.js | Public by design, RLS-protected. No build step = no env var injection for frontend |
+| 11 | **CDN loading** for frontend libs | Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr. No npm/build step for frontend |
+| 12 | **Vercel Web API pattern** for serverless functions | `export async function POST(request: Request)` — modern pattern, not legacy `(req, res)` |
+| 13 | **R2 custom domain optional** | Use r2.dev subdomain initially. Custom domain (`cdn.everlastingsbyemaline.com`) requires Cloudflare DNS — set up later |
+| 14 | **Customers table with upsert-on-checkout** | Email as unique key. No pre-checkout accounts. Newsletter subscribers linked on purchase |
+| 15 | **Frontend Stripe key via `api/config.ts`** | Enables automatic test/live switching per Vercel environment. Not hardcoded |
+| 16 | **GA4 via `gtag.js` CDN, no GTM** | Simple, no-build-step analytics. Custom events via `gtag('event', ...)` |
+| 17 | **Cloudinary as stateless transform layer** | Proven in 360-design. Upload → transform → download → R2 → delete from Cloudinary. Stay on free tier |
+| 18 | **AI product creation via API endpoints** | `POST /api/products` + `POST /api/upload` enable any AI assistant to create products programmatically |
+| 19 | **Order confirmation via Stripe Dashboard emails** | No custom email system for v1. Stripe sends receipts natively (enable in Dashboard → Settings → Emails) |
+
+---
+
+## Git Branching Strategy
+
+```
+main (production — live Stripe keys)
+  ↑ merge via PR only
+dev (integration — test Stripe keys)
+  ↑ merge feature branches
+feat/product-page
+feat/checkout-flow
+fix/webhook-signature
+```
+
+| Branch | Vercel Environment | Stripe Keys | URL |
+|--------|-------------------|-------------|-----|
+| `main` | Production | `sk_live_`, `pk_live_` | everlastingsbyemaline.com |
+| `dev` | Preview | `sk_test_`, `pk_test_` | *.vercel.app preview URL |
+| `feat/*` | Preview | `sk_test_`, `pk_test_` | *.vercel.app preview URL |
+
+**Rules**:
+1. Never push directly to `main` — always merge from `dev` via PR
+2. `dev` is the integration branch — all feature branches merge here first
+3. Test full purchase flow on `dev` preview URL before merging to `main`
+4. Both test and live webhook endpoints configured in Stripe Dashboard simultaneously
+5. Stripe test webhook → `dev` preview URL. Stripe live webhook → production URL.
+
+**Development workflow**:
+1. Create `feat/my-change` from `dev`
+2. Push → Vercel creates preview deployment with test Stripe keys
+3. Test on preview URL
+4. Merge to `dev` → verify on dev preview
+5. Merge `dev` → `main` → production with live keys
+
+---
+
+## Environment Strategy
+
+Vercel Dashboard → Settings → Environment Variables. Each var scoped by environment.
+
+| Variable | Production | Preview + Development |
+|----------|-----------|----------------------|
+| `STRIPE_SECRET_KEY` | `sk_live_...` | `sk_test_...` |
+| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...` | `pk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | live signing secret | test signing secret |
+| `SUPABASE_URL` | same | same |
+| `SUPABASE_ANON_KEY` | same | same |
+| `SUPABASE_SERVICE_KEY` | same | same |
+| `R2_*` vars | same | same |
+| `CLOUDINARY_URL` | same | same |
+
+**Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
+
+**Switchover process** (live launch):
+1. All development on `dev` with test keys (auto-configured)
+2. Test full purchase flow on preview URL with card `4242 4242 4242 4242`
+3. Set live keys for Production scope in Vercel Dashboard
+4. Create live webhook endpoint in Stripe Dashboard → production URL
+5. Set live `STRIPE_WEBHOOK_SECRET` for Production scope
+6. Enable receipt emails: Stripe Dashboard → Settings → Emails → Successful payments
+7. Merge `dev` → `main` → production deploys with live keys
+8. Test one real transaction (refund after)
 
 ---
 
@@ -92,7 +128,7 @@ interface Product {
   images: { url: string; alt: string }[]; // jsonb array
   thumbnail: string;             // CDN URL
   thumbnail_alt: string;
-  video_url: string | null;      // nullable
+  media: { type: 'video' | 'gif' | 'youtube'; url: string; caption?: string }[] | null; // replaces video_url
   seo_title: string;
   seo_description: string;
   artist_note: string | null;    // nullable
@@ -104,7 +140,7 @@ interface Product {
 }
 ```
 
-### Supabase SQL — CREATE TABLE
+### Supabase SQL — CREATE TABLE (5 tables)
 
 ```sql
 CREATE TABLE products (
@@ -131,7 +167,7 @@ CREATE TABLE products (
   images jsonb DEFAULT '[]'::jsonb,
   thumbnail text,
   thumbnail_alt text,
-  video_url text,
+  media jsonb DEFAULT '[]'::jsonb,
   seo_title text,
   seo_description text,
   artist_note text,
@@ -174,11 +210,31 @@ CREATE TRIGGER set_updated_at
 ```
 
 ```sql
+CREATE TABLE customers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text UNIQUE NOT NULL,
+  name text,
+  phone text,
+  shipping_address jsonb,
+  stripe_customer_id text,
+  source text DEFAULT 'checkout',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TRIGGER set_updated_at_customers
+  BEFORE UPDATE ON customers
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+```
+
+```sql
 CREATE TABLE orders (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   stripe_session_id text NOT NULL,
   stripe_payment_intent text,
   product_id uuid REFERENCES products(id),
+  customer_id uuid REFERENCES customers(id),
   customer_email text,
   amount integer,
   status text DEFAULT 'completed',
@@ -222,8 +278,8 @@ CREATE TABLE site_config (
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "https://everlastingsbyemaline.com" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, stripe-signature" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, stripe-signature" },
         { "key": "Access-Control-Max-Age", "value": "86400" }
       ]
     }
@@ -276,7 +332,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_KEY=eyJ...
 
-# Stripe
+# Stripe (set test keys for Preview+Development, live keys for Production)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -287,495 +343,184 @@ R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
 R2_BUCKET_NAME=everlastings
 R2_PUBLIC_URL=https://pub-xxx.r2.dev
+
+# Cloudinary (stateless image transforms — same format as 360-design)
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
 ```
 
 ---
 
-## SESSION 1: Foundation — ~3 hrs
+## How the Tracks Work
 
-**YOU WILL HAVE**: Vercel project live, Supabase tables created with RLS, R2 bucket ready, Stripe connected, all services wired together
+```
+TRACK A (Backend)                    TRACK B (Frontend Design)
+─────────────────                    ────────────────────────
+A1: Services Setup ──────────┐       B1: Design System
+A2: API Endpoints            │       B2: Header, Footer, Nav
+A3: Admin UI + Protocol      │       B3: Product Page (placeholder)
+A4: API Testing              │       B4: Shop Grid (placeholder)
+                             │       B5: Homepage (placeholder)
+                             │       B6: Remaining Pages
+                             │
+                    TRACK C (Integration)
+                    ────────────────────
+                    C1: Wire pages to backend
+                    C2: Checkout flow E2E
+                    C3: SEO finalization
+                    C4: Testing + Launch
+```
 
-### Vercel
+**Track A** and **Track B** can proceed simultaneously. Track C requires A2 + B3 minimum.
 
-- [ ] **Create** Vercel project — connect GitHub repo, auto-deploy on push to `main`
-- [ ] **Add** custom domain `everlastingsbyemaline.com` in Vercel dashboard
-- [ ] **Create** `vercel.json` — copy complete config from Configuration Files section above
-- [ ] **Verify** deploy: push to main, site loads (blank page is fine, no HTML yet)
+**Track B approach**: Every frontend page is built with hardcoded placeholder content (lorem ipsum text, placeholder images). No JavaScript data-fetching. Client reviews and iterates on visual design. In Track C, we add the JS that fetches from Supabase.
 
-### Supabase
+---
+
+## TRACK A: Foundation + Backend
+
+### A1: Services Setup
+
+**YOU WILL HAVE**: All services connected, tables created, env vars set, analytics base installed
+
+#### Vercel
+
+- [ ] **Create** Vercel project — connect GitHub repo
+- [ ] **Add** custom domain `everlastingsbyemaline.com`
+- [ ] **Create** `vercel.json` — copy from Configuration Files section
+- [ ] **Push** and verify deploy loads
+
+#### Git Branches
+
+- [ ] **Create** `dev` branch from `main`
+- [ ] **Set** Vercel auto-deploy: `main` → Production, all other branches → Preview
+- [ ] **Configure** env vars per environment (see Environment Strategy section)
+
+#### Supabase
 
 - [ ] **Create** Supabase project (free tier, us-east-1)
-- [ ] **Run** SQL: create `products` table — copy from Product Schema section above
+- [ ] **Run** SQL: create `products` table — copy from Product Schema section
+- [ ] **Run** SQL: create `customers` table
 - [ ] **Run** SQL: create `orders` table
 - [ ] **Run** SQL: create `subscribers` table
 - [ ] **Run** SQL: create `site_config` table
-- [ ] **Enable** RLS on all 4 tables:
+- [ ] **Enable** RLS on all 5 tables:
 
 ```sql
 -- PRODUCTS: public read, authenticated write
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Products are publicly readable"
-  ON products FOR SELECT
-  TO anon, authenticated
-  USING (true);
+  ON products FOR SELECT TO anon, authenticated USING (true);
 
 CREATE POLICY "Only authenticated users can insert products"
-  ON products FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
+  ON products FOR INSERT TO authenticated WITH CHECK (true);
 
 CREATE POLICY "Only authenticated users can update products"
-  ON products FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  ON products FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
 CREATE POLICY "Only authenticated users can delete products"
-  ON products FOR DELETE
-  TO authenticated
-  USING (true);
+  ON products FOR DELETE TO authenticated USING (true);
 
--- ORDERS: authenticated only
+-- CUSTOMERS: service role only (written by webhook)
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Only authenticated users can read customers"
+  ON customers FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Service role can manage customers"
+  ON customers FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ORDERS: authenticated read, service role write
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Only authenticated users can read orders"
-  ON orders FOR SELECT
-  TO authenticated
-  USING (true);
+  ON orders FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Service role can insert orders"
-  ON orders FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
+  ON orders FOR INSERT TO service_role WITH CHECK (true);
 
 -- SUBSCRIBERS: public insert, authenticated read
 ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can subscribe"
-  ON subscribers FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
+  ON subscribers FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 CREATE POLICY "Only authenticated users can read subscribers"
-  ON subscribers FOR SELECT
-  TO authenticated
-  USING (true);
+  ON subscribers FOR SELECT TO authenticated USING (true);
 
 -- SITE_CONFIG: public read, authenticated update
 ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Site config is publicly readable"
-  ON site_config FOR SELECT
-  TO anon, authenticated
-  USING (true);
+  ON site_config FOR SELECT TO anon, authenticated USING (true);
 
 CREATE POLICY "Only authenticated users can update config"
-  ON site_config FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  ON site_config FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 ```
 
 - [ ] **Create** admin user: Supabase Auth > Users > Invite user (Emy's email)
 - [ ] **Configure** Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
-  - Dashboard: Database > Webhooks > Create new
-  - Table: `products`, Event: INSERT
-  - Type: HTTP Request, Method: POST
-  - URL: `https://everlastingsbyemaline.com/api/stripe-sync`
-  - Headers: `Content-Type: application/json`
 
-### Cloudflare R2
+#### Cloudflare R2
 
-- [ ] **Create** R2 bucket named `everlastings`
-- [ ] **Enable** public access (R2 > bucket > Settings > Public Access > Enable)
-- [ ] **Note** the r2.dev public URL (e.g., `https://pub-xxx.r2.dev`)
-- [ ] **Create** API token: R2 > Manage R2 API Tokens > Create API token
-  - Permissions: Object Read & Write
-  - Specify bucket: `everlastings`
-  - Note: Access Key ID + Secret Access Key
+- [ ] **Create** R2 bucket `everlastings`
+- [ ] **Enable** public access
+- [ ] **Note** r2.dev public URL
+- [ ] **Create** API token (Read & Write, scoped to `everlastings` bucket)
 
-### Stripe
+#### Cloudinary
 
-- [ ] **Confirm** Stripe account active
-- [ ] **Get** test API keys: Dashboard > Developers > API keys
-  - Note publishable key (`pk_test_...`) and secret key (`sk_test_...`)
-- [ ] **Create** webhook endpoint: Developers > Webhooks > Add endpoint
-  - URL: `https://everlastingsbyemaline.com/api/webhook`
+- [ ] **Create** Cloudinary account (free tier) or use existing (cloud name: `dzrtucxh7`)
+- [ ] **Note** cloud name, API key, API secret
+- [ ] **Set** `CLOUDINARY_URL` env var in Vercel
+
+#### Stripe
+
+- [ ] **Get** test API keys (publishable + secret)
+- [ ] **Create** test webhook endpoint → `{dev-preview-url}/api/webhook`
   - Events: `checkout.session.completed`
-  - Note webhook signing secret (`whsec_...`)
+- [ ] **Create** cart-recovery coupon: name "Haven Finder Apology", 10% off, duration once, ID `cart-recovery-10`
+- [ ] **Enable** receipt emails: Dashboard → Settings → Emails → Successful payments
 
-### Environment
+#### Analytics
 
-- [ ] **Create** `.env.example` — copy from Configuration Files section above
-- [ ] **Set** all env vars in Vercel Dashboard: Settings > Environment Variables
-- [ ] **Create** `.env.local` for local dev (copy from .env.example, fill in values)
+- [ ] **Create** GA4 property for everlastingsbyemaline.com
+- [ ] **Note** Measurement ID (`G-XXXXXXXXXX`)
+- [ ] **Verify** Google Search Console (TXT record or HTML file upload)
+
+#### Config Files
+
+- [ ] **Create** `.env.example` — copy from Configuration Files section
+- [ ] **Set** env vars in Vercel Dashboard (per environment — see Environment Strategy)
+- [ ] **Create** `.env.local` for local dev
 - [ ] **Run** `npm init -y && npm install stripe @supabase/supabase-js @aws-sdk/client-s3`
-- [ ] **Create** `tsconfig.json` — copy from Configuration Files section above
-- [ ] **Create** `package.json` — copy from Configuration Files section above
-- [ ] **Verify** `vercel dev` starts locally
+- [ ] **Create** `tsconfig.json` and `package.json` — copy from Configuration Files section
+- [ ] **Verify** `vercel dev` starts
 
 ---
 
-## SESSION 2: Design System — ~3 hrs
+### A2: API Endpoints
 
-**YOU WILL HAVE**: CSS variables, typography loaded, base components styled, responsive scaffolding, image standards defined
+**YOU WILL HAVE**: All server-side endpoints working, testable with curl
 
-### CSS Custom Properties
+#### Config — `api/config.ts`
 
-- [ ] **Create** `assets/css/styles.css`
-- [ ] **Define** color variables — copy from `BRAND.md` > CSS Custom Properties
-- [ ] **Define** typography variables (font-display, font-body, size scale)
-- [ ] **Define** spacing scale:
+Returns environment-appropriate public configuration. Enables automatic test/live Stripe key switching.
 
-```css
-:root {
-  --space-xs: 0.25rem;   /* 4px */
-  --space-sm: 0.5rem;    /* 8px */
-  --space-md: 1rem;      /* 16px */
-  --space-lg: 1.5rem;    /* 24px */
-  --space-xl: 2rem;      /* 32px */
-  --space-2xl: 3rem;     /* 48px */
-  --space-3xl: 4rem;     /* 64px */
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  --transition-fast: 150ms ease;
-  --transition-base: 250ms ease;
-  --transition-slow: 400ms ease;
-
-  --z-header: 100;
-  --z-modal: 200;
-  --z-lightbox: 300;
-}
-```
-
-### Typography
-
-- [ ] **Add** Cormorant Garamond via Google Fonts:
-
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-```
-
-- [ ] **Style** heading hierarchy (h1-h6 using --font-display)
-- [ ] **Style** body text (--font-body, line-height 1.6)
-- [ ] **Style** captions, labels, buttons
-
-### Base Components
-
-- [ ] **Button** styles: primary (plum bg), secondary (outline), ghost, disabled
-- [ ] **Card** styles: product tiles with hover shadow lift
-- [ ] **Form** inputs: border, focus state (plum outline), padding, radius
-- [ ] **Image** styles: `object-fit: cover`, `aspect-ratio: 4/5`, `loading="lazy"`
-- [ ] **Badge** styles: "Sold" (fog bg, muted text), "Featured" (gold border)
-- [ ] **Error** message styles: subtle, non-intrusive, ink text on fog bg
-
-### Image Standards
-
-All product images MUST be:
-- **Aspect ratio**: 4:5 (portrait)
-- **Format**: WebP
-- **Max size**: 2MB per image
-- **Naming**: `hero.webp`, `gallery-01.webp` through `gallery-15.webp`, `thumbnail.webp`
-
-### Responsive Foundation
-
-- [ ] **Set** base mobile styles (393px)
-- [ ] **Add** tablet breakpoint (768px)
-- [ ] **Add** desktop breakpoint (1024px)
-- [ ] **Add** large desktop (1440px)
-
----
-
-## SESSION 3: Product Page + Supabase Client — ~4 hrs
-
-**YOU WILL HAVE**: Supabase client working, one product renders from database with full layout
-
-### Supabase Client — `assets/js/main.js`
-
-```html
-<!-- In every HTML page <head> -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/assets/js/main.js"></script>
-```
-
-```javascript
-// assets/js/main.js
-
-// Supabase client — anon key is public, protected by RLS
-const SUPABASE_URL = 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJ...your-anon-key';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// CDN base URL for product images
-const R2_PUBLIC_URL = 'https://pub-xxx.r2.dev';
-
-// Format price from cents to display string
-function formatPrice(cents) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(cents / 100);
-}
-
-// Generate slug from title (matches DB trigger)
-function slugify(title) {
-  return title.toLowerCase().replaceAll(' ', '-');
-}
-
-// Fetch single product by slug
-async function getProductBySlug(slug) {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (error) {
-    console.error('Failed to fetch product:', error.message);
-    return null;
-  }
-  return data;
-}
-
-// --- Cart (localStorage) ---
-
-function getCart() {
-  return JSON.parse(localStorage.getItem('everlastings_cart') || '[]');
-}
-
-function addToCart(item) {
-  const cart = getCart();
-  // Prevent duplicates (1-of-1 items)
-  if (cart.find(i => i.product_id === item.product_id)) return;
-  cart.push(item);
-  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
-}
-
-function removeFromCart(productId) {
-  const cart = getCart().filter(i => i.product_id !== productId);
-  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
-}
-
-function clearCart() {
-  localStorage.removeItem('everlastings_cart');
-}
-
-function getCartTotal() {
-  return getCart().reduce((sum, item) => sum + item.price, 0);
-}
-
-function updateCartBadge() {
-  const badge = document.getElementById('cart-badge');
-  if (badge) {
-    const count = getCart().length;
-    badge.textContent = count;
-    badge.classList.toggle('hidden', count === 0);
-  }
-}
-
-// Update badge on every page load
-document.addEventListener('DOMContentLoaded', updateCartBadge);
-
-// Fetch all available products
-async function getProducts(options = {}) {
-  let query = supabase.from('products').select('*');
-
-  if (options.available !== undefined) {
-    query = query.eq('available', options.available);
-  }
-  if (options.featured) {
-    query = query.eq('featured', true);
-  }
-  if (options.series) {
-    query = query.eq('series', options.series);
-  }
-  if (options.orderBy) {
-    query = query.order(options.orderBy, { ascending: options.ascending ?? true });
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Failed to fetch products:', error.message);
-    return [];
-  }
-  return data;
-}
-```
-
-- [ ] **Create** `assets/js/main.js` with the code above
-- [ ] **Replace** placeholder URLs with actual Supabase URL, anon key, and R2 URL
-- [ ] **Seed** one test product in Supabase Studio (use Sunkeeper example from PRODUCT_GUIDE.md)
-- [ ] **Upload** test images to R2 under `/products/the-sunkeeper/`
-
-### Product Page — `product.html`
-
-- [ ] **Create** `product.html` — semantic HTML:
-  - Two-column layout: `.product-story` (left), `.product-details` (right)
-  - Image gallery container (7-15 photos)
-  - Story card section (paragraphs)
-  - Features list, dimensions, materials, power supply
-  - Price display + "Add to Cart" button + "Buy Now" button
-  - Care instructions, shipping details
-  - Artist note (conditional)
-  - Breadcrumb: Home > Shop > Product Title
-
-### Product Page JS — `assets/js/product.js`
-
-```javascript
-// assets/js/product.js
-
-document.addEventListener('DOMContentLoaded', async () => {
-  // Extract slug from URL: /product/the-sunkeeper → the-sunkeeper
-  const slug = window.location.pathname.split('/product/')[1];
-
-  if (!slug) {
-    showError('Product not found.');
-    return;
-  }
-
-  const product = await getProductBySlug(slug);
-
-  if (!product) {
-    showError('This product could not be found.');
-    return;
-  }
-
-  renderProduct(product);
-});
-
-function renderProduct(product) {
-  // Title + headline
-  document.getElementById('product-title').textContent = product.title;
-  document.getElementById('product-headline').textContent = product.headline;
-
-  // Story card
-  document.getElementById('story-card').innerHTML = product.story_card
-    .split('\n\n')
-    .map(p => `<p>${p}</p>`)
-    .join('');
-
-  // Price
-  document.getElementById('product-price').textContent = formatPrice(product.price);
-
-  // Add to Cart / Sold button
-  const cartBtn = document.getElementById('add-to-cart');
-  const buyNowBtn = document.getElementById('buy-now');
-  if (!product.available) {
-    cartBtn.disabled = true;
-    cartBtn.textContent = 'Sold';
-    buyNowBtn.style.display = 'none';
-    document.getElementById('sold-badge').classList.remove('hidden');
-  } else {
-    cartBtn.addEventListener('click', () => {
-      addToCart({
-        product_id: product.id,
-        slug: product.slug,
-        title: product.title,
-        price: product.price,
-        thumbnail: product.thumbnail,
-        stripe_price_id: product.stripe_price_id,
-      });
-      updateCartBadge();
-    });
-    buyNowBtn.addEventListener('click', () => {
-      addToCart({
-        product_id: product.id,
-        slug: product.slug,
-        title: product.title,
-        price: product.price,
-        thumbnail: product.thumbnail,
-        stripe_price_id: product.stripe_price_id,
-      });
-      window.location.href = '/checkout.html';
-    });
-  }
-
-  // Images
-  renderGallery(product.images);
-
-  // Features
-  if (product.features?.length) {
-    document.getElementById('features-list').innerHTML =
-      product.features.map(f => `<li>${f}</li>`).join('');
-  }
-
-  // Dimensions, weight, materials
-  if (product.dimensions) {
-    document.getElementById('dimensions').textContent = product.dimensions;
-  }
-  if (product.materials?.length) {
-    document.getElementById('materials').textContent = product.materials.join(', ');
-  }
-
-  // Care instructions
-  if (product.care_instructions?.length) {
-    document.getElementById('care-list').innerHTML =
-      product.care_instructions.map(c => `<li>${c}</li>`).join('');
-  }
-
-  // SEO
-  document.title = product.seo_title || `${product.title} | Everlastings by Emaline`;
-  document.querySelector('meta[name="description"]')?.setAttribute('content', product.seo_description || product.description);
-}
-
-function renderGallery(images) {
-  if (!images?.length) return;
-  const main = document.getElementById('gallery-main');
-  const thumbs = document.getElementById('gallery-thumbs');
-
-  main.src = images[0].url;
-  main.alt = images[0].alt;
-
-  images.forEach((img, i) => {
-    const thumb = document.createElement('img');
-    thumb.src = img.url;
-    thumb.alt = img.alt;
-    thumb.classList.add('gallery-thumb');
-    if (i === 0) thumb.classList.add('active');
-    thumb.addEventListener('click', () => {
-      main.src = img.url;
-      main.alt = img.alt;
-      thumbs.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
-      thumb.classList.add('active');
-    });
-    thumbs.appendChild(thumb);
+```typescript
+// api/config.ts
+export async function GET() {
+  return Response.json({
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
   });
 }
-
-function showError(message) {
-  document.getElementById('product-content').innerHTML =
-    `<div class="error-state"><p>${message}</p><a href="/shop.html">Browse the shop</a></div>`;
-}
 ```
 
-- [ ] **Create** `assets/js/product.js` with the code above
-- [ ] **Test**: navigate to `/product/the-sunkeeper`, verify product renders from Supabase
+- [ ] **Create** `api/config.ts` with the code above
 
-### Responsive
-
-- [ ] **Mobile**: single column, story above details
-- [ ] **Tablet**: two columns start
-- [ ] **Desktop**: full two-column with generous whitespace
-- [ ] **Gallery**: horizontal scroll on mobile, grid on desktop
-
----
-
-## SESSION 4: Stripe Integration — ~4 hrs
-
-**YOU WILL HAVE**: Products purchasable via on-site checkout with cart, inventory auto-updates on sale, Stripe catalog auto-synced
-
-### Stripe Sync — `api/stripe-sync.ts`
+#### Stripe Sync — `api/stripe-sync.ts`
 
 Called by Supabase Database Webhook when a product is inserted.
 
@@ -787,39 +532,32 @@ import { createClient } from '@supabase/supabase-js';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY! // service key for server-side writes
+  process.env.SUPABASE_SERVICE_KEY!
 );
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
 
-    // Supabase DB webhook payload: { type, table, schema, record, old_record }
     if (payload.type !== 'INSERT' || payload.table !== 'products') {
       return Response.json({ error: 'Ignored: not a products INSERT' }, { status: 200 });
     }
 
     const product = payload.record;
 
-    // Create Stripe Product
     const stripeProduct = await stripe.products.create({
       name: product.title,
       description: product.description || product.headline || '',
       images: product.images?.slice(0, 8).map((img: { url: string }) => img.url) || [],
-      metadata: {
-        supabase_id: product.id,
-        slug: product.slug,
-      },
+      metadata: { supabase_id: product.id, slug: product.slug },
     });
 
-    // Create Stripe Price (immutable — write-once)
     const stripePrice = await stripe.prices.create({
       product: stripeProduct.id,
-      unit_amount: product.price, // already in cents
+      unit_amount: product.price,
       currency: 'usd',
     });
 
-    // Write Stripe IDs back to Supabase
     const { error } = await supabase
       .from('products')
       .update({
@@ -844,12 +582,11 @@ export async function POST(request: Request) {
 }
 ```
 
-- [ ] **Create** `api/stripe-sync.ts` with the code above
-- [ ] **Test**: insert product in Supabase Studio → verify Stripe product appears in Stripe Dashboard
+- [ ] **Create** `api/stripe-sync.ts`
 
-### Checkout — `api/checkout.ts`
+#### Checkout — `api/checkout.ts`
 
-Creates a Stripe Checkout Session with `ui_mode: 'custom'`. Checks availability for ALL cart items first.
+Creates Stripe Checkout Session with `ui_mode: 'custom'`. Checks availability for ALL cart items.
 
 ```typescript
 // api/checkout.ts
@@ -876,7 +613,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Cart is empty' }, { status: 400 });
     }
 
-    // Availability check for ALL items — prevents oversell race condition
+    // Availability check for ALL items
     const productIds = items.map(i => i.product_id);
     const { data: products, error } = await supabase
       .from('products')
@@ -887,7 +624,6 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Failed to verify availability' }, { status: 500 });
     }
 
-    // Check each item is still available
     const unavailable = items.filter(item => {
       const product = products?.find(p => p.id === item.product_id);
       return !product || !product.available || product.quantity < 1;
@@ -900,27 +636,21 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    // Build line_items from cart
     const line_items = items.map(item => ({
       price: item.stripe_price_id,
       quantity: 1,
     }));
 
-    // Store item details in metadata for webhook
     const itemsMeta = items.map(i => ({ id: i.product_id, slug: i.slug }));
 
-    // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
       ui_mode: 'custom',
       mode: 'payment',
       line_items,
-      allow_promotion_codes: true, // Enables promo code field (for cart-recovery discounts etc.)
-      shipping_address_collection: {
-        allowed_countries: ['US'],
-      },
-      metadata: {
-        items: JSON.stringify(itemsMeta),
-      },
+      allow_promotion_codes: true,
+      shipping_address_collection: { allowed_countries: ['US'] },
+      phone_number_collection: { enabled: true },
+      metadata: { items: JSON.stringify(itemsMeta) },
       return_url: `${getBaseUrl(request)}/complete.html?session_id={CHECKOUT_SESSION_ID}`,
     });
 
@@ -937,11 +667,9 @@ function getBaseUrl(request: Request): string {
 }
 ```
 
-- [ ] **Create** `api/checkout.ts` with the code above
+- [ ] **Create** `api/checkout.ts`
 
-### Session Status — `api/session-status.ts`
-
-Return page fetches session status to show confirmation or error.
+#### Session Status — `api/session-status.ts`
 
 ```typescript
 // api/session-status.ts
@@ -974,11 +702,11 @@ export async function GET(request: Request) {
 }
 ```
 
-- [ ] **Create** `api/session-status.ts` with the code above
+- [ ] **Create** `api/session-status.ts`
 
-### Webhook — `api/webhook.ts`
+#### Webhook — `api/webhook.ts`
 
-Handles Stripe `checkout.session.completed` events. Updates inventory and creates order.
+Handles `checkout.session.completed`. Updates inventory, upserts customer, creates orders.
 
 ```typescript
 // api/webhook.ts
@@ -1003,9 +731,7 @@ export async function POST(request: Request) {
 
   try {
     event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
@@ -1015,7 +741,7 @@ export async function POST(request: Request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
 
-    // Parse items from metadata (supports single and multi-item carts)
+    // Parse items from metadata
     let items: { id: string; slug: string }[] = [];
     try {
       items = JSON.parse(session.metadata?.items || '[]');
@@ -1029,19 +755,41 @@ export async function POST(request: Request) {
       return Response.json({ received: true }, { status: 200 });
     }
 
-    // Mark each product as sold
+    // Upsert customer record
+    const customerEmail = session.customer_details?.email;
+    let customerId: string | null = null;
+
+    if (customerEmail) {
+      const { data: customer } = await supabase
+        .from('customers')
+        .upsert({
+          email: customerEmail,
+          name: session.customer_details?.name || null,
+          phone: session.customer_details?.phone || null,
+          shipping_address: session.shipping_details?.address || null,
+          source: 'checkout',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'email' })
+        .select('id')
+        .single();
+
+      customerId = customer?.id || null;
+
+      // Link subscriber if exists
+      await supabase
+        .from('subscribers')
+        .update({ source: 'customer' })
+        .eq('email', customerEmail);
+    }
+
+    // Mark each product as sold and create order records
     for (const item of items) {
-      const { error: updateError } = await supabase
+      await supabase
         .from('products')
         .update({ available: false, quantity: 0 })
         .eq('id', item.id);
 
-      if (updateError) {
-        console.error(`Failed to update product ${item.slug}:`, updateError.message);
-      }
-
-      // Create order record per product
-      const { error: orderError } = await supabase
+      await supabase
         .from('orders')
         .insert({
           stripe_session_id: session.id,
@@ -1049,35 +797,845 @@ export async function POST(request: Request) {
             ? session.payment_intent
             : session.payment_intent?.id,
           product_id: item.id,
-          customer_email: session.customer_details?.email,
+          customer_id: customerId,
+          customer_email: customerEmail,
           amount: session.amount_total,
           status: 'completed',
           shipping_address: session.shipping_details?.address,
         });
-
-      if (orderError) {
-        console.error(`Failed to create order for ${item.slug}:`, orderError.message);
-      }
     }
 
-    console.log(`Order completed: ${items.map(i => i.slug).join(', ')} → ${session.customer_details?.email}`);
+    console.log(`Order completed: ${items.map(i => i.slug).join(', ')} → ${customerEmail}`);
   }
 
   return Response.json({ received: true }, { status: 200 });
 }
 ```
 
-- [ ] **Create** `api/webhook.ts` with the code above
+- [ ] **Create** `api/webhook.ts`
 
-### Checkout Page — `checkout.html` + `assets/js/checkout.js`
+#### Cart Recovery — `api/cart-recovery.ts`
 
-On-site checkout using Stripe Elements with `ui_mode: 'custom'`.
+```typescript
+// api/cart-recovery.ts
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+export async function POST(request: Request) {
+  try {
+    const { email, lost_items } = await request.json();
+
+    if (!email || !email.includes('@')) {
+      return Response.json({ error: 'Valid email required' }, { status: 400 });
+    }
+
+    const promoCode = await stripe.promotionCodes.create({
+      coupon: 'cart-recovery-10',
+      max_redemptions: 1,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+      metadata: {
+        source: 'cart-recovery',
+        lost_items: JSON.stringify(lost_items || []),
+        email,
+      },
+    });
+
+    await supabase
+      .from('subscribers')
+      .upsert({ email, source: 'cart-recovery' }, { onConflict: 'email' });
+
+    return Response.json({
+      code: promoCode.code,
+      percent_off: 10,
+      expires_in_days: 30,
+    });
+  } catch (err) {
+    console.error('Cart recovery error:', err);
+    return Response.json({ error: 'Failed to generate discount' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Create** `api/cart-recovery.ts`
+
+#### Products API — `api/products.ts`
+
+Enables AI-assisted product creation. Authenticated with service key.
+
+```typescript
+// api/products.ts
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+function authorize(request: Request): boolean {
+  const auth = request.headers.get('authorization');
+  return auth === `Bearer ${process.env.SUPABASE_SERVICE_KEY}`;
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const slug = url.searchParams.get('slug');
+
+  if (!slug) {
+    return Response.json({ error: 'Missing slug parameter' }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !data) {
+    return Response.json({ error: 'Product not found' }, { status: 404 });
+  }
+
+  return Response.json(data);
+}
+
+export async function POST(request: Request) {
+  if (!authorize(request)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const product = await request.json();
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert(product)
+      .select()
+      .single();
+
+    if (error) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+
+    // DB webhook will auto-trigger stripe-sync
+    return Response.json({ success: true, product: data });
+  } catch (err) {
+    console.error('Product creation error:', err);
+    return Response.json({ error: 'Failed to create product' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  if (!authorize(request)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!id) {
+      return Response.json({ error: 'Missing id parameter' }, { status: 400 });
+    }
+
+    const updates = await request.json();
+
+    // If price changed, archive old Stripe Price and create new one
+    if (updates.price !== undefined) {
+      const { data: existing } = await supabase
+        .from('products')
+        .select('price, stripe_product_id, stripe_price_id')
+        .eq('id', id)
+        .single();
+
+      if (existing && existing.price !== updates.price && existing.stripe_price_id) {
+        // Archive old price
+        await stripe.prices.update(existing.stripe_price_id, { active: false });
+
+        // Create new price
+        const newPrice = await stripe.prices.create({
+          product: existing.stripe_product_id!,
+          unit_amount: updates.price,
+          currency: 'usd',
+        });
+
+        updates.stripe_price_id = newPrice.id;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+
+    return Response.json({ success: true, product: data });
+  } catch (err) {
+    console.error('Product update error:', err);
+    return Response.json({ error: 'Failed to update product' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Create** `api/products.ts`
+
+#### Image Upload — `api/upload.ts`
+
+Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to R2, returns CDN URL.
+
+```typescript
+// api/upload.ts
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+// Parse CLOUDINARY_URL: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+function getCloudinaryConfig() {
+  const url = process.env.CLOUDINARY_URL || '';
+  const match = url.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/);
+  if (!match) throw new Error('Invalid CLOUDINARY_URL');
+  return { apiKey: match[1], apiSecret: match[2], cloudName: match[3] };
+}
+
+export async function POST(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const slug = formData.get('slug') as string;
+    const role = formData.get('role') as string; // hero, gallery-01, thumbnail, video-01, detail-01
+    const skipTransform = formData.get('skip_transform') === 'true'; // for videos/GIFs
+
+    if (!file || !slug || !role) {
+      return Response.json({ error: 'Missing file, slug, or role' }, { status: 400 });
+    }
+
+    let finalBuffer: Buffer;
+    let contentType: string;
+    let extension: string;
+
+    if (skipTransform) {
+      // Direct upload for videos and GIFs
+      finalBuffer = Buffer.from(await file.arrayBuffer());
+      contentType = file.type;
+      extension = file.type.includes('mp4') ? 'mp4' : file.type.includes('gif') ? 'gif' : 'webp';
+    } else {
+      // Image: upload to Cloudinary → transform → download → delete
+      const cloud = getCloudinaryConfig();
+      const imageBuffer = Buffer.from(await file.arrayBuffer());
+
+      // Upload to Cloudinary
+      const uploadForm = new FormData();
+      uploadForm.append('file', new Blob([imageBuffer]));
+      uploadForm.append('upload_preset', 'unsigned_temp'); // or use signed upload
+      uploadForm.append('api_key', cloud.apiKey);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/upload`,
+        { method: 'POST', body: uploadForm }
+      );
+      const uploadData = await uploadRes.json();
+      const publicId = uploadData.public_id;
+
+      // Determine transform params
+      const isThumb = role.startsWith('thumbnail');
+      const width = isThumb ? 600 : 1200;
+      const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_4:5,w_${width},f_webp,q_auto,g_auto/${publicId}`;
+
+      // Download transformed image
+      const transformedRes = await fetch(transformUrl);
+      finalBuffer = Buffer.from(await transformedRes.arrayBuffer());
+      contentType = 'image/webp';
+      extension = 'webp';
+
+      // Delete from Cloudinary (stay on free tier)
+      const timestamp = Math.floor(Date.now() / 1000);
+      const sigString = `public_id=${publicId}&timestamp=${timestamp}${cloud.apiSecret}`;
+      const encoder = new TextEncoder();
+      const hashBuffer = await crypto.subtle.digest('SHA-1', encoder.encode(sigString));
+      const signature = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      await fetch(`https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public_id: publicId, api_key: cloud.apiKey, timestamp, signature }),
+      });
+    }
+
+    // Upload to R2
+    const filename = `${role}-${slug}.${extension}`;
+    const key = `products/${slug}/${filename}`;
+
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: finalBuffer,
+      ContentType: contentType,
+    }));
+
+    const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
+    return Response.json({ url: publicUrl, filename });
+  } catch (err) {
+    console.error('Upload error:', err);
+    return Response.json({ error: 'Upload failed' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Create** `api/upload.ts`
+
+#### Newsletter — `api/subscribe.ts`
+
+```typescript
+// api/subscribe.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+export async function POST(request: Request) {
+  try {
+    const { email, source } = await request.json();
+
+    if (!email || !email.includes('@')) {
+      return Response.json({ error: 'Valid email required' }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from('subscribers')
+      .insert({ email, source: source || 'footer' });
+
+    if (error) {
+      if (error.code === '23505') {
+        return Response.json({ message: 'Already subscribed' }, { status: 200 });
+      }
+      throw error;
+    }
+
+    return Response.json({ message: 'Subscribed' });
+  } catch (err) {
+    console.error('Subscribe error:', err);
+    return Response.json({ error: 'Subscription failed' }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Create** `api/subscribe.ts`
+- [ ] **Create** `api/contact.ts` — similar pattern, stores in Supabase or sends email
+
+---
+
+### A3: Admin UI + Product Creation Protocol
+
+**YOU WILL HAVE**: Browser-based product management + documented AI workflow
+
+#### Admin UI — `admin/index.html` + `assets/js/admin.js`
+
+- [ ] **Create** `admin/index.html` — login form
+- [ ] **Create** `assets/js/admin.js`
+- [ ] **Implement** Supabase Auth login/logout
+- [ ] **Build** product list (table/grid with edit/delete)
+- [ ] **Build** new product form (all schema fields)
+  - Price input in dollars, convert to cents on save
+  - Dynamic lists: features, materials, care_instructions, shipping_details
+- [ ] **Implement** image upload: file picker → `/api/upload` → CDN URL
+- [ ] **Implement** save (INSERT or UPDATE to products)
+- [ ] **Implement** delete with confirmation
+
+#### Product Creation Protocol
+
+- [ ] **Create** `assets/docs/PRODUCT_CREATION_PROTOCOL.md` — see separate document
+  - AI-facing protocol: gather details → process images → create product → verify
+  - Adapts 360-design ENTRY_SOP for Supabase + Stripe
+
+---
+
+### A4: API Integration Testing
+
+- [ ] **Test** stripe-sync: insert product in Supabase → verify Stripe product appears
+- [ ] **Test** checkout: POST with cart items → receive clientSecret
+- [ ] **Test** webhook: use Stripe CLI `stripe listen --forward-to localhost:3000/api/webhook`
+- [ ] **Test** full flow: add to cart → checkout → pay with `4242...` → completion
+- [ ] **Verify** customer record created in customers table
+- [ ] **Verify** order records created with customer_id FK
+- [ ] **Test** multi-item: add 2 products, checkout, verify both marked sold
+- [ ] **Test** race condition: add item, set `available=false`, checkout → 409
+- [ ] **Test** recovery: trigger 409 → enter email → get promo code
+- [ ] **Test** products API: POST/PUT/GET via curl with service key auth
+- [ ] **Test** upload API: upload image, verify Cloudinary transform + R2 delivery
+- [ ] **Test** admin: login → add product → see it on shop page
+
+---
+
+## TRACK B: Frontend Design (Placeholder Content)
+
+All pages built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum text and placeholder images. Client reviews and iterates on visual design.
+
+### B1: Design System
+
+**YOU WILL HAVE**: CSS variables, typography, base components, responsive scaffolding
+
+#### CSS Custom Properties
+
+- [ ] **Create** `assets/css/styles.css`
+- [ ] **Define** color variables — copy from `BRAND.md` > CSS Custom Properties
+- [ ] **Define** typography variables (font-display, font-body, size scale)
+- [ ] **Define** spacing, shadow, radius, transition, z-index tokens:
+
+```css
+:root {
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  --z-header: 100;
+  --z-modal: 200;
+  --z-lightbox: 300;
+
+  --header-height: 64px;
+}
+```
+
+#### Typography
+
+- [ ] **Add** Cormorant Garamond via Google Fonts
+- [ ] **Style** heading hierarchy (h1-h6 using --font-display)
+- [ ] **Style** body text (--font-body, line-height 1.6)
+
+#### Base Components
+
+- [ ] **Buttons**: primary (plum bg), secondary (outline), ghost, disabled
+- [ ] **Cards**: product tiles with hover shadow lift + scale 1.05
+- [ ] **Forms**: border, focus state (plum outline), padding, radius
+- [ ] **Images**: `object-fit: cover`, `aspect-ratio: 4/5`, `loading="lazy"`
+- [ ] **Badges**: "Sold" (fog bg, muted text), "Featured" (gold border)
+- [ ] **Errors**: subtle, non-intrusive, ink text on fog bg
+
+#### Loading States (Skeleton Screens)
+
+- [ ] **Style** skeleton loading placeholders for product page and shop grid
+- [ ] **Animate** with shimmer effect (CSS `@keyframes` gradient sweep)
+
+```css
+.skeleton {
+  background: linear-gradient(90deg, var(--color-fog) 25%, #e0e0e0 50%, var(--color-fog) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+```
+
+#### Lightbox Component
+
+- [ ] **Style** fullscreen overlay: dark bg, centered image, close button
+- [ ] **Add** left/right navigation arrows
+- [ ] **Support** keyboard: Escape to close, Arrow keys to navigate
+
+```css
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-lightbox);
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  color: var(--color-cream);
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-cream);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: var(--space-md);
+}
+
+.lightbox-prev { left: var(--space-md); }
+.lightbox-next { right: var(--space-md); }
+```
+
+#### Inline SVG Icons
+
+No icon library. 5-6 simple SVG icons used in product details:
+
+- [ ] **Create** icons: dimensions (ruler), weight (scale), materials (palette), lighting (sun), care (shield), shipping (truck)
+- [ ] **Style** at 20x20px, `currentColor` fill
+
+#### Responsive Foundation
+
+- [ ] **Set** base mobile (393px)
+- [ ] **Add** tablet breakpoint (768px)
+- [ ] **Add** desktop breakpoint (1024px)
+- [ ] **Add** large desktop (1440px)
+
+#### GA4 Script Tag
+
+- [ ] **Add** `gtag.js` snippet to `<head>` of all pages (include in header template):
+
+```html
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+```
+
+---
+
+### B2: Header, Footer, Nav
+
+**YOU WILL HAVE**: Consistent navigation on all pages (hardcoded, no JS needed)
+
+#### Header
+
+- [ ] **Logo** (left, links to homepage)
+- [ ] **Nav**: Home, Shop (dropdown), About, Commissions, Contact
+- [ ] **Shop dropdown**: All | Portals to Peace | Book Nooks & Story Lofts | Seasonal & Limited | Sold Archive
+- [ ] **Cart icon** with count badge (right) — links to `/checkout.html`
+- [ ] **Mobile**: hamburger (left), logo (center), cart icon (right)
+- [ ] **Sticky** on scroll
+
+#### Footer
+
+- [ ] **Four columns**: About, Shop, Support, Connect
+- [ ] **Newsletter signup**: email input (wired in Track C)
+- [ ] **Social links**: Instagram, Facebook, Pinterest, TikTok
+- [ ] **Bottom bar**: copyright, "Site by Sean August Horvath", Terms | Privacy
+
+---
+
+### B3: Product Page (Placeholder)
+
+**YOU WILL HAVE**: Complete product page layout with hardcoded sample product
+
+- [ ] **Create** `product.html` — two-column layout:
+  - Left: `.product-story` — scrollable gallery + story card
+  - Right: `.product-sticky-card` — sticky details card
+- [ ] **Hardcode** sample product (The Sunkeeper) with placeholder text and images
+- [ ] **Build** image gallery: main image + thumbnail strip
+- [ ] **Build** lightbox: click gallery image → fullscreen overlay with nav
+- [ ] **Build** sticky product card:
+
+```html
+<aside class="product-sticky-card">
+  <img class="sticky-thumb" src="/placeholder/hero.webp" alt="The Sunkeeper">
+  <h2>The Sunkeeper</h2>
+  <p class="price">$245.00</p>
+
+  <button class="btn-primary">Add to Cart</button>
+  <button class="btn-secondary">Buy Now</button>
+
+  <p class="availability-note">
+    Each piece is one-of-a-kind.
+    <a href="/policies.html#availability">Availability confirmed at checkout</a>.
+  </p>
+</aside>
+```
+
+- [ ] **Style** sticky behavior: `position: sticky; top: calc(var(--header-height) + var(--space-lg));`
+- [ ] **Mobile** (< 768px): not sticky, card below gallery in normal flow
+- [ ] **Build** features list with inline SVG icons
+- [ ] **Build** details sections: dimensions, materials, care, shipping
+- [ ] **Build** story card section with poetic lorem ipsum
+- [ ] **Add** breadcrumb: Home > Shop > The Sunkeeper
+- [ ] **Add** "Related Havens" section placeholder (3-4 product cards, hardcoded)
+
+#### Media rendering (for videos/GIFs in gallery):
+
+```html
+<!-- Video -->
+<video controls poster="/placeholder/hero.webp" class="gallery-media">
+  <source src="/placeholder/video.mp4" type="video/mp4">
+</video>
+
+<!-- GIF -->
+<img src="/placeholder/detail.gif" alt="Detail animation" class="gallery-media" loading="lazy">
+
+<!-- YouTube (privacy-enhanced) -->
+<iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
+  class="gallery-media" loading="lazy" allowfullscreen></iframe>
+```
+
+---
+
+### B4: Shop Grid (Placeholder)
+
+**YOU WILL HAVE**: Filterable grid layout with hardcoded product tiles
+
+- [ ] **Create** `shop.html` — filter sidebar + product grid
+- [ ] **Hardcode** 6-8 product tiles with placeholder data
+- [ ] **Build** filter sidebar: series, product_type, availability checkboxes
+- [ ] **Build** sort dropdown: price (low/high), newest, name (A-Z)
+- [ ] **Style** tiles: 4:5 aspect ratio, hover scale + shadow, lazy images
+- [ ] **Style** "Sold" badge overlay
+- [ ] **Style** "No results" state
+- [ ] **Style** skeleton loading state (shown before data loads in Track C)
+
+---
+
+### B5: Homepage (Placeholder)
+
+**YOU WILL HAVE**: Full landing page with all sections, hardcoded content
+
+- [ ] **Create** `index.html`
+- [ ] **Build** hero: full-viewport image + overlay + CTA "Enter Elsewhere"
+- [ ] **Build** intro block: "When the world cracked open..."
+- [ ] **Build** featured carousel: horizontal scroll with 3-4 hardcoded product cards
+- [ ] **Build** brand pillars: Story, Craftsmanship, Sanctuary
+- [ ] **Build** testimonial strip placeholder
+- [ ] **Add** theatrical lighting CSS effect:
+  - CSS mask/spotlight: radial gradient shifts on scroll
+  - `translateY()` on background layers opposite to scroll
+  - `will-change: transform` for GPU acceleration
+
+---
+
+### B6: Remaining Pages (Placeholder)
+
+**YOU WILL HAVE**: All content pages with placeholder text
+
+- [ ] **Create** `about.html` — photo + logo + origin story + philosophy + mission
+- [ ] **Create** `contact.html` — form (name, email, subject, message) + commission section
+- [ ] **Create** `faq.html`
+- [ ] **Create** `shipping.html` — shipping & returns info
+- [ ] **Create** `terms.html` — terms of service
+- [ ] **Create** `privacy.html` — privacy policy
+- [ ] **Create** `policies.html` — includes availability section:
+
+```html
+<section id="availability">
+  <h2>Availability & Cart</h2>
+  <p>Every Everlastings piece is one-of-a-kind. When you add an item to your cart,
+     it is not reserved — another collector may complete their purchase first.</p>
+  <p>We verify availability for all items when you begin checkout. If a piece has
+     found its home while you were browsing, we'll let you know and offer a small
+     thank-you for your patience.</p>
+  <p>We believe in honest, pressure-free shopping. No countdown timers, no artificial
+     urgency — just beautiful things for those who find them.</p>
+</section>
+```
+
+- [ ] **Create** `checkout.html` — cart summary + payment form mount point (wired in Track C)
+- [ ] **Create** `complete.html` — success/error states (wired in Track C)
+
+---
+
+## TRACK C: Integration
+
+Wire Track B frontend pages to Track A backend services. Replace hardcoded placeholders with dynamic data.
+
+### C1: Wire Pages to Backend
+
+**YOU WILL HAVE**: All pages loading real data from Supabase
+
+#### Supabase Client — `assets/js/main.js`
+
+```html
+<!-- In every HTML page <head> -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/assets/js/main.js"></script>
+```
+
+```javascript
+// assets/js/main.js
+
+// Fetch config from server (auto test/live switching)
+let SUPABASE_URL, SUPABASE_ANON_KEY;
+
+async function initConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const config = await res.json();
+    SUPABASE_URL = config.supabaseUrl;
+    SUPABASE_ANON_KEY = config.supabaseAnonKey;
+    window._supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch {
+    console.error('Failed to load config');
+  }
+}
+
+function getSupabase() {
+  return window._supabase;
+}
+
+// CDN base URL for product images
+const R2_PUBLIC_URL = 'https://pub-xxx.r2.dev';
+
+function formatPrice(cents) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD'
+  }).format(cents / 100);
+}
+
+function slugify(title) {
+  return title.toLowerCase().replaceAll(' ', '-');
+}
+
+async function getProductBySlug(slug) {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('products').select('*').eq('slug', slug).single();
+  if (error) { console.error('Failed to fetch product:', error.message); return null; }
+  return data;
+}
+
+async function getProducts(options = {}) {
+  const supabase = getSupabase();
+  let query = supabase.from('products').select('*');
+  if (options.available !== undefined) query = query.eq('available', options.available);
+  if (options.featured) query = query.eq('featured', true);
+  if (options.series) query = query.eq('series', options.series);
+  if (options.orderBy) query = query.order(options.orderBy, { ascending: options.ascending ?? true });
+  const { data, error } = await query;
+  if (error) { console.error('Failed to fetch products:', error.message); return []; }
+  return data;
+}
+
+// --- Cart (localStorage) ---
+
+function getCart() {
+  return JSON.parse(localStorage.getItem('everlastings_cart') || '[]');
+}
+
+function addToCart(item) {
+  const cart = getCart();
+  if (cart.find(i => i.product_id === item.product_id)) return;
+  cart.push(item);
+  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
+  updateCartBadge();
+  gtag('event', 'add_to_cart', { slug: item.slug, title: item.title, value: item.price / 100 });
+}
+
+function removeFromCart(productId) {
+  const cart = getCart().filter(i => i.product_id !== productId);
+  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
+  updateCartBadge();
+}
+
+function clearCart() { localStorage.removeItem('everlastings_cart'); }
+
+function getCartTotal() { return getCart().reduce((sum, item) => sum + item.price, 0); }
+
+function updateCartBadge() {
+  const badge = document.getElementById('cart-badge');
+  if (badge) {
+    const count = getCart().length;
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initConfig();
+  updateCartBadge();
+});
+```
+
+- [ ] **Create** `assets/js/main.js`
+- [ ] **Replace** R2_PUBLIC_URL with actual CDN URL
+
+#### Product Page JS — `assets/js/product.js`
+
+- [ ] **Create** `assets/js/product.js` — replaces hardcoded product data with Supabase fetch
+- [ ] **Wire** Add to Cart / Buy Now buttons
+- [ ] **Wire** gallery with lightbox (click → fullscreen)
+- [ ] **Add** GA4 event: `gtag('event', 'product_view', { slug, title, value: price/100 })`
+- [ ] **Add** related products: fetch 3-4 products from same series, render below story
+
+#### Shop Grid JS — `assets/js/shop.js`
+
+- [ ] **Create** `assets/js/shop.js` — fetches products, renders tiles, handles filters
+- [ ] **Wire** filter sidebar to real data
+- [ ] **Wire** URL state: `?series=portals-to-peace&sort=price-asc`
+- [ ] **Replace** skeleton loaders with real content on load
+
+#### Homepage JS — `assets/js/homepage.js`
+
+- [ ] **Create** `assets/js/homepage.js`
+- [ ] **Fetch** featured products for carousel
+- [ ] **Fetch** theme from `site_config`
+- [ ] **Apply** dynamic CSS variables
+
+#### Newsletter JS — `assets/js/newsletter.js`
+
+- [ ] **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
+- [ ] **Add** GA4 event: `gtag('event', 'newsletter_signup')`
+
+---
+
+### C2: Checkout Flow End-to-End
+
+**YOU WILL HAVE**: Complete purchase flow working
+
+#### Checkout JS — `assets/js/checkout.js`
 
 ```javascript
 // assets/js/checkout.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get cart items from localStorage
   const cart = getCart();
 
   if (!cart.length) {
@@ -1087,14 +1645,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Render cart summary on checkout page
   renderCartSummary(cart);
+  gtag('event', 'begin_checkout', { value: getCartTotal() / 100, items: cart.length });
 
-  // Initialize Stripe
-  const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+  // Fetch Stripe publishable key from server
+  const configRes = await fetch('/api/config');
+  const config = await configRes.json();
+  const stripe = Stripe(config.publishableKey);
 
   try {
-    // Create checkout session on server with all cart items
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1107,18 +1666,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
       if (response.status === 409) {
         const errData = await response.json();
-        // Remove unavailable items from cart
         if (errData.unavailable) {
           errData.unavailable.forEach(slug => {
             const item = cart.find(i => i.slug === slug);
             if (item) removeFromCart(item.product_id);
           });
-          // Show recovery popup with discount + email capture
           showSoldRecovery(errData.unavailable);
         } else {
           showCheckoutError('This piece has already found its home.');
@@ -1129,7 +1684,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Initialize Custom Checkout
+    const data = await response.json();
+
     const checkout = stripe.initCheckout({
       clientSecret: data.clientSecret,
       elementsOptions: {
@@ -1143,16 +1699,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       },
     });
 
-    // Create and mount Payment Element
     const paymentElement = checkout.createPaymentElement();
     paymentElement.mount('#payment-element');
 
-    // Listen for session readiness
     checkout.on('change', (session) => {
       document.getElementById('submit-btn').disabled = !session.canConfirm;
     });
 
-    // Handle form submit
     document.getElementById('checkout-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const submitBtn = document.getElementById('submit-btn');
@@ -1168,7 +1721,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Bring This Haven Home';
         }
-        // If successful, Stripe redirects to return_url
       } catch (err) {
         showCheckoutError('Payment could not be processed. Please try again.');
         submitBtn.disabled = false;
@@ -1200,7 +1752,6 @@ function renderCartSummary(cart) {
 }
 
 function showSoldRecovery(unavailableSlugs) {
-  // Recovery popup: warm apology + one-time discount + email capture
   const popup = document.getElementById('sold-recovery-popup');
   const names = unavailableSlugs.join(', ');
   popup.innerHTML = `
@@ -1219,7 +1770,6 @@ function showSoldRecovery(unavailableSlugs) {
   `;
   popup.classList.remove('hidden');
 
-  // Generate unique promo code via API and show it
   document.getElementById('recovery-email-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('recovery-email').value;
@@ -1259,50 +1809,23 @@ function showCheckoutError(message) {
 }
 ```
 
-```html
-<!-- checkout.html key structure -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/assets/js/main.js"></script>
-<script src="https://js.stripe.com/v3/"></script>
-<script>const STRIPE_PUBLISHABLE_KEY = 'pk_test_...';</script>
-
-<div id="cart-summary"></div>
-<p class="cart-note">Each piece is one-of-a-kind and cannot be reserved. Complete your purchase to ensure availability.</p>
-<form id="checkout-form">
-  <div id="payment-element"></div>
-  <div id="checkout-error" class="hidden"></div>
-  <button id="submit-btn" type="submit" disabled>Bring This Haven Home</button>
-</form>
-<div id="sold-recovery-popup" class="hidden"></div>
-
-<script src="/assets/js/checkout.js"></script>
-```
-
-- [ ] **Create** `checkout.html` with full HTML structure, Stripe.js CDN load, mount point
-- [ ] **Create** `assets/js/checkout.js` with the code above
-- [ ] **Hardcode** `STRIPE_PUBLISHABLE_KEY` in checkout.html `<script>` tag (publishable key is safe to expose — it's designed for client-side use. No build step means no env var injection for frontend)
-
-### Return Page — `complete.html`
+#### Return Page — `complete.html`
 
 ```javascript
-// Inline in complete.html or separate JS file
-
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session_id');
 
-  if (!sessionId) {
-    showResult('error', 'Something went awry.');
-    return;
-  }
+  if (!sessionId) { showResult('error', 'Something went awry.'); return; }
 
   try {
     const response = await fetch(`/api/session-status?session_id=${sessionId}`);
     const data = await response.json();
 
     if (data.status === 'complete') {
-      clearCart(); // Clear cart after successful purchase
+      clearCart();
       showResult('success', 'Your haven is on its way.');
+      gtag('event', 'purchase', { transaction_id: sessionId });
     } else {
       showResult('error', 'Something went awry. Please try again.');
     }
@@ -1317,469 +1840,50 @@ function showResult(type, message) {
 }
 ```
 
-- [ ] **Create** `complete.html` with success/error states
-- [ ] **Wire** "Add to Cart" and "Buy Now" buttons on product page
-- [ ] **Test** cart: add item, verify badge count, navigate to checkout, see cart summary
-- [ ] **Test** full flow: add to cart → checkout → pay with `4242 4242 4242 4242` → completion
-- [ ] **Verify**: product shows "Sold" in Supabase after webhook fires, cart is cleared
-- [ ] **Test** multi-item: add 2 products to cart, checkout, verify both marked sold
-- [ ] **Test** race condition: add item to cart, manually set `available=false` in Supabase, attempt checkout, verify 409 error and item removed from cart
-- [ ] **Test** recovery flow: trigger 409, see recovery popup, enter email, verify subscriber created with `source: 'cart-recovery'`, verify promo code returned and displayed
-
-### Cart Recovery — Discount + Email Capture
-
-**How it works**: When a customer tries to check out and one or more items have sold, we turn the disappointment into a touchpoint. They see a warm, on-brand popup, get a unique one-time discount code, and we capture their email.
-
-**Stripe setup (one-time, during Session 1):**
-
-- [ ] **Create** a Stripe coupon in Dashboard (or via API) for cart recovery:
-  - Name: "Haven Finder Apology"
-  - Type: Percentage off → 10%
-  - Duration: Once (one-time payments)
-  - ID: `cart-recovery-10` (custom ID for API reference)
-  - No max redemptions on the coupon itself (each promo code generated from it will be single-use)
-
-**API endpoint — `api/cart-recovery.ts`:**
-
-```typescript
-// api/cart-recovery.ts
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
-
-export async function POST(request: Request) {
-  try {
-    const { email, lost_items } = await request.json();
-
-    if (!email || !email.includes('@')) {
-      return Response.json({ error: 'Valid email required' }, { status: 400 });
-    }
-
-    // Create a unique, single-use promotion code from our recovery coupon
-    const promoCode = await stripe.promotionCodes.create({
-      coupon: 'cart-recovery-10',
-      max_redemptions: 1,
-      expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
-      metadata: {
-        source: 'cart-recovery',
-        lost_items: JSON.stringify(lost_items || []),
-        email: email,
-      },
-    });
-
-    // Save email to subscribers (ignore duplicate)
-    await supabase
-      .from('subscribers')
-      .upsert(
-        { email, source: 'cart-recovery' },
-        { onConflict: 'email' }
-      );
-
-    return Response.json({
-      code: promoCode.code,
-      percent_off: 10,
-      expires_in_days: 30,
-    });
-  } catch (err) {
-    console.error('Cart recovery error:', err);
-    return Response.json({ error: 'Failed to generate discount' }, { status: 500 });
-  }
-}
-```
-
-- [ ] **Create** `api/cart-recovery.ts` with the code above
-
-**Frontend (update to `showSoldRecovery` in checkout.js):**
-
-Replace the TODO in the existing `showSoldRecovery` function's email handler:
-
-```javascript
-  document.getElementById('recovery-email-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('recovery-email').value;
-    const submitBtn = e.target.querySelector('button');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Generating...';
-
-    try {
-      const res = await fetch('/api/cart-recovery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          lost_items: unavailableSlugs,
-        }),
-      });
-      const data = await res.json();
-
-      if (data.code) {
-        popup.innerHTML = `
-          <div class="recovery-content">
-            <h3>A small gift for your patience</h3>
-            <p>Use code <strong class="promo-code">${data.code}</strong> for ${data.percent_off}% off your next purchase.</p>
-            <p class="promo-expiry">Valid for ${data.expires_in_days} days.</p>
-            <button onclick="location.reload();" class="primary-btn">Continue Shopping</button>
-          </div>
-        `;
-      }
-    } catch {
-      popup.innerHTML = '<div class="recovery-content"><p>We\'ll be in touch. Thank you for your patience.</p></div>';
-      setTimeout(() => location.reload(), 2000);
-    }
-  });
-```
-
-- [ ] **Update** `showSoldRecovery()` in checkout.js with the real API call above
-
-### Sticky Product Card (Product Page)
-
-The product details card follows the user as they scroll through the story and gallery.
-
-**Structure:**
-
-```html
-<!-- Right column of product page — position: sticky -->
-<aside class="product-sticky-card" style="position: sticky; top: calc(var(--header-height) + var(--space-lg));">
-  <img id="sticky-thumb" class="sticky-thumb" alt="">
-  <h2 id="product-title"></h2>
-  <p id="product-price" class="price"></p>
-
-  <button id="add-to-cart" class="btn-primary">Add to Cart</button>
-  <button id="buy-now" class="btn-secondary">Buy Now</button>
-
-  <p class="availability-note">
-    Each piece is one-of-a-kind. <a href="/policies.html#availability">Availability confirmed at checkout</a>.
-  </p>
-</aside>
-```
-
-**CSS:**
-
-```css
-.product-sticky-card {
-  position: sticky;
-  top: calc(var(--z-header, 80px) + var(--space-lg));
-  align-self: start; /* Prevents stretching in flex/grid parent */
-}
-
-.availability-note {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  margin-top: var(--space-md);
-  line-height: 1.4;
-}
-
-.availability-note a {
-  color: var(--text-secondary);
-  text-decoration: underline;
-}
-```
-
-**Behavior:**
-- Sticks to viewport as user scrolls through story card and gallery on the left
-- On mobile (< 768px): not sticky, appears below gallery in normal flow
-- "Availability confirmed at checkout" links to policies page with full explanation
-- Badge overlays ("Sold", "Featured") appear on the thumbnail
-
-- [ ] **Build** sticky product card in `product.html` right column
-- [ ] **Style** with `position: sticky` and mobile fallback
-- [ ] **Create** availability explanation section in `policies.html`
-
-### Policies Page — Availability Section
-
-Add to the policies/shipping page (created in Session 8):
-
-```html
-<section id="availability">
-  <h2>Availability & Cart</h2>
-  <p>Every Everlastings piece is one-of-a-kind. When you add an item to your cart,
-     it is not reserved — another collector may complete their purchase first.</p>
-  <p>We verify availability for all items when you begin checkout. If a piece has
-     found its home while you were browsing, we'll let you know and offer a small
-     thank-you for your patience.</p>
-  <p>We believe in honest, pressure-free shopping. No countdown timers, no artificial
-     urgency — just beautiful things for those who find them.</p>
-</section>
-```
-
-- [ ] **Add** availability section to policies page (Session 8)
+- [ ] **Wire** checkout.html to use `api/config` for Stripe key (no hardcoded key)
+- [ ] **Start** Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhook`
+- [ ] **Test** full flow: product → cart → checkout → pay → completion
+- [ ] **Verify** customer + order records created, product marked sold, cart cleared
 
 ---
 
-## SESSION 5: Shop Grid + Filters — ~3 hrs
+### C3: SEO Finalization
 
-**YOU WILL HAVE**: All products in filterable, sortable grid
-
-### Shop Page
-
-- [ ] **Create** `shop.html` with filter sidebar + product grid
-- [ ] **Create** `assets/js/shop.js`:
-  - Fetch all products from Supabase using `getProducts()`
-  - Render product tiles in CSS grid
-  - Filter by: series, product_type, availability
-  - Sort by: price (low/high), newest, name (A-Z)
-  - Smart filter: hide single-option dropdowns
-  - URL state: `?series=portals-to-peace&sort=price-asc`
-  - "No results" state when filters return empty
-
-### Product Tiles
-
-- [ ] **Hover**: image scale 1.05 + shadow lift
-- [ ] **Sold badge**: overlay when `available === false`
-- [ ] **Click**: navigate to `/product/{slug}`
-- [ ] **Lazy load**: `loading="lazy"` on all tile images
-- [ ] **Aspect ratio**: 4:5 enforced via CSS `aspect-ratio: 4/5`
+- [ ] **Add** dynamic meta titles + descriptions (product pages from Supabase data)
+- [ ] **Add** Open Graph + Twitter Card tags
+- [ ] **Add** Product schema.org structured data (JSON-LD)
+- [ ] **Create** `sitemap.xml` + `robots.txt`
+- [ ] **Submit** sitemap to Google Search Console
 
 ---
 
-## SESSION 6: Homepage — ~5 hrs
-
-**YOU WILL HAVE**: Full landing page with hero, featured products, brand sections
-
-### Sections
-
-- [ ] **Hero**: full-viewport image + overlay + CTA "Enter Elsewhere"
-- [ ] **Intro block**: "When the world cracked open..."
-- [ ] **Featured carousel**: `getProducts({ featured: true })`, horizontal scroll
-- [ ] **Brand pillars**: Story, Craftsmanship, Sanctuary
-- [ ] **Testimonial strip**: placeholder section
-
-### Dynamic Theme
-
-- [ ] **Create** `assets/js/homepage.js`
-- [ ] **Fetch** theme from `site_config` table
-- [ ] **Apply** CSS variables dynamically
-- [ ] **Rotate** theme on return visits (localStorage)
-
-### Theatrical Lighting
-
-- [ ] **CSS mask/spotlight**: radial gradient shifts on scroll
-- [ ] **Transform**: `translateY()` on background layers opposite to scroll
-- [ ] **Performance**: `will-change: transform`, GPU-only properties
-
----
-
-## SESSION 7: Header, Footer, Nav — ~2 hrs
-
-**YOU WILL HAVE**: Consistent navigation across all pages
-
-### Header
-
-- [ ] **Logo** (left, links to homepage)
-- [ ] **Nav**: Home, Shop (dropdown), About, Commissions, Contact
-- [ ] **Shop dropdown**: All, Portals to Peace, Book Nooks & Story Lofts, Seasonal & Limited, Sold Archive
-- [ ] **Cart icon** with count badge (right) — links to `/checkout.html`
-- [ ] **Mobile**: hamburger (left), logo (center), cart icon (right)
-- [ ] **Sticky** on scroll
-
-### Footer
-
-- [ ] **Four columns**: About, Shop, Support, Connect
-- [ ] **Newsletter signup**: email input → POST `/api/subscribe`
-- [ ] **Social links**: Instagram, Facebook, Pinterest, TikTok
-- [ ] **Bottom bar**: copyright, "Site by Sean August Horvath", Terms | Privacy
-
-### Newsletter
-
-- [ ] **Create** `assets/js/newsletter.js`
-- [ ] **Create** `api/subscribe.ts`:
-
-```typescript
-// api/subscribe.ts
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
-
-export async function POST(request: Request) {
-  try {
-    const { email, source } = await request.json();
-
-    if (!email || !email.includes('@')) {
-      return Response.json({ error: 'Valid email required' }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from('subscribers')
-      .insert({ email, source: source || 'footer' });
-
-    if (error) {
-      if (error.code === '23505') { // unique constraint
-        return Response.json({ message: 'Already subscribed' }, { status: 200 });
-      }
-      throw error;
-    }
-
-    return Response.json({ message: 'Subscribed' });
-  } catch (err) {
-    console.error('Subscribe error:', err);
-    return Response.json({ error: 'Subscription failed' }, { status: 500 });
-  }
-}
-```
-
----
-
-## SESSION 8: Remaining Pages — ~3 hrs
-
-**YOU WILL HAVE**: All content pages live
-
-### About (`about.html`)
-
-- [ ] Photo + logo
-- [ ] Origin story (from brand guide)
-- [ ] Philosophy of Elsewhere
-- [ ] Mission statement
-
-### Contact + Commissions (`contact.html`)
-
-- [ ] Contact form: name, email, subject, message
-- [ ] Commission inquiry option
-- [ ] **Create** `api/contact.ts` — receive form, store in Supabase or send email
-
-### Static Pages
-
-- [ ] FAQ
-- [ ] Shipping & Returns
-- [ ] Terms / Privacy
-- [ ] Footer links to all
-
----
-
-## SESSION 9: Admin UI — ~3 hrs
-
-**YOU WILL HAVE**: Emy can add/edit products from her browser
-
-### Auth
-
-- [ ] `/admin/index.html` — login form
-- [ ] Supabase Auth: email/password
-- [ ] Redirect if not authenticated
-- [ ] Logout button
-
-### Product Management — `assets/js/admin.js`
-
-- [ ] Product list: table/grid with edit/delete
-- [ ] New product form: all schema fields
-  - Price input in dollars, convert to cents on save
-  - Dynamic lists: features, materials, care_instructions, shipping_details
-- [ ] Image upload: file picker → `api/upload.ts` → R2 → return CDN URL
-- [ ] Save: INSERT or UPDATE to products
-- [ ] Delete with confirmation
-
-### Image Upload — `api/upload.ts`
-
-```typescript
-// api/upload.ts
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
-const s3 = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
-
-export async function POST(request: Request) {
-  // Auth check required — verify Supabase session token
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const slug = formData.get('slug') as string;
-    const filename = formData.get('filename') as string;
-
-    if (!file || !slug || !filename) {
-      return Response.json({ error: 'Missing file, slug, or filename' }, { status: 400 });
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/webp', 'image/jpeg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
-      return Response.json({ error: 'Only WebP, JPEG, and PNG allowed' }, { status: 400 });
-    }
-
-    // Validate file size (2MB max)
-    if (file.size > 2 * 1024 * 1024) {
-      return Response.json({ error: 'File must be under 2MB' }, { status: 400 });
-    }
-
-    const key = `products/${slug}/${filename}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    await s3.send(new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type,
-    }));
-
-    const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-    return Response.json({ url: publicUrl });
-  } catch (err) {
-    console.error('Upload error:', err);
-    return Response.json({ error: 'Upload failed' }, { status: 500 });
-  }
-}
-```
-
----
-
-## SESSION 10: SEO, Testing, Launch — ~3 hrs
+### C4: Testing + Launch Prep
 
 **YOU WILL HAVE**: Production-ready site
 
-### SEO
+#### Stripe Live Mode
 
-- [ ] Meta titles + descriptions (dynamic for products)
-- [ ] Open Graph + Twitter Card tags
-- [ ] Structured data (Product schema.org)
-- [ ] Canonical URLs, sitemap.xml, robots.txt
+Follow switchover process (see Environment Strategy section).
 
-### Analytics
-
-- [ ] Google Analytics 4 with `gtag.js`
-- [ ] Events: product_view, begin_checkout, purchase
-- [ ] Google Search Console verification
-
-### Stripe Live Mode
-
-- [ ] Switch test keys → live keys in Vercel env vars
-- [ ] Update webhook to live signing secret
-- [ ] Test one real transaction (small amount, refund)
-
-### Testing
+#### Testing
 
 - [ ] Cross-browser: Chrome, Safari, Firefox, Edge
 - [ ] Mobile: iPhone, iPad, Android
-- [ ] Full checkout flow: product page → Buy Now → payment → "Sold" status
-- [ ] Admin flow: login → add product → verify on shop page
+- [ ] Full checkout flow: product → cart → pay → "Sold" status
+- [ ] Admin flow: login → add product → see it on shop page
 - [ ] Newsletter from homepage + footer
 - [ ] Contact form
 - [ ] All internal links
 
-### Performance
+#### Performance
 
 - [ ] Lighthouse 90+ all categories
 - [ ] All images WebP, lazy loaded
 - [ ] WCAG AA accessibility
-- [ ] Keyboard navigation
+- [ ] Keyboard navigation (including lightbox)
 - [ ] Alt text on every image
 
-### Launch
+#### Launch
 
 - [ ] DNS pointed to Vercel
 - [ ] SSL active
@@ -1790,25 +1894,73 @@ export async function POST(request: Request) {
 
 ## Error States Reference
 
-| Page       | Failure                        | User Sees                                                              | Code Behavior                                                                                                  |
-| ---------- | ------------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Product    | Product not found              | "This product could not be found." + link to shop                      | `getProductBySlug` returns null → `showError()`                                                                |
-| Product    | Supabase fetch fails           | "This product could not be found."                                     | `error` from Supabase → `showError()`                                                                          |
-| Product    | Image fails to load            | Broken image hidden, placeholder shown                                 | `onerror` handler on `<img>`                                                                                   |
-| Product    | Product sold                   | "Sold" badge, Buy Now disabled                                         | `available === false` → button disabled                                                                        |
-| Checkout   | Cart empty                     | "Your cart is empty." + link to shop                                   | No items in localStorage                                                                                       |
-| Checkout   | Items sold while in cart (409) | Recovery popup: warm apology + one-time discount offer + email capture | API returns 409 → `showSoldRecovery()` → remove items, show popup, capture email as `cart-recovery` subscriber |
-| Checkout   | Session creation fails         | "Something went awry. Please try again."                               | API returns 500 → error message                                                                                |
-| Checkout   | Payment declined               | Stripe error message displayed                                         | `actions.confirm()` returns error                                                                              |
-| Checkout   | Network error                  | "Unable to load checkout. Please refresh."                             | fetch throws → catch block                                                                                     |
-| Complete   | Session status: complete       | "Your haven is on its way."                                            | Success state                                                                                                  |
-| Complete   | Session status: other          | "Something went awry. Please try again."                               | Error state with retry                                                                                         |
-| Shop       | No products found              | "No products available yet."                                           | Empty array → empty state                                                                                      |
-| Shop       | Filters return empty           | "No products match your filters."                                      | Filtered array empty → message                                                                                 |
-| Newsletter | Already subscribed             | "Already subscribed" (not an error)                                    | 23505 unique constraint → friendly message                                                                     |
-| Newsletter | Invalid email                  | "Valid email required"                                                 | Client + server validation                                                                                     |
-| Admin      | Not authenticated              | Redirect to login                                                      | Supabase auth check                                                                                            |
-| Admin      | Upload too large               | "File must be under 2MB"                                               | File size check before upload                                                                                  |
+#### Product — Not Found
+- **User sees**: "This haven could not be found." + link to shop
+- **Code**: `getProductBySlug()` returns null → `showError()`
+
+#### Product — Supabase Fetch Fails
+- **User sees**: "This haven could not be found."
+- **Code**: Supabase error → `showError()`
+
+#### Product — Image Fails to Load
+- **User sees**: Broken image hidden, placeholder shown
+- **Code**: `onerror` handler on `<img>`
+
+#### Product — Sold
+- **User sees**: "Sold" badge, Buy Now disabled
+- **Code**: `available === false` → button disabled
+
+#### Checkout — Cart Empty
+- **User sees**: "Your cart is empty." + link to shop
+- **Code**: No items in localStorage
+
+#### Checkout — Items Sold While in Cart (409)
+- **User sees**: Recovery popup with warm apology + one-time discount + email capture
+- **Code**: API returns 409 → `showSoldRecovery()` → remove items, capture email as `cart-recovery` subscriber
+
+#### Checkout — Session Creation Fails
+- **User sees**: "Something went awry. Please try again."
+- **Code**: API returns 500 → error message
+
+#### Checkout — Payment Declined
+- **User sees**: Stripe error message displayed
+- **Code**: `actions.confirm()` returns error
+
+#### Checkout — Network Error
+- **User sees**: "Unable to load checkout. Please refresh."
+- **Code**: fetch throws → catch block
+
+#### Complete — Success
+- **User sees**: "Your haven is on its way."
+- **Code**: Session status `complete` → success state, cart cleared
+
+#### Complete — Error
+- **User sees**: "Something went awry. Please try again."
+- **Code**: Session status not `complete` → error state
+
+#### Shop — No Products
+- **User sees**: "New havens are being crafted. Check back soon."
+- **Code**: Empty array → empty state
+
+#### Shop — No Filter Results
+- **User sees**: "No havens match your search."
+- **Code**: Filtered array empty → message
+
+#### Newsletter — Already Subscribed
+- **User sees**: "You're already part of the Firelight Council."
+- **Code**: 23505 unique constraint → friendly message
+
+#### Newsletter — Invalid Email
+- **User sees**: "Valid email required"
+- **Code**: Client + server validation
+
+#### Admin — Not Authenticated
+- **User sees**: Redirect to login
+- **Code**: Supabase auth check
+
+#### Admin — Upload Too Large
+- **User sees**: "File must be under 2MB"
+- **Code**: File size check before upload
 
 ---
 
@@ -1818,18 +1970,59 @@ export async function POST(request: Request) {
 - **Example**: "The Sunkeeper" → `the-sunkeeper`
 - **Immutable**: once created, slug never changes (URL stability, SEO, R2 path depends on it)
 - **URL pattern**: `/product/the-sunkeeper`
-- **R2 path**: `/products/the-sunkeeper/hero.webp`
-- **Enforced by**: Supabase trigger on INSERT (see Product Schema section)
+- **R2 path**: `/products/the-sunkeeper/hero-the-sunkeeper.webp`
+- **Enforced by**: Supabase trigger on INSERT
+
+---
+
+## Image Pipeline (Cloudinary → R2)
+
+### Naming Convention
+
+```
+/products/{slug}/hero-{slug}.webp           → main product image
+/products/{slug}/gallery-{slug}-01.webp     → gallery images (up to 15)
+/products/{slug}/thumbnail-{slug}.webp      → grid thumbnail (smaller)
+/products/{slug}/video-{slug}-01.mp4        → videos (skip Cloudinary)
+/products/{slug}/detail-{slug}-01.gif       → GIFs (skip Cloudinary)
+```
+
+### Cloudinary Transform Parameters
+
+**Product photos**: `c_fill,ar_4:5,w_1200,f_webp,q_auto,g_auto`
+**Thumbnails**: `c_fill,ar_4:5,w_600,f_webp,q_auto,g_auto`
+
+### Pipeline Steps
+
+1. Upload raw image to Cloudinary via Upload API
+2. Construct transform URL with params above
+3. Download transformed image (WebP, 4:5, compressed)
+4. Upload to R2 with SEO-friendly filename (`hero-{slug}.webp`)
+5. Delete from Cloudinary (stay on free tier)
+6. Store CDN URL in product record
+
+Videos and GIFs skip Cloudinary — upload directly to R2.
+
+---
+
+## Deferred Items (Post-Launch)
+
+- **Dark mode** — v0 docs mentioned dark mode variables. Not needed for v1.
+- **Infinite scroll/pagination** — small catalog (<50 products), standard grid is fine.
+- **Section-specific hero images** — shop page hero. Defer to post-launch.
+- **Dynamic shipping rates** — v0 has Stripe dynamic shipping for `ui_mode: embedded`. Doesn't apply to `custom`. For v1: flat-rate or shipping-included pricing.
+- **Google Drive API integration** — for AI product creation. v1 uses manual download from shared folder.
+- **Abandoned cart emails** — requires email service (Resend, SendGrid). Note as post-launch.
+- **Customer accounts** — no login for shoppers. Purchase is anonymous with email/address captured.
 
 ---
 
 ## Caching Strategy (Deferred)
 
-Not needed for launch. Document for later:
-- Supabase queries hit the database directly on every page load
-- Acceptable at current scale (< 100 products)
-- When needed: add Vercel Edge Config or stale-while-revalidate headers
-- Product images on R2 are already CDN-cached by Cloudflare
+Not needed for launch. When needed:
+- Supabase queries hit DB directly (acceptable at < 100 products)
+- Product images already CDN-cached by Cloudflare R2
+- Add `stale-while-revalidate` headers or Vercel Edge Config when scale requires
 
 ---
 
@@ -1843,14 +2036,14 @@ Not needed for launch. Document for later:
 
 ## Reference Documents
 
-| Document      | Location                                      | Use                                |
-| ------------- | --------------------------------------------- | ---------------------------------- |
-| Architecture  | `assets/docs/EVERLASTINGS_STORE.md`           | Full technical reference           |
-| Brand Guide   | `assets/docs/BRAND.md`                        | Colors, fonts, voice, copy         |
-| Product Guide | `assets/docs/PRODUCT_GUIDE.md`                | Client-facing, how to add products |
-| Action Steps  | `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Checklist version of this doc      |
-| Mobile Specs  | `.agent/2026_MOBILE_DESIGN_SPECS.md`          | iOS/iPadOS viewport measurements   |
-| Dev Rules     | `.agent/DEV_RULES.md`                         | Git branching, dev protocols       |
+| Document | Location | Use |
+|----------|----------|-----|
+| Architecture | `assets/docs/EVERLASTINGS_STORE.md` | Full technical reference |
+| Brand Guide | `assets/docs/BRAND.md` | Colors, fonts, voice, copy |
+| Product Guide | `assets/docs/PRODUCT_GUIDE.md` | Client-facing, how to add products |
+| Creation Protocol | `assets/docs/PRODUCT_CREATION_PROTOCOL.md` | AI-assisted product creation |
+| Action Steps | `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Checklist version of this doc |
+| Dev Rules | `.agent/DEV_RULES.md` | Git branching, dev protocols |
 
 ---
-*Every code snippet is production-ready. Every checkbox is one action. Follow the sessions in order.*
+*Every code snippet is production-ready. Every checkbox is one action. Track A and B can proceed in parallel. Track C integrates them.*

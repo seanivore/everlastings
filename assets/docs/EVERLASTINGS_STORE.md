@@ -2,8 +2,8 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-09 — v1.2: ui_mode corrected to custom, locked decisions added, error states added
-**Version**: v1.2.0
+**Updated**: 2026-04-09 — v1.2r1: parallel tracks, customers table, env strategy, Cloudinary, AI product creation, analytics
+**Version**: v1.2.1
 **Status**: Pre-development, architecture finalized
 
 ---
@@ -53,8 +53,10 @@
 │  /api/session-status.ts→ Return page: verify payment status      │
 │  /api/webhook.ts       → Handle Stripe payment events            │
 │  /api/stripe-sync.ts   → Create Stripe Product + Price on INSERT │
-│  /api/upload.ts        → Image upload to Cloudflare R2           │
-│  /api/cart-recovery.ts  → Sold-in-cart: promo code + email capture│
+│  /api/upload.ts        → Cloudinary transform → R2 upload        │
+│  /api/cart-recovery.ts → Sold-in-cart: promo code + email capture │
+│  /api/products.ts      → CRUD for AI-assisted product creation   │
+│  /api/config.ts        → Public config (Stripe key per env)      │
 │  /api/subscribe.ts     → Newsletter email capture                │
 │  /api/contact.ts       → Contact form handler                    │
 └──────────┬─────────────────────────────────┬─────────────────────┘
@@ -64,9 +66,10 @@
 │       SUPABASE           │   │       CLOUDFLARE R2                │
 │                          │   │                                    │
 │  Tables:                 │   │  /products/{slug}/                 │
-│    products              │   │    hero.webp                       │
-│    orders                │   │    gallery-01.webp ... gallery-15  │
-│    subscribers           │   │    thumbnail.webp                  │
+│    products              │   │    hero-{slug}.webp                │
+│    customers             │   │    gallery-{slug}-01.webp          │
+│    orders                │   │    thumbnail-{slug}.webp           │
+│    subscribers           │   │    video-{slug}-01.mp4             │
 │    site_config           │   │                                    │
 │                          │   │  /brand/                           │
 │  Auth: admin login       │   │    logo.svg, favicon, etc.         │
@@ -101,7 +104,15 @@
 
   7. **No git for client** — Emy manages products through admin UI or Supabase Studio. Changes reflect instantly via database, no deploy needed.
 
-  8. **Supabase Database Webhook for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync.ts`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, GPT skill).
+  8. **Supabase Database Webhook for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync.ts`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, AI assistant via API).
+
+  9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
+
+  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `PRODUCT_CREATION_PROTOCOL.md`.
+
+  11. **Environment-based Stripe keys** — Vercel env vars scoped by environment. Preview deployments use test keys, production uses live keys. Frontend Stripe key served via `api/config.ts` (not hardcoded).
+
+  12. **GA4 analytics** — `gtag.js` CDN script, no Google Tag Manager. Custom events: product_view, add_to_cart, begin_checkout, purchase, newsletter_signup.
 
 ---
 
@@ -148,7 +159,7 @@
 
 ### Environment Variables
 
-Create `.env.local`:
+Create `.env.local` (see also `.env.example` in impl guide):
 
 ```bash
 # Supabase
@@ -156,7 +167,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_KEY=your-service-key
 
-# Stripe
+# Stripe (test keys for dev, live keys for production)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -166,8 +177,13 @@ R2_ACCOUNT_ID=your-account-id
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
 R2_BUCKET_NAME=everlastings
-R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
+R2_PUBLIC_URL=https://pub-xxx.r2.dev
+
+# Cloudinary (stateless image transforms)
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
 ```
+
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_2_IMPLEMENTATION.md` > Environment Strategy for full details.
 
 ### Local Development
 
@@ -228,8 +244,10 @@ stripe listen --forward-to localhost:3000/api/webhook
 │   ├── session-status.ts   # Return page payment verification
 │   ├── webhook.ts          # Handle Stripe webhooks
 │   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
-│   ├── upload.ts           # Image upload to R2
+│   ├── upload.ts           # Cloudinary transform → R2 upload
 │   ├── cart-recovery.ts    # Sold-in-cart promo code + email
+│   ├── products.ts         # CRUD for AI product creation (service key auth)
+│   ├── config.ts           # Public config (Stripe key per environment)
 │   ├── subscribe.ts        # Newsletter email capture
 │   └── contact.ts          # Contact form handler
 │
@@ -244,7 +262,12 @@ stripe listen --forward-to localhost:3000/api/webhook
 │   ├── DEV_RULES.md        # Git branching, dev protocols
 │   └── 2026_MOBILE_DESIGN_SPECS.md  # iOS/iPadOS viewport specs
 │
-├── CNAME                   # Custom domain config
+├── complete.html            # Order completion page
+├── faq.html                # FAQ
+├── shipping.html           # Shipping & returns
+├── terms.html              # Terms of service
+├── privacy.html            # Privacy policy
+├── policies.html           # Policies (availability, cart, returns)
 ├── README.md               # Public-facing README
 └── .gitignore              # Ignores .env.local, node_modules, etc.
 ```
@@ -279,15 +302,24 @@ stripe listen --forward-to localhost:3000/api/webhook
 **`api/checkout.ts`** — Stripe session creation
   + Checks product availability in Supabase before creating session
   + Creates checkout session with `ui_mode: 'custom'`
-  + NO pre-created Stripe Customer (anonymous checkout)
-  + Passes metadata: `{ product_id, product_slug }` for webhook identification
-  + Enables shipping address collection (US only)
+  + Collects email, phone, and shipping address
+  + Passes metadata: `{ items: [{id, slug}] }` for webhook identification
+  + Enables shipping address collection (US only) and phone number collection
   + Returns client_secret for frontend Stripe Elements mount
 
 **`api/webhook.ts`** — Stripe event handler
   + Reads raw body via `request.text()` for signature verification
   + Validates webhook signature with `stripe.webhooks.constructEvent()`
-  + On `checkout.session.completed`: extracts metadata, marks product sold (available=false), creates order record
+  + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records
+
+**`api/products.ts`** — Product CRUD for AI assistants
+  + GET: fetch product by slug (public)
+  + POST: create product (requires service key auth)
+  + PUT: update product (handles Stripe price archiving if price changes)
+
+**`api/config.ts`** — Public configuration
+  + Returns Stripe publishable key and Supabase config per environment
+  + Enables automatic test/live switching without hardcoding keys
 
 **`api/session-status.ts`** — Checkout return page verification
   + Retrieves Checkout Session by ID
@@ -422,7 +454,7 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 @media (min-width: 1440px) { /* Large desktop */ }
 ```
 
-### Full brand reference: `assets/docs/archive/v1/v1_1_BRAND.md`
+### Full brand reference: `assets/docs/BRAND.md`
 
 ---
 
@@ -457,7 +489,7 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 
   + **Price is always in cents** — $245.00 = 24500 in the database and Stripe
   + **Slug is auto-generated** from title — "The Sunkeeper" → "the-sunkeeper"
-  + **Images follow CDN path pattern** — `{R2_PUBLIC_URL}/products/{slug}/hero.webp`
+  + **Images follow CDN path pattern** — `{R2_PUBLIC_URL}/products/{slug}/hero-{slug}.webp`
   + **All API functions are TypeScript** — frontend is vanilla JS
   + **Database webhooks vs Stripe webhooks** — both are used but for different purposes. DB webhook syncs to Stripe on INSERT. Stripe webhook updates DB on payment.
 
@@ -544,6 +576,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `R2_SECRET_ACCESS_KEY`   | R2 secret credentials               | Yes      |
 | `R2_BUCKET_NAME`         | R2 bucket name                      | Yes      |
 | `R2_PUBLIC_URL`          | CDN public base URL                 | Yes      |
+| `CLOUDINARY_URL`         | Cloudinary API credentials          | Yes      |
+
+**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `v1_2_IMPLEMENTATION.md` > Environment Strategy.
 
 ### Post-Deploy Verification
 
@@ -585,7 +620,7 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | images            | jsonb       | Array of {url, alt} objects                    |
 | thumbnail         | text        | CDN URL                                        |
 | thumbnail_alt     | text        |                                                |
-| video_url         | text        | Nullable                                       |
+| media             | jsonb       | Array of {type, url, caption} for videos/GIFs  |
 | seo_title         | text        |                                                |
 | seo_description   | text        |                                                |
 | artist_note       | text        | Nullable                                       |
@@ -595,19 +630,34 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | created_at        | timestamptz | Auto                                           |
 | updated_at        | timestamptz | Auto                                           |
 
+### `customers` table
+
+| Column              | Type        | Notes                                    |
+| ------------------- | ----------- | ---------------------------------------- |
+| id                  | uuid        | PK                                       |
+| email               | text        | Unique — primary identifier              |
+| name                | text        | From Stripe checkout                     |
+| phone               | text        | From Stripe checkout                     |
+| shipping_address    | jsonb       | Latest shipping address                  |
+| stripe_customer_id  | text        | Stripe's customer ID                     |
+| source              | text        | checkout, newsletter, cart-recovery      |
+| created_at          | timestamptz | Auto                                     |
+| updated_at          | timestamptz | Auto                                     |
+
 ### `orders` table
 
-| Column                | Type        | Notes               |
-| --------------------- | ----------- | ------------------- |
-| id                    | uuid        | PK                  |
-| stripe_session_id     | text        | Checkout session ID |
-| stripe_payment_intent | text        | Payment intent ID   |
-| product_id            | uuid        | FK to products      |
-| customer_email        | text        | From Stripe         |
-| amount                | integer     | In cents            |
-| status                | text        | completed, refunded |
-| shipping_address      | jsonb       | From Stripe         |
-| created_at            | timestamptz | Auto                |
+| Column                | Type        | Notes                      |
+| --------------------- | ----------- | -------------------------- |
+| id                    | uuid        | PK                         |
+| stripe_session_id     | text        | Checkout session ID        |
+| stripe_payment_intent | text        | Payment intent ID          |
+| product_id            | uuid        | FK to products             |
+| customer_id           | uuid        | FK to customers            |
+| customer_email        | text        | From Stripe (denormalized) |
+| amount                | integer     | In cents                   |
+| status                | text        | completed, refunded        |
+| shipping_address      | jsonb       | From Stripe                |
+| created_at            | timestamptz | Auto                       |
 
 ### `subscribers` table
 
@@ -635,6 +685,7 @@ Set in Vercel Dashboard → Settings → Environment Variables:
   - **Implementation Guide**: `assets/docs/archive/v1/v1_2_IMPLEMENTATION.md`
   - **Action Steps**: `assets/docs/archive/v1/v1_2_ACTION_STEPS.md`
   - **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
+  - **Product Creation Protocol (AI-facing)**: `assets/docs/PRODUCT_CREATION_PROTOCOL.md`
   - **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
   - **Dev Rules**: `.agent/DEV_RULES.md`
   - **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
