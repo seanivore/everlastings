@@ -15,21 +15,21 @@
 
 ## Quick Start
 
-```bash
-# Clone the repository
-git clone https://github.com/seanivore/everlastings-website.git
-cd everlastings-website
+  ```bash
+  # Clone the repository
+  git clone https://github.com/seanivore/everlastings-website.git
+  cd everlastings-website
 
-# Install dependencies
-npm install
+  # Install dependencies
+  npm install
 
-# Set up environment variables
-cp .env.example .env.local
-# Fill in Supabase, Stripe, R2 credentials
+  # Set up environment variables
+  cp .env.example .env.local
+  # Fill in Supabase, Stripe, R2 credentials
 
-# Start development server
-vercel dev
-```
+  # Start development server
+  vercel dev
+  ```
 
 **Preview at** `http://localhost:3000`
 
@@ -59,25 +59,25 @@ vercel dev
 
 ## Project Structure
 
-```
-everlastings-website/
-├── *.html                   # Frontend pages
-├── api/                     # Vercel serverless functions (TypeScript)
-├── assets/
-│   ├── css/                 # Styles + design tokens
-│   ├── js/                  # Frontend controllers
-│   └── docs/                # Project documentation
-├── admin/                   # Admin panel
-└── .agent/                  # AI agent instructions
-```
+  ```
+  everlastings-website/
+  ├── *.html                   # Frontend pages
+  ├── api/                     # Vercel serverless functions (TypeScript)
+  ├── assets/
+  │   ├── css/                 # Styles + design tokens
+  │   ├── js/                  # Frontend controllers
+  │   └── docs/                # Project documentation
+  ├── admin/                   # Admin panel
+  └── .agent/                  # AI agent instructions
+  ```
 
 **Full documentation**: [EVERLASTINGS_STORE.md](/assets/docs/EVERLASTINGS_STORE.md)
 
 ### Branching
 
-- `main` → Production (live Stripe keys)
-- `dev` → Preview/staging (test Stripe keys)
-- `feat/*` → Feature branches (test Stripe keys)
+  - `main` → Production (live Stripe keys)
+  - `dev` → Preview/staging (test Stripe keys)
+  - `feat/*` → Feature branches (test Stripe keys)
 
 Vercel auto-scopes environment variables per branch. See implementation guide for full environment strategy.
 
