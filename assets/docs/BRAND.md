@@ -36,15 +36,19 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
 | **Warm & Poetic**        | Language feels like a gentle embrace.              |
 |                          | Metaphors drawn from light, home, memory, seasons. |
 |                          | Never clinical or transactional.                   |
+| ------------------------ | -------------------------------------------------- |
 | **Emotionally Resonant** | Acknowledges pain without dwelling in it.          |
 |                          | Celebrates small moments of beauty.                |
 |                          | Honors the complexity of healing.                  |
+| ------------------------ | -------------------------------------------------- |
 | **Quietly Magical**      | Hints at otherworldliness without being mystical.  |
 |                          | Invites wonder without demanding belief.           |
 |                          | Uses "elsewhere," "haven," "sanctuary," "portal."  |
+| ------------------------ | -------------------------------------------------- |
 | **Authentic & Personal** | Emy's voice, not a corporate brand.                |
 |                          | Story-driven, never sales-y.                       |
 |                          | Vulnerable without being heavy.                    |
+| ------------------------ | -------------------------------------------------- |
 
 ### Tone by Context
 
@@ -53,17 +57,22 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
 | Homepage/Hero    | Invitational, wonder-filled, | *"Step into Elsewhere. Where memory*       |
 |                  | slightly mysterious          | *becomes miniature, and loss transforms*   |
 |                  |                              | *into something you can hold."*            |
+| ---------------- | ---------------------------- | ------------------------------------------ |
 | Product Pages    | Intimate, descriptive,       | *"The Sun-keeper watches over a garden*    |
 |                  | emotionally grounded         | *where time stands still, where*           |
 |                  |                              | *every bloom is a promise kept."*          |
+| ---------------- | ---------------------------- | ------------------------------------------ |
 | Collection Pages | Organized but poetic,        | *"Each piece in the Portals to Peace*      |
 |                  | guiding without pushing      | *series offers passage to*                 |
 |                  |                              | *somewhere gentler."*                      |
+| ---------------- | ---------------------------- | ------------------------------------------ |
 | About/Story      | Vulnerable, honest, human    | *"When everything changed, I needed*       |
 |                  |                              | *somewhere I could still have control.*    |
 |                  |                              | *So I built worlds small enough to hold."* |
+| ---------------- | ---------------------------- | ------------------------------------------ |
 | Transactional    | Clear, warm, reassuring      | *"Almost there. Your haven is*             |
 |                  |                              | *ready to find its home."*                 |
+| ---------------- | ---------------------------- | ------------------------------------------ |
 
 ### Error & Empty State Voice
 
@@ -201,22 +210,23 @@ All product images: **4:5** (portrait orientation). This is enforced in the admi
 
 ### Format
 
-- **WebP** for all web-served images
-- Original high-res JPG/PNG accepted; we convert to WebP
-- Max file size: 2MB per image after conversion
+  - **WebP** for all web-served images
+  - Original high-res JPG/PNG accepted; we convert to WebP
+  - Max file size: 2MB per image after conversion
 
 ### Naming Convention
 
 Images are stored in Cloudflare R2 with SEO-friendly filenames:
-```
-/products/{slug}/hero-{slug}.webp
-/products/{slug}/gallery-{slug}-01.webp
-/products/{slug}/gallery-{slug}-02.webp
-...
-/products/{slug}/thumbnail-{slug}.webp
-/products/{slug}/video-{slug}-01.mp4
-/products/{slug}/detail-{slug}-01.gif
-```
+
+  ```
+  /products/{slug}/hero-{slug}.webp
+  /products/{slug}/gallery-{slug}-01.webp
+  /products/{slug}/gallery-{slug}-02.webp
+  ...
+  /products/{slug}/thumbnail-{slug}.webp
+  /products/{slug}/video-{slug}-01.mp4
+  /products/{slug}/detail-{slug}-01.gif
+  ```
 
 Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before upload to R2. Videos and GIFs upload directly to R2 without transformation.
 
@@ -304,14 +314,18 @@ Cute, adorable, tiny (except when necessary), perfect, flawless, pristine, sale,
 | **Purchasing** | "Bring This Haven Home"              |
 |                | "Make This Yours"                    |
 |                | "Claim Your Sanctuary"               |
+| -------------- | ------------------------------------ |
 | **Newsletter** | "Join the Firelight Council"         |
 |                | "Stay Connected to Elsewhere"        |
 |                | "Receive Dispatches from the Studio" |
+| -------------- | ------------------------------------ |
 | **Contact**    | "Begin a Conversation"               |
 |                | "Commission Your Own Haven"          |
 |                | "Get in Touch"                       |
+| -------------- | ------------------------------------ |
 | **Homepage**   | "Enter Elsewhere"                    |
 |                | "Step Into Elsewhere"                |
+| -------------- | ------------------------------------ |
 
 ---
 
