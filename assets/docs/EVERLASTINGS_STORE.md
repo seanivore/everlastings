@@ -54,7 +54,7 @@
 │  /api/webhook.ts       → Handle Stripe payment events            │
 │  /api/stripe-sync.ts   → Create Stripe Product + Price on INSERT │
 │  /api/upload.ts        → Cloudinary transform → R2 upload        │
-│  /api/cart-recovery.ts → Sold-in-cart: promo code + email capture │
+│  /api/cart-recovery.ts → Sold-in-cart: promo code + email capture│
 │  /api/products.ts      → CRUD for AI-assisted product creation   │
 │  /api/config.ts        → Public config (Stripe key per env)      │
 │  /api/subscribe.ts     → Newsletter email capture                │
@@ -161,42 +161,42 @@
 
 Create `.env.local` (see also `.env.example` in impl guide):
 
-```bash
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-key
+  ```bash
+  # Supabase
+  SUPABASE_URL=https://your-project.supabase.co
+  SUPABASE_ANON_KEY=your-anon-key
+  SUPABASE_SERVICE_KEY=your-service-key
 
-# Stripe (test keys for dev, live keys for production)
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+  # Stripe (test keys for dev, live keys for production)
+  STRIPE_SECRET_KEY=sk_test_...
+  STRIPE_PUBLISHABLE_KEY=pk_test_...
+  STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Cloudflare R2
-R2_ACCOUNT_ID=your-account-id
-R2_ACCESS_KEY_ID=your-access-key
-R2_SECRET_ACCESS_KEY=your-secret-key
-R2_BUCKET_NAME=everlastings
-R2_PUBLIC_URL=https://pub-xxx.r2.dev
+  # Cloudflare R2
+  R2_ACCOUNT_ID=your-account-id
+  R2_ACCESS_KEY_ID=your-access-key
+  R2_SECRET_ACCESS_KEY=your-secret-key
+  R2_BUCKET_NAME=everlastings
+  R2_PUBLIC_URL=https://pub-xxx.r2.dev
 
-# Cloudinary (stateless image transforms)
-CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
-```
+  # Cloudinary (stateless image transforms)
+  CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+  ```
 
 **Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_2_IMPLEMENTATION.md` > Environment Strategy for full details.
 
 ### Local Development
 
-```bash
-# Install dependencies
-npm install
+  ```bash
+  # Install dependencies
+  npm install
 
-# Start Vercel dev server (serves static files + API functions)
-vercel dev
+  # Start Vercel dev server (serves static files + API functions)
+  vercel dev
 
-# In a separate terminal, forward Stripe webhooks
-stripe listen --forward-to localhost:3000/api/webhook
-```
+  # In a separate terminal, forward Stripe webhooks
+  stripe listen --forward-to localhost:3000/api/webhook
+  ```
 
 ### Testing Checkout Flow
 
@@ -210,67 +210,67 @@ stripe listen --forward-to localhost:3000/api/webhook
 
 ## File Structure & Key Files
 
-```text
-~/Development/everlastings-website/
-├── index.html              # Homepage (long landing page)
-├── shop.html               # Product grid with filters
-├── product.html            # Individual product page template
-├── checkout.html           # Embedded Stripe checkout
-├── about.html              # About Emaline
-├── contact.html            # Contact + commissions
-├── admin/                  # Admin panel (Supabase Auth protected)
-│   └── index.html          # Product management UI
-│
-├── assets/
-│   ├── css/
-│   │   └── styles.css      # All styles, CSS custom properties
-│   ├── js/
-│   │   ├── main.js         # Shared utilities, Supabase client init
-│   │   ├── product.js      # Product page: fetch + render from Supabase
-│   │   ├── shop.js         # Shop grid: filters, sort, tile rendering
-│   │   ├── homepage.js     # Homepage: featured carousel, theme rotation
-│   │   ├── checkout.js     # Stripe custom checkout mount
-│   │   ├── admin.js        # Admin panel: CRUD, image upload
-│   │   └── newsletter.js   # Newsletter signup handler
-│   ├── docs/               # Project documentation
-│   │   ├── EVERLASTINGS_STORE.md   # This file
-│   │   ├── PRODUCT_GUIDE.md        # Client-facing product guide
-│   │   └── archive/                # v0 and v1 planning docs
-│   ├── favicon/            # Favicon files
-│   └── fonts/              # Cormorant Garamond font files
-│
-├── api/                    # Vercel serverless functions
-│   ├── checkout.ts         # Create Stripe checkout session (cart items)
-│   ├── session-status.ts   # Return page payment verification
-│   ├── webhook.ts          # Handle Stripe webhooks
-│   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
-│   ├── upload.ts           # Cloudinary transform → R2 upload
-│   ├── cart-recovery.ts    # Sold-in-cart promo code + email
-│   ├── products.ts         # CRUD for AI product creation (service key auth)
-│   ├── config.ts           # Public config (Stripe key per environment)
-│   ├── subscribe.ts        # Newsletter email capture
-│   └── contact.ts          # Contact form handler
-│
-├── vercel.json             # Vercel config: rewrites, headers
-├── package.json            # Dependencies (stripe, @supabase/supabase-js)
-├── tsconfig.json           # TypeScript config for API functions
-├── .env.example            # Environment variable template
-├── .env.local              # Local env vars (gitignored)
-│
-├── .agent/                 # AI agent instructions
-│   ├── AGENTS.md           # Core agent rules and human profile
-│   ├── DEV_RULES.md        # Git branching, dev protocols
-│   └── 2026_MOBILE_DESIGN_SPECS.md  # iOS/iPadOS viewport specs
-│
-├── complete.html            # Order completion page
-├── faq.html                # FAQ
-├── shipping.html           # Shipping & returns
-├── terms.html              # Terms of service
-├── privacy.html            # Privacy policy
-├── policies.html           # Policies (availability, cart, returns)
-├── README.md               # Public-facing README
-└── .gitignore              # Ignores .env.local, node_modules, etc.
-```
+  ```text
+  ~/Development/everlastings-website/
+  ├── index.html              # Homepage (long landing page)
+  ├── shop.html               # Product grid with filters
+  ├── product.html            # Individual product page template
+  ├── checkout.html           # Embedded Stripe checkout
+  ├── about.html              # About Emaline
+  ├── contact.html            # Contact + commissions
+  ├── admin/                  # Admin panel (Supabase Auth protected)
+  │   └── index.html          # Product management UI
+  │
+  ├── assets/
+  │   ├── css/
+  │   │   └── styles.css      # All styles, CSS custom properties
+  │   ├── js/
+  │   │   ├── main.js         # Shared utilities, Supabase client init
+  │   │   ├── product.js      # Product page: fetch + render from Supabase
+  │   │   ├── shop.js         # Shop grid: filters, sort, tile rendering
+  │   │   ├── homepage.js     # Homepage: featured carousel, theme rotation
+  │   │   ├── checkout.js     # Stripe custom checkout mount
+  │   │   ├── admin.js        # Admin panel: CRUD, image upload
+  │   │   └── newsletter.js   # Newsletter signup handler
+  │   ├── docs/               # Project documentation
+  │   │   ├── EVERLASTINGS_STORE.md   # This file
+  │   │   ├── PRODUCT_GUIDE.md        # Client-facing product guide
+  │   │   └── archive/                # v0 and v1 planning docs
+  │   ├── favicon/            # Favicon files
+  │   └── fonts/              # Cormorant Garamond font files
+  │
+  ├── api/                    # Vercel serverless functions
+  │   ├── checkout.ts         # Create Stripe checkout session (cart items)
+  │   ├── session-status.ts   # Return page payment verification
+  │   ├── webhook.ts          # Handle Stripe webhooks
+  │   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
+  │   ├── upload.ts           # Cloudinary transform → R2 upload
+  │   ├── cart-recovery.ts    # Sold-in-cart promo code + email
+  │   ├── products.ts         # CRUD for AI product creation (service key auth)
+  │   ├── config.ts           # Public config (Stripe key per environment)
+  │   ├── subscribe.ts        # Newsletter email capture
+  │   └── contact.ts          # Contact form handler
+  │
+  ├── vercel.json             # Vercel config: rewrites, headers
+  ├── package.json            # Dependencies (stripe, @supabase/supabase-js)
+  ├── tsconfig.json           # TypeScript config for API functions
+  ├── .env.example            # Environment variable template
+  ├── .env.local              # Local env vars (gitignored)
+  │
+  ├── .agent/                 # AI agent instructions
+  │   ├── AGENTS.md           # Core agent rules and human profile
+  │   ├── DEV_RULES.md        # Git branching, dev protocols
+  │   └── 2026_MOBILE_DESIGN_SPECS.md  # iOS/iPadOS viewport specs
+  │
+  ├── complete.html            # Order completion page
+  ├── faq.html                # FAQ
+  ├── shipping.html           # Shipping & returns
+  ├── terms.html              # Terms of service
+  ├── privacy.html            # Privacy policy
+  ├── policies.html           # Policies (availability, cart, returns)
+  ├── README.md               # Public-facing README
+  └── .gitignore              # Ignores .env.local, node_modules, etc.
+  ```
 
 ### Key Frontend Files
 
@@ -336,58 +336,58 @@ stripe listen --forward-to localhost:3000/api/webhook
 
 ### Product Creation (Any Entry Method)
 
-```
-Emy adds product via Admin UI / Supabase Studio / GPT Skill
-  ↓
-(01) Row inserted into Supabase `products` table
-  ↓
-(02) Supabase Database Webhook fires on INSERT
-  ↓
-(03) POST to /api/stripe-sync.ts (Vercel function)
-  ↓
-(04) Function creates Stripe Product via API
-  ↓
-(05) Function creates Stripe Price linked to Product
-  ↓
-(06) Function writes stripe_product_id + stripe_price_id back to Supabase row
-  ↓
-PRODUCT IS NOW LIVE AND PURCHASABLE
-(No deploy needed — frontend fetches from Supabase at runtime)
-```
+  ```
+  Emy adds product via Admin UI / Supabase Studio / GPT Skill
+    ↓
+  (01) Row inserted into Supabase `products` table
+    ↓
+  (02) Supabase Database Webhook fires on INSERT
+    ↓
+  (03) POST to /api/stripe-sync.ts (Vercel function)
+    ↓
+  (04) Function creates Stripe Product via API
+    ↓
+  (05) Function creates Stripe Price linked to Product
+    ↓
+  (06) Function writes stripe_product_id + stripe_price_id back to Supabase row
+    ↓
+  PRODUCT IS NOW LIVE AND PURCHASABLE
+  (No deploy needed — frontend fetches from Supabase at runtime)
+  ```
 
 ### Purchase Flow
 
-```
-Shopper adds item(s) to cart, then clicks checkout
-  ↓
-(01) Frontend loads checkout.html, reads cart from localStorage
-  ↓
-(02) checkout.js sends POST to /api/checkout.ts
-  ↓
-(03) API checks availability for ALL cart items in Supabase (blocks if any sold)
-  ↓
-(04) API creates Stripe Checkout Session (ui_mode: 'custom', metadata: {items: [...]})
-  ↓
-(05) Returns client_secret to frontend
-  ↓
-(06) Frontend calls stripe.initCheckout({clientSecret}), mounts PaymentElement
-  ↓
-(07) Customer enters email + shipping + payment, clicks pay
-  ↓
-(08) Frontend calls actions.confirm() → Stripe processes payment
-  ↓
-(09) Stripe redirects to complete.html?session_id=...
-  ↓
-(10) Stripe fires checkout.session.completed webhook to /api/webhook.ts
-  ↓
-(11) Webhook validates signature, extracts items from metadata
-  ↓
-(12) Updates each product: available=false, quantity=0
-  ↓
-(13) Creates order record per product in Supabase orders table
-  ↓
-PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
-```
+  ```
+  Shopper adds item(s) to cart, then clicks checkout
+    ↓
+  (01) Frontend loads checkout.html, reads cart from localStorage
+    ↓
+  (02) checkout.js sends POST to /api/checkout.ts
+    ↓
+  (03) API checks availability for ALL cart items in Supabase (blocks if any sold)
+    ↓
+  (04) API creates Stripe Checkout Session (ui_mode: 'custom', metadata: {items: [...]})
+    ↓
+  (05) Returns client_secret to frontend
+    ↓
+  (06) Frontend calls stripe.initCheckout({clientSecret}), mounts PaymentElement
+    ↓
+  (07) Customer enters email + shipping + payment, clicks pay
+    ↓
+  (08) Frontend calls actions.confirm() → Stripe processes payment
+    ↓
+  (09) Stripe redirects to complete.html?session_id=...
+    ↓
+  (10) Stripe fires checkout.session.completed webhook to /api/webhook.ts
+    ↓
+  (11) Webhook validates signature, extracts items from metadata
+    ↓
+  (12) Updates each product: available=false, quantity=0
+    ↓
+  (13) Creates order record per product in Supabase orders table
+    ↓
+  PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
+  ```
 
 ### Data States
 
@@ -402,18 +402,18 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 
 ### Color Scheme
 
-```css
-:root {
-    --color-plum: #4A1942;
-    --color-lavender: #B8A5C8;
-    --color-fog: #D4D4D4;
-    --color-cream: #FFF8E7;
-    --color-gold: #D4AF7A;
-    --color-ink: #1A1A1A;
-    --color-star-blue: #1B3A52;
-    --color-amethyst: #9B6B9E;
-}
-```
+  ```css
+  :root {
+      --color-plum: #4A1942;
+      --color-lavender: #B8A5C8;
+      --color-fog: #D4D4D4;
+      --color-cream: #FFF8E7;
+      --color-gold: #D4AF7A;
+      --color-ink: #1A1A1A;
+      --color-star-blue: #1B3A52;
+      --color-amethyst: #9B6B9E;
+  }
+  ```
 
 ### Design Principles
 
@@ -434,25 +434,25 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 
 ### Typography
 
-```css
-:root {
-    --font-display: "Cormorant Garamond", Georgia, serif;
-    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-```
+  ```css
+  :root {
+      --font-display: "Cormorant Garamond", Georgia, serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  ```
 
   - Cormorant Garamond: hero text, section headings, product titles, taglines
   - System fonts: body copy, navigation, UI elements, buttons
 
 ### Responsive Breakpoints
 
-```css
-/* Mobile-first */
-/* Base: 393px (iPhone) */
-@media (min-width: 768px) { /* Tablet */ }
-@media (min-width: 1024px) { /* Desktop */ }
-@media (min-width: 1440px) { /* Large desktop */ }
-```
+  ```css
+  /* Mobile-first */
+  /* Base: 393px (iPhone) */
+  @media (min-width: 768px) { /* Tablet */ }
+  @media (min-width: 1024px) { /* Desktop */ }
+  @media (min-width: 1440px) { /* Large desktop */ }
+  ```
 
 ### Full brand reference: `assets/docs/BRAND.md`
 
@@ -545,11 +545,11 @@ PRODUCT SHOWS "SOLD" ON NEXT PAGE LOAD
 
 No build step for frontend — static HTML/CSS/JS files served directly by Vercel. API functions are compiled by Vercel's TypeScript support automatically.
 
-```bash
-# Deploy (from developer machine only)
-git push origin main
-# Vercel auto-deploys on push
-```
+  ```bash
+  # Deploy (from developer machine only)
+  git push origin main
+  # Vercel auto-deploys on push
+  ```
 
 ### Hosting Configuration
 
@@ -632,17 +632,17 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ### `customers` table
 
-| Column              | Type        | Notes                                    |
-| ------------------- | ----------- | ---------------------------------------- |
-| id                  | uuid        | PK                                       |
-| email               | text        | Unique — primary identifier              |
-| name                | text        | From Stripe checkout                     |
-| phone               | text        | From Stripe checkout                     |
-| shipping_address    | jsonb       | Latest shipping address                  |
-| stripe_customer_id  | text        | Stripe's customer ID                     |
-| source              | text        | checkout, newsletter, cart-recovery      |
-| created_at          | timestamptz | Auto                                     |
-| updated_at          | timestamptz | Auto                                     |
+| Column             | Type        | Notes                               |
+| ------------------ | ----------- | ----------------------------------- |
+| id                 | uuid        | PK                                  |
+| email              | text        | Unique — primary identifier         |
+| name               | text        | From Stripe checkout                |
+| phone              | text        | From Stripe checkout                |
+| shipping_address   | jsonb       | Latest shipping address             |
+| stripe_customer_id | text        | Stripe's customer ID                |
+| source             | text        | checkout, newsletter, cart-recovery |
+| created_at         | timestamptz | Auto                                |
+| updated_at         | timestamptz | Auto                                |
 
 ### `orders` table
 
