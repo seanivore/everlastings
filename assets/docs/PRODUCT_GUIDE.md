@@ -108,12 +108,12 @@ A number. 1 for one-of-a-kind, 0 for sold out, higher for editions.
 
 ### What We Handle (Don't Worry About These)
 
-- **slug** — URL-friendly version of the title (auto-generated, never changes)
-- **sku** — Unique product ID (auto-generated)
-- **seo_title / seo_description** — Search engine titles (we write these)
-- **stripe_product_id / stripe_price_id** — Stripe catalog links (auto-populated)
-- **thumbnail / images** — CDN URLs for photos (we upload and optimize)
-- **homepage_theme** — Dynamic homepage color/mood settings (we configure)
+  - **slug** — URL-friendly version of the title (auto-generated, never changes)
+  - **sku** — Unique product ID (auto-generated)
+  - **seo_title / seo_description** — Search engine titles (we write these)
+  - **stripe_product_id / stripe_price_id** — Stripe catalog links (auto-populated)
+  - **thumbnail / images** — CDN URLs for photos (we upload and optimize)
+  - **homepage_theme** — Dynamic homepage color/mood settings (we configure)
 
 ---
 
@@ -125,9 +125,9 @@ All product photos must be **4:5 portrait orientation**. This prevents messy gri
 
 ### How Many
 
-- **Minimum**: 7 photos per product
-- **Ideal**: 10-15 photos per product
-- **Required**: 1 clear "hero" shot for product grids
+  - **Minimum**: 7 photos per product
+  - **Ideal**: 10-15 photos per product
+  - **Required**: 1 clear "hero" shot for product grids
 
 ### What to Capture
 
@@ -144,40 +144,40 @@ All product photos must be **4:5 portrait orientation**. This prevents messy gri
 
 You can also include short videos and GIFs for your products. These appear in the gallery alongside photos.
 
-- **Videos**: Short clips showing lighting modes, detail reveals, or the piece in its setting (30-60 seconds ideal)
-- **GIFs**: Short animations showing a detail or lighting transition
-- **YouTube**: If you have a longer video on YouTube, we can embed it on the product page
+  - **Videos**: Short clips showing lighting modes, detail reveals, or the piece in its setting (30-60 seconds ideal)
+  - **GIFs**: Short animations showing a detail or lighting transition
+  - **YouTube**: If you have a longer video on YouTube, we can embed it on the product page
 
 Just send these along with your photos — we handle the formatting and upload.
 
 ### Photo Tips
 
-- **Natural lighting** works best for detail shots
-- **Consistent background** — neutral/cream preferred
-- **No blur** — use a tripod or steady surface
-- **No frame numbers or timestamps visible**
-- **Highest resolution your camera allows** — we'll optimize for web
-- **Landscape AND portrait** orientations both welcome
+  - **Natural lighting** works best for detail shots
+  - **Consistent background** — neutral/cream preferred
+  - **No blur** — use a tripod or steady surface
+  - **No frame numbers or timestamps visible**
+  - **Highest resolution your camera allows** — we'll optimize for web
+  - **Landscape AND portrait** orientations both welcome
 
 ### File Delivery
 
 Upload photos to the shared Google Drive folder or send via the admin UI. We handle:
-- Cropping and resizing
-- Converting to WebP format
-- Compressing for web performance
-- Uploading to CDN (Cloudflare R2)
+  - Cropping and resizing
+  - Converting to WebP format
+  - Compressing for web performance
+  - Uploading to CDN (Cloudflare R2)
 
 ---
 
 ## How the Admin UI Works
 
-1. Go to `everlastingsbyemaline.com/admin`
-2. Log in with your email and password
-3. Click "New Product"
-4. Fill in the form fields (they match the fields above)
-5. Upload photos directly in the form
-6. Click "Save" — the product goes live immediately
-7. Use "Preview" to see how it looks before publishing
+  1. Go to `everlastingsbyemaline.com/admin`
+  2. Log in with your email and password
+  3. Click "New Product"
+  4. Fill in the form fields (they match the fields above)
+  5. Upload photos directly in the form
+  6. Click "Save" — the product goes live immediately
+  7. Use "Preview" to see how it looks before publishing
 
 To edit an existing product: find it in the product list, click "Edit", make changes, save.
 
