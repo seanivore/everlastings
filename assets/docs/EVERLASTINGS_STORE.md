@@ -109,11 +109,17 @@
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
-  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `PRODUCT_CREATION_PROTOCOL.md`.
+  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `PRODUCT_PROTOCOL.md`.
 
   11. **Environment-based Stripe keys** — Vercel env vars scoped by environment. Preview deployments use test keys, production uses live keys. Frontend Stripe key served via `api/config.ts` (not hardcoded).
 
-  12. **GA4 analytics** — `gtag.js` CDN script, no Google Tag Manager. Custom events: product_view, add_to_cart, begin_checkout, purchase, newsletter_signup.
+  12. **GA4 analytics** — `gtag.js` CDN script, no Google Tag Manager. Custom events: view_product, add_to_cart, begin_checkout, purchase, newsletter_signup, and 5 more (see implementation guide).
+
+  13. **Custom `PRODUCT_API_KEY` for external API auth** — Random 64-char string for AI agents and external API access. Replaces `SUPABASE_SERVICE_KEY` in all external calls. `SUPABASE_SERVICE_KEY` is server-only, never exposed.
+
+  14. **Webhook idempotency** — `webhook_events` table stores processed Stripe `event.id` values. Prevents duplicate processing on retries.
+
+  15. **Source of truth hierarchy** — Supabase (authoritative) > Stripe (payment mirror) > R2 (asset storage) > Frontend (read-only consumer). When in doubt, trust Supabase.
 
 ---
 
@@ -178,13 +184,13 @@ Create `.env.local` (see also `.env.example` in impl guide):
   R2_ACCESS_KEY_ID=your-access-key
   R2_SECRET_ACCESS_KEY=your-secret-key
   R2_BUCKET_NAME=everlastings
-  R2_PUBLIC_URL=https://pub-xxx.r2.dev
+  R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
 
   # Cloudinary (stateless image transforms)
   CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
   ```
 
-**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_2_IMPLEMENTATION.md` > Environment Strategy for full details.
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_3_0_IMPLEMENTATION.md` > Environment Strategy for full details.
 
 ### Local Development
 
@@ -235,7 +241,7 @@ Create `.env.local` (see also `.env.example` in impl guide):
   │   │   └── newsletter.js   # Newsletter signup handler
   │   ├── docs/               # Project documentation
   │   │   ├── EVERLASTINGS_STORE.md   # This file
-  │   │   ├── PRODUCT_GUIDE.md        # Client-facing product guide
+  │   │   ├── PRODUCT_PROTOCOL.md     # Client guide + AI creation protocol
   │   │   └── archive/                # v0 and v1 planning docs
   │   ├── favicon/            # Favicon files
   │   └── fonts/              # Cormorant Garamond font files
@@ -311,12 +317,13 @@ Create `.env.local` (see also `.env.example` in impl guide):
 **`api/webhook.ts`** — Stripe event handler
   + Reads raw body via `request.text()` for signature verification
   + Validates webhook signature with `stripe.webhooks.constructEvent()`
-  + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records
+  + Idempotency: checks `webhook_events` table for duplicate `event.id`, skips if already processed
+  + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records, records event.id
 
 **`api/products.ts`** — Product CRUD for AI assistants
-  + GET: fetch product by slug (public)
-  + POST: create product (requires service key auth)
-  + PUT: update product (handles Stripe price archiving if price changes)
+  + GET: fetch product by slug (public, no auth)
+  + POST: create product (requires `PRODUCT_API_KEY` auth, validates fields, generates slug, checks conflicts)
+  + PUT: update product (requires `PRODUCT_API_KEY` auth, handles Stripe price archiving if price changes)
 
 **`api/config.ts`** — Public configuration
   + Returns Stripe publishable key and Supabase config per environment
@@ -578,8 +585,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `R2_BUCKET_NAME`         | R2 bucket name                      | Yes      |
 | `R2_PUBLIC_URL`          | CDN public base URL                 | Yes      |
 | `CLOUDINARY_URL`         | Cloudinary API credentials          | Yes      |
+| `PRODUCT_API_KEY`        | AI/external API auth key            | Yes      |
 
-**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `v1_2_IMPLEMENTATION.md` > Environment Strategy.
+**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `v1_3_0_IMPLEMENTATION.md` > Environment Strategy.
 
 ### Post-Deploy Verification
 
@@ -678,16 +686,24 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | value      | jsonb       | Configuration data                                  |
 | updated_at | timestamptz | Auto                                                |
 
+### `webhook_events` table
+
+| Column       | Type        | Notes                             |
+| ------------ | ----------- | --------------------------------- |
+| event_id     | text        | PK — Stripe event ID             |
+| processed_at | timestamptz | Auto — when event was processed  |
+
+Used for webhook idempotency. Prevents duplicate processing when Stripe retries events.
+
 ---
 
 ## Related Documentation
 
   - **Brand Guide**: `assets/docs/BRAND.md`
-  - **Implementation Guide**: `assets/docs/archive/v1/v1_2_IMPLEMENTATION.md`
-  - **Action Steps**: `assets/docs/archive/v1/v1_2_ACTION_STEPS.md`
-  - **Product Guide (client-facing)**: `assets/docs/PRODUCT_GUIDE.md`
-  - **Product Creation Protocol (AI-facing)**: `assets/docs/PRODUCT_CREATION_PROTOCOL.md`
-  - **Project Brief**: `assets/docs/archive/v1/v1_1_PREP.md`
+  - **Implementation Guide**: `assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md`
+  - **Action Steps**: `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md`
+  - **Product Protocol**: `assets/docs/PRODUCT_PROTOCOL.md`
+  - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`
   - **Dev Rules**: `.agent/DEV_RULES.md`
   - **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
   - **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`

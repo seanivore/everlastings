@@ -25,7 +25,7 @@
 
   # Set up environment variables
   cp .env.example .env.local
-  # Fill in Supabase, Stripe, R2 credentials
+  # Fill in Supabase, Stripe, R2, Cloudinary, PRODUCT_API_KEY credentials
 
   # Start development server
   vercel dev
@@ -51,7 +51,7 @@
   + **Backend**: Vercel Serverless Functions (TypeScript)
   + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
   + **Payments**: Stripe Custom Checkout (ui_mode: 'custom')
-  + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN)
+  + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN at `cdn.everlastingsbyemaline.com`)
   + **Analytics**: Google Analytics 4 (gtag.js)
   + **Hosting**: Vercel (auto-deploy on push)
 
@@ -85,14 +85,13 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 
 ## Documentation
 
-| Document                                                                   | Description                              |
-| -------------------------------------------------------------------------- | ---------------------------------------- |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference             |
-| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy          |
-| [Implementation Guide](/assets/docs/archive/v1_2/v1_2_1_IMPLEMENTATION.md) | 10-session build plan with code snippets |
-| [Action Steps](/assets/docs/archive/v1_2/v1_2_1_ACTION_STEPS.md)           | Checklist version of impl guide          |
-| [Product Guide](/assets/docs/PRODUCT_GUIDE.md)                             | Client-facing product entry guide        |
-| [Creation Protocol](/assets/docs/PRODUCT_CREATION_PROTOCOL.md)             | AI-assisted product creation workflow    |
+| Document                                                                   | Description                                   |
+| -------------------------------------------------------------------------- | --------------------------------------------- |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                   |
+| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy                |
+| [Implementation Guide](/assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md) | Parallel-track build plan with code snippets   |
+| [Action Steps](/assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md)           | ADHD-friendly checklist version of impl guide  |
+| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                       | Client guide + AI product creation protocol    |
 
 ---
 

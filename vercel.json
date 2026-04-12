@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    { "source": "/product/:slug", "destination": "/product.html" },
+    { "source": "/admin/:path*", "destination": "/admin/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://everlastingsbyemaline.com" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, stripe-signature" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ]
+    }
+  ]
+}
