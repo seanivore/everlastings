@@ -1,7 +1,7 @@
-# Everlastings v1.3.0 Implementation Guide
+# Everlastings v1.3.1 Implementation Guide
 
-**Version**: v1.3.0
-**Created**: 2026-04-12 14:52
+**Version**: v1.3.1
+**Created**: 2026-04-12 14:52 | 16:16
 **Previous**: v1.2.1 (2026-04-09)
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary
 **Structure**: 3 parallel tracks (A: Backend, B: Frontend Design, C: Integration)
@@ -2637,13 +2637,13 @@ All e-commerce events use GA4's standard `items` array format, which unlocks bui
 
 ### E-commerce Events (with `items` array)
 
-| Event              | Trigger                    | Format                                                                                    |
-| ------------------ | -------------------------- | ----------------------------------------------------------------------------------------- |
-| `view_item`        | Product page load          | `{ currency: 'USD', value, items: [buildGa4Item(product)] }`                             |
-| `add_to_cart`      | Add to Cart click          | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                                |
-| `remove_from_cart` | Remove from Cart           | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                                |
-| `begin_checkout`   | Checkout page load         | `{ currency: 'USD', value: cartTotal/100, items: cart.map(buildGa4Item) }`               |
-| `purchase`         | Completion page (success)  | `{ transaction_id, currency: 'USD', value, items: [...] }`                                |
+| Event              | Trigger                   | Format                                                                     |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------- |
+| `view_item`        | Product page load         | `{ currency: 'USD', value, items: [buildGa4Item(product)] }`               |
+| `add_to_cart`      | Add to Cart click         | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                  |
+| `remove_from_cart` | Remove from Cart          | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                  |
+| `begin_checkout`   | Checkout page load        | `{ currency: 'USD', value: cartTotal/100, items: cart.map(buildGa4Item) }` |
+| `purchase`         | Completion page (success) | `{ transaction_id, currency: 'USD', value, items: [...] }`                 |
 
 **`items` array format** (via `buildGa4Item()` helper in main.js):
 ```javascript
@@ -2660,30 +2660,30 @@ All e-commerce events use GA4's standard `items` array format, which unlocks bui
 
 ### Custom Events (no `items` array)
 
-| Event                  | Trigger                          | Parameters                                      |
-| ---------------------- | -------------------------------- | ----------------------------------------------- |
-| `newsletter_signup`    | Successful subscribe             | `{ source }` ('homepage', 'footer', 'checkout') |
-| `contact_form_submit`  | Contact form success             | `{ subject }`                                   |
-| `commission_inquiry`   | Commission form submit           | `{ subject }`                                   |
-| `search_filter`        | Shop filter applied              | `{ filter_type, filter_value }`                 |
-| `gallery_open`         | Lightbox opened                  | `{ slug, image_index }`                         |
-| `video_play`           | Product video starts playing     | `{ slug, video_index }`                         |
-| `promo_code_generated` | Cart recovery flow completed     | `{ code }`                                      |
-| `email_cta_capture`    | Email CTA form submitted         | `{ source, slug }`                              |
+| Event                  | Trigger                      | Parameters                                      |
+| ---------------------- | ---------------------------- | ----------------------------------------------- |
+| `newsletter_signup`    | Successful subscribe         | `{ source }` ('homepage', 'footer', 'checkout') |
+| `contact_form_submit`  | Contact form success         | `{ subject }`                                   |
+| `commission_inquiry`   | Commission form submit       | `{ subject }`                                   |
+| `search_filter`        | Shop filter applied          | `{ filter_type, filter_value }`                 |
+| `gallery_open`         | Lightbox opened              | `{ slug, image_index }`                         |
+| `video_play`           | Product video starts playing | `{ slug, video_index }`                         |
+| `promo_code_generated` | Cart recovery flow completed | `{ code }`                                      |
+| `email_cta_capture`    | Email CTA form submitted     | `{ source, slug }`                              |
 
 ### Meta Pixel Events (fire alongside GA4)
 
 Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code path:
 
-| GA4 Event          | Meta Pixel Event   | Meta Parameters                                                  |
-| ------------------ | ------------------ | ---------------------------------------------------------------- |
-| `view_item`        | `ViewContent`      | `{ content_ids: [slug], content_type: 'product', value, currency }` |
-| `add_to_cart`      | `AddToCart`        | `{ content_ids: [slug], content_type: 'product', value, currency }` |
-| `begin_checkout`   | `InitiateCheckout` | `{ content_ids: [...], num_items, value, currency }`             |
-| `purchase`         | `Purchase`         | `{ content_ids: [...], num_items, value, currency }` + CAPI      |
-| `newsletter_signup`| `Lead`             | `{ content_name: 'Newsletter Signup' }`                          |
-| `contact_form_submit` | `Contact`       | (no params)                                                      |
-| `email_cta_capture`| `Lead`             | `{ content_name: source }`                                       |
+| GA4 Event             | Meta Pixel Event   | Meta Parameters                                                     |
+| --------------------- | ------------------ | ------------------------------------------------------------------- |
+| `view_item`           | `ViewContent`      | `{ content_ids: [slug], content_type: 'product', value, currency }` |
+| `add_to_cart`         | `AddToCart`        | `{ content_ids: [slug], content_type: 'product', value, currency }` |
+| `begin_checkout`      | `InitiateCheckout` | `{ content_ids: [...], num_items, value, currency }`                |
+| `purchase`            | `Purchase`         | `{ content_ids: [...], num_items, value, currency }` + CAPI         |
+| `newsletter_signup`   | `Lead`             | `{ content_name: 'Newsletter Signup' }`                             |
+| `contact_form_submit` | `Contact`          | (no params)                                                         |
+| `email_cta_capture`   | `Lead`             | `{ content_name: source }`                                          |
 
 **CAPI (server-side)**: `Purchase` events also sent from `api/webhook.ts` via Meta Conversions API for iOS/ad-blocker resilience. Deduplicated with browser pixel via `event_id = stripe_event.id`.
 
@@ -2840,7 +2840,7 @@ Not needed for launch. When needed:
 | Architecture     | `assets/docs/EVERLASTINGS_STORE.md`               | Full technical reference            |
 | Brand Guide      | `assets/docs/BRAND.md`                            | Colors, fonts, voice, copy          |
 | Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                 | Client guide + AI creation protocol |
-| Action Steps     | `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md` | Checklist version of this doc       |
+| Action Steps     | `assets/docs/archive/v1_3/v1_3_1_ACTION_STEPS.md` | Checklist version of this doc       |
 | Dev Rules        | `.agent/DEV_RULES.md`                             | Git branching, dev protocols        |
 
 ---

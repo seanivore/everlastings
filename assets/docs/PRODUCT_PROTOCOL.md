@@ -1,7 +1,7 @@
 # Product Protocol — Everlastings by Emaline
 
 **Created**: 2026-04-12
-**Updated**: 2026-04-12 — v1.3.0: consolidated from PRODUCT_GUIDE.md + PRODUCT_CREATION_PROTOCOL.md
+**Updated**: 2026-04-12 — v1.3.1: consolidated from PRODUCT_GUIDE.md + PRODUCT_CREATION_PROTOCOL.md
 
 ---
 
@@ -19,25 +19,25 @@ All three create the same database row. When you save a product, a behind-the-sc
 
 ### Complete Example: The Sunkeeper
 
-| Field                 | Value                                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| **title**             | The Sunkeeper                                                                                   |
-| **headline**          | A garden where time stands still                                                                |
-| **story_card**        | *The Sunkeeper stands watch ...* (2-8 paragraphs)                                               |
-| **description**       | Handcrafted miniature garden scene with warm LED lighting and hand-placed botanicals.           |
-| **features**          | Warm LED glow with 3 modes, Hand-placed dried botanicals, USB-C powered (adapter included)      |
-| **price**             | $245.00 (we convert to cents for the database)                                                  |
-| **dimensions**        | 8" W x 6" D x 10" H                                                                            |
-| **weight**            | 2.5 lbs                                                                                        |
-| **materials**         | Wood, resin, LED lights, natural moss, dried flowers                                            |
-| **power_supply**      | USB-C (adapter included)                                                                        |
-| **care_instructions** | Dust gently with soft brush, Keep away from direct sunlight                                     |
-| **shipping_details**  | Ships within 3-5 business days, Insured shipping included                                       |
-| **product_type**      | miniature                                                                                       |
-| **series**            | Portals to Peace                                                                                |
-| **available**         | true                                                                                            |
-| **quantity**          | 1                                                                                               |
-| **featured**          | true                                                                                            |
+| Field                 | Value                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| **title**             | The Sunkeeper                                                                              |
+| **headline**          | A garden where time stands still                                                           |
+| **story_card**        | *The Sunkeeper stands watch ...* (2-8 paragraphs)                                          |
+| **description**       | Handcrafted miniature garden scene with warm LED lighting and hand-placed botanicals.      |
+| **features**          | Warm LED glow with 3 modes, Hand-placed dried botanicals, USB-C powered (adapter included) |
+| **price**             | $245.00 (we convert to cents for the database)                                             |
+| **dimensions**        | 8" W x 6" D x 10" H                                                                        |
+| **weight**            | 2.5 lbs                                                                                    |
+| **materials**         | Wood, resin, LED lights, natural moss, dried flowers                                       |
+| **power_supply**      | USB-C (adapter included)                                                                   |
+| **care_instructions** | Dust gently with soft brush, Keep away from direct sunlight                                |
+| **shipping_details**  | Ships within 3-5 business days, Insured shipping included                                  |
+| **product_type**      | miniature                                                                                  |
+| **series**            | Portals to Peace                                                                           |
+| **available**         | true                                                                                       |
+| **quantity**          | 1                                                                                          |
+| **featured**          | true                                                                                       |
 
 ### What You Write
 
@@ -382,14 +382,14 @@ This happens automatically on customer purchase. Manual marking only if Emy sell
 
 ### API Quick Reference
 
-| Action         | Method | Endpoint                |
-| -------------- | ------ | ----------------------- |
-| Create product | POST   | `/api/products`         |
-| Update product | PUT    | `/api/products?id=UUID` |
-| Get product    | GET    | `/api/products?slug=SLUG` |
-| Upload image   | POST   | `/api/upload`           |
+| Action         | Method | Endpoint                                |
+| -------------- | ------ | --------------------------------------- |
+| Create product | POST   | `/api/products`                         |
+| Update product | PUT    | `/api/products?id=UUID`                 |
+| Get product    | GET    | `/api/products?slug=SLUG`               |
+| Upload image   | POST   | `/api/upload`                           |
 | Auth header    | —      | `Authorization: Bearer PRODUCT_API_KEY` |
 
 ---
 
-*Questions? Ask in the group chat or email Sean at sean@august.style*
+*Questions? Email Sean at sean@august.style*

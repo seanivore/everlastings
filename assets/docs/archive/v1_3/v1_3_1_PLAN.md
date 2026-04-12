@@ -61,12 +61,12 @@ gtag('event', 'view_item', {
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
+| File                                                | Changes                                                              |
+| --------------------------------------------------- | -------------------------------------------------------------------- |
 | `assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md` | GA4 events rewrite, Meta Pixel section, email CTAs, new events, CAPI |
-| `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md` | Add Meta Pixel setup, email CTA checkboxes, updated GA4 events |
-| `assets/docs/EVERLASTINGS_STORE.md` | Add Meta Pixel to tech stack + architecture decisions |
-| `.env.example` | Add META_PIXEL_ID |
+| `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md`   | Add Meta Pixel setup, email CTA checkboxes, updated GA4 events       |
+| `assets/docs/EVERLASTINGS_STORE.md`                 | Add Meta Pixel to tech stack + architecture decisions                |
+| `.env.example`                                      | Add META_PIXEL_ID                                                    |
 
 ### No new standalone files needed. No deletions.
 ### New schema: `product_interests` table (7th table)
@@ -84,21 +84,21 @@ Rename `view_product` → `view_item` (GA4 standard name).
 
 Replace flat parameter format with proper `items` array. New event table:
 
-| Event | GA4 Standard Name | Items Array | Extra Params |
-|-------|-------------------|-------------|--------------|
-| Product page | `view_item` | Yes (1 item) | — |
-| Add to cart | `add_to_cart` | Yes (1 item) | — |
-| Remove from cart | `remove_from_cart` | Yes (1 item) | — |
-| Checkout load | `begin_checkout` | Yes (all cart items) | `coupon` if applicable |
-| Purchase | `purchase` | Yes (all items) | `transaction_id`, `tax`, `shipping` |
-| Newsletter | `newsletter_signup` | No | `{ source }` (custom, not GA4 standard) |
-| Contact | `contact_form_submit` | No | `{ subject }` (custom) |
-| Commission inquiry | `commission_inquiry` | No | `{ subject }` (custom, NEW) |
-| Filter | `search_filter` | No | `{ filter_type, filter_value }` (custom) |
-| Lightbox | `gallery_open` | No | `{ slug, image_index }` (custom) |
-| Video play | `video_play` | No | `{ slug, video_index }` (custom, NEW) |
-| Promo code | `promo_code_generated` | No | `{ code }` (custom) |
-| Email CTA capture | `email_cta_capture` | No | `{ source, slug }` (custom, NEW) |
+| Event              | GA4 Standard Name      | Items Array          | Extra Params                             |
+| ------------------ | ---------------------- | -------------------- | ---------------------------------------- |
+| Product page       | `view_item`            | Yes (1 item)         | —                                        |
+| Add to cart        | `add_to_cart`          | Yes (1 item)         | —                                        |
+| Remove from cart   | `remove_from_cart`     | Yes (1 item)         | —                                        |
+| Checkout load      | `begin_checkout`       | Yes (all cart items) | `coupon` if applicable                   |
+| Purchase           | `purchase`             | Yes (all items)      | `transaction_id`, `tax`, `shipping`      |
+| Newsletter         | `newsletter_signup`    | No                   | `{ source }` (custom, not GA4 standard)  |
+| Contact            | `contact_form_submit`  | No                   | `{ subject }` (custom)                   |
+| Commission inquiry | `commission_inquiry`   | No                   | `{ subject }` (custom, NEW)              |
+| Filter             | `search_filter`        | No                   | `{ filter_type, filter_value }` (custom) |
+| Lightbox           | `gallery_open`         | No                   | `{ slug, image_index }` (custom)         |
+| Video play         | `video_play`           | No                   | `{ slug, video_index }` (custom, NEW)    |
+| Promo code         | `promo_code_generated` | No                   | `{ code }` (custom)                      |
+| Email CTA capture  | `email_cta_capture`    | No                   | `{ source, slug }` (custom, NEW)         |
 
 **Helper function** to add to `main.js`:
 ```javascript
@@ -142,14 +142,14 @@ fbq('track', 'PageView');
 
 **Event mapping** — fire Meta events alongside GA4 events:
 
-| Action | GA4 Event | Meta Pixel Event |
-|--------|-----------|-----------------|
-| Product page | `view_item` | `ViewContent` |
-| Add to cart | `add_to_cart` | `AddToCart` |
-| Checkout | `begin_checkout` | `InitiateCheckout` |
-| Purchase | `purchase` | `Purchase` |
-| Newsletter | `newsletter_signup` | `Lead` |
-| Contact | `contact_form_submit` | `Contact` |
+| Action       | GA4 Event             | Meta Pixel Event   |
+| ------------ | --------------------- | ------------------ |
+| Product page | `view_item`           | `ViewContent`      |
+| Add to cart  | `add_to_cart`         | `AddToCart`        |
+| Checkout     | `begin_checkout`      | `InitiateCheckout` |
+| Purchase     | `purchase`            | `Purchase`         |
+| Newsletter   | `newsletter_signup`   | `Lead`             |
+| Contact      | `contact_form_submit` | `Contact`          |
 
 **Meta Pixel helper** in main.js:
 ```javascript

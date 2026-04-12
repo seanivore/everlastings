@@ -2,8 +2,8 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-09 — v1.2r1: parallel tracks, customers table, env strategy, Cloudinary, AI product creation, analytics
-**Version**: v1.2.1
+**Updated**: 2026-04-12 — v1.3.0: parallel tracks, customers table, env strategy, Cloudinary, AI product creation, analytics, META Pixel
+**Version**: v1.3.1
 **Status**: Pre-development, architecture finalized
 
 ---
@@ -70,7 +70,7 @@
 │    customers             │   │    gallery-{slug}-01.webp          │
 │    orders                │   │    thumbnail-{slug}.webp           │
 │    subscribers           │   │    video-{slug}-01.mp4             │
-│    site_config           │   │    gif-{slug}-01.gif               │
+│    site_config           │   │    detail-{slug}-01.gif            │
 │                          │   │                                    │
 │                          │   │  /brand/                           │
 │  Auth: admin login       │   │    logo.svg, favicon, etc.         │
@@ -194,7 +194,7 @@ Create `.env.local` (see also `.env.example` in impl guide):
   CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
   ```
 
-**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_3_0_IMPLEMENTATION.md` > Environment Strategy for full details.
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_3_1_IMPLEMENTATION.md` > Environment Strategy for full details.
 
 ### Local Development
 
@@ -694,22 +694,22 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ### `webhook_events` table
 
-| Column       | Type        | Notes                             |
-| ------------ | ----------- | --------------------------------- |
-| event_id     | text        | PK — Stripe event ID             |
-| processed_at | timestamptz | Auto — when event was processed  |
+| Column       | Type        | Notes                           |
+| ------------ | ----------- | ------------------------------- |
+| event_id     | text        | PK — Stripe event ID            |
+| processed_at | timestamptz | Auto — when event was processed |
 
 Used for webhook idempotency. Prevents duplicate processing when Stripe retries events.
 
 ### `product_interests` table
 
-| Column       | Type        | Notes                                    |
-| ------------ | ----------- | ---------------------------------------- |
-| id           | uuid        | PK                                       |
-| email        | text        | Subscriber email                         |
-| product_slug | text        | Product they're interested in            |
-| notified     | boolean     | Default false — set true after notified  |
-| created_at   | timestamptz | Auto                                     |
+| Column       | Type        | Notes                                   |
+| ------------ | ----------- | --------------------------------------- |
+| id           | uuid        | PK                                      |
+| email        | text        | Subscriber email                        |
+| product_slug | text        | Product they're interested in           |
+| notified     | boolean     | Default false — set true after notified |
+| created_at   | timestamptz | Auto                                    |
 
 Unique constraint on (email, product_slug). Tracks who wants to be notified about specific products.
 

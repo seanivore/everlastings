@@ -1,8 +1,8 @@
-# Everlastings v1.3.0 Action Steps
+# Everlastings v1.3.1 Action Steps
 
-**Version**: v1.3.0
-**Created**: 2026-04-12
-**Master Plan**: `assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md`
+**Version**: v1.3.1
+**Created**: 2026-04-12 | 16:16
+**Master Plan**: `assets/docs/archive/v1_3/v1_3_1_IMPLEMENTATION.md`
 **Format**: One checkbox = one action. ADHD-friendly.
 
 ---
@@ -259,21 +259,21 @@ Wire Track B pages to Track A backend. Replace placeholders with dynamic data.
   - [ ] **Wire** CTA 3 (contemplation): 3-min timer + promo code generation
   - [ ] **Wire** GA4 enhanced e-commerce + Meta Pixel events (see implementation guide):
 
-| Event | Trigger |
-| ----- | ------- |
-| `view_item` | Product page load |
-| `add_to_cart` | Add to Cart click |
-| `remove_from_cart` | Remove from Cart |
-| `begin_checkout` | Checkout page load |
-| `purchase` | Completion (success) |
-| `newsletter_signup` | Successful subscribe |
-| `contact_form_submit` | Contact form success |
-| `search_filter` | Shop filter applied |
-| `gallery_open` | Lightbox opened |
-| `video_play` | Product video starts |
-| `commission_inquiry` | Commission form submit |
-| `promo_code_generated` | Cart recovery completed |
-| `email_cta_capture` | Email CTA form submitted |
+| Event                  | Trigger                  |
+| ---------------------- | ------------------------ |
+| `view_item`            | Product page load        |
+| `add_to_cart`          | Add to Cart click        |
+| `remove_from_cart`     | Remove from Cart         |
+| `begin_checkout`       | Checkout page load       |
+| `purchase`             | Completion (success)     |
+| `newsletter_signup`    | Successful subscribe     |
+| `contact_form_submit`  | Contact form success     |
+| `search_filter`        | Shop filter applied      |
+| `gallery_open`         | Lightbox opened          |
+| `video_play`           | Product video starts     |
+| `commission_inquiry`   | Commission form submit   |
+| `promo_code_generated` | Cart recovery completed  |
+| `email_cta_capture`    | Email CTA form submitted |
 
   Meta Pixel events fire in parallel: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `Lead`, `Contact`.
 

@@ -87,17 +87,17 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 
 | Document                                                                   | Description                                   |
 | -------------------------------------------------------------------------- | --------------------------------------------- |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                   |
-| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy                |
-| [Implementation Guide](/assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md) | Parallel-track build plan with code snippets   |
-| [Action Steps](/assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md)           | ADHD-friendly checklist version of impl guide  |
-| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                       | Client guide + AI product creation protocol    |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                  |
+| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy               |
+| [Implementation Guide](/assets/docs/archive/v1_3/v1_3_1_IMPLEMENTATION.md) | Parallel-track build plan with code snippets  |
+| [Action Steps](/assets/docs/archive/v1_3/v1_3_1_ACTION_STEPS.md)           | ADHD-friendly checklist version of impl guide |
+| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                       | Client guide + AI product creation protocol   |
 
 ---
 
 ## About
 
-**Everlastings by Emaline** was built by [Sean August Horvath](https://august.style) for artist Emy Hoff — creating miniature sanctuaries where loss transforms into something you can hold.
+**Everlastings by Emaline** was built by [Sean August Horvath](mailto:sean@august.style) for artist Emy Hoff — creating miniature sanctuaries where loss transforms into something you can hold.
 
   + Client: [everlastingsbyemaline.com](https://everlastingsbyemaline.com)
   + Developer: [august.style](https://august.style)
