@@ -49,7 +49,8 @@
   - [ ] **Run** SQL: create `subscribers` table
   - [ ] **Run** SQL: create `site_config` table
   - [ ] **Run** SQL: create `webhook_events` table (idempotency)
-  - [ ] **Enable** RLS on all 6 tables (copy policies from implementation guide)
+  - [ ] **Run** SQL: create `product_interests` table (email capture)
+  - [ ] **Enable** RLS on all 7 tables (copy policies from implementation guide)
   - [ ] **Create** admin user: `admin@everlastingsbyemaline.com` (Supabase Auth > Invite)
   - [ ] **Create** admin user: `emyh@everlastingsbyemaline.com` (Supabase Auth > Invite)
   - [ ] **Configure** Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
@@ -70,7 +71,15 @@
   - [ ] **Create** test webhook endpoint → `{dev-preview-url}/api/webhook`
     - Event: `checkout.session.completed`
   - [ ] **Create** coupon: name "Haven Finder Apology", 10% off, duration once, ID `cart-recovery-10`
+  - [ ] **Create** coupon: name "Welcome to the Firelight Council", 5% off, duration once, ID `newsletter-welcome-5`
   - [ ] **Enable** receipt emails: Dashboard → Settings → Emails → Successful payments
+
+#### Meta Pixel + Instagram Shopping
+  - [ ] **Get** Meta Pixel ID from Meta Events Manager
+  - [ ] **Get** Meta Access Token from Meta Business Manager
+  - [ ] **Set** `META_PIXEL_ID` and `META_ACCESS_TOKEN` in Vercel env vars
+  - [ ] **Verify** Emy has: Business IG → FB Page → Commerce Manager → domain verified
+  - [ ] **Configure** Commerce Manager: catalog feed URL → `https://everlastingsbyemaline.com/api/product-feed`
 
 #### Analytics
   - [ ] **Create** GA4 property for everlastingsbyemaline.com
@@ -93,6 +102,8 @@
   - [ ] **Create** `api/upload.ts` — PRODUCT_API_KEY auth, file type/size validation, Cloudinary → R2 pipeline
   - [ ] **Create** `api/subscribe.ts` — newsletter subscription
   - [ ] **Create** `api/contact.ts` — contact form handler
+  - [ ] **Create** `api/cart-activity.ts` — fire-and-forget product interest notification
+  - [ ] **Create** `api/product-feed.ts` — CSV feed for Meta Commerce Catalog sync
 
 **Auth note**: `api/products.ts` and `api/upload.ts` use `PRODUCT_API_KEY` for auth (NOT `SUPABASE_SERVICE_KEY`). See AR #20.
 
@@ -158,6 +169,10 @@ All pages: hardcoded HTML/CSS. No JavaScript data-fetching. Placeholder images a
   - [ ] **Create** inline SVG icons: dimensions, weight, materials, lighting, care, shipping
   - [ ] **Set** responsive breakpoints: 393px, 768px, 1024px, 1440px
   - [ ] **Add** GA4 `gtag.js` snippet to page `<head>` template
+  - [ ] **Add** Meta Pixel base code to page `<head>` template (alongside GA4)
+  - [ ] **Style** contemplation popup (bottom-right peel-up animation)
+  - [ ] **Style** exit intent modal (centered overlay)
+  - [ ] **Style** product interest CTA (below sticky card buttons)
 
 ### B2: Header, Footer, Nav
 
@@ -180,6 +195,9 @@ All pages: hardcoded HTML/CSS. No JavaScript data-fetching. Placeholder images a
   - [ ] **Add** breadcrumb: Home > Shop > Product
   - [ ] **Add** "Related Havens" placeholder (3-4 cards)
   - [ ] **Add** video/GIF placeholders in gallery
+  - [ ] **Add** email CTA 1: product interest form below sticky card buttons
+  - [ ] **Add** email CTA 3: contemplation popup (bottom-right peel, placeholder)
+  - [ ] **Add** email CTA 2: exit intent modal (hidden by default, on all product pages)
 
 ### B4: Shop Grid
 
@@ -235,11 +253,15 @@ Wire Track B pages to Track A backend. Replace placeholders with dynamic data.
   - [ ] **Create** `assets/js/shop.js` — fetch products, render tiles, filters, sort, URL state
   - [ ] **Create** `assets/js/homepage.js` — featured carousel, theme from site_config
   - [ ] **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
-  - [ ] **Wire** GA4 events (11 total — see GA4 Event Definitions in implementation guide):
+  - [ ] **Wire** `buildGa4Item()` and `trackMeta()` helpers in main.js
+  - [ ] **Wire** CTA 1 (product interest): POST to subscribe + insert product_interests
+  - [ ] **Wire** CTA 2 (exit intent): mouse-leave / visibilitychange detection
+  - [ ] **Wire** CTA 3 (contemplation): 3-min timer + promo code generation
+  - [ ] **Wire** GA4 enhanced e-commerce + Meta Pixel events (see implementation guide):
 
 | Event | Trigger |
 | ----- | ------- |
-| `view_product` | Product page load |
+| `view_item` | Product page load |
 | `add_to_cart` | Add to Cart click |
 | `remove_from_cart` | Remove from Cart |
 | `begin_checkout` | Checkout page load |
@@ -248,7 +270,12 @@ Wire Track B pages to Track A backend. Replace placeholders with dynamic data.
 | `contact_form_submit` | Contact form success |
 | `search_filter` | Shop filter applied |
 | `gallery_open` | Lightbox opened |
+| `video_play` | Product video starts |
+| `commission_inquiry` | Commission form submit |
 | `promo_code_generated` | Cart recovery completed |
+| `email_cta_capture` | Email CTA form submitted |
+
+  Meta Pixel events fire in parallel: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `Lead`, `Contact`.
 
 ### C2: Checkout Flow E2E
 

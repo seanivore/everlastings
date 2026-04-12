@@ -121,6 +121,10 @@
 
   15. **Source of truth hierarchy** — Supabase (authoritative) > Stripe (payment mirror) > R2 (asset storage) > Frontend (read-only consumer). When in doubt, trust Supabase.
 
+  16. **Meta Pixel + Instagram Shopping** — Base pixel code alongside GA4 in `<head>`. Events fire in parallel with GA4. Server-side CAPI for Purchase deduplication. `api/product-feed.ts` serves CSV for Meta Commerce Catalog sync (Instagram Shopping auto-syncs daily).
+
+  17. **Email capture CTAs** — Product interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup with 5% off. `product_interests` table tracks email + product slug for real notification capability.
+
 ---
 
 ## Project Overview
@@ -586,6 +590,8 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `R2_PUBLIC_URL`          | CDN public base URL                 | Yes      |
 | `CLOUDINARY_URL`         | Cloudinary API credentials          | Yes      |
 | `PRODUCT_API_KEY`        | AI/external API auth key            | Yes      |
+| `META_PIXEL_ID`          | Meta Pixel ID for tracking          | Yes      |
+| `META_ACCESS_TOKEN`      | Meta Conversions API token          | Yes      |
 
 **Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `v1_3_0_IMPLEMENTATION.md` > Environment Strategy.
 
@@ -694,6 +700,18 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | processed_at | timestamptz | Auto — when event was processed  |
 
 Used for webhook idempotency. Prevents duplicate processing when Stripe retries events.
+
+### `product_interests` table
+
+| Column       | Type        | Notes                                    |
+| ------------ | ----------- | ---------------------------------------- |
+| id           | uuid        | PK                                       |
+| email        | text        | Subscriber email                         |
+| product_slug | text        | Product they're interested in            |
+| notified     | boolean     | Default false — set true after notified  |
+| created_at   | timestamptz | Auto                                     |
+
+Unique constraint on (email, product_slug). Tracks who wants to be notified about specific products.
 
 ---
 

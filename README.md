@@ -52,7 +52,7 @@
   + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
   + **Payments**: Stripe Custom Checkout (ui_mode: 'custom')
   + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN at `cdn.everlastingsbyemaline.com`)
-  + **Analytics**: Google Analytics 4 (gtag.js)
+  + **Analytics**: Google Analytics 4 (gtag.js) + Meta Pixel (retargeting + Instagram Shopping)
   + **Hosting**: Vercel (auto-deploy on push)
 
 ---

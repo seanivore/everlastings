@@ -1,7 +1,7 @@
 # Everlastings v1.3.0 Implementation Guide
 
 **Version**: v1.3.0
-**Created**: 2026-04-12
+**Created**: 2026-04-12 14:52
 **Previous**: v1.2.1 (2026-04-09)
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary
 **Structure**: 3 parallel tracks (A: Backend, B: Frontend Design, C: Integration)
@@ -93,6 +93,18 @@ Every architectural question answered. No mid-session research. Referenced as "A
       - Exactly 1 thumbnail required
       - Minimum 5 gallery images required
       - Validated by `api/products.ts` before INSERT
+  25. **Meta Pixel for retargeting + Instagram Shopping attribution**
+      - Base pixel code in `<head>` alongside GA4. Events fire in parallel
+      - Server-side CAPI for Purchase deduplication via webhook
+      - Meta Pixel ID served via `api/config.ts` (public, like GA4 measurement ID)
+  26. **Email capture CTAs for conversion optimization**
+      - Product page interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup
+      - All feed into `subscribers` table with distinct `source` values
+      - Product interest tracked in `product_interests` table for real notification capability
+  27. **Meta Commerce Catalog via data feed**
+      - `api/product-feed.ts` serves CSV of all products
+      - Meta Commerce Manager polls daily — products auto-sync to Instagram Shopping
+      - Same pattern extends to Pinterest Shopping (post-launch)
 
 ---
 
@@ -108,11 +120,11 @@ Every architectural question answered. No mid-session research. Referenced as "A
   fix/webhook-signature
   ```
 
-| Branch   | Vercel Environment | Stripe Keys            | URL                              |
-| -------- | ------------------ | ---------------------- | -------------------------------- |
-| `main`   | Production         | `sk_live_`, `pk_live_` | everlastingsbyemaline.com        |
-| `dev`    | Preview            | `sk_test_`, `pk_test_` | *.vercel.app preview URL         |
-| `feat/*` | Preview            | `sk_test_`, `pk_test_` | *.vercel.app preview URL         |
+| Branch   | Vercel Environment | Stripe Keys            | URL                       |
+| -------- | ------------------ | ---------------------- | ------------------------- |
+| `main`   | Production         | `sk_live_`, `pk_live_` | everlastingsbyemaline.com |
+| `dev`    | Preview            | `sk_test_`, `pk_test_` | *.vercel.app preview URL  |
+| `feat/*` | Preview            | `sk_test_`, `pk_test_` | *.vercel.app preview URL  |
 
 **Rules**:
   1. Never push directly to `main` — always merge from `dev` via PR
@@ -200,6 +212,8 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 | `R2_BUCKET_NAME`         | same                  | same                    |
 | `R2_PUBLIC_URL`          | same                  | same                    |
 | `CLOUDINARY_URL`         | same                  | same                    |
+| `META_PIXEL_ID`          | same                  | same                    |
+| `META_ACCESS_TOKEN`      | same                  | same                    |
 
 **Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
 
@@ -278,7 +292,7 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   }
   ```
 
-### Supabase SQL — CREATE TABLE (6 tables)
+### Supabase SQL — CREATE TABLE (7 tables)
 
   ```sql
   CREATE TABLE products (
@@ -409,6 +423,18 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   );
   ```
 
+  ```sql
+  -- Product interest tracking: email capture + cart activity notifications (AR #26)
+  CREATE TABLE product_interests (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    email text NOT NULL,
+    product_slug text NOT NULL,
+    notified boolean DEFAULT false,
+    created_at timestamptz DEFAULT now(),
+    UNIQUE(email, product_slug)
+  );
+  ```
+
 ---
 
 ## Configuration Files
@@ -502,6 +528,10 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   # Product API (for AI agents and external API access — AR #20)
   # Generate with: openssl rand -hex 32
   PRODUCT_API_KEY=your-random-64-char-string
+
+  # Meta Pixel (for retargeting + Instagram Shopping attribution — AR #25)
+  META_PIXEL_ID=your-pixel-id
+  META_ACCESS_TOKEN=your-meta-access-token
   ```
 
 ---
@@ -561,7 +591,8 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   - [ ] **Run** SQL: create `subscribers` table
   - [ ] **Run** SQL: create `site_config` table
   - [ ] **Run** SQL: create `webhook_events` table (idempotency — AR #21)
-  - [ ] **Enable** RLS on all 6 tables:
+  - [ ] **Run** SQL: create `product_interests` table (email capture — AR #26)
+  - [ ] **Enable** RLS on all 7 tables:
 
   ```sql
   -- PRODUCTS: public read, authenticated write
@@ -620,6 +651,15 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
   CREATE POLICY "Service role can manage webhook events"
     ON webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+  -- PRODUCT_INTERESTS: public insert (CTA forms), authenticated read (admin)
+  ALTER TABLE product_interests ENABLE ROW LEVEL SECURITY;
+
+  CREATE POLICY "Anyone can register product interest"
+    ON product_interests FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+  CREATE POLICY "Only authenticated users can read product interests"
+    ON product_interests FOR SELECT TO authenticated USING (true);
   ```
 
   - [ ] **Create** admin users in Supabase Auth > Users > Invite user:
@@ -649,7 +689,22 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   - [ ] **Create** test webhook endpoint → `{dev-preview-url}/api/webhook`
     - Events: `checkout.session.completed`
   - [ ] **Create** cart-recovery coupon: name "Haven Finder Apology", 10% off, duration once, ID `cart-recovery-10`
-  - [ ] **Enable** receipt emails: Dashboard → Settings → Emails �� Successful payments
+  - [ ] **Create** newsletter coupon: name "Welcome to the Firelight Council", 5% off, duration once, ID `newsletter-welcome-5`
+  - [ ] **Enable** receipt emails: Dashboard > Settings > Emails > Successful payments
+
+#### Meta Pixel + Instagram Shopping (AR #25, #27)
+
+  - [ ] **Get** Meta Pixel ID from Meta Events Manager
+  - [ ] **Get** Meta Access Token (system user token with `catalog_management` permission) from Meta Business Manager
+  - [ ] **Set** `META_PIXEL_ID` and `META_ACCESS_TOKEN` env vars in Vercel
+  - [ ] **Verify** Instagram Shopping prerequisites (Emy's responsibility):
+    1. Instagram account converted to Business profile
+    2. IG profile connected to a Facebook Page
+    3. Meta Business Manager with FB Page claimed
+    4. Commerce Manager: create catalog (type: E-commerce)
+    5. Domain verification: DNS TXT record or meta tag for `everlastingsbyemaline.com`
+    6. Submit shop for Commerce review (1-2 weeks)
+    7. After approval: product tagging available in Instagram app
 
 #### Analytics
 
@@ -686,6 +741,7 @@ Returns environment-appropriate public configuration. Enables automatic test/liv
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      metaPixelId: process.env.META_PIXEL_ID || null,
     });
   }
   ```
@@ -991,6 +1047,37 @@ Handles `checkout.session.completed`. See Webhook Contract section for the full 
 
       // Record processed event for idempotency (AR #21)
       await supabase.from('webhook_events').insert({ event_id: event.id });
+
+      // Meta Conversions API — server-side Purchase (AR #25)
+      // Deduplicates with browser pixel via event_id
+      if (process.env.META_PIXEL_ID && process.env.META_ACCESS_TOKEN) {
+        try {
+          await fetch(`https://graph.facebook.com/v21.0/${process.env.META_PIXEL_ID}/events`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              data: [{
+                event_name: 'Purchase',
+                event_time: Math.floor(Date.now() / 1000),
+                event_id: event.id,
+                user_data: {
+                  em: customerEmail ? [await hashSHA256(customerEmail)] : [],
+                },
+                custom_data: {
+                  currency: 'USD',
+                  value: (session.amount_total || 0) / 100,
+                  content_ids: items.map(i => i.slug),
+                  content_type: 'product',
+                  num_items: items.length,
+                }
+              }],
+              access_token: process.env.META_ACCESS_TOKEN
+            })
+          });
+        } catch (err) {
+          console.error('Meta CAPI error (non-blocking):', err);
+        }
+      }
 
       console.log(`Order completed: ${items.map(i => i.slug).join(', ')} → ${customerEmail}`);
     }
@@ -1413,6 +1500,82 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
   - [ ] **Create** `api/subscribe.ts`
   - [ ] **Create** `api/contact.ts` — similar pattern, stores in Supabase or sends email
 
+#### Cart Activity — `api/cart-activity.ts`
+
+Fire-and-forget endpoint called when any user adds a product to cart. Checks for interested email subscribers.
+
+  ```typescript
+  // api/cart-activity.ts
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+
+  export async function POST(request: Request) {
+    try {
+      const { slug } = await request.json();
+      if (!slug) return Response.json({ ok: true });
+
+      // Check for interested subscribers (v1: log for admin visibility)
+      const { data: interests } = await supabase
+        .from('product_interests')
+        .select('email')
+        .eq('product_slug', slug)
+        .eq('notified', false);
+
+      if (interests && interests.length > 0) {
+        console.log(`Cart activity: ${slug} — ${interests.length} interested subscriber(s)`);
+        // Post-launch with email service: send notification emails here
+        // Then: UPDATE product_interests SET notified = true WHERE product_slug = slug
+      }
+
+      return Response.json({ ok: true });
+    } catch {
+      return Response.json({ ok: true }); // Never block cart UX
+    }
+  }
+  ```
+
+  - [ ] **Create** `api/cart-activity.ts`
+
+#### Product Feed — `api/product-feed.ts`
+
+CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync Instagram Shopping.
+
+  ```typescript
+  // api/product-feed.ts
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  );
+
+  export async function GET() {
+    const { data: products } = await supabase
+      .from('products')
+      .select('slug, title, description, price, available, thumbnail');
+
+    const header = 'id,title,description,availability,condition,price,link,image_link,brand';
+    const rows = (products || []).map(p => {
+      const avail = p.available ? 'in stock' : 'out of stock';
+      const price = `${(p.price / 100).toFixed(2)} USD`;
+      const link = `https://everlastingsbyemaline.com/product/${p.slug}`;
+      const esc = (s: string) => `"${(s || '').replace(/"/g, '""')}"`;
+      return [p.slug, esc(p.title), esc(p.description), avail, 'new', price, link, p.thumbnail, 'Everlastings by Emaline'].join(',');
+    });
+
+    return new Response([header, ...rows].join('\n'), {
+      headers: { 'Content-Type': 'text/csv', 'Cache-Control': 'public, max-age=3600' }
+    });
+  }
+  ```
+
+  - [ ] **Create** `api/product-feed.ts`
+  - [ ] **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed`
+
 ---
 
 ### A3: Admin UI + Product Protocol
@@ -1616,6 +1779,55 @@ No icon library. 5-6 simple SVG icons used in product details:
   </script>
   ```
 
+#### Meta Pixel Script Tag (AR #25)
+
+  - [ ] **Add** Meta Pixel base code to `<head>` of all pages (alongside GA4):
+
+  ```html
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', 'META_PIXEL_ID_HERE');
+  fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=META_PIXEL_ID_HERE&ev=PageView&noscript=1"/></noscript>
+  ```
+
+  `PageView` fires automatically on every page load. No extra code needed.
+
+#### Email Capture CTA Styles (AR #26)
+
+  - [ ] **Style** contemplation popup (bottom-right peel-up):
+
+  ```css
+  .contemplation-popup {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    max-width: 360px;
+    transform: translateY(100%);
+    transition: transform var(--transition-slow);
+    z-index: var(--z-modal);
+    background: var(--bg-primary);
+    border-top-left-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-lg);
+  }
+  .contemplation-popup.visible {
+    transform: translateY(0);
+  }
+  ```
+
+  - [ ] **Style** exit intent modal (centered overlay)
+  - [ ] **Style** product interest CTA (below sticky card buttons)
+
 ---
 
 ### B2: Header, Footer, Nav
@@ -1665,6 +1877,19 @@ No icon library. 5-6 simple SVG icons used in product details:
       Each piece is one-of-a-kind.
       <a href="/policies.html#availability">Availability confirmed at checkout</a>.
     </p>
+
+    <!-- Email CTA 1: Product Interest (AR #26) -->
+    <div class="interest-cta" id="product-interest-cta">
+      <p class="interest-text">This is a one-of-a-kind piece. Love it? Get notified if someone else adds it to their cart.</p>
+      <form id="interest-form" class="interest-form">
+        <label class="checkbox-label">
+          <input type="checkbox" required>
+          Please email me. I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        </label>
+        <input type="email" placeholder="Your email" required>
+        <button type="submit" class="btn-secondary btn-sm">Notify Me</button>
+      </form>
+    </div>
   </aside>
   ```
 
@@ -1691,6 +1916,65 @@ No icon library. 5-6 simple SVG icons used in product details:
   <iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
     class="gallery-media" loading="lazy" allowfullscreen></iframe>
   ```
+
+#### Email CTA 2: Cart Exit Intent Modal
+
+When a user has items in cart and navigates away or triggers exit intent:
+
+  ```html
+  <!-- Include on all pages (hidden by default) -->
+  <div class="exit-modal hidden" id="exit-intent-modal">
+    <div class="exit-modal-overlay"></div>
+    <div class="exit-modal-content">
+      <button class="exit-modal-close">&times;</button>
+      <h3>Don't miss out</h3>
+      <p>This is one of a kind. Can we email you if someone else adds it to their cart or if we have a discount?</p>
+      <form id="exit-email-form">
+        <label class="checkbox-label">
+          <input type="checkbox" required>
+          Please email me. I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        </label>
+        <input type="email" placeholder="Your email" required>
+        <button type="submit" class="btn-primary">Keep Me Updated</button>
+      </form>
+    </div>
+  </div>
+  ```
+
+  - Only shows once per session (sessionStorage flag)
+  - Only shows if cart is not empty
+  - Triggered by: mouse leaving viewport top (desktop) or `visibilitychange` (mobile)
+  - POSTs to `/api/subscribe` with `source: 'cart-exit'`
+  - Success: close modal, brief toast "You're on the list."
+
+#### Email CTA 3: Contemplation Popup (3-Minute Timer)
+
+When a user has been on a product page for 3+ minutes, a subtle popup peels up from the bottom-right:
+
+  ```html
+  <div class="contemplation-popup" id="contemplation-popup">
+    <div class="contemplation-content">
+      <button class="contemplation-close">&times;</button>
+      <p>Love it? Join our newsletter for 5% off!</p>
+      <form id="contemplation-form">
+        <label class="checkbox-label">
+          <input type="checkbox" required>
+          I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        </label>
+        <input type="email" placeholder="Your email" required>
+        <button type="submit" class="btn-primary">Get 5% Off</button>
+      </form>
+    </div>
+  </div>
+  ```
+
+  - Triggered by `setTimeout(3 * 60 * 1000)` on product page
+  - Only shows once per session (sessionStorage)
+  - Only shows if user hasn't already subscribed from CTA 1
+  - Animation: bottom-right peel-up (see B1 CSS)
+  - POSTs to `/api/subscribe` with `source: 'contemplation-offer'`
+  - On success: generates unique 5% promo code via Stripe promotion code API (coupon `newsletter-welcome-5`), displays code inline
+  - Fires `email_cta_capture` GA4 event + `Lead` Meta Pixel event
 
 ---
 
@@ -1807,6 +2091,28 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
     return title.toLowerCase().replaceAll(' ', '-');
   }
 
+  // --- GA4 Enhanced E-commerce Helper ---
+
+  function buildGa4Item(product) {
+    return {
+      item_id: product.slug,
+      item_name: product.title,
+      item_brand: 'Everlastings by Emaline',
+      item_category: product.product_type,
+      item_category2: product.series || '',
+      price: product.price / 100,
+      quantity: 1
+    };
+  }
+
+  // --- Meta Pixel Helper (AR #25) ---
+
+  function trackMeta(eventName, params) {
+    if (typeof fbq === 'function') {
+      fbq('track', eventName, params);
+    }
+  }
+
   async function getProductBySlug(slug) {
     const supabase = getSupabase();
     const { data, error } = await supabase
@@ -1839,7 +2145,29 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
     cart.push(item);
     localStorage.setItem('everlastings_cart', JSON.stringify(cart));
     updateCartBadge();
-    gtag('event', 'add_to_cart', { slug: item.slug, title: item.title, value: item.price / 100, currency: 'USD' });
+
+    // GA4 enhanced e-commerce
+    gtag('event', 'add_to_cart', {
+      currency: 'USD',
+      value: item.price / 100,
+      items: [buildGa4Item(item)]
+    });
+
+    // Meta Pixel
+    trackMeta('AddToCart', {
+      content_ids: [item.slug],
+      content_type: 'product',
+      content_name: item.title,
+      value: item.price / 100,
+      currency: 'USD'
+    });
+
+    // Fire-and-forget: notify product interest trackers (AR #26)
+    fetch('/api/cart-activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: item.slug })
+    }).catch(() => {}); // Never block cart UX
   }
 
   function removeFromCart(productId) {
@@ -1848,7 +2176,11 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
     localStorage.setItem('everlastings_cart', JSON.stringify(cart));
     updateCartBadge();
     if (item) {
-      gtag('event', 'remove_from_cart', { slug: item.slug, title: item.title, value: item.price / 100 });
+      gtag('event', 'remove_from_cart', {
+        currency: 'USD',
+        value: item.price / 100,
+        items: [buildGa4Item(item)]
+      });
     }
   }
 
@@ -1878,8 +2210,12 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
   - [ ] **Create** `assets/js/product.js` — replaces hardcoded product data with Supabase fetch
   - [ ] **Wire** Add to Cart / Buy Now buttons
   - [ ] **Wire** gallery with lightbox (click → fullscreen)
-  - [ ] **Add** GA4 event: `gtag('event', 'view_product', { slug, title, value: price/100, product_type, series, available })`
+  - [ ] **Add** GA4 enhanced e-commerce: `gtag('event', 'view_item', { currency: 'USD', value: price/100, items: [buildGa4Item(product)] })`
+  - [ ] **Add** Meta Pixel: `trackMeta('ViewContent', { content_ids: [slug], content_type: 'product', content_name: title, value: price/100, currency: 'USD' })`
   - [ ] **Add** related products: fetch 3-4 products from same series, render below story
+  - [ ] **Wire** CTA 1 (product interest form): POST to `/api/subscribe` with `source: 'product-interest'` + insert into `product_interests` table
+  - [ ] **Wire** CTA 3 (contemplation popup): 3-min timer, POST to `/api/subscribe` with `source: 'contemplation-offer'`, generate promo code
+  - [ ] **Add** `video_play` event: `gtag('event', 'video_play', { slug, video_index })` when product video plays
 
 #### Shop Grid JS — `assets/js/shop.js`
 
@@ -1900,6 +2236,8 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
 
   - [ ] **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
   - [ ] **Add** GA4 event: `gtag('event', 'newsletter_signup', { source: 'homepage' })`
+  - [ ] **Add** Meta Pixel: `trackMeta('Lead', { content_name: 'Newsletter Signup' })`
+  - [ ] **Wire** exit intent modal (CTA 2): detect mouse leave / visibilitychange, show if cart not empty, POST to `/api/subscribe` with `source: 'cart-exit'`
 
 ---
 
@@ -1923,7 +2261,22 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
     }
 
     renderCartSummary(cart);
-    gtag('event', 'begin_checkout', { value: getCartTotal() / 100, currency: 'USD', items: cart.length });
+
+    // GA4 enhanced e-commerce
+    gtag('event', 'begin_checkout', {
+      currency: 'USD',
+      value: getCartTotal() / 100,
+      items: cart.map(item => buildGa4Item(item))
+    });
+
+    // Meta Pixel
+    trackMeta('InitiateCheckout', {
+      content_ids: cart.map(i => i.slug),
+      content_type: 'product',
+      num_items: cart.length,
+      value: getCartTotal() / 100,
+      currency: 'USD'
+    });
 
     // Fetch Stripe publishable key from server
     const configRes = await fetch('/api/config');
@@ -2101,9 +2454,25 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
       const data = await response.json();
 
       if (data.status === 'complete') {
+        // GA4 enhanced e-commerce purchase
+        gtag('event', 'purchase', {
+          transaction_id: sessionId,
+          currency: 'USD',
+          value: (data.amount_total || 0) / 100,
+          items: (data.items || []).map(item => buildGa4Item(item))
+        });
+
+        // Meta Pixel purchase (browser-side, deduped with CAPI via event_id)
+        trackMeta('Purchase', {
+          content_ids: (data.items || []).map(i => i.slug),
+          content_type: 'product',
+          value: (data.amount_total || 0) / 100,
+          currency: 'USD',
+          num_items: (data.items || []).length
+        });
+
         clearCart();
         showResult('success', 'Your haven is on its way.');
-        gtag('event', 'purchase', { transaction_id: sessionId, value: data.amount_total / 100, currency: 'USD' });
       } else {
         showResult('error', 'Something went awry. Please try again.');
       }
@@ -2260,23 +2629,63 @@ Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`:
 
 ---
 
-## GA4 Event Definitions
+## GA4 Event Definitions (Enhanced E-commerce)
 
-All events use `gtag('event', name, params)`. Automatic `page_view` fires on every page via gtag config.
+All e-commerce events use GA4's standard `items` array format, which unlocks built-in reports under Reports > Monetization (product performance, purchase funnel, revenue by category/brand).
 
-| Event | Trigger | Parameters |
-| ----- | ------- | ---------- |
-| `page_view` | Every page load (automatic via gtag config) | `page_title`, `page_location` |
-| `view_product` | Product page load | `{ slug, title, value: price/100, product_type, series, available }` |
-| `add_to_cart` | Add to Cart button click | `{ slug, title, value: price/100, currency: 'USD' }` |
-| `remove_from_cart` | Remove from Cart | `{ slug, title, value: price/100 }` |
-| `begin_checkout` | Checkout page load | `{ value: cartTotal/100, currency: 'USD', items: cart.length }` |
-| `purchase` | Completion page (success) | `{ transaction_id: sessionId, value, currency: 'USD' }` |
-| `newsletter_signup` | Successful subscribe | `{ source: 'homepage' or 'footer' or 'checkout' }` |
-| `contact_form_submit` | Contact form success | `{ subject }` |
-| `search_filter` | Shop filter applied | `{ filter_type, filter_value }` |
-| `gallery_open` | Lightbox opened on product page | `{ slug, image_index }` |
-| `promo_code_generated` | Cart recovery flow completed | `{ code }` |
+**Automatic metrics** (zero custom code): sessions, engagement time, engagement rate (replaces bounce rate), pages per session, traffic source/medium, device, browser, geography, scroll depth, outbound clicks.
+
+### E-commerce Events (with `items` array)
+
+| Event              | Trigger                    | Format                                                                                    |
+| ------------------ | -------------------------- | ----------------------------------------------------------------------------------------- |
+| `view_item`        | Product page load          | `{ currency: 'USD', value, items: [buildGa4Item(product)] }`                             |
+| `add_to_cart`      | Add to Cart click          | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                                |
+| `remove_from_cart` | Remove from Cart           | `{ currency: 'USD', value, items: [buildGa4Item(item)] }`                                |
+| `begin_checkout`   | Checkout page load         | `{ currency: 'USD', value: cartTotal/100, items: cart.map(buildGa4Item) }`               |
+| `purchase`         | Completion page (success)  | `{ transaction_id, currency: 'USD', value, items: [...] }`                                |
+
+**`items` array format** (via `buildGa4Item()` helper in main.js):
+```javascript
+{
+  item_id: product.slug,           // 'the-sunkeeper'
+  item_name: product.title,        // 'The Sunkeeper'
+  item_brand: 'Everlastings by Emaline',
+  item_category: product.product_type,  // 'miniature'
+  item_category2: product.series,       // 'Portals to Peace'
+  price: product.price / 100,      // 245.00
+  quantity: 1
+}
+```
+
+### Custom Events (no `items` array)
+
+| Event                  | Trigger                          | Parameters                                      |
+| ---------------------- | -------------------------------- | ----------------------------------------------- |
+| `newsletter_signup`    | Successful subscribe             | `{ source }` ('homepage', 'footer', 'checkout') |
+| `contact_form_submit`  | Contact form success             | `{ subject }`                                   |
+| `commission_inquiry`   | Commission form submit           | `{ subject }`                                   |
+| `search_filter`        | Shop filter applied              | `{ filter_type, filter_value }`                 |
+| `gallery_open`         | Lightbox opened                  | `{ slug, image_index }`                         |
+| `video_play`           | Product video starts playing     | `{ slug, video_index }`                         |
+| `promo_code_generated` | Cart recovery flow completed     | `{ code }`                                      |
+| `email_cta_capture`    | Email CTA form submitted         | `{ source, slug }`                              |
+
+### Meta Pixel Events (fire alongside GA4)
+
+Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code path:
+
+| GA4 Event          | Meta Pixel Event   | Meta Parameters                                                  |
+| ------------------ | ------------------ | ---------------------------------------------------------------- |
+| `view_item`        | `ViewContent`      | `{ content_ids: [slug], content_type: 'product', value, currency }` |
+| `add_to_cart`      | `AddToCart`        | `{ content_ids: [slug], content_type: 'product', value, currency }` |
+| `begin_checkout`   | `InitiateCheckout` | `{ content_ids: [...], num_items, value, currency }`             |
+| `purchase`         | `Purchase`         | `{ content_ids: [...], num_items, value, currency }` + CAPI      |
+| `newsletter_signup`| `Lead`             | `{ content_name: 'Newsletter Signup' }`                          |
+| `contact_form_submit` | `Contact`       | (no params)                                                      |
+| `email_cta_capture`| `Lead`             | `{ content_name: source }`                                       |
+
+**CAPI (server-side)**: `Purchase` events also sent from `api/webhook.ts` via Meta Conversions API for iOS/ad-blocker resilience. Deduplicated with browser pixel via `event_id = stripe_event.id`.
 
 ---
 
@@ -2426,13 +2835,13 @@ Not needed for launch. When needed:
 
 ## Reference Documents
 
-| Document         | Location                                          | Use                                |
-| ---------------- | ------------------------------------------------- | ---------------------------------- |
-| Architecture     | `assets/docs/EVERLASTINGS_STORE.md`               | Full technical reference           |
-| Brand Guide      | `assets/docs/BRAND.md`                            | Colors, fonts, voice, copy         |
+| Document         | Location                                          | Use                                 |
+| ---------------- | ------------------------------------------------- | ----------------------------------- |
+| Architecture     | `assets/docs/EVERLASTINGS_STORE.md`               | Full technical reference            |
+| Brand Guide      | `assets/docs/BRAND.md`                            | Colors, fonts, voice, copy          |
 | Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                 | Client guide + AI creation protocol |
-| Action Steps     | `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md` | Checklist version of this doc      |
-| Dev Rules        | `.agent/DEV_RULES.md`                             | Git branching, dev protocols       |
+| Action Steps     | `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md` | Checklist version of this doc       |
+| Dev Rules        | `.agent/DEV_RULES.md`                             | Git branching, dev protocols        |
 
 ---
 *Every code snippet should be production-ready. Double check all code, leave no placeholders, only production-ready code. Every checkbox is one action. Track A and B can proceed in parallel to iterate on visual design while development continues on backend functionality. Track C integrates them.*
