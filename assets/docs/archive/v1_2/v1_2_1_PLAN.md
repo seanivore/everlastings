@@ -319,11 +319,11 @@ fix/webhook-signature
 ```
 
 **Branch → Environment → Stripe mapping**:
-| Branch | Vercel Environment | Stripe Keys | URL |
-|--------|-------------------|-------------|-----|
-| `main` | Production | Live (`sk_live_`, `pk_live_`) | everlastingsbyemaline.com |
-| `dev` | Preview | Test (`sk_test_`, `pk_test_`) | everlastings-dev-*.vercel.app |
-| `feat/*` | Preview | Test | everlastings-feat-*.vercel.app |
+| Branch   | Vercel Environment | Stripe Keys                   | URL                            |
+| -------- | ------------------ | ----------------------------- | ------------------------------ |
+| `main`   | Production         | Live (`sk_live_`, `pk_live_`) | everlastingsbyemaline.com      |
+| `dev`    | Preview            | Test (`sk_test_`, `pk_test_`) | everlastings-dev-*.vercel.app  |
+| `feat/*` | Preview            | Test                          | everlastings-feat-*.vercel.app |
 
 **Rules**:
 1. Never push directly to `main` — always merge from `dev` via PR
@@ -398,15 +398,15 @@ Compared v0 `IMPL_WEBSITE.md` against v1.2 docs. Items either missing or undersp
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `assets/docs/archive/v1/v1_2_IMPLEMENTATION.md` | Parallel tracks, customers table, env strategy, api/products.ts, api/config.ts, Cloudinary pipeline, analytics, branching, table reformatting, lightbox, related products, loading states, icons |
-| `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Restructure into Track A/B/C, add all new items |
-| `assets/docs/EVERLASTINGS_STORE.md` | Customers table, env strategy, api/products.ts, api/config.ts, Cloudinary in tech stack, branching, analytics, media schema |
-| `assets/docs/PRODUCT_GUIDE.md` | Reformat tables, add video/GIF section, update image naming |
-| `assets/docs/BRAND.md` | Update image naming convention |
-| `README.md` | Branching note, environment strategy note |
-| **NEW**: `assets/docs/PRODUCT_CREATION_PROTOCOL.md` | AI-assisted product creation protocol |
+| File                                                | Changes                                                                                                                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `assets/docs/archive/v1/v1_2_IMPLEMENTATION.md`     | Parallel tracks, customers table, env strategy, api/products.ts, api/config.ts, Cloudinary pipeline, analytics, branching, table reformatting, lightbox, related products, loading states, icons |
+| `assets/docs/archive/v1/v1_2_ACTION_STEPS.md`       | Restructure into Track A/B/C, add all new items                                                                                                                                                  |
+| `assets/docs/EVERLASTINGS_STORE.md`                 | Customers table, env strategy, api/products.ts, api/config.ts, Cloudinary in tech stack, branching, analytics, media schema                                                                      |
+| `assets/docs/PRODUCT_GUIDE.md`                      | Reformat tables, add video/GIF section, update image naming                                                                                                                                      |
+| `assets/docs/BRAND.md`                              | Update image naming convention                                                                                                                                                                   |
+| `README.md`                                         | Branching note, environment strategy note                                                                                                                                                        |
+| **NEW**: `assets/docs/PRODUCT_CREATION_PROTOCOL.md` | AI-assisted product creation protocol                                                                                                                                                            |
 
 ---
 
@@ -427,14 +427,14 @@ Compared v0 `IMPL_WEBSITE.md` against v1.2 docs. Items either missing or undersp
 
 ## New Locked Decisions (adding to existing 13)
 
-| # | Decision | Rationale |
-|---|----------|-----------|
-| 14 | **Customers table with upsert-on-checkout** | Email as unique key. No pre-checkout accounts. Newsletter subscribers linked on purchase. |
-| 15 | **Frontend Stripe key via `api/config.ts`** | Enables automatic test/live switching per Vercel environment. Not hardcoded. |
-| 16 | **GA4 via `gtag.js` CDN, no GTM** | Simple, no-build-step analytics. Custom events via `gtag('event', ...)`. |
-| 17 | **Cloudinary as stateless transform layer** | Proven in 360-design. Upload → transform → download → R2 → delete. Stay on free tier. |
-| 18 | **AI product creation via API endpoints** | `POST /api/products` + `POST /api/upload` enable any AI assistant to create products programmatically. |
-| 19 | **Order confirmation via Stripe Dashboard emails** | No custom email system for v1. Stripe sends receipts natively. |
+| #   | Decision                                           | Rationale                                                                                              |
+| --- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 14  | **Customers table with upsert-on-checkout**        | Email as unique key. No pre-checkout accounts. Newsletter subscribers linked on purchase.              |
+| 15  | **Frontend Stripe key via `api/config.ts`**        | Enables automatic test/live switching per Vercel environment. Not hardcoded.                           |
+| 16  | **GA4 via `gtag.js` CDN, no GTM**                  | Simple, no-build-step analytics. Custom events via `gtag('event', ...)`.                               |
+| 17  | **Cloudinary as stateless transform layer**        | Proven in 360-design. Upload → transform → download → R2 → delete. Stay on free tier.                  |
+| 18  | **AI product creation via API endpoints**          | `POST /api/products` + `POST /api/upload` enable any AI assistant to create products programmatically. |
+| 19  | **Order confirmation via Stripe Dashboard emails** | No custom email system for v1. Stripe sends receipts natively.                                         |
 
 ---
 

@@ -36,8 +36,8 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │              FRONTEND — Vanilla HTML/CSS/JS on Vercel            │
 │                                                                  │
-│  index.html   shop.html   product.html   checkout.html           │
-│  about.html   contact.html   /admin (protected)                  │
+│  index.html     shop.html     product.html     checkout.html     │
+│  about.html     contact.html     /admin (protected)              │
 │                                                                  │
 │  - JS fetches product data from Supabase REST API                │
 │  - Stripe.js renders custom checkout (ui_mode: 'custom')         │
@@ -46,22 +46,22 @@
 └────────────────────────────┬─────────────────────────────────────┘
                              │
                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│          VERCEL SERVERLESS FUNCTIONS — TypeScript                │
-│                                                                  │
-│  /api/checkout.ts      → Create Stripe session (cart items)      │
-│  /api/session-status.ts→ Return page: verify payment status      │
-│  /api/webhook.ts       → Handle Stripe payment events            │
-│  /api/stripe-sync.ts   → Create Stripe Product + Price on INSERT │
-│  /api/upload.ts        → Cloudinary transform → R2 upload        │
-│  /api/cart-recovery.ts → Sold-in-cart: promo code + email capture│
-│  /api/products.ts      → CRUD for AI-assisted product creation   │
-│  /api/config.ts        → Public config (Stripe key per env)      │
-│  /api/subscribe.ts     → Newsletter email capture                │
-│  /api/contact.ts       → Contact form handler                    │
-└──────────┬─────────────────────────────────┬─────────────────────┘
-           │                                 │
-           ▼                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│            VERCEL SERVERLESS FUNCTIONS — TypeScript                 │
+│                                                                     │
+│  /api/checkout.ts       →  Create Stripe session (cart items)       │
+│  /api/session-status.ts →  Return page: verify payment status       │
+│  /api/webhook.ts        →  Handle Stripe payment events             │
+│  /api/stripe-sync.ts    →  Create Stripe Product + Price on INSERT  │
+│  /api/upload.ts         →  Cloudinary transform → R2 upload         │
+│  /api/cart-recovery.ts  →  Sold-in-cart: promo code + email capture │
+│  /api/products.ts       →  CRUD for AI-assisted product creation    │
+│  /api/config.ts         →  Public config (Stripe key per env)       │
+│  /api/subscribe.ts      →  Newsletter email capture                 │
+│  /api/contact.ts        →  Contact form handler                     │
+└──────────┬───────────────────────────────────┬──────────────────────┘
+           │                                   │
+           ▼                                   ▼
 ┌──────────────────────────┐   ┌────────────────────────────────────┐
 │       SUPABASE           │   │       CLOUDFLARE R2                │
 │                          │   │                                    │
@@ -70,7 +70,8 @@
 │    customers             │   │    gallery-{slug}-01.webp          │
 │    orders                │   │    thumbnail-{slug}.webp           │
 │    subscribers           │   │    video-{slug}-01.mp4             │
-│    site_config           │   │                                    │
+│    site_config           │   │    gif-{slug}-01.gif               │
+│                          │   │                                    │
 │                          │   │  /brand/                           │
 │  Auth: admin login       │   │    logo.svg, favicon, etc.         │
 │  RLS: row-level security │   │                                    │

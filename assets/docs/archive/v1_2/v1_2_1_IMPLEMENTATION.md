@@ -1,10 +1,12 @@
-# Everlastings — v1.2 Implementation Guide (Revised)
+# Everlastings v1.2 Implementation Guide
 
-**Version**: v1.2r1
-**Created**: 2026-04-09 10:27 | **Revised**: 2026-04-09 19:17
+**Version**: v1.2.0
+**Created**: 2026-04-09 10:27 
+**Revised**: 2026-04-09 19:17
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary
 **Structure**: 3 parallel tracks (A: Backend, B: Frontend Design, C: Integration)
-**Reference**: `EVERLASTINGS_STORE.md` for architecture, `BRAND.md` for design
+**Architecture**: `assets/docs/EVERLASTINGS_STORE.md` 
+**Design**: `assets/docs/BRAND.md` 
 
 ---
 
@@ -391,19 +393,19 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
   ```
   TRACK A (Backend)                    TRACK B (Frontend Design)
   ─────────────────                    ────────────────────────
-  A1: Services Setup ──────────┐       B1: Design System
-  A2: API Endpoints            │       B2: Header, Footer, Nav
-  A3: Admin UI + Protocol      │       B3: Product Page (placeholder)
+  A1: Services Setup                   B1: Design System
+  A2: API Endpoints  ──────────┐       B2: Header, Footer, Nav
+  A3: Admin UI + Protocol      ├────── B3: Product Page (placeholder)
   A4: API Testing              │       B4: Shop Grid (placeholder)
-                              │       B5: Homepage (placeholder)
-                              │       B6: Remaining Pages
-                              │
-                      TRACK C (Integration)
-                      ────────────────────
-                      C1: Wire pages to backend
-                      C2: Checkout flow E2E
-                      C3: SEO finalization
-                      C4: Testing + Launch
+                               │       B5: Homepage (placeholder)
+                               │       B6: Remaining Pages
+                               │
+                   TRACK C (Integration)
+                   ────────────────────
+                   C1: Wire pages to backend
+                   C2: Checkout flow E2E
+                   C3: SEO finalization
+                   C4: Testing + Launch
   ```
 
 **Track A** and **Track B** can proceed simultaneously. Track C requires A2 + B3 minimum.
@@ -501,12 +503,12 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
   - [ ] **Create** R2 bucket `everlastings`
   - [ ] **Enable** public access
-  - [ ] **Note** r2.dev public URL
+  - [ ] **Note** r2.dev public URL -- **CAN BE CUSTOM NOW**
   - [ ] **Create** API token (Read & Write, scoped to `everlastings` bucket)
 
 #### Cloudinary
 
-  - [ ] **Create** Cloudinary account (free tier) or use existing (cloud name: `dzrtucxh7`)
+  - [ ] **Create** Cloudinary account (free tier) -- **CREATE NEW CLIENT ACCOUNT**
   - [ ] **Note** cloud name, API key, API secret
   - [ ] **Set** `CLOUDINARY_URL` env var in Vercel
 
@@ -2072,14 +2074,14 @@ Not needed for launch. When needed:
 
 ## Reference Documents
 
-| Document          | Location                                      | Use                                |
-| ----------------- | --------------------------------------------- | ---------------------------------- |
-| Architecture      | `assets/docs/EVERLASTINGS_STORE.md`           | Full technical reference           |
-| Brand Guide       | `assets/docs/BRAND.md`                        | Colors, fonts, voice, copy         |
-| Product Guide     | `assets/docs/PRODUCT_GUIDE.md`                | Client-facing, how to add products |
-| Creation Protocol | `assets/docs/PRODUCT_CREATION_PROTOCOL.md`    | AI-assisted product creation       |
-| Action Steps      | `assets/docs/archive/v1/v1_2_ACTION_STEPS.md` | Checklist version of this doc      |
-| Dev Rules         | `.agent/DEV_RULES.md`                         | Git branching, dev protocols       |
+| Document          | Location                                          | Use                                |
+| ----------------- | ------------------------------------------------- | ---------------------------------- |
+| Architecture      | `assets/docs/EVERLASTINGS_STORE.md`               | Full technical reference           |
+| Brand Guide       | `assets/docs/BRAND.md`                            | Colors, fonts, voice, copy         |
+| Product Guide     | `assets/docs/PRODUCT_GUIDE.md`                    | Client-facing, how to add products |
+| Creation Protocol | `assets/docs/PRODUCT_CREATION_PROTOCOL.md`        | AI-assisted product creation       |
+| Action Steps      | `assets/docs/archive/v1_2/v1_2_1_ACTION_STEPS.md` | Checklist version of this doc      |
+| Dev Rules         | `.agent/DEV_RULES.md`                             | Git branching, dev protocols       |
 
 ---
 *Every code snippet should be production-ready. Double check all code, leave no placeholders, only production-ready code. Every checkbox is one action. Track A and B can proceed in parallel to iterate on visual design while development continues on backend functionality. Track C integrates them.*

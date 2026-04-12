@@ -85,14 +85,14 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 
 ## Documentation
 
-| Document                                                               | Description                              |
-| ---------------------------------------------------------------------- | ---------------------------------------- |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                     | Complete technical reference             |
-| [Brand Guide](/assets/docs/BRAND.md)                                   | Voice, colors, typography, copy          |
-| [Implementation Guide](/assets/docs/archive/v1/v1_2_IMPLEMENTATION.md) | 10-session build plan with code snippets |
-| [Action Steps](/assets/docs/archive/v1/v1_2_ACTION_STEPS.md)           | Checklist version of impl guide          |
-| [Product Guide](/assets/docs/PRODUCT_GUIDE.md)                         | Client-facing product entry guide        |
-| [Creation Protocol](/assets/docs/PRODUCT_CREATION_PROTOCOL.md)         | AI-assisted product creation workflow    |
+| Document                                                                   | Description                              |
+| -------------------------------------------------------------------------- | ---------------------------------------- |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference             |
+| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy          |
+| [Implementation Guide](/assets/docs/archive/v1_2/v1_2_1_IMPLEMENTATION.md) | 10-session build plan with code snippets |
+| [Action Steps](/assets/docs/archive/v1_2/v1_2_1_ACTION_STEPS.md)           | Checklist version of impl guide          |
+| [Product Guide](/assets/docs/PRODUCT_GUIDE.md)                             | Client-facing product entry guide        |
+| [Creation Protocol](/assets/docs/PRODUCT_CREATION_PROTOCOL.md)             | AI-assisted product creation workflow    |
 
 ---
 
