@@ -35,12 +35,14 @@ In Cloudflare's DNS page:
      - Don't rely on the ⁠smtp.google.com⁠ shorthand 
      - Copy from Google's docs/Admin Console 
 
+    **CONFIRMED**: Google Workspace now just uses the `⁠smtp.google.com⁠` as priority 1 and nothing else. 
+
   2. Add/verify DNS records 
      - TXT ⁠@⁠ → ⁠v=spf1 include:_spf.google.com ~all⁠
      - TXT ⁠google._domainkey⁠ → that long DKIM key (or regenerate in Google Admin if you want)
      - Optional: TXT ⁠_dmarc⁠ → something like ⁠v=DMARC1; p=none; rua=mailto:…⁠ if you want DMARC.
 
-  3. Copy any other records you care about.
+  3. Copy any other records you care about 
      - If there were any other custom DNS entries in Squarespace 
      - These would be subdomains, verification records, etc.
      - Make sure they exist in Cloudflare as well 

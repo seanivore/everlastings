@@ -10,67 +10,65 @@
 
 ## Locked Decisions
 
-Every architectural question answered. No mid-session research.
+Every architectural question answered. No mid-session research. 
 
-| #   | Decision                                                  | Rationale                                                            |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 1   | **`ui_mode: 'custom'`** for Stripe Checkout               | Proven in freelance-payments. Full UI control. On-site               |
-|     |                                                           | checkout per client contract. Follows Stripe quickstart guide        |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 2   | **Standard cart flow**                                    | Add to Cart → keep shopping → view cart → checkout.                  |
-|     |                                                           | Normal e-commerce UX. Cart stored in localStorage                    |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 3   | **Availability check at checkout for all cart items**     | Query `available === true` for every item before creating            |
-|     |                                                           | Stripe session. If any sold, 409 + recovery flow                     |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 4   | **Stripe products are write-once**                        | Never UPDATE Stripe products/prices. Price change = archive old      |
-|     |                                                           | Price, create new. "Stripe is a payment mirror, not source of truth" |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 5   | **R2 path**: `/products/{slug}/{role}-{slug}.webp`        | SEO-friendly, predictable, collision-free.                           |
-|     |                                                           | Example: `/products/the-sunkeeper/hero-the-sunkeeper.webp`           |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 6   | **Image aspect ratio**: 4:5                               | Prevents messy grids. Enforced via                                   |
-|     |                                                           | Cloudinary transform on upload                                       |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 7   | **Slug rules**: immutable after creation                  | `title.toLowerCase().replaceAll(' ', '-')`.                          |
-|     |                                                           | URL stability, SEO preservation                                      |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 8   | **Stripe metadata**: `items` field                        | JSON array of `{ id, slug }`.                                        |
-|     |                                                           | Parsed with `JSON.parse(metadata.items)`                             |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 9   | **Error states**: fallback message + disabled             | Every page has a failure mode documented.                            |
-|     | buttons + console.log                                     | See Error States Reference                                           |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 10  | **Supabase anon key hardcoded** in main.js                | Public by design, RLS-protected.                                     |
-|     |                                                           | No build step = no env var injection for frontend                    |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 11  | **CDN loading** for frontend libs                         | Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr.             |
-|     |                                                           | No npm/build step for frontend                                       |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 12  | **Vercel Web API pattern** for serverless functions       | `export async function POST(request: Request)` —                     |
-|     |                                                           | modern pattern, not legacy `(req, res)`                              |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 13  | **R2 custom domain optional**                             | Use r2.dev subdomain initially. Custom domain                        |
-|     |                                                           | (`cdn.everlastingsbyemaline.com`) requires Cloudflare DNS            |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 14  | **Customers table with upsert-on-checkout**               | Email as unique key. No pre-checkout accounts.                       |
-|     |                                                           | Newsletter subscribers linked on purchase                            |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 15  | **Frontend Stripe key via `api/config.ts`**               | Enables automatic test/live switching                                |
-|     |                                                           | per Vercel environment. Not hardcoded                                |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 16  | **GA4 via `gtag.js` CDN, no GTM**                         | Simple, no-build-step analytics.                                     |
-|     |                                                           | Custom events via `gtag('event', ...)`                               |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 17  | **Cloudinary as stateless transform layer**               | Proven in 360-design. Upload → transform → download →                |
-|     |                                                           | R2 → delete from Cloudinary. Stay on free tier                       |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 18  | **AI product creation via API endpoints**                 | `POST /api/products` + `POST /api/upload` enable any                 |
-|     |                                                           | AI assistant to create products programmatically                     |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| 19  | **Order confirmation via Stripe Dashboard emails**        | No custom email system for v1. Stripe sends receipts                 |
-|     |                                                           | natively (enable in Dashboard → Settings → Emails)                   |
-| --- | --------------------------------------------------------- | -------------------------------------------------------------------- |
+  1. **`ui_mode: 'custom'`** for Stripe Checkout 
+     - Proven in freelance-payments. Full UI control. 
+     - On-site checkout per client contract. Follows Stripe quickstart guide
+  2. **Standard cart flow**
+     - Add to Cart → keep shopping → view cart → checkout.
+     - Normal e-commerce UX. Cart stored in localStorage
+  3. **Availability check at checkout for all cart items**
+     - Query `available === true` for every item before creating Stripe session
+     - If any sold, 409 + recovery flow
+  4. **Stripe products are write-once**
+     - Never UPDATE Stripe products/prices. Price change = archive old price, create new. 
+     - "Stripe is a payment mirror, not source of truth"
+  5. **R2 path**: `/products/{slug}/{role}-{slug}.webp`
+     - SEO-friendly, predictable, collision-free.
+     - Example: `/products/the-sunkeeper/hero-the-sunkeeper.webp`
+  6. **Image aspect ratio**: 4:5
+     - Prevents messy grids. 
+     - Enforced via Cloudinary transform on upload
+  7. **Slug rules**: immutable after creation
+     - `title.toLowerCase().replaceAll(' ', '-')` 
+     - URL stability, SEO preservation
+  8. **Stripe metadata**: `items` field
+     - JSON array of `{ id, slug }` 
+     - Parsed with `JSON.parse(metadata.items)`
+  9. **Error states**: fallback message + disabled buttons + console.log
+     - Every page has a failure mode documented. 
+     - See Error States Reference
+  10. **Supabase anon key hardcoded** in `main.js`
+      - Public by design, RLS-protected. 
+      - No build step = no env var injection for frontend
+  11. **CDN loading** for frontend libs
+      - Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr. 
+      - No npm/build step for frontend
+  12. **Vercel Web API pattern** for serverless functions
+      - `export async function POST(request: Request)` 
+      - Modern pattern, not legacy `(req, res)`
+  13. **R2 custom domain optional**
+      - Don't use r2.dev subdomain initially
+      - Set up domain `cdn.everlastingsbyemaline.com` with Cloudflare DNS
+  14. **Customers table with upsert-on-checkout**
+      - Email as unique key. No pre-checkout accounts. 
+      - Newsletter subscribers linked on purchase
+  15. **Frontend Stripe key via `api/config.ts`**
+      - Enables automatic test/live switching per Vercel environment
+      - Nothing hardcoded 
+  16. **GA4 via `gtag.js` CDN, no GTM**
+      - Simple, no-build-step analytics
+      - Custom events via `gtag('event', ...)`
+  17. **Cloudinary as stateless transform layer**
+      - Proven in 360-design. Upload → transform → download → R2 → delete from Cloudinary. 
+      - Stay on free tier
+  18. **AI product creation via API endpoints**
+      - `POST /api/products` + `POST /api/upload` 
+      - Enable any AI assistant to create products programmatically
+  19. **Order confirmation via Stripe Dashboard emails**
+      - No custom email system for v1. 
+      - Stripe sends receipts natively (enable in Dashboard → Settings → Emails)
 
 ---
 

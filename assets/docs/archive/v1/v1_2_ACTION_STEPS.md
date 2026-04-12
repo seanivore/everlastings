@@ -18,9 +18,10 @@
 
 ## Pre-Flight (Before Any Track)
 
+  - [x] **Setup** domain in Cloudflare
+  - [ ] **Verify** Cloudflare account for R2
   - [ ] **Verify** Stripe account active with dashboard access
   - [ ] **Verify** Supabase project can be created (free tier)
-  - [ ] **Verify** Cloudflare account for R2
   - [ ] **Verify** Cloudinary account (free tier) — existing `dzrtucxh7` or new
   - [ ] **Verify** Vercel CLI installed (`npm install -g vercel`)
   - [ ] **Create** `dev` branch from `main`
