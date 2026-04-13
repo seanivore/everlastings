@@ -26,6 +26,41 @@
 
 ---
 
+- [Everlastings v1.3.1 Action Steps](#everlastings-v131-action-steps)
+  - [Pre-Flight](#pre-flight)
+  - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
+    - [A1: Services Setup](#a1-services-setup)
+      - [Vercel](#vercel)
+      - [Git + Environment](#git--environment)
+      - [Supabase](#supabase)
+      - [Cloudflare R2](#cloudflare-r2)
+      - [Cloudinary](#cloudinary)
+      - [Stripe](#stripe)
+      - [Meta Pixel + Instagram Shopping](#meta-pixel--instagram-shopping)
+      - [Analytics](#analytics)
+    - [A2: API Endpoints](#a2-api-endpoints)
+    - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
+    - [A4: API Integration Testing](#a4-api-integration-testing)
+  - [TRACK B: Frontend Design](#track-b-frontend-design)
+    - [B1: Design System](#b1-design-system)
+    - [B2: Header, Footer, Nav](#b2-header-footer-nav)
+    - [B3: Product Page](#b3-product-page)
+    - [B4: Shop Grid](#b4-shop-grid)
+    - [B5: Homepage](#b5-homepage)
+    - [B6: Remaining Pages](#b6-remaining-pages)
+  - [TRACK C: Integration](#track-c-integration)
+    - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
+    - [C2: Checkout Flow E2E](#c2-checkout-flow-e2e)
+    - [C3: SEO Finalization](#c3-seo-finalization)
+    - [C4: Testing + Launch](#c4-testing--launch)
+      - [Stripe Live Mode](#stripe-live-mode)
+      - [Cross-Browser Testing](#cross-browser-testing)
+      - [Performance](#performance)
+      - [Launch](#launch)
+  - [Dependencies](#dependencies)
+
+---
+
 ## TRACK A: Foundation + Backend
 
 ### A1: Services Setup
@@ -146,7 +181,7 @@
 
 ---
 
-## TRACK B: Frontend Design (Placeholder Content)
+## TRACK B: Frontend Design
 
 All pages: hardcoded HTML/CSS. No JavaScript data-fetching. Placeholder images and text. Client reviews visual design.
 
