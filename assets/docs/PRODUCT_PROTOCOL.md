@@ -166,6 +166,34 @@ To edit an existing product: find it in the product list, click "Edit", make cha
 
 To mark something sold manually: edit the product, set available to false, save.
 
+### Using Your AI Product Assistant (optional)
+
+If filling out the form feels slow, or if you want to think through a product description conversationally, there's a second path: a **Custom GPT** inside your ChatGPT called **"Everlastings Product Assistant."** It does exactly what the admin form does, but you talk to it instead of typing into boxes.
+
+**How to use it:**
+
+  1. Open ChatGPT. In the sidebar under "My GPTs," click **Everlastings Product Assistant**. (Sean will have set this up for you once and sent the direct link — bookmark it.)
+  2. Say something like: *"I want to add a new product. It's called The Sunkeeper, it's $245, here are the photos and the story..."*
+  3. Drag and drop your product photos into the chat (7 minimum — 1 hero, 1 thumbnail, at least 5 gallery).
+  4. Paste or type the product details. You can write casually — the Assistant will pull out the fields. If anything is missing (e.g., weight), it will ask.
+  5. The Assistant shows you a preview of what it will create. **Review it carefully** — this is your chance to catch typos or wrong prices before the product goes live.
+  6. Say "looks good" or "go ahead" — the Assistant creates the product. It will give you a link to the live product page within ~10 seconds.
+
+**What the Assistant will NOT do:**
+  - It won't create a product without showing you the preview first.
+  - It won't set a price different from what you said.
+  - It won't upload fewer than 7 photos (it will stop and ask for more).
+  - It won't change existing products — for edits, use the admin UI.
+
+**If something goes wrong:**
+  - "Error 409" means a product with that title already exists. Rename it (e.g., "The Sunkeeper II") and try again.
+  - "Error 400" means something's missing from the product details. The Assistant will tell you what.
+  - For anything else, take a screenshot and text Sean.
+
+**About privacy + security**: the Assistant runs in your ChatGPT account, but the connection to the website uses a private key that only Sean manages — you never see it or type it. The photos and text you share only go to the Everlastings website (not shared anywhere else). Sean can disable or rotate the key instantly if anything ever feels off.
+
+**Quick note on "test mode"**: your Assistant always creates real, live products. If Sean ever asks you to test something without it going live, he'll use a separate test tool — you don't need to worry about a test-vs-real setting.
+
 ### Quick Reference: What You Provide vs What We Handle
 
 | You Provide                         | We Handle                       |
@@ -181,11 +209,35 @@ To mark something sold manually: edit the product, set available to false, save.
 
 ---
 
-## For AI Assistants (Creation Protocol)
+## For Agentic AI / Sean's Programmatic Use (Creation Protocol)
 
-This protocol enables any AI assistant to create a complete product entry — from gathering details to uploading images to a live, purchasable product page.
+> **Audience**: Claude Code, Cursor, custom automation scripts, or Sean doing test-data seeding. This is the shell-based curl protocol — it requires an AI that can execute HTTP requests directly (Claude Code, ChatGPT-with-code-interpreter, custom scripts). For Emy's ChatGPT web workflow, see [Using Your AI Product Assistant](#using-your-ai-product-assistant-optional) above — the Custom GPT wraps these same API calls in a conversational interface.
 
-**End result**: Client describes a product → AI handles everything → client gets a permalink to review immediately.
+This protocol enables any AI assistant with HTTP + file capabilities to create a complete product entry — from gathering details to uploading images to a live, purchasable product page.
+
+**End result**: Client describes a product → agentic AI handles everything → client gets a permalink to review immediately.
+
+### Base URL Convention
+
+All curl commands below use `$BASE_URL` for the API host. Set it once at the start of the session based on which environment the AI is targeting:
+
+| Use case                                     | `BASE_URL` value                                                  |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| Real product creation (default)              | `https://everlastingsbyemaline.com`                               |
+| Test/dev product seeding (preview deployment) | `https://everlastings-git-dev-{team}.vercel.app` (or any `*.vercel.app` preview URL) |
+| Local testing (`vercel dev`)                 | `http://localhost:3000`                                           |
+
+```bash
+# Production (default)
+export BASE_URL="https://everlastingsbyemaline.com"
+
+# Test on the dev branch's preview deployment
+export BASE_URL="https://everlastings-git-dev-team.vercel.app"
+```
+
+When `BASE_URL` points to a preview URL, the API automatically tags created rows with `is_test = true` and uploads images under R2's `test/` namespace (CDN URLs become `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`). No manual cleanup is needed before launch — see the implementation guide's [Dev/Test Data Hygiene](archive/v1_4/v1_4_0_IMPL_GUIDE.md#devtest-data-hygiene-reference) section.
+
+`PRODUCT_API_KEY` differs per environment too — use the test value from `.env.local` when `BASE_URL` is a preview URL, and the live value (managed by Sean) only for production seeding.
 
 ### Step 0: Generate Slug
 
@@ -254,7 +306,7 @@ Verify before calling `POST /api/products`:
 The API endpoint handles Cloudinary transform internally:
 
   ```bash
-  curl -X POST "https://everlastingsbyemaline.com/api/upload" \
+  curl -X POST "$BASE_URL/api/upload" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -F "file=@/path/to/raw-image.jpg" \
     -F "slug=the-sunkeeper" \
@@ -265,7 +317,7 @@ The API endpoint handles Cloudinary transform internally:
 For videos and GIFs — skip Cloudinary:
 
   ```bash
-  curl -X POST "https://everlastingsbyemaline.com/api/upload" \
+  curl -X POST "$BASE_URL/api/upload" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -F "file=@video.mp4" \
     -F "slug=the-sunkeeper" \
@@ -287,7 +339,7 @@ For videos and GIFs — skip Cloudinary:
   # For thumbnails: use w_600 instead of w_1200
 
   # 3. Upload to R2 via API
-  curl -X POST "https://everlastingsbyemaline.com/api/upload" \
+  curl -X POST "$BASE_URL/api/upload" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -F "file=@hero-the-sunkeeper.webp" \
     -F "slug=the-sunkeeper" \
@@ -304,7 +356,7 @@ For videos and GIFs — skip Cloudinary:
 After all images are uploaded and you have CDN URLs:
 
   ```bash
-  curl -X POST "https://everlastingsbyemaline.com/api/products" \
+  curl -X POST "$BASE_URL/api/products" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
@@ -337,22 +389,22 @@ The database webhook automatically:
 
 ### Step 4: Verify
 
-  1. **Check permalink**: `https://everlastingsbyemaline.com/product/{slug}`
-  2. **Check shop page**: Product should appear in grid
-  3. **Check Stripe Dashboard**: Product + Price should exist
-  4. **Share permalink with client** for immediate review
+  1. **Check permalink**: `$BASE_URL/product/{slug}` (production permalink for live products; preview URL for test seeding)
+  2. **Check shop page**: Product should appear in grid (production reads filter `is_test = false`, so test products only appear on preview URLs)
+  3. **Check Stripe Dashboard**: Product + Price should exist (test mode dashboard for preview, live mode for production)
+  4. **Share permalink with client** for immediate review (only when seeding real products against production)
 
 ### Editing a Product
 
   ```bash
   # Update non-price fields
-  curl -X PUT "https://everlastingsbyemaline.com/api/products?id=PRODUCT_UUID" \
+  curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{"headline": "Updated tagline", "featured": false}'
 
   # Update price (automatically archives old Stripe Price, creates new one)
-  curl -X PUT "https://everlastingsbyemaline.com/api/products?id=PRODUCT_UUID" \
+  curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{"price": 29500}'
@@ -361,7 +413,7 @@ The database webhook automatically:
 ### Marking as Sold
 
   ```bash
-  curl -X PUT "https://everlastingsbyemaline.com/api/products?id=PRODUCT_UUID" \
+  curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" \
     -H "Authorization: Bearer PRODUCT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{"available": false, "quantity": 0}'

@@ -215,7 +215,7 @@ Create `.env.local` (see also `.env.example` in impl guide):
   CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
   ```
 
-**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Environment Strategy for full details.
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys, served at `everlastingsbyemaline.com`). `dev`/`feat/*` branches → Preview (test Stripe keys, served at auto-generated `*.vercel.app` URLs — these are the dev environment). The shared Supabase project and R2 bucket are kept clean via an `is_test` row flag and a `test/` R2 path prefix. Full conventions: see `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > [Environment Strategy](archive/v1_4/v1_4_0_IMPL_GUIDE.md#environment-strategy-reference) and [Dev/Test Data Hygiene](archive/v1_4/v1_4_0_IMPL_GUIDE.md#devtest-data-hygiene-reference).
 
 ### Local Development
 

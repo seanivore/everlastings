@@ -184,6 +184,7 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
   - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
   - [ ] (AGENT) **Bootstrap** Stripe coupons idempotently via `api/_bootstrap/coupons.ts` (created in A1 Stripe). Runs once; idempotent. Creates both `cart-recovery-10` and `newsletter-welcome-5` via the Stripe API — no dashboard click required.
   - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) via Stripe CLI/MCP, pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
+  - [ ] (AGENT) **Verify preview URL is functional**: push a throwaway commit on a `feat/_preview-smoketest` branch → open the auto-generated `*.vercel.app` preview URL in a browser → DevTools console must show no CORS errors → `fetch('/api/config').then(r => r.json())` from the console must return the **test** publishable key (`pk_test_...`). Delete the branch after. This catches the failure mode where every previous Vercel project's preview deployments "loaded nothing" due to hardcoded CORS origins. See [Dev/Test Data Hygiene > CORS allowlist](#1-cors-allowlist-the-reason-previews-load-at-all).
 
 ---
 
@@ -320,6 +321,75 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
 ---
 
+## Dev/Test Data Hygiene Reference
+
+> **Why this section exists**: production and dev/preview share the same Supabase project and R2 bucket (only Stripe keys differ — see [Environment Variable Table](#environment-variable-table)). Without explicit conventions, test checkouts pollute the production database and test image uploads land in the live CDN. These four conventions keep the boundary clean without standing up a second Supabase project or R2 bucket.
+
+### 1. CORS allowlist (the reason previews load at all)
+
+`vercel.json` static CORS headers cannot do origin allowlisting (no wildcard support without exposing `*` to the world). All `api/*.ts` endpoints share a CORS helper that reads the request `Origin` header, matches it against an allowlist, and reflects it back in `Access-Control-Allow-Origin`. The helper lives at `api/_lib/cors.ts` and is imported by every endpoint (see [Config — `api/config.ts`](#config--apiconfigts) for the pattern).
+
+Allowlist:
+- `https://everlastingsbyemaline.com` (production)
+- `https://*.vercel.app` (any preview from this Vercel project — pattern-matched, not literal)
+- `http://localhost:3000` (local `vercel dev`)
+
+If this is wrong, every fetch from a `*.vercel.app` preview is blocked by the browser and the page appears broken even though the API works in curl.
+
+### 2. Frontend uses relative API paths
+
+Frontend code calls `fetch('/api/upload')`, never `fetch('https://everlastingsbyemaline.com/api/upload')`. Relative paths automatically hit whichever host the page was loaded from — production on prod, preview on preview, localhost on local. Absolute URLs would route every preview request back to production.
+
+> **Lint convention**: a Track C grep pass should flag any `fetch('https://everlastingsbyemaline.com` or hardcoded API URL in `src/`. Same idea as the [Placeholder Hygiene](#placeholder-hygiene) grep.
+
+### 3. Supabase `is_test` flag
+
+Add `is_test BOOLEAN NOT NULL DEFAULT FALSE` to all transactional tables: `products`, `customers`, `orders`, `subscribers`, `product_interests`, `cart_holds`. Skip `site_config` (singleton) and `webhook_events` (Stripe-id keyed). Server-side helper sets it from `process.env.VERCEL_ENV`:
+
+```typescript
+// api/_lib/env.ts
+export const isTest = process.env.VERCEL_ENV !== 'production';
+```
+
+Every INSERT in an `api/*.ts` endpoint passes `is_test: isTest`. Production-facing reads (shop grid, product page, admin orders list) filter `WHERE is_test = false`. Cleanup before launch is one statement per table: `DELETE FROM products WHERE is_test = true;`.
+
+### 4. R2 path + filename namespacing
+
+Production uploads:
+- Path: `products/{slug}/{role}-{slug}.webp`
+- CDN URL: `https://cdn.everlastingsbyemaline.com/products/{slug}/{role}-{slug}.webp`
+
+Preview/dev uploads (when `isTest === true`):
+- Path: `test/{slug}/test_{role}-{slug}.webp`
+- CDN URL: `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`
+
+Both the path prefix (`test/`) AND the filename prefix (`test_`) are present so a stray reference is obvious anywhere it appears. `api/upload.ts` reads `isTest` and constructs the key accordingly. Cleanup before launch: `aws s3 rm s3://everlastings/test --recursive`.
+
+> **Future upgrade path**: a separate R2 bucket plus `cdn-test.everlastingsbyemaline.com` subdomain is <5 min to set up via Cloudflare (Cloudflare auto-creates the CNAME). If the namespacing convention becomes unwieldy, that's the cleaner long-term split.
+
+### 5. Stripe webhook endpoint pinning
+
+Two webhook endpoints exist in Stripe Dashboard simultaneously:
+
+| Mode | URL                                           | Secret env var                |
+| ---- | --------------------------------------------- | ----------------------------- |
+| Live | `https://everlastingsbyemaline.com/api/webhook` | `STRIPE_WEBHOOK_SECRET` (Production scope) |
+| Test | `https://everlastings-git-dev-{team}.vercel.app/api/webhook` | `STRIPE_WEBHOOK_SECRET` (Preview scope) |
+
+The test webhook is **pinned to the `dev` branch's preview URL specifically** — Vercel's per-branch preview URL is stable as long as the branch and project name don't change. For `feat/*` branches, do not register a separate Stripe endpoint; instead use Stripe CLI for ad-hoc testing:
+
+```bash
+stripe listen --forward-to https://everlastings-git-feat-my-thing-{team}.vercel.app/api/webhook
+```
+
+This avoids accumulating dead webhook endpoints in Stripe Dashboard for every short-lived feature branch.
+
+### 6. PRODUCT_PROTOCOL.md base-URL convention
+
+The product creation API protocol (used by Emy via ChatGPT/Claude AND by Sean for test-product seeding) reads a `BASE_URL` variable so the same flow works against production or any preview URL. See [PRODUCT_PROTOCOL.md > Step 2: Upload Images](../../../PRODUCT_PROTOCOL.md) for the curl examples and base-URL switching pattern.
+
+---
+
 ## Source of Truth Hierarchy Reference 
 
 Cited from `api/stripe-sync.ts`, `api/webhook.ts`, and `api/products.ts`.
@@ -385,6 +455,7 @@ interface Product {
   stripe_product_id: string | null; // auto-populated by stripe-sync
   stripe_price_id: string | null;   // auto-populated by stripe-sync
   homepage_theme: { colors: string[]; mood: string } | null; // nullable
+  is_test: boolean;              // dev/preview rows = true; production reads filter is_test = false
   created_at: string;            // timestamptz, auto
   updated_at: string;            // timestamptz, auto
 }
@@ -496,7 +567,8 @@ CREATE TABLE orders (
   shipping_address jsonb,
   tracking_number text,
   tracking_carrier text,            -- 'USPS' | 'UPS' | 'FedEx' | 'DHL'
-  shipped_at timestamptz,
+  shipped_at timestamptz,            -- when Emy clicked "Mark as shipped"
+  tracking_email_sent_at timestamptz, -- when Resend accepted the tracking email (audit trail). NULL = send failed; admin UI exposes a "Resend tracking email" button in that case
   delivered_at timestamptz,          -- post-launch, via Shippo webhook
   created_at timestamptz DEFAULT now()
 );
@@ -562,6 +634,23 @@ CREATE TABLE cart_holds (
 CREATE INDEX idx_cart_holds_product_active ON cart_holds (product_id, expires_at);
 ```
 
+```sql
+-- is_test flag for dev/preview data isolation. See Dev/Test Data Hygiene Reference.
+-- All transactional tables get the column. Non-transactional tables (site_config, webhook_events) skip it.
+ALTER TABLE products          ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+ALTER TABLE customers         ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+ALTER TABLE orders            ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+ALTER TABLE subscribers       ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+ALTER TABLE product_interests ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+ALTER TABLE cart_holds        ADD COLUMN is_test boolean NOT NULL DEFAULT false;
+
+-- Partial indexes so production reads (is_test = false) stay fast on a mixed-data table.
+CREATE INDEX idx_products_live    ON products (created_at DESC) WHERE is_test = false;
+CREATE INDEX idx_subscribers_live ON subscribers (email)        WHERE is_test = false;
+```
+
+> Production-facing reads (shop grid, product page, admin orders list) MUST filter `WHERE is_test = false`. The Product TypeScript interface above gains `is_test: boolean;` — server-side INSERTs set it from the `isTest` helper in `api/_lib/env.ts`.
+
 ---
 
 ## Configuration Files Reference
@@ -575,22 +664,11 @@ These files must be created as actual files in the repository root. Copy the con
   "rewrites": [
     { "source": "/product/:slug", "destination": "/product.html" },
     { "source": "/admin/:path*", "destination": "/admin/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://everlastingsbyemaline.com" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, stripe-signature" },
-        { "key": "Access-Control-Max-Age", "value": "86400" }
-      ]
-    }
   ]
 }
 ```
 
-**Note**: CORS `Access-Control-Allow-Origin` is set to production domain. During development on preview URLs (`*.vercel.app`), CORS may need to be handled in API functions with dynamic origin checking. Address during A2 implementation.
+**Note**: CORS is intentionally NOT set as a static header here — `vercel.json` cannot do origin allowlisting (it would require either a single hardcoded origin, which breaks `*.vercel.app` previews, or `*`, which is unsafe). All `api/*.ts` endpoints handle CORS dynamically via the shared helper at `api/_lib/cors.ts` — see [Shared API helpers](#shared-api-helpers--api_lib) and [Dev/Test Data Hygiene > CORS allowlist](#1-cors-allowlist-the-reason-previews-load-at-all).
 
 ### `tsconfig.json`
 
@@ -715,6 +793,8 @@ A1 assumes Phase 0 is complete (all accounts created, env vars loaded) by verify
 #### Supabase
 
 Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via MCP `apply_migration`. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
+
+> **v1 auth scope — intentional**: policies gate by `authenticated` role (any logged-in Supabase user), not by individual user or per-user role. All three invited admins (`admin@`, `sean@`, `emyh@`) have identical read/write/delete permissions across products, orders, customers, subscribers. This is acceptable for v1 because the admin set is small, trusted, and fixed. **v1.1 upgrade path** when Emy hires a helper or adds a second brand: add a `user_roles` table (user_id → role enum) and rewrite the policies to check `auth.jwt() ->> 'role'` instead of just `authenticated`. Do not add this complexity before v1 needs it.
   
   - [ ] (SEAN) **Verify** admin users invited in Supabase Auth > Users (covered in Phase 0 — this is a sanity check)
   - [ ] (AGENT) **Enable** RLS on all 8 tables (apply as part of the Phase 0 migration, or as a follow-up migration):
@@ -802,7 +882,7 @@ Complete from Phase 0: bucket created, public access enabled, custom domain conn
   - [ ] (AGENT) **Verify** DNS resolution: `dig cdn.everlastingsbyemaline.com` returns the R2 CNAME target
   - [ ] (AGENT) **Set** `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com` in Vercel env vars (all environments)
   - [ ] (AGENT) **Set** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings` in Vercel env vars
-  - **No development subdomain needed** — dev and production share the same R2 bucket and CDN. Only Stripe keys differ between environments.
+  - **No custom dev subdomain needed for the CDN** — Vercel's auto-generated `*.vercel.app` preview URLs serve as the dev environment (see [Git Branching Strategy](#git-branching-strategy-reference)). The R2 bucket and `cdn.everlastingsbyemaline.com` CDN are shared across environments; preview/dev uploads namespace under a `test/` path prefix to keep them visibly separate. See [Dev/Test Data Hygiene](#devtest-data-hygiene-reference) for the full convention.
 
 #### Cloudinary
 
@@ -851,7 +931,7 @@ Complete from Phase 0: bucket created, public access enabled, custom domain conn
     ```
 
   - [ ] (AGENT) **Run** `npx tsx api/_bootstrap/coupons.ts` once for **test mode** — verify both coupons exist in Stripe Dashboard > Products > Coupons
-  - [ ] (AGENT) **Create** test webhook endpoint via Stripe CLI or MCP → `{dev-preview-url}/api/webhook` with event `checkout.session.completed`
+  - [ ] (AGENT) **Create** test webhook endpoint via Stripe CLI or MCP → pinned to the `dev` branch's preview URL (e.g. `https://everlastings-git-dev-{team}.vercel.app/api/webhook`) with event `checkout.session.completed`. Do not register a separate Stripe endpoint per `feat/*` branch — use `stripe listen --forward-to {feat-preview-url}/api/webhook` for ad-hoc feature testing. Full convention: [Dev/Test Data Hygiene > Stripe webhook endpoint pinning](#5-stripe-webhook-endpoint-pinning).
   - [ ] (AGENT) At launch switchover: re-run the bootstrap with `STRIPE_SECRET_KEY=sk_live_...` to populate coupons in live mode
   - [ ] (SEAN) Receipt emails were toggled ON in Phase 0 — no further action here
 
@@ -876,14 +956,14 @@ From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
 > Meta Pixel ID, Access Token, and env vars are all set in Phase 0. A1 adds only Emy's IG Shopping workflow below.
 
-  - [ ] (SEAN) **Coordinate with Emy** on Instagram Shopping prerequisites (her Instagram + Meta Business Manager accounts):
-    1. Instagram account converted to Business profile
-    2. IG profile connected to a Facebook Page
-    3. Meta Business Manager with FB Page claimed
-    4. Commerce Manager: create catalog (type: E-commerce)
-    5. Domain verification: DNS TXT record or meta tag for `everlastingsbyemaline.com`
-    6. Submit shop for Commerce review (1-2 weeks — can happen in parallel with build)
-    7. After approval: product tagging available in Instagram app
+  - [ ] (SEAN+EMY) **Coordinate with Emy** on Instagram Shopping prerequisites. These steps happen in Emy's own Meta accounts; Sean is a delegate (already added to her Meta Business account) and unblocks her on DNS + infra. Emy drives the rest:
+    1. (EMY) Instagram account converted to Business profile
+    2. (EMY) IG profile connected to a Facebook Page
+    3. (EMY) Meta Business Manager with FB Page claimed
+    4. (EMY) Commerce Manager: create catalog (type: E-commerce)
+    5. (SEAN+EMY) Domain verification: Sean adds the DNS TXT record in Cloudflare; Emy confirms verification inside Meta
+    6. (EMY) Submit shop for Commerce review (1-2 weeks — can happen in parallel with build)
+    7. (EMY) After approval: product tagging available in Instagram app
 
 #### Analytics
 
@@ -904,6 +984,46 @@ From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
 **YOU WILL HAVE**: All server-side endpoints working, testable with curl
 
+#### Shared API helpers — `api/_lib/`
+
+> Every endpoint imports these. Implements the conventions defined in [Dev/Test Data Hygiene](#devtest-data-hygiene-reference).
+
+  ```typescript
+  // api/_lib/env.ts
+  // Single source of truth for "are we in production?" — drives is_test flag and R2 path namespacing.
+  export const isTest = process.env.VERCEL_ENV !== 'production';
+  ```
+
+  ```typescript
+  // api/_lib/cors.ts
+  // Reflects request Origin if it matches the allowlist; otherwise omits the header (browser blocks).
+  // Wildcard *.vercel.app is matched as a pattern, not echoed literally.
+  const ALLOWED = [
+    /^https:\/\/everlastingsbyemaline\.com$/,
+    /^https:\/\/[a-z0-9-]+\.vercel\.app$/,
+    /^http:\/\/localhost:3000$/,
+  ];
+
+  export function corsHeaders(req: Request): HeadersInit {
+    const origin = req.headers.get('origin') ?? '';
+    const allowed = ALLOWED.some((re) => re.test(origin));
+    return {
+      ...(allowed ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' } : {}),
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, stripe-signature',
+      'Access-Control-Max-Age': '86400',
+    };
+  }
+
+  export function preflight(req: Request): Response | null {
+    if (req.method !== 'OPTIONS') return null;
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
+  }
+  ```
+
+  - [ ] (AGENT) **Create** `api/_lib/env.ts` and `api/_lib/cors.ts` with the code above
+  - [ ] (AGENT) Every `api/*.ts` endpoint must: (1) call `preflight(req)` first and return early if non-null, (2) include `corsHeaders(req)` on every response
+
 #### Config — `api/config.ts`
 
 Returns environment-appropriate public configuration. Enables automatic test/live Stripe key switching.
@@ -912,13 +1032,22 @@ Returns environment-appropriate public configuration. Enables automatic test/liv
 
   ```typescript
   // api/config.ts
-  export async function GET() {
-    return Response.json({
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-      metaPixelId: process.env.META_PIXEL_ID || null,
-    });
+  import { corsHeaders, preflight } from './_lib/cors';
+
+  export async function GET(req: Request) {
+    return Response.json(
+      {
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+        metaPixelId: process.env.META_PIXEL_ID || null,
+      },
+      { headers: corsHeaders(req) },
+    );
+  }
+
+  export async function OPTIONS(req: Request) {
+    return preflight(req)!;
   }
   ```
 
@@ -1436,6 +1565,8 @@ Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #
   // api/products.ts
   import Stripe from 'stripe';
   import { createClient } from '@supabase/supabase-js';
+  import { corsHeaders, preflight } from './_lib/cors';
+  import { isTest } from './_lib/env';
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
@@ -1453,20 +1584,26 @@ Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #
     const slug = url.searchParams.get('slug');
 
     if (!slug) {
-      return Response.json({ error: 'Missing slug parameter' }, { status: 400 });
+      return Response.json({ error: 'Missing slug parameter' }, { status: 400, headers: corsHeaders(request) });
     }
 
+    // Filter by is_test so production never serves test products and previews never serve live ones
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('slug', slug)
+      .eq('is_test', isTest)
       .single();
 
     if (error || !data) {
-      return Response.json({ error: 'Product not found' }, { status: 404 });
+      return Response.json({ error: 'Product not found' }, { status: 404, headers: corsHeaders(request) });
     }
 
-    return Response.json(data);
+    return Response.json(data, { headers: corsHeaders(request) });
+  }
+
+  export async function OPTIONS(request: Request) {
+    return preflight(request)!;
   }
 
   export async function POST(request: Request) {
@@ -1536,9 +1673,10 @@ Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #
       }
 
       // --- Insert ---
+      // Tag with is_test so production reads filter test rows out (Dev/Test Data Hygiene)
       const { data, error } = await supabase
         .from('products')
-        .insert(product)
+        .insert({ ...product, is_test: isTest })
         .select()
         .single();
 
@@ -1619,6 +1757,8 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
   ```typescript
   // api/upload.ts
   import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+  import { corsHeaders, preflight } from './_lib/cors';
+  import { isTest } from './_lib/env';
 
   const s3 = new S3Client({
     region: 'auto',
@@ -1723,9 +1863,10 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
         });
       }
 
-      // Upload to R2
-      const filename = `${role}-${slug}.${extension}`;
-      const key = `products/${slug}/${filename}`;
+      // Upload to R2 — namespace by environment to keep test uploads visibly separate
+      // (See Dev/Test Data Hygiene > R2 path + filename namespacing)
+      const filename = isTest ? `test_${role}-${slug}.${extension}` : `${role}-${slug}.${extension}`;
+      const key = isTest ? `test/${slug}/${filename}` : `products/${slug}/${filename}`;
 
       await s3.send(new PutObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME!,
@@ -1735,11 +1876,15 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
       }));
 
       const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-      return Response.json({ url: publicUrl, filename });
+      return Response.json({ url: publicUrl, filename }, { headers: corsHeaders(request) });
     } catch (err) {
       console.error('Upload error:', err);
-      return Response.json({ error: 'Upload failed' }, { status: 500 });
+      return Response.json({ error: 'Upload failed' }, { status: 500, headers: corsHeaders(request) });
     }
+  }
+
+  export async function OPTIONS(request: Request) {
+    return preflight(request)!;
   }
   ```
 
@@ -1866,8 +2011,10 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
 
 Admin-only endpoints for the shipping fulfillment pipeline.
 
+> **Auth model — Supabase JWT only**: unlike `/api/products` and `/api/upload` (which use `PRODUCT_API_KEY` for AI-agent access), these endpoints are admin-UI-only and auth via the Supabase session token. The admin UI puts the JWT in `Authorization: Bearer <jwt>`; the endpoint calls Supabase's `auth.getUser(jwt)` to verify. No `PRODUCT_API_KEY` path — orders have no AI-agent use case. See `api/_lib/adminAuth.ts` below.
+
   ```typescript
-  // api/orders.ts — GET only; lists orders with optional status filter
+  // api/_lib/adminAuth.ts — shared helper for admin-UI endpoints
   import { createClient } from '@supabase/supabase-js';
 
   const supabase = createClient(
@@ -1875,21 +2022,43 @@ Admin-only endpoints for the shipping fulfillment pipeline.
     process.env.SUPABASE_SERVICE_KEY!
   );
 
-  function authorize(request: Request): boolean {
-    const auth = request.headers.get('authorization');
-    return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
+  // Returns the authenticated user, or null if the token is missing/invalid.
+  // Any authenticated Supabase user qualifies as admin in v1 (see RLS v1 auth scope note).
+  export async function requireAdmin(request: Request) {
+    const header = request.headers.get('authorization');
+    const token = header?.startsWith('Bearer ') ? header.slice(7) : null;
+    if (!token) return null;
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user;
   }
+  ```
+
+  ```typescript
+  // api/orders.ts — GET only; lists orders with optional status filter
+  import { createClient } from '@supabase/supabase-js';
+  import { corsHeaders, preflight } from './_lib/cors';
+  import { requireAdmin } from './_lib/adminAuth';
+  import { isTest } from './_lib/env';
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
 
   export async function GET(request: Request) {
-    if (!authorize(request)) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await requireAdmin(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(request) });
     }
 
     const url = new URL(request.url);
-    const status = url.searchParams.get('status'); // 'needs_shipping' | 'shipped' | 'all'
+    const status = url.searchParams.get('status'); // 'needs_shipping' | 'shipped' | 'all' (default: 'all')
+    const q = url.searchParams.get('q'); // optional search: customer email/name, order id, tracking number
 
     let query = supabase.from('orders')
       .select('*, products(title, thumbnail), customers(name, email)')
+      .eq('is_test', isTest)
       .order('created_at', { ascending: false });
 
     if (status === 'needs_shipping') {
@@ -1897,36 +2066,44 @@ Admin-only endpoints for the shipping fulfillment pipeline.
     } else if (status === 'shipped') {
       query = query.not('shipped_at', 'is', null);
     }
+    // 'all' or null: no status filter — returns the full historical list so Emy can look up any past order
+
+    if (q) {
+      // Simple OR search across common lookup fields
+      query = query.or(`id.eq.${q},tracking_number.ilike.%${q}%,customer_email.ilike.%${q}%`);
+    }
 
     const { data, error } = await query;
-    if (error) return Response.json({ error: error.message }, { status: 500 });
-    return Response.json({ orders: data });
+    if (error) return Response.json({ error: error.message }, { status: 500, headers: corsHeaders(request) });
+    return Response.json({ orders: data }, { headers: corsHeaders(request) });
+  }
+
+  export async function OPTIONS(request: Request) {
+    return preflight(request)!;
   }
   ```
 
   ```typescript
   // api/orders/[id].ts — PATCH only; records tracking and sends branded email via Resend
   import { createClient } from '@supabase/supabase-js';
+  import { corsHeaders, preflight } from '../_lib/cors';
+  import { requireAdmin } from '../_lib/adminAuth';
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!
   );
 
-  function authorize(request: Request): boolean {
-    const auth = request.headers.get('authorization');
-    return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
-  }
-
   export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-    if (!authorize(request)) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await requireAdmin(request);
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders(request) });
     }
 
     const { tracking_number, tracking_carrier, shipped_at } = await request.json();
 
     if (!tracking_number || !tracking_carrier) {
-      return Response.json({ error: 'tracking_number and tracking_carrier required' }, { status: 400 });
+      return Response.json({ error: 'tracking_number and tracking_carrier required' }, { status: 400, headers: corsHeaders(request) });
     }
 
     const shippedAtIso = shipped_at || new Date().toISOString();
@@ -1944,19 +2121,31 @@ Admin-only endpoints for the shipping fulfillment pipeline.
       .single();
 
     if (error || !order) {
-      return Response.json({ error: error?.message || 'Order not found' }, { status: 404 });
+      return Response.json({ error: error?.message || 'Order not found' }, { status: 404, headers: corsHeaders(request) });
     }
 
-    // Send branded tracking email via Resend (see Shipping Pipeline reference)
-    await sendTrackingEmail(order);
+    // Send branded tracking email via Resend; record the send timestamp only if it succeeds
+    const emailSentAt = await sendTrackingEmail(order);
+    if (emailSentAt) {
+      await supabase.from('orders')
+        .update({ tracking_email_sent_at: emailSentAt })
+        .eq('id', params.id);
+      order.tracking_email_sent_at = emailSentAt;
+    }
 
-    return Response.json({ ok: true, order });
+    return Response.json({ ok: true, order }, { headers: corsHeaders(request) });
   }
 
-  async function sendTrackingEmail(order: any) {
+  export async function OPTIONS(request: Request) {
+    return preflight(request)!;
+  }
+
+  // Returns the ISO timestamp when Resend accepted the email, or null on failure.
+  // Caller writes this to orders.tracking_email_sent_at for audit visibility.
+  async function sendTrackingEmail(order: any): Promise<string | null> {
     const email = order.customers?.email || order.customer_email;
     const name = order.customers?.name || 'Dear collector';
-    if (!email) return;
+    if (!email) return null;
 
     const trackingUrl = buildTrackingUrl(order.tracking_carrier, order.tracking_number);
     const html = `
@@ -1968,7 +2157,7 @@ Admin-only endpoints for the shipping fulfillment pipeline.
       <p>With care,<br>Everlastings by Emaline</p>
     `;
 
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -1981,6 +2170,12 @@ Admin-only endpoints for the shipping fulfillment pipeline.
         html,
       }),
     });
+
+    if (!res.ok) {
+      console.error('Resend tracking email failed:', await res.text());
+      return null;
+    }
+    return new Date().toISOString();
   }
 
   function buildTrackingUrl(carrier: string, number: string): string {
@@ -2053,25 +2248,173 @@ All transactional emails live in a shared module. Three templates for v1:
 
 #### Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)
 
-  - [ ] (AGENT) **Build** Orders tab with two sub-tabs: "Needs Shipping" (default) and "Shipped"
-  - [ ] (AGENT) **Fetch** via `GET /api/orders?status=needs_shipping` (authenticated via `PRODUCT_API_KEY` — the admin session gets the key from an env-scoped endpoint, or uses Supabase Auth session token)
+  - [ ] (AGENT) **Build** Orders tab with three sub-tabs: "Needs Shipping" (default), "Shipped", "All Orders" — every order ever placed is visible in the "All Orders" tab indefinitely, with a search box (customer email, order id, tracking number). No time window, no archive. Emy can look up a customer's order a year after the fact.
+  - [ ] (AGENT) **Fetch** via `GET /api/orders?status={needs_shipping|shipped|all}&q={search}` — authenticated via the admin's Supabase JWT. The admin UI grabs the JWT from `supabase.auth.getSession()` and sends it as `Authorization: Bearer <jwt>`. The server verifies via `supabase.auth.getUser(jwt)` (see `api/_lib/adminAuth.ts`). **Not** `PRODUCT_API_KEY` — that's for AI agent access to products/upload only.
   - [ ] (AGENT) **Render** each order card with:
     - Customer name, email
     - Shipping address (with "Copy to clipboard" button for pasting into Shippo)
     - Item: photo + title + order total
     - Form: tracking number input, carrier dropdown (USPS, UPS, FedEx, DHL), "Mark as shipped" button
-  - [ ] (AGENT) **On submit** → `PATCH /api/orders/:id` with `{ tracking_number, tracking_carrier }` → server records + sends Resend tracking email
+    - Status indicators: `shipped_at` (when Emy marked it shipped) and `tracking_email_sent_at` (when the Resend API accepted the tracking email — null means the email failed to send and Emy should retry or notify the customer manually)
+  - [ ] (AGENT) **On submit** → `PATCH /api/orders/:id` with `{ tracking_number, tracking_carrier }` → server records, sends Resend tracking email, writes back `tracking_email_sent_at` on success
   - [ ] (AGENT) **Move** order card from "Needs Shipping" → "Shipped" tab on success
-  - [ ] (AGENT) **Shipped tab**: shows tracking number, carrier, ship date; link to carrier's tracking page
+  - [ ] (AGENT) **Shipped tab + All Orders tab**: show tracking number, carrier, ship date, email-sent status; link to carrier's tracking page. If `tracking_email_sent_at` is null, show a "Resend tracking email" button that re-fires the Resend send
 
-> **Emy's day-to-day**: Purchase completes → admin "Needs Shipping" tab shows the order → copy address → paste into Shippo (her browser bookmark) → Shippo prints label + gives tracking number → paste tracking number into admin → click "Mark as shipped" → branded email goes to customer automatically.
+> **Emy's day-to-day**: Purchase completes → admin "Needs Shipping" tab shows the order → copy address → paste into Shippo (her browser bookmark) → Shippo prints label + gives tracking number → paste tracking number into admin → click "Mark as shipped" → branded email goes to customer automatically → `tracking_email_sent_at` confirms delivery to the Resend send queue (not inbox delivery, but definitive proof the API accepted the send).
+
+> **Customer-side order lookup** (out of v1): customers cannot log in to view their own order status — v1 intentionally has no customer accounts. If a buyer loses their email receipt, they contact Emy; she finds the order in "All Orders" by email and re-sends tracking. v1.1+ may add a `/my-orders?token={signed-email-link}` page for self-service lookup.
 
 #### Product Protocol
 
   - `assets/docs/PRODUCT_PROTOCOL.md`
-    - Section 1: Client guide (for Emy) — field explanations, photo requirements, admin UI walkthrough
-    - Section 2: AI protocol — slug generation, image pipeline, API calls, validation, error handling
-  - [ ] (AGENT) **Review** `assets/docs/PRODUCT_PROTOCOL.md` — confirm accurate 
+    - Section 1: Client guide (for Emy) — field explanations, photo requirements, admin UI walkthrough, Custom GPT ("AI Product Assistant") usage
+    - Section 2: Programmatic / agentic AI protocol — shell-based curl pipeline for Claude Code / test seeding
+  - [ ] (AGENT) **Review** `assets/docs/PRODUCT_PROTOCOL.md` — confirm accurate
+
+#### Custom GPT: "Everlastings Product Assistant" — Emy's AI path (NEW)
+
+> **Why**: Emy uses ChatGPT web (Plus). ChatGPT web cannot execute curl, so the raw programmatic protocol above doesn't work for her. A **Custom GPT with Actions** wraps the same API endpoints in a conversational interface she already knows how to use. Plus-tier ChatGPT users can create Custom GPTs with authenticated Actions that make HTTP calls on the user's behalf.
+
+**One-time setup (SEAN, after A2 API endpoints are live in production)**:
+
+  - [ ] (SEAN) Go to <https://chat.openai.com/gpts/editor> (requires ChatGPT Plus — already confirmed for Emy)
+  - [ ] (SEAN) **Name**: "Everlastings Product Assistant"
+  - [ ] (SEAN) **Description**: "Helps Emy add new products to everlastingsbyemaline.com through natural conversation."
+  - [ ] (SEAN) **Instructions** (GPT system prompt) — paste the block below
+  - [ ] (SEAN) **Capabilities**: enable "Image input" (so Emy can drag photos into the chat). Disable "Code Interpreter" and "Web Browsing" (not needed, reduces confusion)
+  - [ ] (SEAN) **Actions > Add action**: paste the OpenAPI 3 schema block below
+  - [ ] (SEAN) **Authentication**: choose "API Key," auth type "Bearer," paste the **production** `PRODUCT_API_KEY` (live env, not test). Once saved, the key is hidden from Emy — she'll never see or type it
+  - [ ] (SEAN) **Privacy policy URL**: required by ChatGPT for GPTs with Actions. Point to `https://everlastingsbyemaline.com/privacy.html` (Track B6 builds this page)
+  - [ ] (SEAN) **Visibility**: "Only people with the link." Send the link to Emy and have her bookmark it
+  - [ ] (SEAN) **Smoke test**: open the GPT, say "Create a test product called Test Sunkeeper $1 and here's a placeholder image," confirm it walks through the preview step and (when you approve) successfully creates the product. **Then delete the test product from the admin UI** so Emy's shop starts clean
+
+**GPT Instructions** (paste into the Instructions field):
+
+```
+You are Emy's product-creation assistant for everlastingsbyemaline.com — a small handcrafted-miniatures brand. You help her add products by gathering details conversationally, then calling the site's API.
+
+Voice: warm, poetic but concise. Match the brand voice described in BRAND.md (Emy's actual writing style — reverent, grounded, unhurried).
+
+Workflow for every new product:
+1. Ask Emy for the product details one topic at a time (title, price, story, dimensions, materials, etc.). Do NOT ask for SEO fields, slug, SKU, or Stripe IDs — those are auto-generated.
+2. Require at minimum: title, price (in dollars — you convert to cents), description, product_type (one of miniature/printable/storybook), story_card (2-8 paragraphs), and 7 photos (1 hero, 1 thumbnail, at least 5 gallery).
+3. For each photo Emy provides: call `uploadImage` with slug, role (hero | thumbnail | gallery-01 ... gallery-15), and the image file. Collect the returned CDN URLs.
+4. BEFORE calling createProduct: show Emy a full preview of every field she provided plus the generated slug. Wait for her explicit approval ("yes", "go ahead", "looks good").
+5. Call `createProduct` with all fields. Share the returned permalink with her.
+6. If `createProduct` returns 409 (slug conflict): explain, suggest a variant title (e.g., adding "II" or a year), ask her to confirm the new title, then retry.
+7. If any step fails: stop, explain the error in plain language, do NOT retry blindly. Never create a product if any image upload failed.
+
+Never:
+- Create a product without explicit preview + approval.
+- Change fields Emy didn't specify (e.g., don't invent story content).
+- Skip image uploads or create products with fewer than 7 images.
+- Tell Emy about "test mode," the API key, curl, slugs, or CDN URLs — keep the conversation product-focused.
+
+If Emy asks to edit an existing product or mark one sold: tell her those actions are only available in the admin UI at everlastingsbyemaline.com/admin, not through you.
+```
+
+**GPT Actions — OpenAPI 3 schema** (paste into the Actions editor):
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Everlastings Product API
+  version: 1.0.0
+  description: Product creation endpoints used by the Everlastings Product Assistant GPT.
+servers:
+  - url: https://everlastingsbyemaline.com
+paths:
+  /api/upload:
+    post:
+      operationId: uploadImage
+      summary: Upload a product image. Cloudinary transform + R2 delivery happens server-side.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, slug, role]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image file (JPEG/PNG/WebP, max 10MB). For videos/GIFs, set skip_transform=true.
+                slug:
+                  type: string
+                  description: Product slug (generated by GPT as title.toLowerCase().replaceAll(' ', '-') before first upload).
+                role:
+                  type: string
+                  description: One of hero, thumbnail, gallery-01 through gallery-15, video-01, detail-01.
+                skip_transform:
+                  type: string
+                  description: Set to "true" for videos and GIFs to skip Cloudinary processing.
+      responses:
+        '200':
+          description: Upload succeeded; returns CDN URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+                  filename: { type: string }
+  /api/products:
+    post:
+      operationId: createProduct
+      summary: Create a new product. Stripe Product + Price auto-created server-side via DB webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, price, product_type, images, thumbnail]
+              properties:
+                title: { type: string }
+                slug: { type: string, description: "Generated by GPT from title; lowercase, hyphen-separated." }
+                headline: { type: string, description: "5-7 word tagline." }
+                story_card: { type: string, description: "2-8 paragraphs of brand-voice copy." }
+                description: { type: string }
+                features: { type: array, items: { type: string } }
+                price: { type: integer, description: "Price in cents (e.g. 24500 for $245)." }
+                dimensions: { type: string }
+                weight: { type: string }
+                materials: { type: array, items: { type: string } }
+                power_supply: { type: string, nullable: true }
+                care_instructions: { type: array, items: { type: string } }
+                shipping_details: { type: array, items: { type: string } }
+                product_type: { type: string, enum: [miniature, printable, storybook] }
+                series: { type: string, nullable: true }
+                available: { type: boolean }
+                quantity: { type: integer }
+                featured: { type: boolean }
+                images:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      url: { type: string }
+                      alt: { type: string }
+                thumbnail: { type: string, description: "CDN URL of the thumbnail image." }
+                seo_title: { type: string, nullable: true }
+                seo_description: { type: string, nullable: true }
+                artist_note: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Product created.
+        '409':
+          description: Slug conflict — product with that slug already exists.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+security:
+  - bearerAuth: []
+```
+
+**Key rotation / incident response**: if the key is ever leaked (Emy shares a screenshot of the GPT config, her ChatGPT account is compromised, etc.), Sean: (1) regenerates `PRODUCT_API_KEY` via `openssl rand -hex 32` on the production Vercel env, (2) updates the GPT's Authentication field with the new key, (3) redeploys. Emy doesn't need to do anything — the GPT keeps working with the new key.
 
 ---
 

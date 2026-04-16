@@ -78,25 +78,26 @@
   - [ ] (SEAN) **GA4**: create property, note Measurement ID `G-XXXXXXXXXX`
   - [ ] (SEAN) **Google Search Console**: verify ownership (TXT record or HTML file)
   - [ ] (SEAN) **Confirm** `everlastingsbyemaline.com` is on Cloudflare DNS
-  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` (different value per Vercel environment)
+  - [ ] (SEAN) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` (different value per Vercel environment). Sean owns the secret and is the only human who should see it in raw form — Emy never types or handles this key
 
 ### Emy's Instagram Shopping (tracking — can proceed in parallel with build)
 
-  - [ ] (SEAN) **Coordinate** with Emy on her IG Shopping setup (sub-items are Emy's account work in her own Meta accounts):
-    - [ ] (SEAN) Instagram account → Business profile
-    - [ ] (SEAN) IG connected to Facebook Page
-    - [ ] (SEAN) Meta Business Manager claims FB Page
-    - [ ] (SEAN) Commerce Manager catalog (type: E-commerce)
-    - [ ] (SEAN) Domain verification (DNS TXT or meta tag)
-    - [ ] (SEAN) Submit shop for Commerce review (1-2 weeks)
+  - [ ] (SEAN+EMY) **Coordinate** with Emy on her IG Shopping setup. Sub-items are Emy's own account work in her Meta accounts; Sean's role is unblocking her (he's already been added to her Meta Business account):
+    - [ ] (EMY) Instagram account → Business profile
+    - [ ] (EMY) IG connected to Facebook Page
+    - [ ] (EMY) Meta Business Manager claims FB Page
+    - [ ] (EMY) Commerce Manager catalog (type: E-commerce)
+    - [ ] (SEAN+EMY) Domain verification (DNS TXT or meta tag) — Sean adds the DNS record in Cloudflare; Emy confirms verification in Meta
+    - [ ] (EMY) Submit shop for Commerce review (1-2 weeks)
 
 ### Agent bootstrap (after all services/env vars exist)
 
-  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration`: all 8 tables + RLS policies + triggers (`set_slug`, `set_updated_at_*`). Canonical SQL in IMPL_GUIDE > Product Schema Hard Reference + A1 Supabase
+  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration`: all 8 tables + RLS policies + triggers (`set_slug`, `set_updated_at_*`) + `is_test` column on the 6 transactional tables + partial indexes. Canonical SQL in IMPL_GUIDE > Product Schema Hard Reference + A1 Supabase
   - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
   - [ ] (AGENT) **Create** `api/_bootstrap/coupons.ts` — idempotent coupon bootstrap (see A1 Stripe in IMPL_GUIDE)
   - [ ] (AGENT) **Run** `npx tsx api/_bootstrap/coupons.ts` once in test mode — verify both `cart-recovery-10` and `newsletter-welcome-5` exist in Stripe Dashboard > Products > Coupons
-  - [ ] (AGENT) **Create** Stripe test webhook endpoint via CLI/MCP → `{dev-preview-url}/api/webhook`, event `checkout.session.completed`
+  - [ ] (AGENT) **Create** Stripe test webhook endpoint via CLI/MCP → pinned to `dev` branch's preview URL (e.g. `https://everlastings-git-dev-{team}.vercel.app/api/webhook`), event `checkout.session.completed`. For `feat/*` branches, use `stripe listen` instead — see IMPL_GUIDE > Dev/Test Data Hygiene > Stripe webhook endpoint pinning
+  - [ ] (AGENT) **Smoke-test preview URL functionality**: push throwaway commit on `feat/_preview-smoketest` branch → open the auto-generated `*.vercel.app` preview URL → DevTools console must show no CORS errors → `fetch('/api/config').then(r => r.json())` returns the **test** publishable key. Delete branch after. Catches the failure mode where every prior Vercel project's previews "loaded nothing" due to hardcoded CORS
 
 ---
 
@@ -117,23 +118,26 @@
 > **ACTION — (AGENT) only.** 
 > Goal: all server-side endpoints working, testable with curl.
 
-  - [ ] (AGENT) **Create** `api/config.ts` — public keys (Stripe publishable, Supabase URL + anon key, Meta Pixel ID)
+  - [ ] (AGENT) **Create** `api/_lib/env.ts` — exports `isTest = process.env.VERCEL_ENV !== 'production'`. Drives `is_test` row flag and R2 path namespacing
+  - [ ] (AGENT) **Create** `api/_lib/cors.ts` — exports `corsHeaders(req)` and `preflight(req)` with allowlist regex for `everlastingsbyemaline.com`, `*.vercel.app`, `localhost:3000`. Every endpoint imports both
+  - [ ] (AGENT) **Create** `api/config.ts` — public keys (Stripe publishable, Supabase URL + anon key, Meta Pixel ID). Wraps response in `corsHeaders(req)`; exports `OPTIONS = preflight`
   - [ ] (AGENT) **Create** `api/stripe-sync.ts` — Supabase webhook handler, creates Stripe Product + Price
-  - [ ] (AGENT) **Create** `api/checkout/reserve.ts` (NEW — AR #28) — availability check, creates 15-min cart_hold, optionally upserts subscriber
+  - [ ] (AGENT) **Create** `api/checkout/reserve.ts` (NEW — AR #28) — availability check, creates 15-min cart_hold (with `is_test: isTest`), optionally upserts subscriber (with `is_test: isTest`)
   - [ ] (AGENT) **Create** `api/checkout.ts` — verifies hold is valid (410 if expired) + creates Stripe session with `ui_mode: 'custom'`, `customer_email` prefill
   - [ ] (AGENT) **Create** `api/session-status.ts` — retrieves session for completion page
-  - [ ] (AGENT) **Create** `api/webhook.ts` — idempotency check, customer upsert, mark sold, create orders, record event, Meta CAPI. Fire `customer_email_linked` event when subscriber→customer source transition happens
+  - [ ] (AGENT) **Create** `api/webhook.ts` — idempotency check, customer upsert (with `is_test: isTest`), mark sold, create orders (with `is_test: isTest`), record event, Meta CAPI. Fire `customer_email_linked` event when subscriber→customer source transition happens
   - [ ] (AGENT) **Create** `api/cart-recovery.ts` — generates unique Stripe promotion code + sends Resend email
-  - [ ] (AGENT) **Create** `api/products.ts` — GET (public), POST/PUT (PRODUCT_API_KEY auth, validation, slug gen, conflict check)
-  - [ ] (AGENT) **Create** `api/upload.ts` — PRODUCT_API_KEY auth, file type/size validation, Cloudinary → R2 pipeline
-  - [ ] (AGENT) **Create** `api/subscribe.ts` — newsletter subscription. If `source: 'contemplation-offer'`, generate promo code + send welcome email with coupon. Other sources get welcome email without coupon
+  - [ ] (AGENT) **Create** `api/products.ts` — GET (public, filters `is_test = false` in production reads), POST/PUT (PRODUCT_API_KEY auth, validation, slug gen, conflict check, sets `is_test: isTest` on INSERT)
+  - [ ] (AGENT) **Create** `api/upload.ts` — PRODUCT_API_KEY auth, file type/size validation, Cloudinary → R2 pipeline. R2 key uses `test/{slug}/test_{role}-{slug}.ext` when `isTest`, `products/{slug}/{role}-{slug}.ext` otherwise
+  - [ ] (AGENT) **Create** `api/subscribe.ts` — newsletter subscription (writes with `is_test: isTest`). If `source: 'contemplation-offer'`, generate promo code + send welcome email with coupon. Other sources get welcome email without coupon
   - [ ] (AGENT) **Create** `api/contact.ts` — contact form handler
-  - [ ] (AGENT) **Create** `api/cart-activity.ts` — fire-and-forget product interest notification
-  - [ ] (AGENT) **Create** `api/product-feed.ts` — CSV feed for Meta Commerce Catalog sync
-  - [ ] (AGENT) **Create** `api/orders.ts` (NEW — AR #30) — GET list of orders (admin auth), filter by shipping status
+  - [ ] (AGENT) **Create** `api/cart-activity.ts` — fire-and-forget product interest notification (writes with `is_test: isTest`)
+  - [ ] (AGENT) **Create** `api/product-feed.ts` — CSV feed for Meta Commerce Catalog sync. Filters `WHERE is_test = false` so test products never appear in the live catalog
+  - [ ] (AGENT) **Create** `api/orders.ts` (NEW — AR #30) — GET list of orders (admin auth), filter by shipping status. In production, filter `WHERE is_test = false`
   - [ ] (AGENT) **Create** `api/orders/[id].ts` (NEW — AR #30) — PATCH to record tracking number/carrier + fire Resend tracking email
   - [ ] (AGENT) **Create** `api/_emails/index.ts` (NEW — AR #30, #31) — shared Resend sender + three HTML templates (tracking, welcome-coupon, cart-recovery-coupon)
-  - [ ] (SEAN) **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed`
+  - [ ] (AGENT) **Apply** the `corsHeaders(req)` + `preflight(req)` pattern from `api/_lib/cors.ts` to every endpoint above (no exceptions). Without this, browser fetches from `*.vercel.app` previews are silently blocked
+  - [ ] (SEAN) **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed` (production URL only — preview URLs would expose test products if Meta ever consumed them)
 
 **Auth note**: `api/products.ts`, `api/upload.ts`, `api/orders.ts`, `api/orders/[id].ts` use `PRODUCT_API_KEY` for auth (NOT `SUPABASE_SERVICE_KEY`). See AR #20.
 
@@ -149,12 +153,15 @@
   - [ ] (AGENT) **Implement** image upload via `/api/upload`
   - [ ] (AGENT) **Implement** product save (INSERT or UPDATE)
   - [ ] (AGENT) **Implement** product delete with confirmation
-  - [ ] (AGENT) **Build** Orders tab with sub-tabs "Needs Shipping" / "Shipped" (NEW — AR #30)
-  - [ ] (AGENT) **Render** order cards: customer info, address (with Copy button), item + total, tracking form
-  - [ ] (AGENT) **Wire** "Mark as shipped" → `PATCH /api/orders/:id` → triggers Resend tracking email
+  - [ ] (AGENT) **Build** Orders tab with three sub-tabs: "Needs Shipping" (default), "Shipped", "All Orders" (full historical list with a search box: email / order id / tracking number). Every order ever placed remains visible in "All Orders" indefinitely — no archive or time window (NEW — AR #30)
+  - [ ] (AGENT) **Auth**: admin UI sends the Supabase Auth JWT as `Authorization: Bearer <jwt>` to `/api/orders` and `/api/orders/:id`. Server verifies via `supabase.auth.getUser(jwt)` (helper at `api/_lib/adminAuth.ts`). No `PRODUCT_API_KEY` for orders
+  - [ ] (AGENT) **Render** order cards: customer info, address (with Copy button), item + total, tracking form, `shipped_at` timestamp, `tracking_email_sent_at` status (NULL → show "Resend tracking email" button)
+  - [ ] (AGENT) **Wire** "Mark as shipped" → `PATCH /api/orders/:id` → records tracking, fires Resend tracking email, writes `tracking_email_sent_at` on Resend success
   - [ ] (AGENT) **Update** `assets/docs/PRODUCT_PROTOCOL.md` if any new fields surface
   - [ ] (SEAN) **Review** `assets/docs/PRODUCT_PROTOCOL.md`
+  - [ ] (SEAN) **Create Custom GPT** "Everlastings Product Assistant" per IMPL_GUIDE > [Custom GPT](archive/v1_4/v1_4_0_IMPL_GUIDE.md#custom-gpt-everlastings-product-assistant--emys-ai-path-new) — paste Instructions + OpenAPI schema, set Bearer auth to production `PRODUCT_API_KEY`, set privacy URL to `everlastingsbyemaline.com/privacy.html`, smoke test with a $1 throwaway product (delete after), send private link to Emy to bookmark
   - [ ] (AGENT) **Test** full admin flow: login → add product → verify on shop page; then simulate order → mark shipped → verify tracking email delivered
+  - [ ] (AGENT) **Test** Custom GPT flow (pre-handoff): open the GPT, create a test product from scratch with placeholder images, confirm the preview step requires explicit approval, confirm created product appears in shop. Delete the test product after.
 
 ### A4: API Integration Testing
 
@@ -276,8 +283,10 @@
 
 ### C1: Wire Pages to Backend
 
+> **Convention**: every `fetch()` call uses a relative path (`/api/foo`), never an absolute URL. Absolute URLs route preview-deployment requests back to production and break the dev environment. The Track C grep pass should flag any `fetch('https://everlastingsbyemaline.com` in `assets/js/`. See IMPL_GUIDE > Dev/Test Data Hygiene > Frontend uses relative API paths.
+
   - [ ] (AGENT) **Create** `assets/js/main.js` — Supabase client via `/api/config`, cart functions, utilities, browser session_id (crypto.randomUUID → localStorage)
-  - [ ] (AGENT) **Seed** test products in Supabase Studio
+  - [ ] (AGENT) **Seed** test products in Supabase Studio (via the Product Protocol against the dev preview URL — `BASE_URL` set to `*.vercel.app`. Rows land with `is_test = true` automatically)
   - [ ] (AGENT) **Seed** test images in R2 bucket
   - [ ] (AGENT) **Create** `assets/js/product.js` — fetch + render product, gallery, lightbox, related products
   - [ ] (AGENT) **Create** `assets/js/shop.js` — fetch products, render tiles, filters, sort, URL state, all shop states
@@ -317,6 +326,12 @@
 **Placeholder Audit**
 
   - [ ] (AGENT) **Run** `grep -rn "PLACEHOLDER" .` — MUST return zero matches before launch
+  - [ ] (AGENT) **Run** `grep -rn "https://everlastingsbyemaline.com/api" assets/js/` — MUST return zero matches (every frontend fetch must be relative; absolute URLs break preview deployments)
+
+**Test Data Audit (optional but recommended)**
+
+  - [ ] (AGENT) **Run** `SELECT count(*) FROM products WHERE is_test = true;` — note the count. Same for `customers`, `orders`, `subscribers`, `cart_holds`, `product_interests`. Test rows are filtered out of production reads, but Sean may want to purge them: `DELETE FROM products WHERE is_test = true;` (and same per table)
+  - [ ] (AGENT) **Optionally clean R2 test namespace**: `aws s3 rm s3://everlastings/test --recursive` (only if test images aren't referenced by surviving test rows)
 
 **Stripe Live Mode**
 
