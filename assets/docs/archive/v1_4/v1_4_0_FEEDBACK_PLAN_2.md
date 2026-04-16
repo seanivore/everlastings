@@ -2,7 +2,7 @@
 
 ## Context
 
-After 12 rounds of feedback integration, `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` (3,715 lines) has accumulated three classes of problems that break sequential human reading:
+After countless rounds of feedback integration, `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` (3,715 lines) has accumulated three classes of problems that break sequential human reading:
 
 1. **Triple duplication of setup actions.** The same commands appear in Phase 0 (lines 282-305), Phase 1 (307-325), and A1 Services Setup (821-1019) with inconsistent `(SEAN)`/`(AGENT)` tagging. Example: `git checkout -b dev` appears three times; `openssl rand -hex 32` twice; Supabase SQL execution three times; env-var setting scattered across five A1 subsections.
 
@@ -33,7 +33,7 @@ Purpose: produce a precise punch list so the restructure doesn't miss duplicated
 
 ### Agent A — Sequential walker
 
-**Prompt intent**: "You are a human contractor starting at line 1. Walk forward. Every step you hit, ask: (1) is the context complete here, or do I have to jump somewhere else? (2) is the jump signposted? (3) have I seen this same action already? Continue through Phase 0 → Phase 1 → TRACK A → C4 Launch. Stop at end of Track C. Produce a table: [step line, what it says, where the referent lives, line distance, is it a duplicate of an earlier step]."
+**Prompt intent**: "You are a human contractor starting at line 1. Walk forward. Every step you hit, ask: (1) is the context complete here, or do I have to jump somewhere else? (2) is the jump signposted? (3) have I seen this same action already? Continue through Phase 0 → Phase 1 → TRACK A → C4 Launch. Stop at end of Track C. Produce a table: {step line, what it says, where the referent lives, line distance, is it a duplicate of an earlier step}."
 
 ### Agent B — Section classifier
 
