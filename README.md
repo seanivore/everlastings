@@ -91,10 +91,10 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 | ------------------------------------------------------------------------------- | ------------------------------------------------ |
 | [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                              | Complete technical reference                     |
 | [Brand Guide](/assets/docs/BRAND.md)                                            | Voice, colors, typography, copy, email templates |
-| [Implementation Guide (v1.4.0)](/assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md) | Phase 0 setup + Tracks A/B/C build, every section labeled REFERENCE/ACTION, every checkbox tagged (SEAN)/(AGENT) |
-| [Action Steps (v1.4.0)](/assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md)         | ADHD-friendly checklist version                  |
-| [GA4 KPIs + Advertising](/assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md) | Post-launch KPI reference + ad strategy          |
-| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                            | Client guide + AI product creation protocol      |
+| [Implementation Guide](/assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md)          | Phase 0 setup + Tracks A/B/C build               |
+| [Action Steps](/assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md)                  | Checklist version                                |
+| [GA4 KPIs + Advertising](/assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                |
+| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                            | AI product creation protocol, client guide       |
 
 ---
 

@@ -11,180 +11,9 @@
 
 ---
 
-### How to read this doc
-
-**Every section is labeled** immediately under its heading:
-
-- `> REFERENCE — no action required.` Read once; linked from action sections that need it. Skip on a linear pass if you already know the material.
-- `> ACTION — (SEAN)` / `(AGENT)` / `(SEAN+AGENT)`. Do these. Every checkbox inside carries a role tag too.
-
-**Every checkbox starts with a role tag**: `(SEAN)` = you do it in a dashboard, on your laptop, or with your judgment. `(AGENT)` = the implementation-session agent does it via code/CLI/MCP. `(SEAN+AGENT)` = handoff pair (Sean does X, then agent does Y). Zero exceptions.
-
-**Structure**:
-
-1. **Architecture Reference** (REF) — all 32 ARs.
-2. **Pre-flight setup references** (REF cluster) — Git Branching, Environment Strategy, Source of Truth, Stripe Sync Rules, Product Schema, Configuration Files. Read before touching Track A.
-3. **Phase 0 — Sean's Prerequisites** (ACTION) — human-only dashboard/account work, done before the first implementation session. No agent involvement.
-4. **Tracks A → B → C** (ACTION) — build.  Track A1 is the canonical setup block (Phase 1 was removed; it duplicated A1).
-5. **Post-build references** (REF cluster) — Webhook Contract, 409 Recovery Flow, Error States, Slug Rules, Image Pipeline, GA4 event definitions, Coupon Strategy, Shipping Pipeline, Placeholder Hygiene, Deferred Items. Consulted during implementation of the tracks that reference them.
-
-**Linear reading works**: every forward reference is ≤50 lines away OR clearly signposted with a section name. If you find a reference you don't recognize, the link tells you exactly where to look.
-
----
-
-- [Everlastings v1.4.0 Implementation Guide](#everlastings-v140-implementation-guide)
-    - [How to read this doc](#how-to-read-this-doc)
-  - [Architecture Reference](#architecture-reference)
-  - [Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
-    - [Secret handling — do this once, not twice](#secret-handling--do-this-once-not-twice)
-    - [Repo reconciliation](#repo-reconciliation)
-    - [Services (one service per group — complete each service end-to-end before moving on)](#services-one-service-per-group--complete-each-service-end-to-end-before-moving-on)
-    - [Agent bootstrap (run once, after services exist and env vars are set)](#agent-bootstrap-run-once-after-services-exist-and-env-vars-are-set)
-  - [Git Branching Strategy](#git-branching-strategy)
-    - [Setup Commands](#setup-commands)
-  - [Environment Strategy](#environment-strategy)
-    - [Where Secrets Live](#where-secrets-live)
-    - [Environment Variable Table](#environment-variable-table)
-    - [Live Launch Switchover Process](#live-launch-switchover-process)
-  - [Source of Truth Hierarchy](#source-of-truth-hierarchy)
-  - [Stripe Sync Rules](#stripe-sync-rules)
-  - [Product Schema Hard Reference](#product-schema-hard-reference)
-    - [TypeScript Interface](#typescript-interface)
-    - [Supabase SQL](#supabase-sql)
-  - [Configuration Files](#configuration-files)
-    - [`vercel.json`](#verceljson)
-    - [`tsconfig.json`](#tsconfigjson)
-    - [`package.json`](#packagejson)
-    - [`.env.example`](#envexample)
-  - [How the Tracks Work](#how-the-tracks-work)
-  - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
-    - [A1: Services Setup](#a1-services-setup)
-      - [Vercel](#vercel)
-      - [Git Branches](#git-branches)
-      - [Supabase](#supabase)
-      - [Cloudflare R2](#cloudflare-r2)
-      - [Cloudinary](#cloudinary)
-      - [Stripe](#stripe)
-      - [Resend (Transactional Email)](#resend-transactional-email)
-      - [Shippo (Shipping Labels)](#shippo-shipping-labels)
-      - [Meta Pixel + Instagram Shopping](#meta-pixel--instagram-shopping)
-      - [Analytics](#analytics)
-      - [Config Files](#config-files)
-    - [A2: API Endpoints](#a2-api-endpoints)
-      - [Config — `api/config.ts`](#config--apiconfigts)
-      - [Stripe Sync — `api/stripe-sync.ts`](#stripe-sync--apistripe-syncts)
-      - [Reserve — `api/checkout/reserve.ts` (NEW — AR #28, #29)](#reserve--apicheckoutreservets-new--ar-28-29)
-      - [Checkout — `api/checkout.ts`](#checkout--apicheckoutts)
-      - [Session Status — `api/session-status.ts`](#session-status--apisession-statusts)
-      - [Webhook — `api/webhook.ts`](#webhook--apiwebhookts)
-      - [Cart Recovery — `api/cart-recovery.ts`](#cart-recovery--apicart-recoveryts)
-      - [Products API — `api/products.ts`](#products-api--apiproductsts)
-      - [Image Upload — `api/upload.ts`](#image-upload--apiuploadts)
-      - [Newsletter — `api/subscribe.ts`](#newsletter--apisubscribets)
-      - [Cart Activity — `api/cart-activity.ts`](#cart-activity--apicart-activityts)
-      - [Product Feed — `api/product-feed.ts`](#product-feed--apiproduct-feedts)
-      - [Orders (Admin) — `api/orders.ts` + `api/orders/[id].ts` (NEW — AR #30)](#orders-admin--apiordersts--apiordersidts-new--ar-30)
-      - [Email Templates — `api/_emails/`](#email-templates--api_emails)
-    - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
-      - [Admin UI — `admin/index.html` + `assets/js/admin.js`](#admin-ui--adminindexhtml--assetsjsadminjs)
-      - [Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)](#admin-orders-tab--shipping-fulfillment-new--ar-30)
-      - [Product Protocol](#product-protocol)
-    - [A4: API Integration Testing](#a4-api-integration-testing)
-  - [TRACK B: Frontend Design](#track-b-frontend-design)
-    - [B1: Design System](#b1-design-system)
-      - [CSS Custom Properties](#css-custom-properties)
-      - [Typography](#typography)
-      - [Base Components](#base-components)
-      - [Loading States](#loading-states)
-      - [Lightbox Component](#lightbox-component)
-      - [Inline SVG Icons](#inline-svg-icons)
-      - [Responsive Foundation](#responsive-foundation)
-      - [GA4 Script Tag](#ga4-script-tag)
-      - [Meta Pixel Script Tag](#meta-pixel-script-tag)
-      - [Email Capture CTA Styles](#email-capture-cta-styles)
-    - [B2: Header, Footer, Nav](#b2-header-footer-nav)
-      - [Header](#header)
-      - [Footer](#footer)
-    - [B3: Product Page](#b3-product-page)
-      - [Media Rendering](#media-rendering)
-      - [Email CTA 2: Cart Exit Intent Modal](#email-cta-2-cart-exit-intent-modal)
-      - [Email CTA 3: 3-Minute Timed Contemplation Popup](#email-cta-3-3-minute-timed-contemplation-popup)
-    - [B4: Shop Grid](#b4-shop-grid)
-    - [B5: Homepage](#b5-homepage)
-    - [B6: Remaining Pages](#b6-remaining-pages)
-  - [TRACK C: Integration](#track-c-integration)
-    - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
-      - [Supabase Client — `assets/js/main.js`](#supabase-client--assetsjsmainjs)
-      - [Product Page JS — `assets/js/product.js`](#product-page-js--assetsjsproductjs)
-      - [Shop Grid JS — `assets/js/shop.js`](#shop-grid-js--assetsjsshopjs)
-      - [Homepage JS — `assets/js/homepage.js`](#homepage-js--assetsjshomepagejs)
-      - [Newsletter JS — `assets/js/newsletter.js`](#newsletter-js--assetsjsnewsletterjs)
-    - [C2: Checkout Flow End-to-End](#c2-checkout-flow-end-to-end)
-      - [Cart JS — `assets/js/cart.js` (NEW — AR #28)](#cart-js--assetsjscartjs-new--ar-28)
-      - [Return Page — `complete.html`](#return-page--completehtml)
-    - [C3: SEO Finalization](#c3-seo-finalization)
-    - [C4: Testing + Launch Prep](#c4-testing--launch-prep)
-      - [Stripe Live Mode](#stripe-live-mode)
-      - [Testing](#testing)
-      - [Performance](#performance)
-      - [Launch](#launch)
-  - [Webhook Contract](#webhook-contract)
-  - [409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
-    - [What Triggers It](#what-triggers-it)
-    - [What the User Sees](#what-the-user-sees)
-    - [Backend Behavior](#backend-behavior)
-    - [Coupon Setup](#coupon-setup)
-  - [Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
-  - [Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
-    - [E-commerce Events (with `items` array)](#e-commerce-events-with-items-array)
-    - [Custom Events (no `items` array)](#custom-events-no-items-array)
-    - [Meta Pixel Events (fire alongside GA4)](#meta-pixel-events-fire-alongside-ga4)
-  - [Error States Reference](#error-states-reference)
-      - [Product — Not Found](#product--not-found)
-      - [Product — Supabase Fetch Fails](#product--supabase-fetch-fails)
-      - [Product — Image Fails to Load](#product--image-fails-to-load)
-      - [Product — Sold](#product--sold)
-      - [Checkout — Cart Empty](#checkout--cart-empty)
-      - [Cart — Items Sold Before Reserve (409)](#cart--items-sold-before-reserve-409)
-      - [Checkout — Hold Expired (410)](#checkout--hold-expired-410)
-      - [Checkout — Session Creation Fails](#checkout--session-creation-fails)
-      - [Checkout — Payment Declined](#checkout--payment-declined)
-      - [Checkout — Network Error](#checkout--network-error)
-      - [Checkout — Shipping Address Incomplete](#checkout--shipping-address-incomplete)
-      - [Checkout — Address Not Deliverable](#checkout--address-not-deliverable)
-      - [Checkout — Restricted Country](#checkout--restricted-country)
-      - [Checkout — Billing/Shipping Mismatch](#checkout--billingshipping-mismatch)
-      - [Complete — Success](#complete--success)
-      - [Complete — Error](#complete--error)
-      - [Shop — Loading](#shop--loading)
-      - [Shop — No Products at All](#shop--no-products-at-all)
-      - [Shop — All Products Sold (none available, no filter)](#shop--all-products-sold-none-available-no-filter)
-      - [Shop — Filter Returned Zero Matches](#shop--filter-returned-zero-matches)
-      - [Shop — Fetch Failed](#shop--fetch-failed)
-      - [Newsletter — Already Subscribed](#newsletter--already-subscribed)
-      - [Newsletter — Invalid Email](#newsletter--invalid-email)
-      - [Admin — Not Authenticated](#admin--not-authenticated)
-      - [Admin — Upload Too Large](#admin--upload-too-large)
-  - [Slug Rules](#slug-rules)
-  - [Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
-    - [Naming Convention](#naming-convention)
-    - [Cloudinary Transform Parameters](#cloudinary-transform-parameters)
-    - [Pipeline Steps](#pipeline-steps)
-  - [Deferred Items](#deferred-items)
-  - [Deferred Caching Strategy](#deferred-caching-strategy)
-  - [Post-Launch](#post-launch)
-  - [Reference Sections](#reference-sections)
-    - [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy)
-    - [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
-    - [Placeholder Hygiene](#placeholder-hygiene)
-  - [Reference Documents](#reference-documents)
-
----
-
 ## Architecture Reference
 
-> **REFERENCE — no action required.** 
-> Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
+Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
 
   1. **`ui_mode: 'custom'`** for Stripe Checkout
      - Proven in freelance-payments. Full UI control.
@@ -303,33 +132,25 @@
 
 ---
 
-## Phase 0: Sean's Prerequisites
+## Phase 0: Setup
 
-> **ACTION — (SEAN) only.** 
-> All items below are human-only (account creation, password choices, dashboard clicks, domain setup). An agent cannot do these. Complete Phase 0 BEFORE kicking off the first implementation session.
+Complete Phase 0 BEFORE kicking off the first implementation session.
 
-### Secret handling — do this once, not twice
+### Secrets & Services 
 
-As you copy each key from its dashboard, paste it into `.env.local` AND run `vercel env add` for the same key, in the same sitting. This avoids gathering-then-setting-later churn.
+Do this once, both for development and production environments. Never paste secrets into this doc, commit messages, or any tracked file. 
 
-  - `.env.local` (local file, gitignored) is for `vercel dev`
-  - Vercel env vars (set via `vercel env add VAR_NAME preview` and `vercel env add VAR_NAME production`) are for preview and prod deployments
-  - Never paste secrets into this doc, commit messages, or any tracked file
-
-First things first:
-
-  - [ ] (AGENT) **Create** `.env.example` from the [Configuration Files](#configuration-files) reference section (template only, no real values)
-  - [ ] (AGENT) **Create** `.env.local` from template: `cp .env.example .env.local`
-  - [ ] (SEAN) Add `.env.local` to `.gitignore` if not already present (verify: `grep -q "\.env\.local" .gitignore`)
-
-### Repo reconciliation
-
-You are currently on the `everlastings` branch. Before the first implementation session, reconcile to the standard two-branch model documented in [Git Branching Strategy](#git-branching-strategy):
-
-  - [ ] (SEAN+AGENT) **Merge** `everlastings` → `main` (PR or direct merge) so main is up to date
-  - [ ] (SEAN+AGENT) **Create** `dev` from `main`: `git checkout main && git checkout -b dev && git push -u origin dev`
-  - [ ] (SEAN) **Delete** the `everlastings` branch locally and on origin once confirmed merged
-  - [ ] (AGENT) **Confirm** Vercel project auto-promotes main → Production, dev → Preview
+  - [x] **Create** `.env.example`
+  - [x] **Create** `.env.local` from template
+  - [x] **Update** `.gitignore` `.env.local` 
+  - [ ] **Setup** all services and save keys to drafting pad 
+  - [ ] **Merge** `everlastings` → `main`
+  - [ ] **Setup** live secrets in main branch 
+  - [ ] **Send** live secrets to production Vercel environment `vercel env add VAR_NAME production`
+  - [ ] **Delete** the `everlastings` branch locally and on origin once confirmed merged
+  - [ ] **Create** dev branch 
+  - [ ] **Setup** test secrets in dev branch
+  - [ ] **Send** test secrets to preview Vercel environment `vercel env add VAR_NAME preview`
 
 ### Services (one service per group — complete each service end-to-end before moving on)
 
@@ -366,20 +187,19 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 ---
 
-## Git Branching Strategy
+## Git Branching Strategy Reference
 
-> **REFERENCE — no action required** 
-> The actual branch-creation checkboxes live in [Phase 0](#phase-0-seans-prerequisites) > Repo reconciliation. 
+The actual branch-creation checkboxes live in [Phase 0](#phase-0-setup).
 
-  ```
-  main (production — live Stripe keys)
-    ↑ merge via PR only
-  dev (integration — test Stripe keys)
-    ↑ merge feature branches
-  feat/product-page
-  feat/checkout-flow
-  fix/webhook-signature
-  ```
+```
+main (production — live Stripe keys)
+  ↑ merge via PR only
+dev (integration — test Stripe keys)
+  ↑ merge feature branches
+feat/product-page
+feat/checkout-flow
+fix/webhook-signature
+```
 
 | Branch   | Vercel Environment | Stripe Keys            | URL                       |
 | -------- | ------------------ | ---------------------- | ------------------------- |
@@ -403,41 +223,43 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 ### Setup Commands
 
-  ```bash
-  # Initial branch setup (run once)
-  git checkout main
-  git checkout -b dev
-  git push -u origin dev
+```bash
+# From current branch 
+git checkout everlastings
+git checkout -b main
+git push -u origin main 
 
-  # Feature work
-  git checkout dev
-  git checkout -b feat/product-page
-  # ... work ...
-  git push -u origin feat/product-page
-  # Create PR: feat/product-page → dev (via GitHub)
-  # After merge: delete feat branch
+# Initial branch setup (run once)
+git checkout main
+git checkout -b dev
+git push -u origin dev
 
-  # Production release
-  # Create PR: dev → main (via GitHub)
-  # Merge → Vercel auto-deploys to production
+# Feature work
+git checkout dev
+git checkout -b feat/product-page
+# ... work ...
+git push -u origin feat/product-page
+# Create PR: feat/product-page → dev (via GitHub)
+# After merge: delete feat branch
 
-  # Local environment setup (after branches exist)
-  cp .env.example .env.local
-  # Fill in real values from Supabase/Stripe/R2/Cloudinary dashboards
-  npm install
-  vercel dev
-  ```
+# Production release
+# Create PR: dev → main (via GitHub)
+# Merge → Vercel auto-deploys to production
+
+# Local environment setup (after branches exist)
+cp .env.example .env.local
+# Fill in real values from Supabase/Stripe/R2/Cloudinary dashboards
+npm install
+vercel dev
+```
 
 ---
 
-## Environment Strategy
-
-> **REFERENCE — no action required** 
-> Actions happen in [Phase 0](#phase-0-seans-prerequisites) as each secret is gathered, and at launch in the Live Launch Switchover Process below. 
+## Environment Strategy Reference 
 
 ### Where Secrets Live
 
-  > These live in 3 distinct locations, each with a specific purpose. 
+> These live in 3 distinct locations, each with a specific purpose. 
 
 **1. Vercel Dashboard** (all production secrets)
   - Settings → Environment Variables
@@ -498,10 +320,9 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
 ---
 
-## Source of Truth Hierarchy
+## Source of Truth Hierarchy Reference 
 
-> **REFERENCE — no action required.** 
-> Cited from api/stripe-sync.ts, api/webhook.ts, and api/products.ts.
+Cited from `api/stripe-sync.ts`, `api/webhook.ts`, and `api/products.ts`.
 
   1. **Supabase** — authoritative product data, customer records, orders, site config
   2. **Stripe** — payment mirror only. Created from Supabase data via webhook, never manually edited
@@ -512,10 +333,9 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ---
 
-## Stripe Sync Rules
+## Stripe Sync Rules Reference 
 
-> **REFERENCE — no action required.** 
-> Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` (A2) and `api/products.ts > PUT` (A2).
+Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` (A2) and `api/products.ts > PUT` (A2).
 
   - On product **INSERT** → create Stripe Product + Price (via `api/stripe-sync.ts`)
   - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase
@@ -527,334 +347,331 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ## Product Schema Hard Reference
 
-> **REFERENCE — no action required** 
-> Migrations are applied in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) and again verified in A1 Supabase. 
+Migrations are applied in [Phase 0 > Agent bootstrap](#phase-0-setup) and again verified in A1 Supabase. 
 
 ### TypeScript Interface 
 
 These are for API functions. 
 
-  ```typescript
-  interface Product {
-    id: string;                    // uuid, auto-generated
-    sku: string;                   // unique, auto-generated
-    slug: string;                  // unique, IMMUTABLE — generated API-side or by DB trigger
-    title: string;                 // NOT NULL
-    headline: string;              // 5-7 word tagline
-    story_card: string;            // 2-8 paragraphs, poetic
-    description: string;           // short summary
-    features: string[];            // jsonb array of feature strings
-    price: number;                 // integer, in cents ($245 = 24500)
-    dimensions: string;            // e.g. '8" W x 6" D x 10" H'
-    weight: string;                // e.g. '2.5 lbs'
-    materials: string[];           // text array
-    power_supply: string | null;   // nullable
-    care_instructions: string[];   // text array
-    shipping_details: string[];    // text array
-    product_type: string;          // 'miniature' | 'printable' | 'storybook'
-    series: string | null;         // nullable — 'Portals to Peace', etc.
-    available: boolean;            // default true
-    quantity: number;              // default 1
-    featured: boolean;             // default false
-    images: { url: string; alt: string }[]; // jsonb array
-    thumbnail: string;             // CDN URL
-    thumbnail_alt: string;
-    media: { type: 'video' | 'gif' | 'youtube'; url: string; caption?: string }[] | null;
-    seo_title: string;
-    seo_description: string;
-    artist_note: string | null;    // nullable
-    stripe_product_id: string | null; // auto-populated by stripe-sync
-    stripe_price_id: string | null;   // auto-populated by stripe-sync
-    homepage_theme: { colors: string[]; mood: string } | null; // nullable
-    created_at: string;            // timestamptz, auto
-    updated_at: string;            // timestamptz, auto
-  }
-  ```
+```typescript
+interface Product {
+  id: string;                    // uuid, auto-generated
+  sku: string;                   // unique, auto-generated
+  slug: string;                  // unique, IMMUTABLE — generated API-side or by DB trigger
+  title: string;                 // NOT NULL
+  headline: string;              // 5-7 word tagline
+  story_card: string;            // 2-8 paragraphs, poetic
+  description: string;           // short summary
+  features: string[];            // jsonb array of feature strings
+  price: number;                 // integer, in cents ($245 = 24500)
+  dimensions: string;            // e.g. '8" W x 6" D x 10" H'
+  weight: string;                // e.g. '2.5 lbs'
+  materials: string[];           // text array
+  power_supply: string | null;   // nullable
+  care_instructions: string[];   // text array
+  shipping_details: string[];    // text array
+  product_type: string;          // 'miniature' | 'printable' | 'storybook'
+  series: string | null;         // nullable — 'Portals to Peace', etc.
+  available: boolean;            // default true
+  quantity: number;              // default 1
+  featured: boolean;             // default false
+  images: { url: string; alt: string }[]; // jsonb array
+  thumbnail: string;             // CDN URL
+  thumbnail_alt: string;
+  media: { type: 'video' | 'gif' | 'youtube'; url: string; caption?: string }[] | null;
+  seo_title: string;
+  seo_description: string;
+  artist_note: string | null;    // nullable
+  stripe_product_id: string | null; // auto-populated by stripe-sync
+  stripe_price_id: string | null;   // auto-populated by stripe-sync
+  homepage_theme: { colors: string[]; mood: string } | null; // nullable
+  created_at: string;            // timestamptz, auto
+  updated_at: string;            // timestamptz, auto
+}
+```
 
 ### Supabase SQL
 
 These are the 8 tables to be created. 
 
-  ```sql
-  CREATE TABLE products (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    sku text UNIQUE NOT NULL DEFAULT ('EVE-' || substr(gen_random_uuid()::text, 1, 8)),
-    slug text UNIQUE NOT NULL,
-    title text NOT NULL,
-    headline text,
-    story_card text,
-    description text,
-    features jsonb DEFAULT '[]'::jsonb,
-    price integer NOT NULL,
-    dimensions text,
-    weight text,
-    materials text[] DEFAULT '{}',
-    power_supply text,
-    care_instructions text[] DEFAULT '{}',
-    shipping_details text[] DEFAULT '{}',
-    product_type text NOT NULL DEFAULT 'miniature',
-    series text,
-    available boolean DEFAULT true,
-    quantity integer DEFAULT 1,
-    featured boolean DEFAULT false,
-    images jsonb DEFAULT '[]'::jsonb,
-    thumbnail text,
-    thumbnail_alt text,
-    media jsonb DEFAULT '[]'::jsonb,
-    seo_title text,
-    seo_description text,
-    artist_note text,
-    stripe_product_id text,
-    stripe_price_id text,
-    homepage_theme jsonb,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-  );
+```sql
+CREATE TABLE products (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  sku text UNIQUE NOT NULL DEFAULT ('EVE-' || substr(gen_random_uuid()::text, 1, 8)),
+  slug text UNIQUE NOT NULL,
+  title text NOT NULL,
+  headline text,
+  story_card text,
+  description text,
+  features jsonb DEFAULT '[]'::jsonb,
+  price integer NOT NULL,
+  dimensions text,
+  weight text,
+  materials text[] DEFAULT '{}',
+  power_supply text,
+  care_instructions text[] DEFAULT '{}',
+  shipping_details text[] DEFAULT '{}',
+  product_type text NOT NULL DEFAULT 'miniature',
+  series text,
+  available boolean DEFAULT true,
+  quantity integer DEFAULT 1,
+  featured boolean DEFAULT false,
+  images jsonb DEFAULT '[]'::jsonb,
+  thumbnail text,
+  thumbnail_alt text,
+  media jsonb DEFAULT '[]'::jsonb,
+  seo_title text,
+  seo_description text,
+  artist_note text,
+  stripe_product_id text,
+  stripe_price_id text,
+  homepage_theme jsonb,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-  -- Slug generation: FALLBACK ONLY for manual Supabase Studio inserts.
-  -- Normal flow: slug is generated API-side BEFORE image upload and passed in the INSERT.
-  -- This trigger only fires if slug is NULL or empty (manual insert without slug).
-  CREATE OR REPLACE FUNCTION generate_slug()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    IF NEW.slug IS NULL OR NEW.slug = '' THEN
-      NEW.slug := lower(replace(NEW.title, ' ', '-'));
-    END IF;
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
+-- Slug generation: FALLBACK ONLY for manual Supabase Studio inserts.
+-- Normal flow: slug is generated API-side BEFORE image upload and passed in the INSERT.
+-- This trigger only fires if slug is NULL or empty (manual insert without slug).
+CREATE OR REPLACE FUNCTION generate_slug()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.slug IS NULL OR NEW.slug = '' THEN
+    NEW.slug := lower(replace(NEW.title, ' ', '-'));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER set_slug
-    BEFORE INSERT ON products
-    FOR EACH ROW
-    EXECUTE FUNCTION generate_slug();
+CREATE TRIGGER set_slug
+  BEFORE INSERT ON products
+  FOR EACH ROW
+  EXECUTE FUNCTION generate_slug();
 
-  -- Auto-update updated_at
-  CREATE OR REPLACE FUNCTION update_updated_at()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-  END;
-  $$ LANGUAGE plpgsql;
+-- Auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER set_updated_at
-    BEFORE UPDATE ON products
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
-  ```
+CREATE TRIGGER set_updated_at
+  BEFORE UPDATE ON products
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+```
 
-  ```sql
-  CREATE TABLE customers (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    email text UNIQUE NOT NULL,
-    name text,
-    phone text,
-    shipping_address jsonb,
-    stripe_customer_id text,
-    source text DEFAULT 'checkout',
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-  );
+```sql
+CREATE TABLE customers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text UNIQUE NOT NULL,
+  name text,
+  phone text,
+  shipping_address jsonb,
+  stripe_customer_id text,
+  source text DEFAULT 'checkout',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-  CREATE TRIGGER set_updated_at_customers
-    BEFORE UPDATE ON customers
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
-  ```
+CREATE TRIGGER set_updated_at_customers
+  BEFORE UPDATE ON customers
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at();
+```
 
-  ```sql
-  -- orders table includes shipping columns (AR #30)
-  CREATE TABLE orders (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    stripe_session_id text NOT NULL,
-    stripe_payment_intent text,
-    product_id uuid REFERENCES products(id),
-    customer_id uuid REFERENCES customers(id),
-    customer_email text,
-    amount integer,
-    status text DEFAULT 'completed',  -- 'completed' | 'shipped' | 'delivered' | 'refunded'
-    shipping_address jsonb,
-    tracking_number text,
-    tracking_carrier text,            -- 'USPS' | 'UPS' | 'FedEx' | 'DHL'
-    shipped_at timestamptz,
-    delivered_at timestamptz,          -- post-launch, via Shippo webhook
-    created_at timestamptz DEFAULT now()
-  );
+```sql
+-- orders table includes shipping columns (AR #30)
+CREATE TABLE orders (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  stripe_session_id text NOT NULL,
+  stripe_payment_intent text,
+  product_id uuid REFERENCES products(id),
+  customer_id uuid REFERENCES customers(id),
+  customer_email text,
+  amount integer,
+  status text DEFAULT 'completed',  -- 'completed' | 'shipped' | 'delivered' | 'refunded'
+  shipping_address jsonb,
+  tracking_number text,
+  tracking_carrier text,            -- 'USPS' | 'UPS' | 'FedEx' | 'DHL'
+  shipped_at timestamptz,
+  delivered_at timestamptz,          -- post-launch, via Shippo webhook
+  created_at timestamptz DEFAULT now()
+);
 
-  -- Fast lookup of unshipped orders for admin queue
-  CREATE INDEX idx_orders_needs_shipping ON orders (created_at DESC)
-    WHERE shipped_at IS NULL AND status = 'completed';
-  ```
+-- Fast lookup of unshipped orders for admin queue
+CREATE INDEX idx_orders_needs_shipping ON orders (created_at DESC)
+  WHERE shipped_at IS NULL AND status = 'completed';
+```
 
-  ```sql
-  -- subscribers table includes promo code tracking (AR #31)
-  CREATE TABLE subscribers (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    email text UNIQUE NOT NULL,
-    source text DEFAULT 'footer',
-    promo_code text,                     -- dynamic Stripe promotion code for newsletter welcome / contemplation CTA
-    promo_code_expires_at timestamptz,
-    created_at timestamptz DEFAULT now()
-  );
-  ```
+```sql
+-- subscribers table includes promo code tracking (AR #31)
+CREATE TABLE subscribers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text UNIQUE NOT NULL,
+  source text DEFAULT 'footer',
+  promo_code text,                     -- dynamic Stripe promotion code for newsletter welcome / contemplation CTA
+  promo_code_expires_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+```
 
-  ```sql
-  CREATE TABLE site_config (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    key text UNIQUE NOT NULL,
-    value jsonb NOT NULL,
-    updated_at timestamptz DEFAULT now()
-  );
-  ```
+```sql
+CREATE TABLE site_config (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  key text UNIQUE NOT NULL,
+  value jsonb NOT NULL,
+  updated_at timestamptz DEFAULT now()
+);
+```
 
-  ```sql
-  -- Webhook idempotency: prevents duplicate processing when Stripe retries (AR #21)
-  CREATE TABLE webhook_events (
-    event_id text PRIMARY KEY,
-    processed_at timestamptz DEFAULT now()
-  );
-  ```
+```sql
+-- Webhook idempotency: prevents duplicate processing when Stripe retries (AR #21)
+CREATE TABLE webhook_events (
+  event_id text PRIMARY KEY,
+  processed_at timestamptz DEFAULT now()
+);
+```
 
-  ```sql
-  -- Product interest tracking: email capture + cart activity notifications (AR #26)
-  CREATE TABLE product_interests (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    email text NOT NULL,
-    product_slug text NOT NULL,
-    notified boolean DEFAULT false,
-    created_at timestamptz DEFAULT now(),
-    UNIQUE(email, product_slug)
-  );
-  ```
+```sql
+-- Product interest tracking: email capture + cart activity notifications (AR #26)
+CREATE TABLE product_interests (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text NOT NULL,
+  product_slug text NOT NULL,
+  notified boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(email, product_slug)
+);
+```
 
-  ```sql
-  -- Cart holds: soft reservations during checkout flow (AR #28, #29)
-  -- Prevents UX shock of "sold while entering payment" without hard-reserving items
-  CREATE TABLE cart_holds (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    session_id text NOT NULL,
-    product_id uuid REFERENCES products(id) ON DELETE CASCADE NOT NULL,
-    expires_at timestamptz NOT NULL,
-    created_at timestamptz DEFAULT now()
-  );
+```sql
+-- Cart holds: soft reservations during checkout flow (AR #28, #29)
+-- Prevents UX shock of "sold while entering payment" without hard-reserving items
+CREATE TABLE cart_holds (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id text NOT NULL,
+  product_id uuid REFERENCES products(id) ON DELETE CASCADE NOT NULL,
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
 
-  -- Index for efficient availability lookups (AR #28)
-  CREATE INDEX idx_cart_holds_product_active ON cart_holds (product_id, expires_at);
-  ```
+-- Index for efficient availability lookups (AR #28)
+CREATE INDEX idx_cart_holds_product_active ON cart_holds (product_id, expires_at);
+```
 
 ---
 
-## Configuration Files
-
-> **REFERENCE — no action required** 
-> Actions are in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) — "Create config files in repo root from this reference". 
+## Configuration Files Reference
 
 These files must be created as actual files in the repository root. Copy the contents below into each file.
 
 ### `vercel.json`
 
-  ```json
-  {
-    "rewrites": [
-      { "source": "/product/:slug", "destination": "/product.html" },
-      { "source": "/admin/:path*", "destination": "/admin/index.html" }
-    ],
-    "headers": [
-      {
-        "source": "/api/(.*)",
-        "headers": [
-          { "key": "Access-Control-Allow-Origin", "value": "https://everlastingsbyemaline.com" },
-          { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, OPTIONS" },
-          { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, stripe-signature" },
-          { "key": "Access-Control-Max-Age", "value": "86400" }
-        ]
-      }
-    ]
-  }
-  ```
+```json
+{
+  "rewrites": [
+    { "source": "/product/:slug", "destination": "/product.html" },
+    { "source": "/admin/:path*", "destination": "/admin/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://everlastingsbyemaline.com" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, stripe-signature" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ]
+    }
+  ]
+}
+```
 
 **Note**: CORS `Access-Control-Allow-Origin` is set to production domain. During development on preview URLs (`*.vercel.app`), CORS may need to be handled in API functions with dynamic origin checking. Address during A2 implementation.
 
 ### `tsconfig.json`
 
-  ```json
-  {
-    "compilerOptions": {
-      "target": "ES2020",
-      "module": "ES2020",
-      "moduleResolution": "node",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "outDir": "dist",
-      "rootDir": ".",
-      "types": ["node"]
-    },
-    "include": ["api/**/*.ts"],
-    "exclude": ["node_modules"]
-  }
-  ```
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["api/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
 
 ### `package.json`
 
-  ```json
-  {
-    "name": "everlastings-website",
-    "private": true,
-    "scripts": {
-      "dev": "vercel dev"
-    },
-    "dependencies": {
-      "stripe": "^17.0.0",
-      "@supabase/supabase-js": "^2.0.0",
-      "@aws-sdk/client-s3": "^3.0.0"
-    }
+```json
+{
+  "name": "everlastings-website",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "stripe": "^17.0.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "@aws-sdk/client-s3": "^3.0.0"
   }
-  ```
+}
+```
 
 ### `.env.example`
 
-  ```bash
-  # Supabase
-  SUPABASE_URL=https://your-project.supabase.co
-  SUPABASE_ANON_KEY=eyJ...
-  SUPABASE_SERVICE_KEY=eyJ...
+```bash
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_KEY=eyJ...
 
-  # Stripe (set test keys for Preview+Development, live keys for Production)
-  STRIPE_SECRET_KEY=sk_test_...
-  STRIPE_PUBLISHABLE_KEY=pk_test_...
-  STRIPE_WEBHOOK_SECRET=whsec_...
+# Stripe (set test keys for Preview+Development, live keys for Production)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-  # Cloudflare R2
-  R2_ACCOUNT_ID=your-account-id
-  R2_ACCESS_KEY_ID=your-access-key
-  R2_SECRET_ACCESS_KEY=your-secret-key
-  R2_BUCKET_NAME=everlastings
-  R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
+# Cloudflare R2
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=everlastings
+R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
 
-  # Cloudinary (stateless image transforms — same format as 360-design)
-  CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+# Cloudinary (stateless image transforms — same format as 360-design)
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
 
-  # Product API (for AI agents and external API access — AR #20)
-  # Generate with: openssl rand -hex 32
-  PRODUCT_API_KEY=your-random-64-char-string
+# Product API (for AI agents and external API access — AR #20)
+# Generate with: openssl rand -hex 32
+PRODUCT_API_KEY=your-random-64-char-string
 
-  # Meta Pixel (for retargeting + Instagram Shopping attribution — AR #25)
-  META_PIXEL_ID=your-pixel-id
-  META_ACCESS_TOKEN=your-meta-access-token
+# Meta Pixel (for retargeting + Instagram Shopping attribution — AR #25)
+META_PIXEL_ID=your-pixel-id
+META_ACCESS_TOKEN=your-meta-access-token
 
-  # Resend (transactional email — tracking, cart recovery coupons, newsletter welcome) — AR #30, #31
-  RESEND_API_KEY=re_...
-  RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com
-  ```
+# Resend (transactional email — tracking, cart recovery coupons, newsletter welcome) — AR #30, #31
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com
+```
 
 ---
 
-## How the Tracks Work
+## Development Tracks Reference
 
-> **REFERENCE — no action required.** 
-> Orientation for the three parallel implementation tracks.
+**Track A** and **Track B** can proceed simultaneously. Track C requires A2 + B3 minimum.
+
+**Track B approach**: Every frontend page is built with hardcoded placeholder content (lorem ipsum text, placeholder images). No JavaScript data-fetching. Client reviews and iterates on visual design. In Track C, we add the JS that fetches from Supabase.
 
   ```
   TRACK A (Backend)                    TRACK B (Frontend Design)
@@ -874,124 +691,113 @@ These files must be created as actual files in the repository root. Copy the con
                    C4: Testing + Launch
   ```
 
-**Track A** and **Track B** can proceed simultaneously. Track C requires A2 + B3 minimum.
-
-**Track B approach**: Every frontend page is built with hardcoded placeholder content (lorem ipsum text, placeholder images). No JavaScript data-fetching. Client reviews and iterates on visual design. In Track C, we add the JS that fetches from Supabase.
-
 ---
 
 ## TRACK A: Foundation + Backend
 
-> **ACTION — mostly (AGENT); handoff points to (SEAN) are tagged per checkbox.** 
-> Track A builds the backend: services wired up, database tables live, API endpoints shipped, admin UI functional.
+Track A builds the backend: services wired up, database tables live, API endpoints shipped, admin UI functional.
 
 ### A1: Services Setup
 
-> **ACTION — (SEAN+AGENT).** 
-> A1 assumes Phase 0 is complete (all accounts created, env vars loaded). 
-> A1 verifies each service is correctly wired and completes any agent-side configuration that depends on those services.
+A1 assumes Phase 0 is complete (all accounts created, env vars loaded) by verifying each service is correctly wired and completes any agent-side configuration that depends on those services.
 
 **YOU WILL HAVE**: All services connected, tables created, env vars set, analytics base installed
 
 #### Vercel
-
-> Covered in Phase 0 except the two steps below:
 
   - [ ] (SEAN) **Add** custom domain `everlastingsbyemaline.com` to the Vercel project (Settings > Domains)
   - [ ] (AGENT) **Push** to trigger a Vercel deploy and verify it loads without error
 
 #### Git Branches
 
-> Covered in Phase 0 except:
-
-  - [ ] (AGENT) **Verify** Vercel auto-deploys `main` → Production and all other branches → Preview
+  - [ ] (AGENT) **Verify** Vercel auto-deploys `main` → Production and all other branches → `Preview`
 
 #### Supabase
 
-> Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via MCP `apply_migration`. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
-
+Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via MCP `apply_migration`. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
+  
+  - [ ] (SEAN) **Verify** admin users invited in Supabase Auth > Users (covered in Phase 0 — this is a sanity check)
   - [ ] (AGENT) **Enable** RLS on all 8 tables (apply as part of the Phase 0 migration, or as a follow-up migration):
 
-  ```sql
-  -- PRODUCTS: public read, authenticated write
-  ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+```sql
+-- PRODUCTS: public read, authenticated write
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Products are publicly readable"
-    ON products FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Products are publicly readable"
+  ON products FOR SELECT TO anon, authenticated USING (true);
 
-  CREATE POLICY "Only authenticated users can insert products"
-    ON products FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Only authenticated users can insert products"
+  ON products FOR INSERT TO authenticated WITH CHECK (true);
 
-  CREATE POLICY "Only authenticated users can update products"
-    ON products FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Only authenticated users can update products"
+  ON products FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-  CREATE POLICY "Only authenticated users can delete products"
-    ON products FOR DELETE TO authenticated USING (true);
+CREATE POLICY "Only authenticated users can delete products"
+  ON products FOR DELETE TO authenticated USING (true);
 
-  -- CUSTOMERS: service role only (written by webhook)
-  ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+-- CUSTOMERS: service role only (written by webhook)
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Only authenticated users can read customers"
-    ON customers FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Only authenticated users can read customers"
+  ON customers FOR SELECT TO authenticated USING (true);
 
-  CREATE POLICY "Service role can manage customers"
-    ON customers FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role can manage customers"
+  ON customers FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-  -- ORDERS: authenticated read, service role write
-  ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+-- ORDERS: authenticated read, service role write
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Only authenticated users can read orders"
-    ON orders FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Only authenticated users can read orders"
+  ON orders FOR SELECT TO authenticated USING (true);
 
-  CREATE POLICY "Service role can insert orders"
-    ON orders FOR INSERT TO service_role WITH CHECK (true);
+CREATE POLICY "Service role can insert orders"
+  ON orders FOR INSERT TO service_role WITH CHECK (true);
 
-  -- SUBSCRIBERS: public insert, authenticated read
-  ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
+-- SUBSCRIBERS: public insert, authenticated read
+ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Anyone can subscribe"
-    ON subscribers FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Anyone can subscribe"
+  ON subscribers FOR INSERT TO anon, authenticated WITH CHECK (true);
 
-  CREATE POLICY "Only authenticated users can read subscribers"
-    ON subscribers FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Only authenticated users can read subscribers"
+  ON subscribers FOR SELECT TO authenticated USING (true);
 
-  -- SITE_CONFIG: public read, authenticated update
-  ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
+-- SITE_CONFIG: public read, authenticated update
+ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Site config is publicly readable"
-    ON site_config FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Site config is publicly readable"
+  ON site_config FOR SELECT TO anon, authenticated USING (true);
 
-  CREATE POLICY "Only authenticated users can update config"
-    ON site_config FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Only authenticated users can update config"
+  ON site_config FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 
-  -- WEBHOOK_EVENTS: service role only (no RLS policies needed — only accessed via service key)
-  ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
+-- WEBHOOK_EVENTS: service role only (no RLS policies needed — only accessed via service key)
+ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Service role can manage webhook events"
-    ON webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role can manage webhook events"
+  ON webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-  -- PRODUCT_INTERESTS: public insert (CTA forms), authenticated read (admin)
-  ALTER TABLE product_interests ENABLE ROW LEVEL SECURITY;
+-- PRODUCT_INTERESTS: public insert (CTA forms), authenticated read (admin)
+ALTER TABLE product_interests ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Anyone can register product interest"
-    ON product_interests FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Anyone can register product interest"
+  ON product_interests FOR INSERT TO anon, authenticated WITH CHECK (true);
 
-  CREATE POLICY "Only authenticated users can read product interests"
-    ON product_interests FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Only authenticated users can read product interests"
+  ON product_interests FOR SELECT TO authenticated USING (true);
 
-  -- CART_HOLDS: service role only (all access through api/checkout/reserve.ts)
-  ALTER TABLE cart_holds ENABLE ROW LEVEL SECURITY;
+-- CART_HOLDS: service role only (all access through api/checkout/reserve.ts)
+ALTER TABLE cart_holds ENABLE ROW LEVEL SECURITY;
 
-  CREATE POLICY "Service role can manage cart holds"
-    ON cart_holds FOR ALL TO service_role USING (true) WITH CHECK (true);
-  ```
+CREATE POLICY "Service role can manage cart holds"
+  ON cart_holds FOR ALL TO service_role USING (true) WITH CHECK (true);
+```
 
-  - [ ] (SEAN) **Verify** admin users invited in Supabase Auth > Users (covered in Phase 0 — this is a sanity check)
   - [ ] (AGENT) **Verify** Database Webhook configured and fires on `products` INSERT (covered in Phase 0 — tail logs or insert a test product)
 
 #### Cloudflare R2
 
-> **Sean's part** (Phase 0): bucket created, public access enabled, custom domain connected via R2 > Settings > Public access > Custom Domains > Connect Domain (Cloudflare auto-creates the CNAME since the domain is on Cloudflare DNS). Status must read Active before continuing.
+Complete from Phase 0: bucket created, public access enabled, custom domain connected via R2 > Settings > Public access > Custom Domains > Connect Domain (Cloudflare auto-creates the CNAME since the domain is on Cloudflare DNS). Status must read Active before continuing.
 
   - [ ] (AGENT) **Verify** DNS resolution: `dig cdn.everlastingsbyemaline.com` returns the R2 CNAME target
   - [ ] (AGENT) **Set** `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com` in Vercel env vars (all environments)
