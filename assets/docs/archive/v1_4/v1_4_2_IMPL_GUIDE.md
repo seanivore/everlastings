@@ -1,13 +1,13 @@
-# Everlastings v1.4.0 Implementation Guide
+# Everlastings v1.4.2 Implementation Guide
 
-**Version**: v1.4.0
-**Created**: 2026-04-16 from `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md` via `assets/docs/archive/v1_4/v1_4_0_FEEDBACK_PLAN_1.md`
-**Revised**: 2026-04-16 via `assets/docs/archive/v1_4/v1_4_0_FEEDBACK_PLAN_2.md` and `assets/docs/archive/v1_4/v1_4_0_FEEDBACK_PLAN_3.md`
+**Version**: v1.4.2
+**Created**: 2026-04-16 from `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md` via `assets/docs/archive/v1_4/v1_4_0_FEEDBACK_PLAN.md`
+**Revised**: 2026-04-16 via `assets/docs/archive/v1_4/v1_4_1_FEEDBACK_PLAN.md` and `assets/docs/archive/v1_4/v1_4_2_FEEDBACK_PLAN.md`
 **Previous**: v1.3.1 (2026-04-12), archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
 **Architecture Reference**: `assets/docs/EVERLASTINGS_STORE.md`
 **Design Reference**: `assets/docs/BRAND.md`
-**Action Steps**: `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`
+**Action Steps**: `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`
 
 ---
 
@@ -3992,7 +3992,7 @@ Track B builds frontend pages with hardcoded placeholder content (images, text, 
 | Architecture     | `assets/docs/EVERLASTINGS_STORE.md`                    | Full technical reference                    |
 | Brand Guide      | `assets/docs/BRAND.md`                                 | Colors, fonts, voice, copy, email templates |
 | Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                      | Client guide + AI creation protocol         |
-| Action Steps     | `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`        | Checklist version of this doc               |
+| Action Steps     | `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`        | Checklist version of this doc               |
 | KPI + Ads Pitch  | `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | Post-launch contract asset                  |
 | Dev Rules        | `.agent/AGENTS.md`                                     | Git branching, dev protocols                |
 | Feedback Source  | `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md`     | Source of the 12 items that drove v1.4      |

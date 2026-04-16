@@ -7,7 +7,7 @@ Understand the project, then update as needed:
 `README.md`
 
 Detailed and step based build plan to update by creating new documents: 
-`assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md` to `v1_4/v1_4_0_IMPL_GUIDE.md`
+`assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md` to `v1_4/v1_4_2_IMPL_GUIDE.md`
 `assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md` to `v1_4/v1_4_0_IMPL_STEPS`
 
 Build references to maintain, update as needed: 

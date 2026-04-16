@@ -1,7 +1,7 @@
 # Product Protocol — Everlastings by Emaline
 
 **Created**: 2026-04-12
-**Updated**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Admin Orders Tab).
+**Updated**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Admin Orders Tab).
 
 ---
 
@@ -221,11 +221,11 @@ This protocol enables any AI assistant with HTTP + file capabilities to create a
 
 All curl commands below use `$BASE_URL` for the API host. Set it once at the start of the session based on which environment the AI is targeting:
 
-| Use case                                     | `BASE_URL` value                                                  |
-| -------------------------------------------- | ----------------------------------------------------------------- |
-| Real product creation (default)              | `https://everlastingsbyemaline.com`                               |
+| Use case                                      | `BASE_URL` value                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Real product creation (default)               | `https://everlastingsbyemaline.com`                                                  |
 | Test/dev product seeding (preview deployment) | `https://everlastings-git-dev-{team}.vercel.app` (or any `*.vercel.app` preview URL) |
-| Local testing (`vercel dev`)                 | `http://localhost:3000`                                           |
+| Local testing (`vercel dev`)                  | `http://localhost:3000`                                                              |
 
 ```bash
 # Production (default)
@@ -235,7 +235,7 @@ export BASE_URL="https://everlastingsbyemaline.com"
 export BASE_URL="https://everlastings-git-dev-team.vercel.app"
 ```
 
-When `BASE_URL` points to a preview URL, the API automatically tags created rows with `is_test = true` and uploads images under R2's `test/` namespace (CDN URLs become `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`). No manual cleanup is needed before launch — see the implementation guide's [Dev/Test Data Hygiene](archive/v1_4/v1_4_0_IMPL_GUIDE.md#devtest-data-hygiene-reference) section.
+When `BASE_URL` points to a preview URL, the API automatically tags created rows with `is_test = true` and uploads images under R2's `test/` namespace (CDN URLs become `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`). No manual cleanup is needed before launch — see the implementation guide's [Dev/Test Data Hygiene](archive/v1_4/v1_4_2_IMPL_GUIDE.md#devtest-data-hygiene-reference) section.
 
 `PRODUCT_API_KEY` differs per environment too — use the test value from `.env.local` when `BASE_URL` is a preview URL, and the live value (managed by Sean) only for production seeding.
 

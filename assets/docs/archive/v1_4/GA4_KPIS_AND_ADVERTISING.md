@@ -5,7 +5,7 @@
 **Version**: v1.0 
 **Created**: 2026-04-16 08:42
 **Updated**: 2026-04-16 09:28 
-**Companion to**: `assets/docs/EVERLASTINGS_STORE.md` & `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
+**Companion to**: `assets/docs/EVERLASTINGS_STORE.md` & `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
 
 ---
 

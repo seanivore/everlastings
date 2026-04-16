@@ -4,7 +4,7 @@
 **Created**: 2026-04-16
 **Revised**: 2026-04-16 (restructured — Phase 1 removed as duplicate of A1; every checkbox tagged)
 **Previous**: v1.3.1 (archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md`)
-**Master Plan**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
+**Master Plan**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
 **Format**: One checkbox = one action. ADHD-friendly. Every action tagged `(SEAN)` (you do it in a dashboard/on your laptop), `(AGENT)` (agent does it via code/CLI/MCP), or `(SEAN+AGENT)` (handoff pair).
 
 > **Reading order**: Phase 0 (human setup, done before first session) → Track A (backend) in parallel with Track B (frontend design) → Track C (integration + launch). Reference sections live in the IMPL_GUIDE; they are read-only.
@@ -48,7 +48,7 @@
 
 ### Setup the repo and env scaffolding
 
-  - [ ] (AGENT) **Create** `.env.example` (template, no real values) from [Configuration Files](./v1_4_0_IMPL_GUIDE.md#configuration-files-reference) in the guide
+  - [ ] (AGENT) **Create** `.env.example` (template, no real values) from [Configuration Files](./v1_4_2_IMPL_GUIDE.md#configuration-files-reference) in the guide
   - [ ] (AGENT) **Create** `.env.local` from template: `cp .env.example .env.local`
   - [ ] (SEAN) **Verify** `.env.local` is in `.gitignore`
   - [ ] (AGENT) **Create** `vercel.json`, `tsconfig.json`, `package.json` from the guide
@@ -159,7 +159,7 @@
   - [ ] (AGENT) **Wire** "Mark as shipped" → `PATCH /api/orders/:id` → records tracking, fires Resend tracking email, writes `tracking_email_sent_at` on Resend success
   - [ ] (AGENT) **Update** `assets/docs/PRODUCT_PROTOCOL.md` if any new fields surface
   - [ ] (SEAN) **Review** `assets/docs/PRODUCT_PROTOCOL.md`
-  - [ ] (SEAN) **Create Custom GPT** "Everlastings Product Assistant" per IMPL_GUIDE > [Custom GPT](./v1_4_0_IMPL_GUIDE.md#custom-gpt-everlastings-product-assistant--emys-ai-path-new) — paste Instructions + OpenAPI schema, set Bearer auth to production `PRODUCT_API_KEY`, set privacy URL to `everlastingsbyemaline.com/privacy.html`, smoke test with a $1 throwaway product (delete after), send private link to Emy to bookmark
+  - [ ] (SEAN) **Create Custom GPT** "Everlastings Product Assistant" per IMPL_GUIDE > [Custom GPT](./v1_4_2_IMPL_GUIDE.md#custom-gpt-everlastings-product-assistant--emys-ai-path-new) — paste Instructions + OpenAPI schema, set Bearer auth to production `PRODUCT_API_KEY`, set privacy URL to `everlastingsbyemaline.com/privacy.html`, smoke test with a $1 throwaway product (delete after), send private link to Emy to bookmark
   - [ ] (AGENT) **Test** full admin flow: login → add product → verify on shop page; then simulate order → mark shipped → verify tracking email delivered
   - [ ] (AGENT) **Test** Custom GPT flow (pre-handoff): open the GPT, create a test product from scratch with placeholder images, confirm the preview step requires explicit approval, confirm created product appears in shop. Delete the test product after.
 

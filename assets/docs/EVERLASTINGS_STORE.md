@@ -5,7 +5,7 @@
 **Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo web UI + Resend tracking emails), corrected coupon strategy (idempotent `api/_bootstrap/coupons.ts`), single Phase 0 setup block (Phase 1 removed as duplicate of A1), placeholder hygiene, `customer_email_linked` event
 **Version**: v1.4.0
 **Status**: Pre-development, architecture finalized
-**Build Guide**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
+**Build Guide**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
 
 ---
 
@@ -215,7 +215,7 @@ Create `.env.local` (see also `.env.example` in impl guide):
   CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
   ```
 
-**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys, served at `everlastingsbyemaline.com`). `dev`/`feat/*` branches → Preview (test Stripe keys, served at auto-generated `*.vercel.app` URLs — these are the dev environment). The shared Supabase project and R2 bucket are kept clean via an `is_test` row flag and a `test/` R2 path prefix. Full conventions: see `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > [Environment Strategy](archive/v1_4/v1_4_0_IMPL_GUIDE.md#environment-strategy-reference) and [Dev/Test Data Hygiene](archive/v1_4/v1_4_0_IMPL_GUIDE.md#devtest-data-hygiene-reference).
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys, served at `everlastingsbyemaline.com`). `dev`/`feat/*` branches → Preview (test Stripe keys, served at auto-generated `*.vercel.app` URLs — these are the dev environment). The shared Supabase project and R2 bucket are kept clean via an `is_test` row flag and a `test/` R2 path prefix. Full conventions: see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > [Environment Strategy](archive/v1_4/v1_4_2_IMPL_GUIDE.md#environment-strategy-reference) and [Dev/Test Data Hygiene](archive/v1_4/v1_4_2_IMPL_GUIDE.md#devtest-data-hygiene-reference).
 
 ### Local Development
 
@@ -616,7 +616,7 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `RESEND_API_KEY`         | Resend transactional email API key                      | Yes      |
 | `RESEND_FROM_EMAIL`      | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes      |
 
-**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
+**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 
 ### Post-Deploy Verification
 
@@ -772,8 +772,8 @@ Compared to v1.3.1:
 ## Related Documentation
 
   - **Brand Guide**: `assets/docs/BRAND.md`
-  - **Implementation Guide (current)**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
-  - **Action Steps (current)**: `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`
+  - **Implementation Guide (current)**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
+  - **Action Steps (current)**: `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Product Protocol**: `assets/docs/PRODUCT_PROTOCOL.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`

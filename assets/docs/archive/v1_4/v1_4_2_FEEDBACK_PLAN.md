@@ -2,7 +2,7 @@
 
 ## Context
 
-While cleaning up `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` at the "Secrets & Services" section, Sean paused at this line (v1_4_0_IMPL_GUIDE.md:805):
+While cleaning up `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` at the "Secrets & Services" section, Sean paused at this line (v1_4_2_IMPL_GUIDE.md:805):
 
 > "No development subdomain needed — dev and production share the same R2 bucket and CDN. Only Stripe keys differ between environments."
 
@@ -14,7 +14,7 @@ Sean noted that across multiple of his Vercel projects, preview URLs "load nothi
 
 ## Finding 1 — URL/preview separation IS documented correctly
 
-The Environment Strategy section (v1_4_0_IMPL_GUIDE.md:195-222) already covers this. Vercel auto-generates a unique `*.vercel.app` URL per branch. Preview deployments are the dev environment.
+The Environment Strategy section (v1_4_2_IMPL_GUIDE.md:195-222) already covers this. Vercel auto-generates a unique `*.vercel.app` URL per branch. Preview deployments are the dev environment.
 
 **The R2 sentence in context**: it means Sean doesn't need to register `dev.everlastingsbyemaline.com` as a custom Cloudflare CNAME — Vercel's auto-preview URLs serve as the dev URL. Wording is just ambiguous when read out of context.
 
@@ -70,20 +70,20 @@ IMPL_GUIDE.md:214-215 says "both test and live webhook endpoints configured in S
 
 ## Implementation plan (in order)
 
-1. **Rewrite the R2 line** at v1_4_0_IMPL_GUIDE.md:805 to be unambiguous and link back to the Branch Strategy table at line 195.
-2. **Add a new "Dev/Test Data Hygiene" section** to v1_4_0_IMPL_GUIDE.md (placed near Branch Strategy, ~line 250). Covers:
+1. **Rewrite the R2 line** at v1_4_2_IMPL_GUIDE.md:805 to be unambiguous and link back to the Branch Strategy table at line 195.
+2. **Add a new "Dev/Test Data Hygiene" section** to v1_4_2_IMPL_GUIDE.md (placed near Branch Strategy, ~line 250). Covers:
    - CORS strategy + relative-path fetch convention (Findings 2 + 3)
    - Supabase `is_test` column convention (Finding 4)
    - R2 `test/` prefix + `test_` filename prefix convention (Finding 5)
    - Stripe webhook pinning convention (Finding 6)
 3. **Update `vercel.json`** to remove the hardcoded `Access-Control-Allow-Origin` for `/api/*`. Either (a) replace with `*` and let per-route TypeScript handlers do allowlist matching, or (b) leave the static rule for production and document that all `api/*.ts` handlers must override the header dynamically. Option (a) is simpler.
-4. **Add a CORS helper** to the planned API endpoint architecture in v1_4_0_IMPL_GUIDE.md (the section that introduces `api/config.ts` around line 907). The helper reads `request.headers.get('origin')`, matches against the allowlist, and sets the response header dynamically. Every endpoint imports + calls it.
-5. **Update v1_4_0_IMPL_GUIDE.md > Secrets & Services > Stripe** at line 854 to reference the webhook pinning convention from the new section.
+4. **Add a CORS helper** to the planned API endpoint architecture in v1_4_2_IMPL_GUIDE.md (the section that introduces `api/config.ts` around line 907). The helper reads `request.headers.get('origin')`, matches against the allowlist, and sets the response header dynamically. Every endpoint imports + calls it.
+5. **Update v1_4_2_IMPL_GUIDE.md > Secrets & Services > Stripe** at line 854 to reference the webhook pinning convention from the new section.
 6. **Add a verification checkbox** in the Environment Strategy section: "Push a test branch, open the preview URL, confirm the page loads and `/api/config` returns 200."
 
 ## Critical files to modify
 
-- `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` — primary doc, multiple sections
+- `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` — primary doc, multiple sections
 - `vercel.json` — CORS header fix (the one actual code change)
 
 ## Critical files to reference (read-only)

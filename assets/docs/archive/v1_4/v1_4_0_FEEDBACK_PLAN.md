@@ -12,8 +12,8 @@ This session produces v1.4.0 versions of the two build docs (leaving v1.3.1 in p
 
 | File                                                   | Action       | Purpose         |
 | ------------------------------------------------------ | ------------ | --------------- |
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`        | **Create**   | New plan        |
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`        | **Create**   | New checklist   |
+| `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`        | **Create**   | New plan        |
+| `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`        | **Create**   | New checklist   |
 | `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | **Create**   | Post-launch     |
 | `assets/docs/EVERLASTINGS_STORE.md`                    | **Update**   | Refresh         |
 | `README.md`                                            | **Update**   | Refresh         |
@@ -73,7 +73,7 @@ For a low-volume artisan brand (expected: a few labels/month), **Shippo Starter 
 
 **Problem**: PRE-FLIGHT vs A1 Services Setup blurs together. Sean can't tell which checkboxes are for him (dashboard clicks, service account setup, paying for things) vs the agent (file creation, SQL runs, config wiring).
 
-**Solution in v1_4_0_IMPL_GUIDE.md + IMPL_STEPS.md**:
+**Solution in v1_4_2_IMPL_GUIDE.md + IMPL_STEPS.md**:
 
 Restructure into three explicit phases at the top:
 
@@ -118,7 +118,7 @@ Restructure into three explicit phases at the top:
 
 ### 3. Post-session Consistency Agent
 
-Add a final checklist item at the end of v1_4_0_IMPL_GUIDE.md:
+Add a final checklist item at the end of v1_4_2_IMPL_GUIDE.md:
 > **After v1.4.0 lands**: spawn a fresh-context Explore agent with the prompt "Read all of `assets/docs/**/*.md`, identify any references to deprecated file paths, stale version numbers, outdated table counts, or contradictions between docs. Report — don't fix." Sean reviews the report and drives targeted fixes.
 
 This is a session-closing task, not part of this v1.4 plan itself.
@@ -405,7 +405,7 @@ This way if a user loses their email, admin can look up the code. Also prevents 
 
 **Solution**: introduce a **`<!-- PLACEHOLDER: ... -->`** convention for all hardcoded content.
 
-In v1_4_0_IMPL_GUIDE.md add a **"Placeholder Hygiene"** section:
+In v1_4_2_IMPL_GUIDE.md add a **"Placeholder Hygiene"** section:
 
 1. Every piece of hardcoded demo content in Track B is wrapped in an HTML comment tag:
    ```html
@@ -435,8 +435,8 @@ This is lightweight, zero tooling needed, works across HTML/CSS/JS, and gives Se
 
 The IMPL_GUIDE and IMPL_STEPS will be written together as the core deliverable. Other docs are incremental updates.
 
-1. **Write** `v1_4_0_IMPL_GUIDE.md` — derived from v1_3_1_IMPL_GUIDE.md, with all 12 feedback items integrated. Renumber ARs as needed (adding new ones for shipping pipeline, soft-hold, email templates → probably ARs #28-32). Update version header, creation date, "Previous: v1.3.1".
-2. **Write** `v1_4_0_IMPL_STEPS.md` — derived from v1_3_1_IMPL_STEPS.md, restructure into Phase 0 / Phase 1 / Phase 2, tag every checkbox `[SEAN]` or `[AGENT]`.
+1. **Write** `v1_4_2_IMPL_GUIDE.md` — derived from v1_3_1_IMPL_GUIDE.md, with all 12 feedback items integrated. Renumber ARs as needed (adding new ones for shipping pipeline, soft-hold, email templates → probably ARs #28-32). Update version header, creation date, "Previous: v1.3.1".
+2. **Write** `v1_4_2_IMPL_STEPS.md` — derived from v1_3_1_IMPL_STEPS.md, restructure into Phase 0 / Phase 1 / Phase 2, tag every checkbox `[SEAN]` or `[AGENT]`.
 3. **Write** `GA4_KPIS_AND_ADVERTISING.md` — new doc, requires web research on DTC artisan benchmark data.
 4. **Update** `EVERLASTINGS_STORE.md`:
    - Bump version to v1.4.0, update date
@@ -469,7 +469,7 @@ The IMPL_GUIDE and IMPL_STEPS will be written together as the core deliverable. 
 ## Verification
 
 After updates, these must all be true:
-1. `v1_4_0_IMPL_GUIDE.md` exists, `v1_4_0_IMPL_STEPS.md` exists, both reference v1.4.0 version
+1. `v1_4_2_IMPL_GUIDE.md` exists, `v1_4_2_IMPL_STEPS.md` exists, both reference v1.4.0 version
 2. Every checkbox in IMPL_STEPS is tagged `[SEAN]` or `[AGENT]`
 3. Phase 0 / Phase 1 / Phase 2 structure is explicit
 4. Checkout flow is documented as three progressive screens (cart → info → pay) with soft-hold mechanism

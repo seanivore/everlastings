@@ -2,7 +2,7 @@
 
 ## Context
 
-After countless rounds of feedback integration, `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` (3,715 lines) has accumulated three classes of problems that break sequential human reading:
+After countless rounds of feedback integration, `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` (3,715 lines) has accumulated three classes of problems that break sequential human reading:
 
 1. **Triple duplication of setup actions.** The same commands appear in Phase 0 (lines 282-305), Phase 1 (307-325), and A1 Services Setup (821-1019) with inconsistent `(SEAN)`/`(AGENT)` tagging. Example: `git checkout -b dev` appears three times; `openssl rand -hex 32` twice; Supabase SQL execution three times; env-var setting scattered across five A1 subsections.
 
@@ -20,8 +20,8 @@ Sean has also flagged six specific content/flow issues (answered in conversation
 
 | File                                            | Action                                                                                    |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` | **Major restructure** (no content loss — reorganization + 6 fixes)                        |
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md` | **Align to restructured guide** (mirror section order, re-verify `(SEAN)`/`(AGENT)` tags) |
+| `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` | **Major restructure** (no content loss — reorganization + 6 fixes)                        |
+| `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md` | **Align to restructured guide** (mirror section order, re-verify `(SEAN)`/`(AGENT)` tags) |
 
 No other files change. `EVERLASTINGS_STORE.md`, `BRAND.md`, `PRODUCT_PROTOCOL.md`, `README.md` are already consistent with v1.4 content.
 
@@ -128,8 +128,8 @@ These come from Sean's direct questions and my answers. They are fixes to conten
 
 ## Critical files to reference when writing
 
-- `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md:1-3715` — source of truth (being restructured)
-- `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md:1-398` — mirror updates after guide is done
+- `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md:1-3715` — source of truth (being restructured)
+- `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md:1-398` — mirror updates after guide is done
 - `assets/docs/EVERLASTINGS_STORE.md` — verify cross-references after restructure
 - `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md` — original feedback source; re-check nothing from v1.3.1→v1.4 was lost in the reorg
 
