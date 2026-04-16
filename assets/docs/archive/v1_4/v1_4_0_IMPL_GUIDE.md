@@ -33,26 +33,31 @@
 ---
 
 - [Everlastings v1.4.0 Implementation Guide](#everlastings-v140-implementation-guide)
-  - [REF — Architecture Reference](#architecture-reference)
-  - [ACTION — Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
-  - [REF — Git Branching Strategy](#git-branching-strategy)
+    - [How to read this doc](#how-to-read-this-doc)
+  - [Architecture Reference](#architecture-reference)
+  - [Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
+    - [Secret handling — do this once, not twice](#secret-handling--do-this-once-not-twice)
+    - [Repo reconciliation](#repo-reconciliation)
+    - [Services (one service per group — complete each service end-to-end before moving on)](#services-one-service-per-group--complete-each-service-end-to-end-before-moving-on)
+    - [Agent bootstrap (run once, after services exist and env vars are set)](#agent-bootstrap-run-once-after-services-exist-and-env-vars-are-set)
+  - [Git Branching Strategy](#git-branching-strategy)
     - [Setup Commands](#setup-commands)
-  - [REF — Environment Strategy](#environment-strategy)
+  - [Environment Strategy](#environment-strategy)
     - [Where Secrets Live](#where-secrets-live)
     - [Environment Variable Table](#environment-variable-table)
     - [Live Launch Switchover Process](#live-launch-switchover-process)
-  - [REF — Source of Truth Hierarchy](#source-of-truth-hierarchy)
-  - [REF — Stripe Sync Rules](#stripe-sync-rules)
-  - [REF — Product Schema Hard Reference](#product-schema-hard-reference)
+  - [Source of Truth Hierarchy](#source-of-truth-hierarchy)
+  - [Stripe Sync Rules](#stripe-sync-rules)
+  - [Product Schema Hard Reference](#product-schema-hard-reference)
     - [TypeScript Interface](#typescript-interface)
     - [Supabase SQL](#supabase-sql)
-  - [REF — Configuration Files](#configuration-files)
+  - [Configuration Files](#configuration-files)
     - [`vercel.json`](#verceljson)
     - [`tsconfig.json`](#tsconfigjson)
     - [`package.json`](#packagejson)
     - [`.env.example`](#envexample)
-  - [REF — How the Tracks Work](#how-the-tracks-work)
-  - [ACTION — TRACK A: Foundation + Backend](#track-a-foundation--backend)
+  - [How the Tracks Work](#how-the-tracks-work)
+  - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
     - [A1: Services Setup](#a1-services-setup)
       - [Vercel](#vercel)
       - [Git Branches](#git-branches)
@@ -85,7 +90,7 @@
       - [Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)](#admin-orders-tab--shipping-fulfillment-new--ar-30)
       - [Product Protocol](#product-protocol)
     - [A4: API Integration Testing](#a4-api-integration-testing)
-  - [ACTION — TRACK B: Frontend Design](#track-b-frontend-design)
+  - [TRACK B: Frontend Design](#track-b-frontend-design)
     - [B1: Design System](#b1-design-system)
       - [CSS Custom Properties](#css-custom-properties)
       - [Typography](#typography)
@@ -107,7 +112,7 @@
     - [B4: Shop Grid](#b4-shop-grid)
     - [B5: Homepage](#b5-homepage)
     - [B6: Remaining Pages](#b6-remaining-pages)
-  - [ACTION — TRACK C: Integration](#track-c-integration)
+  - [TRACK C: Integration](#track-c-integration)
     - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
       - [Supabase Client — `assets/js/main.js`](#supabase-client--assetsjsmainjs)
       - [Product Page JS — `assets/js/product.js`](#product-page-js--assetsjsproductjs)
@@ -123,18 +128,18 @@
       - [Testing](#testing)
       - [Performance](#performance)
       - [Launch](#launch)
-  - [REF — Webhook Contract](#webhook-contract)
-  - [REF — 409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
+  - [Webhook Contract](#webhook-contract)
+  - [409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
     - [What Triggers It](#what-triggers-it)
     - [What the User Sees](#what-the-user-sees)
     - [Backend Behavior](#backend-behavior)
-    - [Coupon Setup (see A1 + Coupon Strategy reference)](#coupon-setup-see-a1--coupon-strategy-reference)
-  - [REF — Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
-  - [REF — Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
+    - [Coupon Setup](#coupon-setup)
+  - [Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
+  - [Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
     - [E-commerce Events (with `items` array)](#e-commerce-events-with-items-array)
     - [Custom Events (no `items` array)](#custom-events-no-items-array)
     - [Meta Pixel Events (fire alongside GA4)](#meta-pixel-events-fire-alongside-ga4)
-  - [REF — Error States Reference](#error-states-reference)
+  - [Error States Reference](#error-states-reference)
       - [Product — Not Found](#product--not-found)
       - [Product — Supabase Fetch Fails](#product--supabase-fetch-fails)
       - [Product — Image Fails to Load](#product--image-fails-to-load)
@@ -160,25 +165,26 @@
       - [Newsletter — Invalid Email](#newsletter--invalid-email)
       - [Admin — Not Authenticated](#admin--not-authenticated)
       - [Admin — Upload Too Large](#admin--upload-too-large)
-  - [REF — Slug Rules](#slug-rules)
-  - [REF — Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
+  - [Slug Rules](#slug-rules)
+  - [Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
     - [Naming Convention](#naming-convention)
     - [Cloudinary Transform Parameters](#cloudinary-transform-parameters)
     - [Pipeline Steps](#pipeline-steps)
-  - [REF — Deferred Items](#deferred-items)
-  - [REF — Deferred Caching Strategy](#deferred-caching-strategy)
-  - [REF — Post-Launch](#post-launch)
-  - [REF — Additional Reference Sections](#reference-sections)
+  - [Deferred Items](#deferred-items)
+  - [Deferred Caching Strategy](#deferred-caching-strategy)
+  - [Post-Launch](#post-launch)
+  - [Reference Sections](#reference-sections)
     - [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy)
     - [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
     - [Placeholder Hygiene](#placeholder-hygiene)
-  - [REF — Reference Documents](#reference-documents)
+  - [Reference Documents](#reference-documents)
 
 ---
 
 ## Architecture Reference
 
-> **REFERENCE — no action required.** Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
+> **REFERENCE — no action required.** 
+> Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
 
   1. **`ui_mode: 'custom'`** for Stripe Checkout
      - Proven in freelance-payments. Full UI control.
@@ -299,7 +305,8 @@
 
 ## Phase 0: Sean's Prerequisites
 
-> **ACTION — (SEAN) only.** All items below are human-only (account creation, password choices, dashboard clicks, domain setup). An agent cannot do these. Complete Phase 0 BEFORE kicking off the first implementation session.
+> **ACTION — (SEAN) only.** 
+> All items below are human-only (account creation, password choices, dashboard clicks, domain setup). An agent cannot do these. Complete Phase 0 BEFORE kicking off the first implementation session.
 
 ### Secret handling — do this once, not twice
 
@@ -361,7 +368,8 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 ## Git Branching Strategy
 
-> **REFERENCE — no action required** (the actual branch-creation checkboxes live in [Phase 0](#phase-0-seans-prerequisites) > Repo reconciliation).
+> **REFERENCE — no action required** 
+> The actual branch-creation checkboxes live in [Phase 0](#phase-0-seans-prerequisites) > Repo reconciliation. 
 
   ```
   main (production — live Stripe keys)
@@ -424,7 +432,8 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 ## Environment Strategy
 
-> **REFERENCE — no action required** (actions happen in [Phase 0](#phase-0-seans-prerequisites) as each secret is gathered, and at launch in the Live Launch Switchover Process below).
+> **REFERENCE — no action required** 
+> Actions happen in [Phase 0](#phase-0-seans-prerequisites) as each secret is gathered, and at launch in the Live Launch Switchover Process below. 
 
 ### Where Secrets Live
 
@@ -491,7 +500,8 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
 ## Source of Truth Hierarchy
 
-> **REFERENCE — no action required.** Cited from api/stripe-sync.ts, api/webhook.ts, and api/products.ts.
+> **REFERENCE — no action required.** 
+> Cited from api/stripe-sync.ts, api/webhook.ts, and api/products.ts.
 
   1. **Supabase** — authoritative product data, customer records, orders, site config
   2. **Stripe** — payment mirror only. Created from Supabase data via webhook, never manually edited
@@ -504,7 +514,8 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ## Stripe Sync Rules
 
-> **REFERENCE — no action required.** Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` (A2) and `api/products.ts > PUT` (A2).
+> **REFERENCE — no action required.** 
+> Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` (A2) and `api/products.ts > PUT` (A2).
 
   - On product **INSERT** → create Stripe Product + Price (via `api/stripe-sync.ts`)
   - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase
@@ -516,7 +527,8 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ## Product Schema Hard Reference
 
-> **REFERENCE — no action required** (migrations are applied in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) and again verified in A1 Supabase).
+> **REFERENCE — no action required** 
+> Migrations are applied in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) and again verified in A1 Supabase. 
 
 ### TypeScript Interface 
 
@@ -735,7 +747,8 @@ These are the 8 tables to be created.
 
 ## Configuration Files
 
-> **REFERENCE — no action required** (actions are in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) — "Create config files in repo root from this reference").
+> **REFERENCE — no action required** 
+> Actions are in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) — "Create config files in repo root from this reference". 
 
 These files must be created as actual files in the repository root. Copy the contents below into each file.
 
@@ -840,7 +853,8 @@ These files must be created as actual files in the repository root. Copy the con
 
 ## How the Tracks Work
 
-> **REFERENCE — no action required.** Orientation for the three parallel implementation tracks.
+> **REFERENCE — no action required.** 
+> Orientation for the three parallel implementation tracks.
 
   ```
   TRACK A (Backend)                    TRACK B (Frontend Design)
@@ -868,11 +882,14 @@ These files must be created as actual files in the repository root. Copy the con
 
 ## TRACK A: Foundation + Backend
 
-> **ACTION — mostly (AGENT); handoff points to (SEAN) are tagged per checkbox.** Track A builds the backend: services wired up, database tables live, API endpoints shipped, admin UI functional.
+> **ACTION — mostly (AGENT); handoff points to (SEAN) are tagged per checkbox.** 
+> Track A builds the backend: services wired up, database tables live, API endpoints shipped, admin UI functional.
 
 ### A1: Services Setup
 
-> **ACTION — (SEAN+AGENT).** A1 assumes Phase 0 is complete (all accounts created, env vars loaded). A1 verifies each service is correctly wired and completes any agent-side configuration that depends on those services.
+> **ACTION — (SEAN+AGENT).** 
+> A1 assumes Phase 0 is complete (all accounts created, env vars loaded). 
+> A1 verifies each service is correctly wired and completes any agent-side configuration that depends on those services.
 
 **YOU WILL HAVE**: All services connected, tables created, env vars set, analytics base installed
 
@@ -1047,8 +1064,6 @@ From AR #30, #31 — Resend handles three email types: shipping tracking, newsle
   - [ ] (SEAN) Shippo Starter account already created in Phase 0 (free, 30 labels/month covers expected volume)
   - [ ] (SEAN) USPS account linked inside Shippo (automatic, no fee)
 
-> **No Shippo env var in v1.** Web UI only — Emy pastes Shippo-generated tracking numbers into the admin UI.
-
 #### Meta Pixel + Instagram Shopping 
 
 From AR #25, #27 — see [Architecture Reference](#architecture-reference).
@@ -1078,7 +1093,8 @@ From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
 ### A2: API Endpoints
 
-> **ACTION — (AGENT) only.** All endpoints are code. Zero Sean dashboard work in A2 — every secret it depends on was loaded in Phase 0.
+> **ACTION — (AGENT) only.** 
+> All endpoints are code. Zero Sean dashboard work in A2 — every secret it depends on was loaded in Phase 0.
 
 **YOU WILL HAVE**: All server-side endpoints working, testable with curl
 
@@ -2246,11 +2262,10 @@ All transactional emails live in a shared module. Three templates for v1:
 
 #### Product Protocol
 
-  - [ ] (AGENT) **Create** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
+  - `assets/docs/PRODUCT_PROTOCOL.md`
     - Section 1: Client guide (for Emy) — field explanations, photo requirements, admin UI walkthrough
     - Section 2: AI protocol — slug generation, image pipeline, API calls, validation, error handling
-    - Replaces both `PRODUCT_GUIDE.md` and `PRODUCT_CREATION_PROTOCOL.md`
-  - [ ] (SEAN) **Review** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
+  - [ ] (AGENT) **Review** `assets/docs/PRODUCT_PROTOCOL.md` — confirm accurate 
 
 ---
 
@@ -2280,11 +2295,12 @@ All transactional emails live in a shared module. Three templates for v1:
 
 ## TRACK B: Frontend Design
 
-> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** Track B is entirely frontend. All hardcoded content must use the `PLACEHOLDER:` convention (see [Placeholder Hygiene](#placeholder-hygiene)) so Track C's grep pass catches everything.
+> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** 
+> Track B is entirely frontend. All hardcoded content must use the `PLACEHOLDER:` convention (see [Placeholder Hygiene](#placeholder-hygiene)) so Track C's grep pass catches everything.
 
 Initial pages are built using placeholder content that needs to be sourced during the build process and saved to the appropriate locations. Every page is built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum text and placeholder images. Client reviews and iterates on visual design.
 
-  > **Verified**: All page descriptions from v1.1 planning docs (homepage, shop, product, about, contact, FAQ, shipping, terms, privacy, policies, checkout, complete) are present in Track B below. No pages were lost during restructuring.
+> **Verified**: All page descriptions from v1.1 planning docs (homepage, shop, product, about, contact, FAQ, shipping, terms, privacy, policies, checkout, complete) are present in Track B below. No pages were lost during restructuring.
 
 ### B1: Design System
 
@@ -2727,7 +2743,8 @@ These use placeholder data.
 
 ## TRACK C: Integration
 
-> **ACTION — (AGENT) builds; (SEAN) does final testing, real-card checkout, DNS flip at launch.** Track C wires Track B frontend pages to Track A backend services and replaces placeholders with live data.
+> **ACTION — (AGENT) builds; (SEAN) does final testing, real-card checkout, DNS flip at launch.** 
+> Track C wires Track B frontend pages to Track A backend services and replaces placeholders with live data.
 
 **First task of Track C**: `grep -rn "PLACEHOLDER" .` — every hit from Track B is a to-do entry. At end of C4, same grep must return zero results. See [Placeholder Hygiene](#placeholder-hygiene).
 
@@ -2934,7 +2951,7 @@ These use placeholder data.
 
 > **ACTION — (AGENT) builds; (SEAN) smoke-tests with real card at launch (A4 + C4).**
 
-**YOU WILL HAVE**: Complete purchase flow working — /cart.html availability check + /checkout.html progressive disclosure
+**YOU WILL HAVE**: Complete purchase flow working — `/cart.html` availability check + `/checkout.html` progressive disclosure
 
 #### Cart JS — `assets/js/cart.js` (NEW — AR #28)
 
@@ -3048,7 +3065,7 @@ These use placeholder data.
 
   - [ ] (AGENT) **Create** `assets/js/cart.js`
 
-Implements the two-stage progressive disclosure on `/checkout.html`. Assumes `/cart.html` already ran `/api/checkout/reserve` and a soft hold exists. This page never triggers the 409 recovery flow — that's /cart.html's job now.
+Implements the two-stage progressive disclosure on `/checkout.html`. Assumes `/cart.html` already ran `/api/checkout/reserve` and a soft hold exists. This page never triggers the 409 recovery flow — that's `/cart.html`'s job now.
 
   ```javascript
   // assets/js/checkout.js
@@ -3274,7 +3291,8 @@ Implements the two-stage progressive disclosure on `/checkout.html`. Assumes `/c
 
 ### C4: Testing + Launch Prep
 
-> **ACTION — (SEAN+AGENT).** Agent runs automated checks; Sean does final QA, real-card test, DNS flip.
+> **ACTION — (SEAN+AGENT).** 
+> Agent runs automated checks; Sean does final QA, real-card test, DNS flip.
 
 **YOU WILL HAVE**: Production-ready site
 
@@ -3313,7 +3331,8 @@ Follow switchover process (see [Live Launch Switchover Process](#live-launch-swi
 
 ## Webhook Contract
 
-> **REFERENCE — no action required.** Implemented in `api/webhook.ts` (A2).
+> **REFERENCE — no action required.** 
+> Implemented in `api/webhook.ts` (A2).
 
 **Event**: `checkout.session.completed`
 
@@ -3345,7 +3364,9 @@ Follow switchover process (see [Live Launch Switchover Process](#live-launch-swi
 
 ## 409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)
 
-> **REFERENCE — no action required.** UX and backend spec for the sold-while-you-browse recovery. Implemented across `api/checkout/reserve.ts` (A2), `api/cart-recovery.ts` (A2), `cart.html` (B6), and `assets/js/cart.js` + `recovery.js` (C2).
+> **REFERENCE — no action required.** 
+> UX and backend spec for the sold-while-you-browse recovery. 
+> Implemented across `api/checkout/reserve.ts` (A2), `api/cart-recovery.ts` (A2), `cart.html` (B6), and `assets/js/cart.js` + `recovery.js` (C2).
 
 ### What Triggers It
 
@@ -3413,7 +3434,8 @@ Created automatically by `api/_bootstrap/coupons.ts` (see [A1 Stripe](#stripe) a
 
 ## Agentic Pipeline Error Handling
 
-> **REFERENCE — no action required.** Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`.
+> **REFERENCE — no action required.** 
+> Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`.
 
   1. **Image upload failure**: Retry once. If second attempt fails, **STOP** the entire process. Do not proceed to product creation with missing images.
   2. **Product creation failure**: Do **NOT** retry blindly. Log the error, report to user. Common causes:
@@ -3428,7 +3450,8 @@ Created automatically by `api/_bootstrap/coupons.ts` (see [A1 Stripe](#stripe) a
 
 ## Enhanced E-commerce GA4 Event Definitions
 
-> **REFERENCE — no action required.** Event inventory. Wiring lives throughout Track B (script tags) and Track C (event triggers in page-specific JS).
+> **REFERENCE — no action required.** 
+> Event inventory. Wiring lives throughout Track B (script tags) and Track C (event triggers in page-specific JS).
 
 All e-commerce events use GA4's standard `items` array format, which unlocks built-in reports under Reports > Monetization (product performance, purchase funnel, revenue by category/brand).
 
@@ -3598,7 +3621,8 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 
 ## Slug Rules
 
-> **REFERENCE — no action required.** Implemented in `api/products.ts` (A2) and DB trigger (Schema).
+> **REFERENCE — no action required.** 
+> Implemented in `api/products.ts` (A2) and DB trigger (Schema).
 
   - **Generation**: `title.toLowerCase().replaceAll(' ', '-')` (AR #23)
   - **Example**: "The Sunkeeper" → `the-sunkeeper`
@@ -3613,7 +3637,8 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 
 ## Cloudinary → R2 CDN Image Pipeline
 
-> **REFERENCE — no action required.** Implemented in `api/upload.ts` (A2).
+> **REFERENCE — no action required.** 
+> Implemented in `api/upload.ts` (A2).
 
 ### Naming Convention
 
@@ -3645,7 +3670,8 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Deferred Items 
 
-> **REFERENCE — no action required.** Explicitly out of scope for v1; tracked for post-launch conversation.
+> **REFERENCE — no action required.** 
+> Explicitly out of scope for v1; tracked for post-launch conversation.
 
   - **Dark mode** — v0 docs mentioned dark mode variables. Not needed for v1.
   - **Infinite scroll/pagination** — not a recommended UX pattern. 
@@ -3663,7 +3689,8 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Deferred Caching Strategy
 
-> **REFERENCE — no action required.** Not needed at launch. When needed:
+> **REFERENCE — no action required.** 
+> Not needed at launch. When needed:
   - Supabase queries hit DB directly (acceptable at < 100 products)
   - Product images already CDN-cached by Cloudflare R2
   - Add `stale-while-revalidate` headers or Vercel Edge Config when scale requires
@@ -3672,7 +3699,8 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Post-Launch 
 
-> **REFERENCE — no action required.** Scope of the 30-day post-launch support window.
+> **REFERENCE — no action required.** 
+> Scope of the 30-day post-launch support window.
 
   - Bug fixes and technical support
   - Performance optimization
@@ -3682,7 +3710,8 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Reference Sections
 
-> **REFERENCE — no action required.** Canonical references used throughout this doc. Not checkboxes — read once, link back.
+> **REFERENCE — no action required.** 
+> Canonical references used throughout this doc. Not checkboxes — read once, link back.
 
 ### Coupon + Promotion Code Strategy
 
@@ -3774,32 +3803,32 @@ Track B builds frontend pages with hardcoded placeholder content (images, text, 
 
 **The convention** — wrap every piece of hardcoded content in a tagged comment:
 
-```html
-<!-- PLACEHOLDER: product-title -->
-<h1>The Sunkeeper</h1>
-<!-- /PLACEHOLDER -->
+  ```html
+  <!-- PLACEHOLDER: product-title -->
+  <h1>The Sunkeeper</h1>
+  <!-- /PLACEHOLDER -->
 
-<!-- PLACEHOLDER: hero-image -->
-<img src="/placeholder/hero.webp" alt="Placeholder">
-<!-- /PLACEHOLDER -->
-```
+  <!-- PLACEHOLDER: hero-image -->
+  <img src="/placeholder/hero.webp" alt="Placeholder">
+  <!-- /PLACEHOLDER -->
+  ```
 
-```css
-/* PLACEHOLDER: hero-bg */
-.hero { background: url('/placeholder/hero.webp'); }
-/* /PLACEHOLDER */
-```
+  ```css
+  /* PLACEHOLDER: hero-bg */
+  .hero { background: url('/placeholder/hero.webp'); }
+  /* /PLACEHOLDER */
+  ```
 
-```javascript
-// PLACEHOLDER: sample-cart-data
-const sampleCart = [{ title: 'The Sunkeeper', price: 24500 }];
-// /PLACEHOLDER
-```
+  ```javascript
+  // PLACEHOLDER: sample-cart-data
+  const sampleCart = [{ title: 'The Sunkeeper', price: 24500 }];
+  // /PLACEHOLDER
+  ```
 
 **Workflow**:
-1. Track B: every hardcoded block gets wrapped. Name after the data it represents (`product-title`, `featured-carousel`, `related-cards`)
-2. Track C start: run `grep -rn "PLACEHOLDER" .` → that's your to-do list, sorted
-3. Track C end (before C4 Launch): same grep must return zero lines. Explicit checkbox in C4: `[ ] grep -rn "PLACEHOLDER" . returns no results`
+  1. Track B: every hardcoded block gets wrapped. Name after the data it represents (`product-title`, `featured-carousel`, `related-cards`)
+  2. Track C start: run `grep -rn "PLACEHOLDER" .` → that's your to-do list, sorted
+  3. Track C end (before C4 Launch): same grep must return zero lines. Explicit checkbox in C4: `[ ] grep -rn "PLACEHOLDER" . returns no results`
 
 **Why this over a build-tool flag**: zero tooling, works across HTML/CSS/JS uniformly, reviewable in PRs as a single diff.
 
