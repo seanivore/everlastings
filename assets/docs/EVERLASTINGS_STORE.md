@@ -136,7 +136,7 @@
 
   17. **Email capture CTAs** — Product interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup with 5% off. `product_interests` table tracks email + product slug for real notification capability.
 
-  18. **Availability check BEFORE any PII** (v1.4) — `/cart.html` fires `POST /api/checkout/reserve` on [CHECKOUT] click, creating a 15-min soft hold in the `cart_holds` table. 409 recovery happens on the cart page, before the user has entered address or payment details. Stripe session is created only after the hold is confirmed. See IMPL_GUIDE AR #28, #29.
+  18. **Availability check BEFORE any PII** (v1.4) — `/cart.html` fires `POST /api/checkout/reserve` on {CHECKOUT} click, creating a 15-min soft hold in the `cart_holds` table. 409 recovery happens on the cart page, before the user has entered address or payment details. Stripe session is created only after the hold is confirmed. See IMPL_GUIDE AR #28, #29.
 
   19. **Soft cart holds, not hard reservations** (v1.4) — 15-minute TTL. Availability is `products.available = true AND NOT EXISTS (hold by different session)`. No infinite lock; items free after 15 minutes of user inactivity.
 
@@ -596,25 +596,25 @@ No build step for frontend — static HTML/CSS/JS files served directly by Verce
 
 Set in Vercel Dashboard → Settings → Environment Variables:
 
-| Variable                 | Purpose                             | Required |
-| ------------------------ | ----------------------------------- | -------- |
-| `SUPABASE_URL`           | Supabase project URL                | Yes      |
-| `SUPABASE_ANON_KEY`      | Supabase anonymous key (frontend)   | Yes      |
-| `SUPABASE_SERVICE_KEY`   | Supabase service key (backend only) | Yes      |
-| `STRIPE_SECRET_KEY`      | Stripe API secret                   | Yes      |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe frontend key                 | Yes      |
-| `STRIPE_WEBHOOK_SECRET`  | Webhook signature validation        | Yes      |
-| `R2_ACCOUNT_ID`          | Cloudflare account                  | Yes      |
-| `R2_ACCESS_KEY_ID`       | R2 access credentials               | Yes      |
-| `R2_SECRET_ACCESS_KEY`   | R2 secret credentials               | Yes      |
-| `R2_BUCKET_NAME`         | R2 bucket name                      | Yes      |
-| `R2_PUBLIC_URL`          | CDN public base URL                 | Yes      |
-| `CLOUDINARY_URL`         | Cloudinary API credentials          | Yes      |
-| `PRODUCT_API_KEY`        | AI/external API auth key            | Yes      |
-| `META_PIXEL_ID`          | Meta Pixel ID for tracking          | Yes      |
-| `META_ACCESS_TOKEN`      | Meta Conversions API token          | Yes      |
-| `RESEND_API_KEY`         | Resend transactional email API key  | Yes      |
-| `RESEND_FROM_EMAIL`      | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes |
+| Variable                 | Purpose                                                 | Required |
+| ------------------------ | ------------------------------------------------------- | -------- |
+| `SUPABASE_URL`           | Supabase project URL                                    | Yes      |
+| `SUPABASE_ANON_KEY`      | Supabase anonymous key (frontend)                       | Yes      |
+| `SUPABASE_SERVICE_KEY`   | Supabase service key (backend only)                     | Yes      |
+| `STRIPE_SECRET_KEY`      | Stripe API secret                                       | Yes      |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe frontend key                                     | Yes      |
+| `STRIPE_WEBHOOK_SECRET`  | Webhook signature validation                            | Yes      |
+| `R2_ACCOUNT_ID`          | Cloudflare account                                      | Yes      |
+| `R2_ACCESS_KEY_ID`       | R2 access credentials                                   | Yes      |
+| `R2_SECRET_ACCESS_KEY`   | R2 secret credentials                                   | Yes      |
+| `R2_BUCKET_NAME`         | R2 bucket name                                          | Yes      |
+| `R2_PUBLIC_URL`          | CDN public base URL                                     | Yes      |
+| `CLOUDINARY_URL`         | Cloudinary API credentials                              | Yes      |
+| `PRODUCT_API_KEY`        | AI/external API auth key                                | Yes      |
+| `META_PIXEL_ID`          | Meta Pixel ID for tracking                              | Yes      |
+| `META_ACCESS_TOKEN`      | Meta Conversions API token                              | Yes      |
+| `RESEND_API_KEY`         | Resend transactional email API key                      | Yes      |
+| `RESEND_FROM_EMAIL`      | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes      |
 
 **Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 
@@ -684,35 +684,35 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ### `orders` table
 
-| Column                | Type        | Notes                                                |
-| --------------------- | ----------- | ---------------------------------------------------- |
-| id                    | uuid        | PK                                                   |
-| stripe_session_id     | text        | Checkout session ID                                  |
-| stripe_payment_intent | text        | Payment intent ID                                    |
-| product_id            | uuid        | FK to products                                       |
-| customer_id           | uuid        | FK to customers                                      |
-| customer_email        | text        | From Stripe (denormalized)                           |
-| amount                | integer     | In cents                                             |
-| status                | text        | completed, shipped, delivered, refunded              |
-| shipping_address      | jsonb       | From Stripe                                          |
-| tracking_number       | text        | Set when Emy marks shipped via admin UI              |
-| tracking_carrier      | text        | USPS, UPS, FedEx, DHL                                |
-| shipped_at            | timestamptz | When Emy marked shipped — triggers Resend email      |
-| delivered_at          | timestamptz | Post-launch via Shippo webhook                       |
-| created_at            | timestamptz | Auto                                                 |
+| Column                | Type        | Notes                                           |
+| --------------------- | ----------- | ----------------------------------------------- |
+| id                    | uuid        | PK                                              |
+| stripe_session_id     | text        | Checkout session ID                             |
+| stripe_payment_intent | text        | Payment intent ID                               |
+| product_id            | uuid        | FK to products                                  |
+| customer_id           | uuid        | FK to customers                                 |
+| customer_email        | text        | From Stripe (denormalized)                      |
+| amount                | integer     | In cents                                        |
+| status                | text        | completed, shipped, delivered, refunded         |
+| shipping_address      | jsonb       | From Stripe                                     |
+| tracking_number       | text        | Set when Emy marks shipped via admin UI         |
+| tracking_carrier      | text        | USPS, UPS, FedEx, DHL                           |
+| shipped_at            | timestamptz | When Emy marked shipped — triggers Resend email |
+| delivered_at          | timestamptz | Post-launch via Shippo webhook                  |
+| created_at            | timestamptz | Auto                                            |
 
 Partial index `idx_orders_needs_shipping` on `(created_at DESC)` WHERE `shipped_at IS NULL AND status = 'completed'` for fast admin queue lookups.
 
 ### `subscribers` table
 
-| Column                | Type        | Notes                                                    |
-| --------------------- | ----------- | -------------------------------------------------------- |
-| id                    | uuid        | PK                                                       |
-| email                 | text        | Unique                                                   |
+| Column                | Type        | Notes                                                                                                         |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------- |
+| id                    | uuid        | PK                                                                                                            |
+| email                 | text        | Unique                                                                                                        |
 | source                | text        | homepage, footer, checkout-started, cart-recovery, product-interest, cart-exit, contemplation-offer, customer |
-| promo_code            | text        | Dynamic Stripe promotion code (newsletter welcome or contemplation CTA) |
-| promo_code_expires_at | timestamptz | When the promo code expires (30 days after generation)   |
-| created_at            | timestamptz | Auto                                                     |
+| promo_code            | text        | Dynamic Stripe promotion code (newsletter welcome or contemplation CTA)                                       |
+| promo_code_expires_at | timestamptz | When the promo code expires (30 days after generation)                                                        |
+| created_at            | timestamptz | Auto                                                                                                          |
 
 ### `site_config` table
 
@@ -746,15 +746,15 @@ Unique constraint on (email, product_slug). Tracks who wants to be notified abou
 
 ### `cart_holds` table (NEW in v1.4)
 
-| Column       | Type        | Notes                                              |
-| ------------ | ----------- | -------------------------------------------------- |
-| id           | uuid        | PK                                                 |
-| session_id   | text        | Browser session (localStorage UUID)                |
-| product_id   | uuid        | FK to products (ON DELETE CASCADE)                 |
-| expires_at   | timestamptz | 15 minutes after creation; soft hold              |
-| created_at   | timestamptz | Auto                                               |
+| Column     | Type        | Notes                                |
+| ---------- | ----------- | ------------------------------------ |
+| id         | uuid        | PK                                   |
+| session_id | text        | Browser session (localStorage UUID)  |
+| product_id | uuid        | FK to products (ON DELETE CASCADE)   |
+| expires_at | timestamptz | 15 minutes after creation; soft hold |
+| created_at | timestamptz | Auto                                 |
 
-Index on `(product_id, expires_at)` for efficient availability lookups. A product is "available for purchase by session X" if `products.available = true AND NOT EXISTS (cart_hold WHERE product_id = X AND session_id != X AND expires_at > now())`. This prevents the "sold while entering payment" UX shock — availability is checked and held when the user clicks [CHECKOUT] on `/cart.html`, before any PII is entered.
+Index on `(product_id, expires_at)` for efficient availability lookups. A product is "available for purchase by session X" if `products.available = true AND NOT EXISTS (cart_hold WHERE product_id = X AND session_id != X AND expires_at > now())`. This prevents the "sold while entering payment" UX shock — availability is checked and held when the user clicks {CHECKOUT} on `/cart.html`, before any PII is entered.
 
 ---
 
@@ -765,7 +765,7 @@ Compared to v1.3.1:
 1. **8 tables** (was 7) — added `cart_holds`
 2. **`orders`** — added `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, and `idx_orders_needs_shipping` partial index for the shipping fulfillment pipeline
 3. **`subscribers`** — added `promo_code`, `promo_code_expires_at` so newsletter welcome / contemplation-offer coupons can be looked up by admin
-4. **Source values** expanded to include `checkout-started` (captured on /cart.html [CHECKOUT] click even if user doesn't complete purchase)
+4. **Source values** expanded to include `checkout-started` (captured on /cart.html {CHECKOUT} click even if user doesn't complete purchase)
 
 ---
 

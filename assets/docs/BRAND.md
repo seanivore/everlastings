@@ -366,7 +366,7 @@ Three transactional emails send from the site via Resend. All three adopt Emalin
 
 **Voice rules**:
 - Address the customer by name when we have it, "Dear collector" when we don't
-- Never "Hi!" or "Hey there" — always "Dear [Name]," or "[Name],"
+- Never "Hi!" or "Hey there" — always "Dear {Name}," or "{Name},"
 - Close with "With care," or "Warmly," + "Everlastings by Emaline" (not "The Emaline Team")
 - Avoid exclamation points except in welcome (one, maximum)
 - Prefer "your haven" / "your piece" over "your order" / "your purchase"
@@ -377,13 +377,13 @@ Fires from `PATCH /api/orders/:id` when Emy marks an order shipped.
 
 > **Subject**: Your haven is on its way
 >
-> [Name],
+> {Name},
 >
-> **[Product Title]** has been carefully packed and is on its way to you. ${Carrier} tells us to expect delivery within a few days.
+> **{Product Title}** has been carefully packed and is on its way to you. ${Carrier} tells us to expect delivery within a few days.
 >
-> Tracking number: **[TRACKING-NUMBER]**
+> Tracking number: **{TRACKING-NUMBER}**
 >
-> [Track your package →]
+> {Track your package →}
 >
 > If anything arrives not as you hoped, please reply to this email directly.
 >
@@ -396,11 +396,11 @@ Fires from `api/subscribe.ts` when source is `contemplation-offer`. Generates a 
 
 > **Subject**: Welcome to the Firelight Council
 >
-> [Name or "Dear collector"],
+> {Name or "Dear collector"},
 >
 > Thank you for lingering long enough with the work to want to know more. That kind of attention is rare, and it is met here with the same.
 >
-> As a small token, use code **[PROMO-CODE]** for 5% off your first piece. Valid for 30 days.
+> As a small token, use code **{PROMO-CODE}** for 5% off your first piece. Valid for 30 days.
 >
 > You'll hear from us when a new haven is ready — never more often than that.
 >
@@ -413,7 +413,7 @@ Fires from `api/subscribe.ts` for all other sources. No coupon generated.
 
 > **Subject**: Welcome to the Firelight Council
 >
-> [Name or "Dear collector"],
+> {Name or "Dear collector"},
 >
 > Thank you for joining us. You'll hear from us when a new haven is ready — never more often than that.
 >
@@ -428,13 +428,13 @@ Fires from `api/cart-recovery.ts` when a user submits email in the 409 recovery 
 
 > **Subject**: A small gift, for your patience
 >
-> [Name or "Dear collector"],
+> {Name or "Dear collector"},
 >
 > We're sorry the piece you reached for had already found its home. These are one-of-a-kind, and sometimes timing decides.
 >
 > As thanks for your interest, here is 10% off your next piece with us:
 >
-> **[PROMO-CODE]**
+> **{PROMO-CODE}**
 >
 > Valid for 30 days.
 >

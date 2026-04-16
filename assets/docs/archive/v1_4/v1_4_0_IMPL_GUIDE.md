@@ -157,7 +157,7 @@ Do this once, both for development and production environments. Never paste secr
 Each service below has: (1) a dashboard portion Sean does, (2) env-var loading handled the instant keys are available. A1 in Track A confirms each service is wired correctly; no work is repeated there.
 
   - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`. Then: copy anon key + service role key from Settings > API → paste into `.env.local` as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` → `vercel env add` each for preview AND production (same values — Supabase project is shared across envs)
-  - [ ] (SEAN) **Create** Stripe account (if not already). Dashboard > Developers > API keys → copy **test** keys. Paste into `.env.local` + `vercel env add` for preview scope only. Live keys are captured at launch switchover (see [Environment Strategy](#environment-strategy) > Live Launch Switchover Process).
+  - [ ] (SEAN) **Create** Stripe account (if not already). Dashboard > Developers > API keys → copy **test** keys. Paste into `.env.local` + `vercel env add` for preview scope only. Live keys are captured at launch switchover (see [Environment Strategy](#environment-strategy-reference) > Live Launch Switchover Process).
   - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
   - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`. Enable public access
   - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
@@ -177,7 +177,7 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 ### Agent bootstrap (run once, after services exist and env vars are set)
 
-  - [ ] (AGENT) **Create** config files in repo root from the [Configuration Files](#configuration-files) reference: `vercel.json`, `tsconfig.json`, `package.json`
+  - [ ] (AGENT) **Create** config files in repo root from the [Configuration Files](#configuration-files-reference) reference: `vercel.json`, `tsconfig.json`, `package.json`
   - [ ] (AGENT) **Run** `npm install`
   - [ ] (AGENT) **Verify** `vercel dev` starts without errors
   - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration` (preferred) — all 8 tables + RLS policies + triggers. Canonical SQL lives in [Product Schema Hard Reference](#product-schema-hard-reference) and [A1 Supabase](#supabase) (RLS). If MCP is unavailable, paste into Supabase Studio SQL editor.
@@ -371,10 +371,10 @@ Both the path prefix (`test/`) AND the filename prefix (`test_`) are present so 
 
 Two webhook endpoints exist in Stripe Dashboard simultaneously:
 
-| Mode | URL                                           | Secret env var                |
-| ---- | --------------------------------------------- | ----------------------------- |
-| Live | `https://everlastingsbyemaline.com/api/webhook` | `STRIPE_WEBHOOK_SECRET` (Production scope) |
-| Test | `https://everlastings-git-dev-{team}.vercel.app/api/webhook` | `STRIPE_WEBHOOK_SECRET` (Preview scope) |
+| Mode | URL                                                          | Secret env var                             |
+| ---- | ------------------------------------------------------------ | ------------------------------------------ |
+| Live | `https://everlastingsbyemaline.com/api/webhook`              | `STRIPE_WEBHOOK_SECRET` (Production scope) |
+| Test | `https://everlastings-git-dev-{team}.vercel.app/api/webhook` | `STRIPE_WEBHOOK_SECRET` (Preview scope)    |
 
 The test webhook is **pinned to the `dev` branch's preview URL specifically** — Vercel's per-branch preview URL is stable as long as the branch and project name don't change. For `feat/*` branches, do not register a separate Stripe endpoint; instead use Stripe CLI for ad-hoc testing:
 
@@ -386,7 +386,7 @@ This avoids accumulating dead webhook endpoints in Stripe Dashboard for every sh
 
 ### 6. PRODUCT_PROTOCOL.md base-URL convention
 
-The product creation API protocol (used by Emy via ChatGPT/Claude AND by Sean for test-product seeding) reads a `BASE_URL` variable so the same flow works against production or any preview URL. See [PRODUCT_PROTOCOL.md > Step 2: Upload Images](../../../PRODUCT_PROTOCOL.md) for the curl examples and base-URL switching pattern.
+The product creation API protocol (used by Emy via ChatGPT/Claude AND by Sean for test-product seeding) reads a `BASE_URL` variable so the same flow works against production or any preview URL. See [PRODUCT_PROTOCOL.md > Step 2: Upload Images](/assets/docs/PRODUCT_PROTOCOL.md) for the curl examples and base-URL switching pattern.
 
 ---
 
