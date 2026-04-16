@@ -261,7 +261,7 @@
   - [ ] (AGENT) **Create** `terms.html`
   - [ ] (AGENT) **Create** `privacy.html`
   - [ ] (AGENT) **Create** `policies.html` — includes availability section
-  - [ ] (AGENT) **Create** `cart.html` (NEW in v1.4) — line items + cost estimate + optional email/name + [CHECKOUT] button. Hidden recovery overlay with email form + related products slot
+  - [ ] (AGENT) **Create** `cart.html` (NEW in v1.4) — line items + cost estimate + optional email/name + `CHECKOUT` button. Hidden recovery overlay with email form + related products slot
   - [ ] (AGENT) **Create** `checkout.html` — two stacked sections: Stage A info form, Stage B payment (hidden until Stage A valid)
   - [ ] (AGENT) **Create** `complete.html` — success/error states
 
@@ -283,7 +283,7 @@
   - [ ] (AGENT) **Create** `assets/js/shop.js` — fetch products, render tiles, filters, sort, URL state, all shop states
   - [ ] (AGENT) **Create** `assets/js/homepage.js` — featured carousel, theme from site_config
   - [ ] (AGENT) **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
-  - [ ] (AGENT) **Create** `assets/js/cart.js` (NEW) — cart page line items + email/name capture + [CHECKOUT] button + reserve call + 409 recovery
+  - [ ] (AGENT) **Create** `assets/js/cart.js` (NEW) — cart page line items + email/name capture + `CHECKOUT` button + reserve call + 409 recovery
   - [ ] (AGENT) **Create** `assets/js/recovery.js` — shared overlay rendering (step 1 email + related, step 3 code display), used by cart.js
   - [ ] (AGENT) **Wire** `buildGa4Item()` and `trackMeta()` helpers in main.js
   - [ ] (AGENT) **Wire** CTA 1 (product interest): POST to subscribe + insert product_interests
@@ -298,7 +298,7 @@
   - [ ] (AGENT) **Wire** complete.html (session status check, cart clear, session_id localStorage clear)
   - [ ] (AGENT) **Wire** Add to Cart + Buy Now buttons on product page (both navigate to /cart.html on click)
   - [ ] (AGENT) **Start** Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhook`
-  - [ ] (AGENT) **Test** full flow: product → add to cart → /cart.html → [CHECKOUT] → /checkout.html Stage A → Stage B → pay `4242...` → /complete.html
+  - [ ] (AGENT) **Test** full flow: product → add to cart → /cart.html → `CHECKOUT` → /checkout.html Stage A → Stage B → pay `4242...` → /complete.html
   - [ ] (AGENT) **Test** multi-item cart
   - [ ] (AGENT) **Test** 409 on /cart.html: force unavailable → recovery overlay shown BEFORE any PII entered
   - [ ] (AGENT) **Test** related products in recovery overlay render

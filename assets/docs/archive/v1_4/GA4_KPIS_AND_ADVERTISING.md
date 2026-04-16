@@ -139,7 +139,7 @@ Retargeting means showing ads specifically to people who already visited the sit
   + Cold social traffic typically converts at 0.5–1.5%. 
     - [Digital Web Solutions, 2025](https://www.digitalwebsolutions.com/blog/ecommerce-conversion-rate-statistics/)
 
-+ Standard advice: allocate 15–30% of total ad budget to retargeting, with short (7–14 day) windows outperforming longer windows by ~30%. 
+  + Standard advice: allocate 15–30% of total ad budget to retargeting, with short (7–14 day) windows outperforming longer windows by ~30%. 
     - [Triple Whale, 2025](https://www.triplewhale.com/blog/ecommerce-benchmarks)
 
 Because retargeting relies on the Meta Pixel already being installed (we've built it in from day one), we can start running retargeting the day the first ad-free traffic visits the site. Zero additional engineering, zero setup friction.
@@ -148,27 +148,27 @@ Because retargeting relies on the Meta Pixel already being installed (we've buil
 
 For the Home & Interior / Art Decor categories most adjacent to Everlastings:
 
-+ Home & Interior Design benchmark ROAS: 13.9x in 2025 (high-end, visually-driven). 
-  - [WebFX, 2026](https://www.webfx.com/blog/social-media/meta-benchmarks/)
+  + Home & Interior Design benchmark ROAS: 13.9x in 2025 (high-end, visually-driven). 
+    - [WebFX, 2026](https://www.webfx.com/blog/social-media/meta-benchmarks/)
 
-+ Home & Garden category ROAS: 2.18 with an 18.47% year-over-year conversion rate improvement. 
-  - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
+  + Home & Garden category ROAS: 2.18 with an 18.47% year-over-year conversion rate improvement. 
+    - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
 
-+ Art and Home Decor leads in click-through rate at 2.92% — the highest of any category. 
-  - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
+  + Art and Home Decor leads in click-through rate at 2.92% — the highest of any category. 
+    - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
 
-+ Meta commands 68.31% of total DTC ad budgets — because it works. 
-  - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+  + Meta commands 68.31% of total DTC ad budgets — because it works. 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
 
 A well-run artisan home-goods campaign should expect 2.5–4x ROAS in the first 60 days and improve from there. A 4x ROAS at a $245 average order value means every $60 in ad spend produces a sale.
 
 ### 3.4 Creative Matters More Than Targeting
 
-+ 70–80% of Meta ad performance is now driven by creative quality 
-  - AppsFlyer research, cited in [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+  + 70–80% of Meta ad performance is now driven by creative quality 
+    - AppsFlyer research, cited in [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
 
-+ Top DTC brands using UGC (user-generated content) + retargeting report 4–6x ROAS. 
-  - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+  + Top DTC brands using UGC (user-generated content) + retargeting report 4–6x ROAS. 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
 
 Everlastings has a structural advantage here: the work is inherently photogenic, each piece has a poetic story, and the brand voice is distinctive. These are exactly the creative assets Meta's algorithm rewards. We don't need to manufacture "content" — we already have it.
 

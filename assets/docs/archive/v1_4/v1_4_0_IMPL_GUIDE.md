@@ -2735,7 +2735,7 @@ These use placeholder data.
   </section>
   ```
 
-  - [ ] (AGENT) **Create** `cart.html` (NEW in v1.4 — AR #28): line items + qty + cost estimate + optional email/name capture + [CHECKOUT] button. Recovery overlay (hidden by default). Related products cards section (hidden by default).
+  - [ ] (AGENT) **Create** `cart.html` (NEW in v1.4 — AR #28): line items + qty + cost estimate + optional email/name capture + `CHECKOUT` button. Recovery overlay (hidden by default). Related products cards section (hidden by default).
   - [ ] (AGENT) **Create** `checkout.html` — two-stage progressive disclosure. Stage A: info (email/name prefilled from cart, billing, shipping, "same as" checkbox). Stage B unlocks when Stage A valid: Stripe Payment Element + "Confirm & Pay" button. Same URL — stages are stacked sections in the DOM, one hidden until the other is valid.
   - [ ] (AGENT) **Create** `complete.html` — success/error states (wired in Track C)
 

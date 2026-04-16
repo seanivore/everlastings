@@ -18,9 +18,9 @@ Sean has also flagged six specific content/flow issues (answered in conversation
 
 ## Files Modified
 
-| File | Action |
-|---|---|
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` | **Major restructure** (no content loss — reorganization + 6 fixes) |
+| File                                            | Action                                                                                    |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` | **Major restructure** (no content loss — reorganization + 6 fixes)                        |
 | `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md` | **Align to restructured guide** (mirror section order, re-verify `(SEAN)`/`(AGENT)` tags) |
 
 No other files change. `EVERLASTINGS_STORE.md`, `BRAND.md`, `PRODUCT_PROTOCOL.md`, `README.md` are already consistent with v1.4 content.

@@ -10,17 +10,17 @@ This session produces v1.4.0 versions of the two build docs (leaving v1.3.1 in p
 
 ## Files Being Created / Modified
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` | **Create** (based on v1_3_1_IMPL_GUIDE.md) | New authoritative build plan |
-| `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md` | **Create** (based on v1_3_1_IMPL_STEPS.md) | New ADHD checklist |
-| `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | **Create** | Sales/pitch doc for post-launch contract |
-| `assets/docs/EVERLASTINGS_STORE.md` | **Update** | Fix dated references, add shipping pipeline, address validation, checkout flow, update version + date |
-| `README.md` | **Update** | Refresh doc paths to v1_4, reflect checkout flow |
-| `assets/docs/BRAND.md` | **Update (light)** | Add voice references for new email templates (tracking, welcome coupon, order confirmation if we customize beyond Stripe default) |
-| `assets/docs/PRODUCT_PROTOCOL.md` | **Update (light)** | Any new fields driven by shipping flow (e.g., shipping_weight for label generation), confirm consistency |
-| `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md` | **No change** (remains archived) | Historical |
-| `assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md` | **No change** (remains archived) | Historical |
+| File                                                   | Action       | Purpose         |
+| ------------------------------------------------------ | ------------ | --------------- |
+| `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`        | **Create**   | New plan        |
+| `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`        | **Create**   | New checklist   |
+| `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | **Create**   | Post-launch     |
+| `assets/docs/EVERLASTINGS_STORE.md`                    | **Update**   | Refresh         |
+| `README.md`                                            | **Update**   | Refresh         |
+| `assets/docs/BRAND.md`                                 | **Update**   | Email templates |
+| `assets/docs/PRODUCT_PROTOCOL.md`                      | **Update**   | Shipping flow   |
+| `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`        | **Archived** | Historical      |
+| `assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md`        | **Archived** | Historical      |
 
 **Also deferred to separate follow-up session** (per Sean's note): launch a fresh-context Explore agent to sweep all docs for consistency after this session wraps. Tracked as a TODO at the end of the new IMPL_GUIDE.
 
@@ -129,13 +129,20 @@ This is a session-closing task, not part of this v1.4 plan itself.
 
 **Fix**: rename to **"Shop — Filter Returned Zero Matches"** to make clear this only fires when the user has actively filtered *and* the filtered set is empty. Also add explicit separate state:
 
-| State | Trigger | User sees |
-|-------|---------|-----------|
-| Shop — Loading | Initial fetch | Skeleton shimmer |
-| Shop — No Products at All | DB returned 0 products | "New havens are being crafted. Check back soon." |
-| Shop — All Products Sold | All products where `available = false` AND no filter active | "Every haven has found its home. Join the Firelight Council for first look at new arrivals." + newsletter input |
-| Shop — Filter Returned Zero Matches | User-applied filter returns 0 | "No havens match your search." + "Clear filters" button |
-| Shop — Fetch Failed | Supabase error | "Havens are resting. Please refresh." |
+|     | State                               | Trigger                                                     |
+| --- | ----------------------------------- | ----------------------------------------------------------- |
+| 1   | Shop — Loading                      | Initial fetch                                               |
+| 2   | Shop — No Products at All           | DB returned 0 products                                      |
+| 3   | Shop — All Products Sold            | All products where `available = false` AND no filter active |
+| 4   | Shop — Filter Returned Zero Matches | User-applied filter returns 0                               |
+| 5   | Shop — Fetch Failed                 | Supabase error                                              |
+
+User Sees: 
+1. Skeleton shimmer
+2. "New havens are being crafted. Check back soon."
+3. "Every haven has found its home. Join the Firelight Council for first look at new arrivals." + newsletter input
+4. "No havens match your search." + "Clear filters" button
+5. "Havens are resting. Please refresh."
 
 ### 5. Stripe Receipts + Shipping/Tracking Email Pipeline
 
@@ -190,26 +197,29 @@ ALTER TABLE orders ADD COLUMN delivered_at timestamptz;    -- post-launch, via S
 
 **Fix — add to Error States Reference**:
 
-| State | Trigger | User sees |
-|-------|---------|-----------|
-| Checkout — Shipping address incomplete | Stripe Elements reports missing required field | "Please complete your shipping address." + highlight missing field |
-| Checkout — Address not deliverable | Stripe/carrier reports invalid zip or unrecognized address | "We couldn't verify this address. Please double-check." |
-| Checkout — Restricted country | Customer selects country not in `allowed_countries: ['US']` | "We currently only ship within the United States. Contact us for international inquiries." + link to /contact.html |
-| Checkout — Billing address mismatch | (If using separate billing — Stripe handles internally) | Stripe default messaging |
+|     | State                                  | Trigger                                                     |
+| --- | -------------------------------------- | ----------------------------------------------------------- |
+| 1   | Checkout — Shipping address incomplete | Stripe Elements reports missing required field              |
+| 2   | Checkout — Address not deliverable     | Stripe/carrier reports invalid zip or unrecognized address  |
+| 3   | Checkout — Restricted country          | Customer selects country not in `allowed_countries: ['US']` |
+| 4   | Checkout — Billing address mismatch    | (If using separate billing — Stripe handles internally)     |
 
 Note: Stripe Checkout Custom UI handles most address validation via the AddressElement. Our role is to catch the edge cases Stripe surfaces (via `checkout.on('change')` event) and display them in our own error area, not to reimplement address validation.
+
+User sees: 
+1. "Please complete your shipping address." + highlight missing field
+2. "We couldn't verify this address. Please double-check."  
+3. "We currently only ship within the United States. Contact us for international inquiries." + link to /contact.html
+4. Stripe default messaging
 
 ### 7. GA4 Email Capture — All Signup Sources
 
 **Sean's concern**: `email_cta_capture` covers the CTA-driven captures (product interest, exit intent, contemplation). What about emails captured at purchase (the subscriber source = 'customer' linkage)?
 
-**Fix**: clarify event inventory:
-
-| GA4 Event | Fires on | Params |
-|-----------|----------|--------|
-| `newsletter_signup` | Footer/homepage newsletter form, commissioned form subscribe checkbox, welcome flow | `{ source }` |
-| `email_cta_capture` | The three modal CTAs (product-interest, cart-exit, contemplation-offer) | `{ source, slug? }` |
-| `purchase` | Successful checkout | (existing items array) — customer email is implicitly captured into `customers` table via webhook, but we **don't fire a separate event** because `purchase` already captures the conversion |
+Fix to clarify **GA4 Event Inventory**: 
+  - `newsletter_signup` - Footer/homepage newsletter form, commissioned form subscribe checkbox, welcome flow - `{ source }`
+  - `email_cta_capture` - The three modal CTAs (product-interest, cart-exit, contemplation-offer) - `{ source, slug? }`
+  - `purchase` - Successful checkout - (existing items array) — customer email is implicitly captured into `customers` table via webhook, but we **don't fire a separate event** because `purchase` already captures the conversion
 
 **New event to add**: `customer_email_linked` (fires when webhook detects a subscriber email matches a purchase email, i.e., the 'customer' source transition). Params: `{ previous_source }`. This lets GA4 show "what % of newsletter subscribers eventually buy."
 
@@ -280,14 +290,14 @@ Backend: extend `/api/cart-recovery` response to include `related: Product[]` ba
 **Implemented flow** (aligns exactly with Sean's model):
 
 ```
-/cart.html                       /checkout.html                         (same URL, stages unlock)
-─────────── [CHECKOUT button]    ─────────────                          ─────────────
-Page 1: CART                     Page 2: CHECKOUT (info + pay)          No separate route
-- Line items                     Stage A (shown first):                 Stage B unlocks when
-- Quantity, cost estimate        - Email + Name (prefilled from cart)   Stage A valid:
-- Email + Name (optional capture —  - Billing address                   - Payment Element
-   stored even if user bails)    - Shipping address (+ "same as" chk)   - "Confirm & Pay" button
-- "CHECKOUT" button              Stage A submit creates Stripe session
+/cart.html                               /checkout.html                             (same URL, stages unlock)
+─────────── [CHECKOUT button]            ───────────── [PAY BUTTON]                 ─────────────
+Page 1: CART                             Page 2: CHECKOUT (info + pay)              No separate route
+- Line items                             Stage A (shown first):                     Stage B unlocks when
+- Quantity, cost estimate                - Email + Name (prefilled from cart)       Stage A valid:
+- Email + Name                           - Billing address                          - Payment Element
+                                         - Shipping address (+ "same as" chk)       - "Confirm & Pay" button
+- "CHECKOUT" button                      Stage A submit creates Stripe session
   ↓ fires POST /api/checkout/reserve
     (availability check + hold,
     NO PII collected yet)
