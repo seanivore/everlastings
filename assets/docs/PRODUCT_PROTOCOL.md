@@ -1,7 +1,7 @@
 # Product Protocol — Everlastings by Emaline
 
 **Created**: 2026-04-12
-**Updated**: 2026-04-12 — v1.3.1: consolidated from PRODUCT_GUIDE.md + PRODUCT_CREATION_PROTOCOL.md
+**Updated**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Admin Orders Tab).
 
 ---
 

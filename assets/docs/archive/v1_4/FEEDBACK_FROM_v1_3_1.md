@@ -24,8 +24,7 @@ Get a bit deeper with the set up services, including web research for the most u
 
 After this session, when we're wrapping up, I'd like us to launch an agent to make sure all the documentation is consistent just because I noticed a few things that were dated on the EVERLASTINGS_STORE.md and while that document specifically isn't a huge deal because it's really the final version that will be the most important, it made me curious about the other documents. Basically I know they're getting long in general so for me it is just an overwhelming amount of information to try to find this issues, and then for context it seemed to make the most sense to have that done by an agent with a clean context in addition to your reviews. 
 
-
-
+---
 
 Line 2789, Re: "Shop — No Filter Results", I'm not sure what this means because shouldn't no filter show all products?
 

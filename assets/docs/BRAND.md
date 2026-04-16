@@ -355,4 +355,129 @@ When in doubt, ask:
   - Is there room for wonder?
 
 ---
-*This brand guide is the canonical reference. Colors, voice, and photography standards are enforced across all documents.*
+
+## Email Voice (v1.4)
+
+Three transactional emails send from the site via Resend. All three adopt Emaline's voice — warm, attentive, poetic-but-not-purple, small-g gentle.
+
+**Sender**: `Everlastings by Emaline <hello@everlastingsbyemaline.com>`
+
+**Visual style**: single-column centered layout, cream (#FAF6F0) background, ink (#2C2521) text, plum (#4A1942) accents. Cormorant Garamond for headlines (Google Fonts link at top of each template). One small logo at top. No heavy hero imagery; let typography do the work.
+
+**Voice rules**:
+- Address the customer by name when we have it, "Dear collector" when we don't
+- Never "Hi!" or "Hey there" — always "Dear [Name]," or "[Name],"
+- Close with "With care," or "Warmly," + "Everlastings by Emaline" (not "The Emaline Team")
+- Avoid exclamation points except in welcome (one, maximum)
+- Prefer "your haven" / "your piece" over "your order" / "your purchase"
+
+### Template 1: Tracking Email
+
+Fires from `PATCH /api/orders/:id` when Emy marks an order shipped.
+
+> **Subject**: Your haven is on its way
+>
+> [Name],
+>
+> **[Product Title]** has been carefully packed and is on its way to you. ${Carrier} tells us to expect delivery within a few days.
+>
+> Tracking number: **[TRACKING-NUMBER]**
+>
+> [Track your package →]
+>
+> If anything arrives not as you hoped, please reply to this email directly.
+>
+> With care,
+> Everlastings by Emaline
+
+### Template 2: Newsletter Welcome — With Coupon (contemplation-offer source)
+
+Fires from `api/subscribe.ts` when source is `contemplation-offer`. Generates a unique 5% promotion code + saves to `subscribers.promo_code` + emails it.
+
+> **Subject**: Welcome to the Firelight Council
+>
+> [Name or "Dear collector"],
+>
+> Thank you for lingering long enough with the work to want to know more. That kind of attention is rare, and it is met here with the same.
+>
+> As a small token, use code **[PROMO-CODE]** for 5% off your first piece. Valid for 30 days.
+>
+> You'll hear from us when a new haven is ready — never more often than that.
+>
+> With care,
+> Everlastings by Emaline
+
+### Template 3: Newsletter Welcome — No Coupon (footer / homepage / checkout-started sources)
+
+Fires from `api/subscribe.ts` for all other sources. No coupon generated.
+
+> **Subject**: Welcome to the Firelight Council
+>
+> [Name or "Dear collector"],
+>
+> Thank you for joining us. You'll hear from us when a new haven is ready — never more often than that.
+>
+> In the meantime, if there's a specific piece that's caught your eye, reply and tell us. Emy reads every message.
+>
+> With care,
+> Everlastings by Emaline
+
+### Template 4: Cart Recovery Coupon
+
+Fires from `api/cart-recovery.ts` when a user submits email in the 409 recovery overlay. Delivers the generated 10% code (also shown inline in the overlay; this is the record copy).
+
+> **Subject**: A small gift, for your patience
+>
+> [Name or "Dear collector"],
+>
+> We're sorry the piece you reached for had already found its home. These are one-of-a-kind, and sometimes timing decides.
+>
+> As thanks for your interest, here is 10% off your next piece with us:
+>
+> **[PROMO-CODE]**
+>
+> Valid for 30 days.
+>
+> New havens are in the works. We'll let you know when they're ready.
+>
+> With care,
+> Everlastings by Emaline
+
+### HTML Skeleton (shared across all four)
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#FAF6F0;font-family:Georgia,serif;color:#2C2521;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560">
+        <tr><td align="center" style="padding-bottom:32px;">
+          <img src="https://cdn.everlastingsbyemaline.com/brand/logo.svg" alt="Everlastings by Emaline" width="180">
+        </td></tr>
+        <tr><td>
+          <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:32px;color:#4A1942;margin:0 0 24px;">{{heading}}</h1>
+          {{body}}
+        </td></tr>
+        <tr><td align="center" style="padding-top:40px;color:#918B82;font-size:13px;">
+          With care,<br>
+          Everlastings by Emaline<br>
+          <a href="https://everlastingsbyemaline.com" style="color:#4A1942;">everlastingsbyemaline.com</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+```
+
+All four templates use this skeleton, swapping only `{{subject}}`, `{{heading}}`, and `{{body}}`. The agent implementing `api/_emails/index.ts` copies this HTML and substitutes template-specific values.
+
+---
+*This brand guide is the canonical reference. Colors, voice, photography standards, and email templates are enforced across all documents.*

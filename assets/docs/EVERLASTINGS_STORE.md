@@ -2,9 +2,10 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-12 — v1.3.0: parallel tracks, customers table, env strategy, Cloudinary, AI product creation, analytics, META Pixel
-**Version**: v1.3.1
+**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo + Resend), corrected coupon strategy, Phase 0/1 split, placeholder hygiene, `customer_email_linked` event
+**Version**: v1.4.0
 **Status**: Pre-development, architecture finalized
+**Build Guide**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
 
 ---
 
@@ -49,44 +50,54 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │            VERCEL SERVERLESS FUNCTIONS — TypeScript                 │
 │                                                                     │
-│  /api/checkout.ts       →  Create Stripe session (cart items)       │
+│  /api/checkout/reserve.ts → Availability check + soft cart hold      │
+│  /api/checkout.ts       →  Create Stripe session (requires hold)    │
 │  /api/session-status.ts →  Return page: verify payment status       │
 │  /api/webhook.ts        →  Handle Stripe payment events             │
 │  /api/stripe-sync.ts    →  Create Stripe Product + Price on INSERT  │
 │  /api/upload.ts         →  Cloudinary transform → R2 upload         │
-│  /api/cart-recovery.ts  →  Sold-in-cart: promo code + email capture │
+│  /api/cart-recovery.ts  →  Sold-in-cart: promo code + Resend email  │
 │  /api/products.ts       →  CRUD for AI-assisted product creation    │
+│  /api/orders.ts         →  Admin: list orders by shipping status    │
+│  /api/orders/[id].ts    →  Admin: record tracking + fire email      │
+│  /api/cart-activity.ts  →  Product interest notification            │
+│  /api/product-feed.ts   →  CSV feed for Meta Commerce Catalog       │
 │  /api/config.ts         →  Public config (Stripe key per env)       │
-│  /api/subscribe.ts      →  Newsletter email capture                 │
+│  /api/subscribe.ts      →  Newsletter email capture + optional code │
 │  /api/contact.ts        →  Contact form handler                     │
+│  /api/_emails/          →  Resend templates (tracking, welcome,     │
+│                            cart-recovery)                            │
 └──────────┬───────────────────────────────────┬──────────────────────┘
            │                                   │
            ▼                                   ▼
 ┌──────────────────────────┐   ┌────────────────────────────────────┐
 │       SUPABASE           │   │       CLOUDFLARE R2                │
 │                          │   │                                    │
-│  Tables:                 │   │  /products/{slug}/                 │
+│  Tables (8):             │   │  /products/{slug}/                 │
 │    products              │   │    hero-{slug}.webp                │
 │    customers             │   │    gallery-{slug}-01.webp          │
 │    orders                │   │    thumbnail-{slug}.webp           │
 │    subscribers           │   │    video-{slug}-01.mp4             │
 │    site_config           │   │    detail-{slug}-01.gif            │
+│    webhook_events        │   │                                    │
+│    product_interests     │   │  /brand/                           │
+│    cart_holds            │   │    logo.svg, favicon, etc.         │
 │                          │   │                                    │
-│                          │   │  /brand/                           │
-│  Auth: admin login       │   │    logo.svg, favicon, etc.         │
-│  RLS: row-level security │   │                                    │
-│  DB Webhooks: on INSERT  │   │  Public CDN access                 │
+│  Auth: admin login       │   │  Public CDN access via              │
+│  RLS: row-level security │   │  cdn.everlastingsbyemaline.com      │
+│  DB Webhooks: on INSERT  │   │                                    │
 └──────────────────────────┘   └────────────────────────────────────┘
            │
            ▼
-┌─────────────────────────┐
-│       STRIPE            │
-│                         │
-│  Products + Prices      │
-│  Checkout Sessions      │
-│  Payment Intents        │
-│  Webhooks               │
-└─────────────────────────┘
+┌─────────────────────────┐      ┌────────────────────┐    ┌─────────────┐
+│       STRIPE            │      │      RESEND        │    │   SHIPPO    │
+│                         │      │                    │    │             │
+│  Products + Prices      │      │ Transactional      │    │ Free Starter│
+│  Checkout Sessions      │      │  email (tracking,  │    │ Emy's web   │
+│  Payment Intents        │      │  welcome coupons,  │    │ UI only in  │
+│  Webhooks               │      │  cart recovery)    │    │ v1 — no API │
+│  Dynamic promo codes    │      │ Free tier: 3k/mo   │    │ integration │
+└─────────────────────────┘      └────────────────────┘    └─────────────┘
 ```
 
 ### Key Architectural Decisions
@@ -124,6 +135,16 @@
   16. **Meta Pixel + Instagram Shopping** — Base pixel code alongside GA4 in `<head>`. Events fire in parallel with GA4. Server-side CAPI for Purchase deduplication. `api/product-feed.ts` serves CSV for Meta Commerce Catalog sync (Instagram Shopping auto-syncs daily).
 
   17. **Email capture CTAs** — Product interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup with 5% off. `product_interests` table tracks email + product slug for real notification capability.
+
+  18. **Availability check BEFORE any PII** (v1.4) — `/cart.html` fires `POST /api/checkout/reserve` on [CHECKOUT] click, creating a 15-min soft hold in the `cart_holds` table. 409 recovery happens on the cart page, before the user has entered address or payment details. Stripe session is created only after the hold is confirmed. See IMPL_GUIDE AR #28, #29.
+
+  19. **Soft cart holds, not hard reservations** (v1.4) — 15-minute TTL. Availability is `products.available = true AND NOT EXISTS (hold by different session)`. No infinite lock; items free after 15 minutes of user inactivity.
+
+  20. **Shipping pipeline: Shippo (labels) + Resend (branded tracking email)** (v1.4) — Emy uses Shippo free-tier UI to print labels (30/mo free) and pastes tracking number into admin UI. `PATCH /api/orders/:id` records tracking and fires a branded tracking email via Resend (free tier, 3k/mo, no credit card).
+
+  21. **Coupon = rule, promotion code = single-use delivery** (v1.4) — Stripe coupons are `Duration: Forever`, `Max redemptions: BLANK`. Every user event generates a unique promotion code via `stripe.promotionCodes.create` with `max_redemptions: 1` and 30-day expiry. Code is emailed via Resend.
+
+  22. **Placeholder hygiene** (v1.4) — Track B hardcoded content wrapped in `<!-- PLACEHOLDER: name -->` tags (and equivalents for CSS/JS). Track C begins and ends with a grep against the codebase to guarantee nothing slips through.
 
 ---
 
@@ -194,7 +215,7 @@ Create `.env.local` (see also `.env.example` in impl guide):
   CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
   ```
 
-**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `v1_3_1_IMPLEMENTATION.md` > Environment Strategy for full details.
+**Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys). `dev`/`feat/*` branches → Preview (test Stripe keys). See `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Environment Strategy for full details.
 
 ### Local Development
 
@@ -592,8 +613,10 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `PRODUCT_API_KEY`        | AI/external API auth key            | Yes      |
 | `META_PIXEL_ID`          | Meta Pixel ID for tracking          | Yes      |
 | `META_ACCESS_TOKEN`      | Meta Conversions API token          | Yes      |
+| `RESEND_API_KEY`         | Resend transactional email API key  | Yes      |
+| `RESEND_FROM_EMAIL`      | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes |
 
-**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `v1_3_0_IMPLEMENTATION.md` > Environment Strategy.
+**Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 
 ### Post-Deploy Verification
 
@@ -661,27 +684,35 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 ### `orders` table
 
-| Column                | Type        | Notes                      |
-| --------------------- | ----------- | -------------------------- |
-| id                    | uuid        | PK                         |
-| stripe_session_id     | text        | Checkout session ID        |
-| stripe_payment_intent | text        | Payment intent ID          |
-| product_id            | uuid        | FK to products             |
-| customer_id           | uuid        | FK to customers            |
-| customer_email        | text        | From Stripe (denormalized) |
-| amount                | integer     | In cents                   |
-| status                | text        | completed, refunded        |
-| shipping_address      | jsonb       | From Stripe                |
-| created_at            | timestamptz | Auto                       |
+| Column                | Type        | Notes                                                |
+| --------------------- | ----------- | ---------------------------------------------------- |
+| id                    | uuid        | PK                                                   |
+| stripe_session_id     | text        | Checkout session ID                                  |
+| stripe_payment_intent | text        | Payment intent ID                                    |
+| product_id            | uuid        | FK to products                                       |
+| customer_id           | uuid        | FK to customers                                      |
+| customer_email        | text        | From Stripe (denormalized)                           |
+| amount                | integer     | In cents                                             |
+| status                | text        | completed, shipped, delivered, refunded              |
+| shipping_address      | jsonb       | From Stripe                                          |
+| tracking_number       | text        | Set when Emy marks shipped via admin UI              |
+| tracking_carrier      | text        | USPS, UPS, FedEx, DHL                                |
+| shipped_at            | timestamptz | When Emy marked shipped — triggers Resend email      |
+| delivered_at          | timestamptz | Post-launch via Shippo webhook                       |
+| created_at            | timestamptz | Auto                                                 |
+
+Partial index `idx_orders_needs_shipping` on `(created_at DESC)` WHERE `shipped_at IS NULL AND status = 'completed'` for fast admin queue lookups.
 
 ### `subscribers` table
 
-| Column     | Type        | Notes                      |
-| ---------- | ----------- | -------------------------- |
-| id         | uuid        | PK                         |
-| email      | text        | Unique                     |
-| source     | text        | homepage, footer, checkout |
-| created_at | timestamptz | Auto                       |
+| Column                | Type        | Notes                                                    |
+| --------------------- | ----------- | -------------------------------------------------------- |
+| id                    | uuid        | PK                                                       |
+| email                 | text        | Unique                                                   |
+| source                | text        | homepage, footer, checkout-started, cart-recovery, product-interest, cart-exit, contemplation-offer, customer |
+| promo_code            | text        | Dynamic Stripe promotion code (newsletter welcome or contemplation CTA) |
+| promo_code_expires_at | timestamptz | When the promo code expires (30 days after generation)   |
+| created_at            | timestamptz | Auto                                                     |
 
 ### `site_config` table
 
@@ -713,16 +744,41 @@ Used for webhook idempotency. Prevents duplicate processing when Stripe retries 
 
 Unique constraint on (email, product_slug). Tracks who wants to be notified about specific products.
 
+### `cart_holds` table (NEW in v1.4)
+
+| Column       | Type        | Notes                                              |
+| ------------ | ----------- | -------------------------------------------------- |
+| id           | uuid        | PK                                                 |
+| session_id   | text        | Browser session (localStorage UUID)                |
+| product_id   | uuid        | FK to products (ON DELETE CASCADE)                 |
+| expires_at   | timestamptz | 15 minutes after creation; soft hold              |
+| created_at   | timestamptz | Auto                                               |
+
+Index on `(product_id, expires_at)` for efficient availability lookups. A product is "available for purchase by session X" if `products.available = true AND NOT EXISTS (cart_hold WHERE product_id = X AND session_id != X AND expires_at > now())`. This prevents the "sold while entering payment" UX shock — availability is checked and held when the user clicks [CHECKOUT] on `/cart.html`, before any PII is entered.
+
+---
+
+## Key Schema Changes in v1.4.0
+
+Compared to v1.3.1:
+
+1. **8 tables** (was 7) — added `cart_holds`
+2. **`orders`** — added `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, and `idx_orders_needs_shipping` partial index for the shipping fulfillment pipeline
+3. **`subscribers`** — added `promo_code`, `promo_code_expires_at` so newsletter welcome / contemplation-offer coupons can be looked up by admin
+4. **Source values** expanded to include `checkout-started` (captured on /cart.html [CHECKOUT] click even if user doesn't complete purchase)
+
 ---
 
 ## Related Documentation
 
   - **Brand Guide**: `assets/docs/BRAND.md`
-  - **Implementation Guide**: `assets/docs/archive/v1_3/v1_3_0_IMPLEMENTATION.md`
-  - **Action Steps**: `assets/docs/archive/v1_3/v1_3_0_ACTION_STEPS.md`
+  - **Implementation Guide (current)**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
+  - **Action Steps (current)**: `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`
+  - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Product Protocol**: `assets/docs/PRODUCT_PROTOCOL.md`
+  - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`
-  - **Dev Rules**: `.agent/DEV_RULES.md`
+  - **Dev Rules**: `.agent/AGENTS.md`
   - **Mobile Design Specs**: `.agent/2026_MOBILE_DESIGN_SPECS.md`
   - **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`
 
