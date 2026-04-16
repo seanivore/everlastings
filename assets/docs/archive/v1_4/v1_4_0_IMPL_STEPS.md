@@ -13,6 +13,11 @@
 
 - [Everlastings v1.4.0 Action Steps](#everlastings-v140-action-steps)
   - [Phase 0: Sean's Prerequisites + Agent Bootstrap](#phase-0-seans-prerequisites--agent-bootstrap)
+    - [Setup the repo and env scaffolding](#setup-the-repo-and-env-scaffolding)
+    - [Reconcile branches from current state](#reconcile-branches-from-current-state)
+    - [Services — for each, copy secrets into `.env.local` AND `vercel env add` in one pass](#services--for-each-copy-secrets-into-envlocal-and-vercel-env-add-in-one-pass)
+    - [Emy's Instagram Shopping (tracking — can proceed in parallel with build)](#emys-instagram-shopping-tracking--can-proceed-in-parallel-with-build)
+    - [Agent bootstrap (after all services/env vars exist)](#agent-bootstrap-after-all-servicesenv-vars-exist)
   - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
     - [A1: Services Setup (verification + dependent config)](#a1-services-setup-verification--dependent-config)
     - [A2: API Endpoints](#a2-api-endpoints)
@@ -36,7 +41,10 @@
 
 ## Phase 0: Sean's Prerequisites + Agent Bootstrap
 
-> **ACTION — (SEAN+AGENT).** Human-only service work, interleaved with agent bootstrap tasks. Done BEFORE the first Track-A implementation session. Every secret goes into `.env.local` AND `vercel env add` in the same sitting — one touch per key.
+> **ACTION — (SEAN+AGENT).** 
+> Human-only service work, interleaved with agent bootstrap tasks. 
+> Done BEFORE the first Track-A implementation session. 
+> Every secret goes into `.env.local` AND `vercel env add` in the same sitting — one touch per key.
 
 ### Setup the repo and env scaffolding
 
@@ -106,7 +114,8 @@
 
 ### A2: API Endpoints
 
-> **ACTION — (AGENT) only.** Goal: all server-side endpoints working, testable with curl.
+> **ACTION — (AGENT) only.** 
+> Goal: all server-side endpoints working, testable with curl.
 
   - [ ] (AGENT) **Create** `api/config.ts` — public keys (Stripe publishable, Supabase URL + anon key, Meta Pixel ID)
   - [ ] (AGENT) **Create** `api/stripe-sync.ts` — Supabase webhook handler, creates Stripe Product + Price
@@ -174,7 +183,11 @@
 
 ## TRACK B: Frontend Design
 
-> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!-- PLACEHOLDER: name -->` tags (see Placeholder Hygiene reference in IMPL_GUIDE). No JavaScript data-fetching. Client reviews visual design.
+> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** 
+> All pages: hardcoded HTML/CSS. 
+> Every piece of placeholder content wrapped in `<!-- PLACEHOLDER: name -->` tags (see Placeholder Hygiene reference in IMPL_GUIDE). 
+> No JavaScript data-fetching. 
+> Client reviews visual design.
 
 ### B1: Design System
 
@@ -256,7 +269,10 @@
 
 ## TRACK C: Integration
 
-> **ACTION — (AGENT) builds integrations; (SEAN) does final QA + real-card test + DNS flip at launch.** Wire Track B pages to Track A backend. First task: `grep -rn "PLACEHOLDER" .` → that's the to-do list. Last task before C4: same grep returns zero lines.
+> **ACTION — (AGENT) builds integrations; (SEAN) does final QA + real-card test + DNS flip at launch.** 
+> Wire Track B pages to Track A backend. 
+> First task: `grep -rn "PLACEHOLDER" .` → that's the to-do list. 
+> Last task before C4: same grep returns zero lines.
 
 ### C1: Wire Pages to Backend
 
@@ -351,5 +367,4 @@
 Phase 0 merges the former Phase 0 (Sean dashboard work) and Phase 1 (agent bootstrap) into one interleaved block — each secret is handled once. Tracks A and B proceed in parallel once Phase 0 is done. Track C integrates them.
 
 ---
-
 *One checkbox = one action. Every action tagged (SEAN), (AGENT), or (SEAN+AGENT). Reference material lives in the IMPL_GUIDE; this doc is pure action.*
