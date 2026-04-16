@@ -1,7 +1,7 @@
 # Everlastings v1.4.0 Implementation Guide
 
 **Version**: v1.4.0
-**Created**: 2026-04-16
+**Created**: 2026-04-16 07:35
 **Previous**: v1.3.1 (2026-04-12), archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
 **Structure**: Phase 0 (Sean setup) → Phase 1 (agent setup) → Phase 2 (3 parallel tracks: A Backend / B Frontend / C Integration)
@@ -9,7 +9,7 @@
 **Design Reference**: `assets/docs/BRAND.md`
 **Action Steps**: `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`
 
-> **How to read this doc**: Every actionable checkbox is tagged `[SEAN]` (you do it in a dashboard or on your laptop) or `[AGENT]` (the implementation-session agent does it via code/CLI/MCP). Reference sections (Git Branching Strategy, Environment Strategy, Webhook Contract, Slug Rules, Source of Truth Hierarchy, Stripe Sync Rules, Coupon + Promotion Code Strategy, Shipping Pipeline) are not tasks — they are canonical references to link back to.
+> **How to read this doc**: Every actionable checkbox is tagged `(SEAN)` (you do it in a dashboard or on your laptop) or `(AGENT)` (the implementation-session agent does it via code/CLI/MCP). Reference sections (Git Branching Strategy, Environment Strategy, Webhook Contract, Slug Rules, Source of Truth Hierarchy, Stripe Sync Rules, Coupon + Promotion Code Strategy, Shipping Pipeline) are not tasks — they are canonical references to link back to.
 
 ---
 
@@ -17,29 +17,145 @@
   - [Architecture Reference](#architecture-reference)
   - [Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
   - [Phase 1: Agent-Executable Setup](#phase-1-agent-executable-setup)
-  - [Dependencies](#dependencies)
+  - [Git Branching Strategy](#git-branching-strategy)
+    - [Setup Commands](#setup-commands)
+  - [Environment Strategy](#environment-strategy)
+    - [Where Secrets Live](#where-secrets-live)
+    - [Environment Variable Table](#environment-variable-table)
+    - [Live Launch Switchover Process](#live-launch-switchover-process)
+  - [Source of Truth Hierarchy](#source-of-truth-hierarchy)
+  - [Stripe Sync Rules](#stripe-sync-rules)
+  - [Product Schema Hard Reference](#product-schema-hard-reference)
+    - [TypeScript Interface](#typescript-interface)
+    - [Supabase SQL](#supabase-sql)
+  - [Configuration Files](#configuration-files)
+    - [`vercel.json`](#verceljson)
+    - [`tsconfig.json`](#tsconfigjson)
+    - [`package.json`](#packagejson)
+    - [`.env.example`](#envexample)
+  - [How the Tracks Work](#how-the-tracks-work)
   - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
     - [A1: Services Setup](#a1-services-setup)
+      - [Vercel](#vercel)
+      - [Git Branches](#git-branches)
+      - [Supabase](#supabase)
+      - [Cloudflare R2](#cloudflare-r2)
+      - [Cloudinary](#cloudinary)
+      - [Stripe](#stripe)
+      - [Resend (Transactional Email)](#resend-transactional-email)
+      - [Shippo (Shipping Labels)](#shippo-shipping-labels)
+      - [Meta Pixel + Instagram Shopping](#meta-pixel--instagram-shopping)
+      - [Analytics](#analytics)
+      - [Config Files](#config-files)
     - [A2: API Endpoints](#a2-api-endpoints)
+      - [Config — `api/config.ts`](#config--apiconfigts)
+      - [Stripe Sync — `api/stripe-sync.ts`](#stripe-sync--apistripe-syncts)
+      - [Reserve — `api/checkout/reserve.ts` (NEW — AR #28, #29)](#reserve--apicheckoutreservets-new--ar-28-29)
+      - [Checkout — `api/checkout.ts`](#checkout--apicheckoutts)
+      - [Session Status — `api/session-status.ts`](#session-status--apisession-statusts)
+      - [Webhook — `api/webhook.ts`](#webhook--apiwebhookts)
+      - [Cart Recovery — `api/cart-recovery.ts`](#cart-recovery--apicart-recoveryts)
+      - [Products API — `api/products.ts`](#products-api--apiproductsts)
+      - [Image Upload — `api/upload.ts`](#image-upload--apiuploadts)
+      - [Newsletter — `api/subscribe.ts`](#newsletter--apisubscribets)
+      - [Cart Activity — `api/cart-activity.ts`](#cart-activity--apicart-activityts)
+      - [Product Feed — `api/product-feed.ts`](#product-feed--apiproduct-feedts)
+      - [Orders (Admin) — `api/orders.ts` + `api/orders/[id].ts` (NEW — AR #30)](#orders-admin--apiordersts--apiordersidts-new--ar-30)
+      - [Email Templates — `api/_emails/`](#email-templates--api_emails)
     - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
+      - [Admin UI — `admin/index.html` + `assets/js/admin.js`](#admin-ui--adminindexhtml--assetsjsadminjs)
+      - [Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)](#admin-orders-tab--shipping-fulfillment-new--ar-30)
+      - [Product Protocol](#product-protocol)
     - [A4: API Integration Testing](#a4-api-integration-testing)
-  - [TRACK B: Frontend Design](#track-b-frontend-design-using-placeholder-content)
+  - [TRACK B: Frontend Design](#track-b-frontend-design)
     - [B1: Design System](#b1-design-system)
+      - [CSS Custom Properties](#css-custom-properties)
+      - [Typography](#typography)
+      - [Base Components](#base-components)
+      - [Loading States](#loading-states)
+      - [Lightbox Component](#lightbox-component)
+      - [Inline SVG Icons](#inline-svg-icons)
+      - [Responsive Foundation](#responsive-foundation)
+      - [GA4 Script Tag](#ga4-script-tag)
+      - [Meta Pixel Script Tag](#meta-pixel-script-tag)
+      - [Email Capture CTA Styles](#email-capture-cta-styles)
     - [B2: Header, Footer, Nav](#b2-header-footer-nav)
+      - [Header](#header)
+      - [Footer](#footer)
     - [B3: Product Page](#b3-product-page)
+      - [Media Rendering](#media-rendering)
+      - [Email CTA 2: Cart Exit Intent Modal](#email-cta-2-cart-exit-intent-modal)
+      - [Email CTA 3: 3-Minute Timed Contemplation Popup](#email-cta-3-3-minute-timed-contemplation-popup)
     - [B4: Shop Grid](#b4-shop-grid)
     - [B5: Homepage](#b5-homepage)
     - [B6: Remaining Pages](#b6-remaining-pages)
   - [TRACK C: Integration](#track-c-integration)
     - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
-    - [C2: Checkout Flow E2E](#c2-checkout-flow-e2e)
+      - [Supabase Client — `assets/js/main.js`](#supabase-client--assetsjsmainjs)
+      - [Product Page JS — `assets/js/product.js`](#product-page-js--assetsjsproductjs)
+      - [Shop Grid JS — `assets/js/shop.js`](#shop-grid-js--assetsjsshopjs)
+      - [Homepage JS — `assets/js/homepage.js`](#homepage-js--assetsjshomepagejs)
+      - [Newsletter JS — `assets/js/newsletter.js`](#newsletter-js--assetsjsnewsletterjs)
+    - [C2: Checkout Flow End-to-End](#c2-checkout-flow-end-to-end)
+      - [Cart JS — `assets/js/cart.js` (NEW — AR #28)](#cart-js--assetsjscartjs-new--ar-28)
+      - [Return Page — `complete.html`](#return-page--completehtml)
     - [C3: SEO Finalization](#c3-seo-finalization)
-    - [C4: Testing + Launch](#c4-testing--launch)
+    - [C4: Testing + Launch Prep](#c4-testing--launch-prep)
+      - [Stripe Live Mode](#stripe-live-mode)
+      - [Testing](#testing)
+      - [Performance](#performance)
+      - [Launch](#launch)
+  - [Webhook Contract](#webhook-contract)
+  - [409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
+    - [What Triggers It](#what-triggers-it)
+    - [What the User Sees](#what-the-user-sees)
+    - [Backend Behavior](#backend-behavior)
+    - [Coupon Setup (see A1 + Coupon Strategy reference)](#coupon-setup-see-a1--coupon-strategy-reference)
+  - [Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
+  - [Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
+    - [E-commerce Events (with `items` array)](#e-commerce-events-with-items-array)
+    - [Custom Events (no `items` array)](#custom-events-no-items-array)
+    - [Meta Pixel Events (fire alongside GA4)](#meta-pixel-events-fire-alongside-ga4)
+  - [Error States Reference](#error-states-reference)
+      - [Product — Not Found](#product--not-found)
+      - [Product — Supabase Fetch Fails](#product--supabase-fetch-fails)
+      - [Product — Image Fails to Load](#product--image-fails-to-load)
+      - [Product — Sold](#product--sold)
+      - [Checkout — Cart Empty](#checkout--cart-empty)
+      - [Cart — Items Sold Before Reserve (409)](#cart--items-sold-before-reserve-409)
+      - [Checkout — Hold Expired (410)](#checkout--hold-expired-410)
+      - [Checkout — Session Creation Fails](#checkout--session-creation-fails)
+      - [Checkout — Payment Declined](#checkout--payment-declined)
+      - [Checkout — Network Error](#checkout--network-error)
+      - [Checkout — Shipping Address Incomplete](#checkout--shipping-address-incomplete)
+      - [Checkout — Address Not Deliverable](#checkout--address-not-deliverable)
+      - [Checkout — Restricted Country](#checkout--restricted-country)
+      - [Checkout — Billing/Shipping Mismatch](#checkout--billingshipping-mismatch)
+      - [Complete — Success](#complete--success)
+      - [Complete — Error](#complete--error)
+      - [Shop — Loading](#shop--loading)
+      - [Shop — No Products at All](#shop--no-products-at-all)
+      - [Shop — All Products Sold (none available, no filter)](#shop--all-products-sold-none-available-no-filter)
+      - [Shop — Filter Returned Zero Matches](#shop--filter-returned-zero-matches)
+      - [Shop — Fetch Failed](#shop--fetch-failed)
+      - [Newsletter — Already Subscribed](#newsletter--already-subscribed)
+      - [Newsletter — Invalid Email](#newsletter--invalid-email)
+      - [Admin — Not Authenticated](#admin--not-authenticated)
+      - [Admin — Upload Too Large](#admin--upload-too-large)
+  - [Slug Rules](#slug-rules)
+  - [Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
+    - [Naming Convention](#naming-convention)
+    - [Cloudinary Transform Parameters](#cloudinary-transform-parameters)
+    - [Pipeline Steps](#pipeline-steps)
+  - [Deferred Items](#deferred-items)
+  - [Deferred Caching Strategy](#deferred-caching-strategy)
+  - [Post-Launch](#post-launch)
   - [Reference Sections](#reference-sections)
     - [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy)
     - [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
     - [Placeholder Hygiene](#placeholder-hygiene)
     - [Post-Session Consistency Sweep](#post-session-consistency-sweep)
+  - [Reference Documents](#reference-documents)
 
 ---
 
@@ -168,21 +284,21 @@ Every architectural question answered. No mid-session research. Referenced as "A
 
 These are human-only tasks — account creation, password choices, dashboard clicks, domain setup. An agent cannot do these. Do them BEFORE kicking off an implementation session.
 
-  - [ ] [SEAN] **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`
-  - [ ] [SEAN] **Copy** Supabase anon key + service role key from Settings > API (save for Phase 1 env vars)
-  - [ ] [SEAN] **Create** Stripe account (if not already). Save publishable + secret test keys from Developers > API keys
-  - [ ] [SEAN] **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
-  - [ ] [SEAN] **Create** Cloudflare R2 bucket `everlastings`. Enable public access
-  - [ ] [SEAN] **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
-  - [ ] [SEAN] **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket
-  - [ ] [SEAN] **Create** Cloudinary account (free tier). Copy cloud name, API key, API secret (CLOUDINARY_URL format)
-  - [ ] [SEAN] **Create** Resend account (free tier, no credit card). Get API key from Dashboard > API Keys. Verify domain `everlastingsbyemaline.com` for sending (DNS records provided by Resend)
-  - [ ] [SEAN] **Create** Shippo account (free Starter). Link USPS account (automatic, no fee)
-  - [ ] [SEAN] **Create** Google Analytics 4 property for `everlastingsbyemaline.com`. Note Measurement ID `G-XXXXXXXXXX`
-  - [ ] [SEAN] **Verify** Google Search Console ownership (TXT record or HTML file)
-  - [ ] [SEAN] **Emy's Instagram Shopping prerequisites** (see A1 Meta section for the full list)
-  - [ ] [SEAN] **Confirm** everlastingsbyemaline.com domain is registered and managed in Cloudflare DNS
-  - [ ] [SEAN] **Invite** admin users in Supabase Auth > Users > Invite user:
+  - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`
+  - [ ] (SEAN) **Copy** Supabase anon key + service role key from Settings > API (save for Phase 1 env vars)
+  - [ ] (SEAN) **Create** Stripe account (if not already). Save publishable + secret test keys from Developers > API keys
+  - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
+  - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`. Enable public access
+  - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
+  - [ ] (SEAN) **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket
+  - [ ] (SEAN) **Create** Cloudinary account (free tier). Copy cloud name, API key, API secret (CLOUDINARY_URL format)
+  - [ ] (SEAN) **Create** Resend account (free tier, no credit card). Get API key from Dashboard > API Keys. Verify domain `everlastingsbyemaline.com` for sending (DNS records provided by Resend)
+  - [ ] (SEAN) **Create** Shippo account (free Starter). Link USPS account (automatic, no fee)
+  - [ ] (SEAN) **Create** Google Analytics 4 property for `everlastingsbyemaline.com`. Note Measurement ID `G-XXXXXXXXXX`
+  - [ ] (SEAN) **Verify** Google Search Console ownership (TXT record or HTML file)
+  - [ ] (SEAN) **Emy's Instagram Shopping prerequisites** (see A1 Meta section for the full list)
+  - [ ] (SEAN) **Confirm** everlastingsbyemaline.com domain is registered and managed in Cloudflare DNS
+  - [ ] (SEAN) **Invite** admin users in Supabase Auth > Users > Invite user:
     - `admin@everlastingsbyemaline.com` (Master)
     - `sean@everlastingsbyemaline.com` (Developer)
     - `emyh@everlastingsbyemaline.com` (Client)
@@ -193,20 +309,20 @@ These are human-only tasks — account creation, password choices, dashboard cli
 
 These are tasks the implementation-session agent can do via bash, MCP servers, or Vercel CLI — no dashboard clicks needed. Prefer MCP where available (Supabase MCP can run migrations, Stripe MCP can create coupons). Fall back to CLI where MCP doesn't cover.
 
-  - [ ] [AGENT] **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` — save output
-  - [ ] [AGENT] **Create** config files in repo root (copy from Configuration Files section): `.env.example`, `vercel.json`, `tsconfig.json`, `package.json`
-  - [ ] [AGENT] **Create** `dev` branch: `git checkout main && git checkout -b dev && git push -u origin dev`
-  - [ ] [AGENT] **Create** `.env.local`: `cp .env.example .env.local`, then fill in real test values from Phase 0
-  - [ ] [AGENT] **Add** all env vars to Vercel per environment via `vercel env add` (see Environment Strategy table for per-env scoping). Variables include all Supabase, Stripe (test + live), R2, Cloudinary, Resend, Meta, and `PRODUCT_API_KEY`
-  - [ ] [AGENT] **Run** `npm install`
-  - [ ] [AGENT] **Verify** `vercel dev` starts without errors
-  - [ ] [AGENT] **Apply** Supabase migrations via MCP `apply_migration` (preferred) OR paste SQL into Supabase Studio:
+  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` — save output
+  - [ ] (AGENT) **Create** config files in repo root (copy from Configuration Files section): `.env.example`, `vercel.json`, `tsconfig.json`, `package.json`
+  - [ ] (AGENT) **Create** `dev` branch: `git checkout main && git checkout -b dev && git push -u origin dev`
+  - [ ] (AGENT) **Create** `.env.local`: `cp .env.example .env.local`, then fill in real test values from Phase 0
+  - [ ] (AGENT) **Add** all env vars to Vercel per environment via `vercel env add` (see Environment Strategy table for per-env scoping). Variables include all Supabase, Stripe (test + live), R2, Cloudinary, Resend, Meta, and `PRODUCT_API_KEY`
+  - [ ] (AGENT) **Run** `npm install`
+  - [ ] (AGENT) **Verify** `vercel dev` starts without errors
+  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration` (preferred) OR paste SQL into Supabase Studio:
     - All 8 table creations (see Product Schema Hard Reference)
     - All RLS policies (see A1 Supabase section)
     - Triggers (`set_slug`, `set_updated_at_*`)
-  - [ ] [AGENT] **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
-  - [ ] [AGENT] **Create** Stripe coupons via MCP or Dashboard (see A1 Stripe section for exact settings)
-  - [ ] [AGENT] **Create** Stripe webhook endpoints (test + live) pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
+  - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
+  - [ ] (AGENT) **Create** Stripe coupons via MCP or Dashboard (see A1 Stripe section for exact settings)
+  - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
 
 ---
 
@@ -299,25 +415,25 @@ These are tasks the implementation-session agent can do via bash, MCP servers, o
 
 Vercel Dashboard → Settings → Environment Variables. Each var scoped by environment.
 
-| Variable                 | Production            | Preview + Development   |
-| ------------------------ | --------------------- | ----------------------- |
-| `STRIPE_SECRET_KEY`      | `sk_live_...`         | `sk_test_...`           |
-| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...`         | `pk_test_...`           |
-| `STRIPE_WEBHOOK_SECRET`  | live signing secret   | test signing secret     |
-| `SUPABASE_URL`           | same                  | same                    |
-| `SUPABASE_ANON_KEY`      | same                  | same                    |
-| `SUPABASE_SERVICE_KEY`   | same                  | same                    |
-| `PRODUCT_API_KEY`        | random 64-char string | different random string |
-| `R2_ACCOUNT_ID`          | same                  | same                    |
-| `R2_ACCESS_KEY_ID`       | same                  | same                    |
-| `R2_SECRET_ACCESS_KEY`   | same                  | same                    |
-| `R2_BUCKET_NAME`         | same                  | same                    |
-| `R2_PUBLIC_URL`          | same                  | same                    |
-| `CLOUDINARY_URL`         | same                  | same                    |
-| `META_PIXEL_ID`          | same                  | same                    |
-| `META_ACCESS_TOKEN`      | same                  | same                    |
-| `RESEND_API_KEY`         | same                  | same                    |
-| `RESEND_FROM_EMAIL`      | `hello@everlastingsbyemaline.com` | same        |
+| Variable                 | Production                        | Preview + Development   |
+| ------------------------ | --------------------------------- | ----------------------- |
+| `STRIPE_SECRET_KEY`      | `sk_live_...`                     | `sk_test_...`           |
+| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...`                     | `pk_test_...`           |
+| `STRIPE_WEBHOOK_SECRET`  | live signing secret               | test signing secret     |
+| `SUPABASE_URL`           | same                              | same                    |
+| `SUPABASE_ANON_KEY`      | same                              | same                    |
+| `SUPABASE_SERVICE_KEY`   | same                              | same                    |
+| `PRODUCT_API_KEY`        | random 64-char string             | different random string |
+| `R2_ACCOUNT_ID`          | same                              | same                    |
+| `R2_ACCESS_KEY_ID`       | same                              | same                    |
+| `R2_SECRET_ACCESS_KEY`   | same                              | same                    |
+| `R2_BUCKET_NAME`         | same                              | same                    |
+| `R2_PUBLIC_URL`          | same                              | same                    |
+| `CLOUDINARY_URL`         | same                              | same                    |
+| `META_PIXEL_ID`          | same                              | same                    |
+| `META_ACCESS_TOKEN`      | same                              | same                    |
+| `RESEND_API_KEY`         | same                              | same                    |
+| `RESEND_FROM_EMAIL`      | `hello@everlastingsbyemaline.com` | same                    |
 
 **Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
 **Resend**: single API key for both environments (free tier 3k/mo). Uses same verified domain.
@@ -728,15 +844,15 @@ These files must be created as actual files in the repository root. Copy the con
 
 > **Sean's part** (Phase 0) covered: project created with DB password, anon + service keys copied. Agent runs everything below via MCP `apply_migration` where possible, otherwise via Supabase Studio SQL editor.
 
-  - [ ] [AGENT] **Run** SQL: create `products` table — copy from Product Schema section
-  - [ ] [AGENT] **Run** SQL: create `customers` table
-  - [ ] [AGENT] **Run** SQL: create `orders` table (includes `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, `idx_orders_needs_shipping`)
-  - [ ] [AGENT] **Run** SQL: create `subscribers` table (includes `promo_code`, `promo_code_expires_at`)
-  - [ ] [AGENT] **Run** SQL: create `site_config` table
-  - [ ] [AGENT] **Run** SQL: create `webhook_events` table (idempotency — AR #21)
-  - [ ] [AGENT] **Run** SQL: create `product_interests` table (email capture — AR #26)
-  - [ ] [AGENT] **Run** SQL: create `cart_holds` table (soft reservations — AR #28, #29)
-  - [ ] [AGENT] **Enable** RLS on all 8 tables:
+  - [ ] (AGENT) **Run** SQL: create `products` table — copy from Product Schema section
+  - [ ] (AGENT) **Run** SQL: create `customers` table
+  - [ ] (AGENT) **Run** SQL: create `orders` table (includes `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, `idx_orders_needs_shipping`)
+  - [ ] (AGENT) **Run** SQL: create `subscribers` table (includes `promo_code`, `promo_code_expires_at`)
+  - [ ] (AGENT) **Run** SQL: create `site_config` table
+  - [ ] (AGENT) **Run** SQL: create `webhook_events` table (idempotency — AR #21)
+  - [ ] (AGENT) **Run** SQL: create `product_interests` table (email capture — AR #26)
+  - [ ] (AGENT) **Run** SQL: create `cart_holds` table (soft reservations — AR #28, #29)
+  - [ ] (AGENT) **Enable** RLS on all 8 tables:
 
   ```sql
   -- PRODUCTS: public read, authenticated write
@@ -822,9 +938,9 @@ These files must be created as actual files in the repository root. Copy the con
 
 > **Sean's part** (Phase 0): bucket created, public access enabled, custom domain connected via R2 > Settings > Public access > Custom Domains > Connect Domain (Cloudflare auto-creates the CNAME since the domain is on Cloudflare DNS). Status must read Active before continuing.
 
-  - [ ] [AGENT] **Verify** DNS resolution: `dig cdn.everlastingsbyemaline.com` returns the R2 CNAME target
-  - [ ] [AGENT] **Set** `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com` in Vercel env vars (all environments)
-  - [ ] [AGENT] **Set** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings` in Vercel env vars
+  - [ ] (AGENT) **Verify** DNS resolution: `dig cdn.everlastingsbyemaline.com` returns the R2 CNAME target
+  - [ ] (AGENT) **Set** `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com` in Vercel env vars (all environments)
+  - [ ] (AGENT) **Set** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings` in Vercel env vars
   - **No development subdomain needed** — dev and production share the same R2 bucket and CDN. Only Stripe keys differ between environments.
 
 #### Cloudinary
@@ -836,7 +952,7 @@ These files must be created as actual files in the repository root. Copy the con
 
 > **Coupon strategy note**: See the [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy) reference section. In short: coupons are the discount RULE (created once), promotion codes are single-use delivery (generated on-the-fly per user event).
 
-  - [ ] [SEAN] **Get** test API keys (publishable + secret) — Dashboard > Developers > API keys
+  - [ ] (SEAN) **Get** test API keys (publishable + secret) — Dashboard > Developers > API keys
   - [ ] [SEAN or AGENT-via-MCP] **Create** cart-recovery coupon via Dashboard > Products > Coupons OR `stripe coupons create`:
     - Name: "Haven Finder Apology"
     - Percent off: 10
@@ -851,24 +967,24 @@ These files must be created as actual files in the repository root. Copy the con
     - Max redemptions: **LEAVE BLANK**
     - Apply to: All products
     - Coupon ID: `newsletter-welcome-5`
-  - [ ] [AGENT] **Create** test webhook endpoint via Stripe CLI or MCP → `{dev-preview-url}/api/webhook`
+  - [ ] (AGENT) **Create** test webhook endpoint via Stripe CLI or MCP → `{dev-preview-url}/api/webhook`
     - Events: `checkout.session.completed`
-  - [ ] [SEAN] Receipt emails already toggled ON in Phase 0 (Dashboard > Settings > Emails > Successful payments + Refunds)
+  - [ ] (SEAN) Receipt emails already toggled ON in Phase 0 (Dashboard > Settings > Emails > Successful payments + Refunds)
 
 #### Resend (Transactional Email)
 
 From AR #30, #31 — Resend handles three email types: shipping tracking, newsletter welcome (optional coupon), cart recovery (coupon delivery).
 
-  - [ ] [SEAN] Account created in Phase 0. API key retrieved from Dashboard > API Keys
-  - [ ] [SEAN] Domain `everlastingsbyemaline.com` verified for sending (Resend provides DNS records — add to Cloudflare DNS)
-  - [ ] [AGENT] **Set** `RESEND_API_KEY` and `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com` in Vercel env vars
+  - [ ] (SEAN) Account created in Phase 0. API key retrieved from Dashboard > API Keys
+  - [ ] (SEAN) Domain `everlastingsbyemaline.com` verified for sending (Resend provides DNS records — add to Cloudflare DNS)
+  - [ ] (AGENT) **Set** `RESEND_API_KEY` and `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com` in Vercel env vars
 
 #### Shippo (Shipping Labels)
 
 > v1 uses Shippo's web UI only — no API integration. Emy pastes Shippo-generated tracking numbers into the admin UI. Post-launch upgrade: direct Shippo API for label creation from admin.
 
-  - [ ] [SEAN] Shippo Starter account already created in Phase 0 (free, 30 labels/month covers expected volume)
-  - [ ] [SEAN] USPS account linked inside Shippo (automatic, no fee)
+  - [ ] (SEAN) Shippo Starter account already created in Phase 0 (free, 30 labels/month covers expected volume)
+  - [ ] (SEAN) USPS account linked inside Shippo (automatic, no fee)
   - [ ] No env vars for v1
 
 #### Meta Pixel + Instagram Shopping 
@@ -991,7 +1107,7 @@ Called by Supabase Database Webhook when a product is inserted. See Stripe Sync 
   }
   ```
 
-  - [ ] [AGENT] **Create** `api/stripe-sync.ts`
+  - [ ] (AGENT) **Create** `api/stripe-sync.ts`
 
 #### Reserve — `api/checkout/reserve.ts` (NEW — AR #28, #29)
 
@@ -1098,7 +1214,7 @@ Called when user clicks `[CHECKOUT]` on `/cart.html`. Runs the availability chec
   }
   ```
 
-  - [ ] [AGENT] **Create** `api/checkout/reserve.ts`
+  - [ ] (AGENT) **Create** `api/checkout/reserve.ts`
 
 #### Checkout — `api/checkout.ts`
 
@@ -1864,8 +1980,8 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
   }
   ```
 
-  - [ ] [AGENT] **Create** `api/product-feed.ts`
-  - [ ] [SEAN] **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed`
+  - [ ] (AGENT) **Create** `api/product-feed.ts`
+  - [ ] (SEAN) **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed`
 
 #### Orders (Admin) — `api/orders.ts` + `api/orders/[id].ts` (NEW — AR #30)
 
@@ -1999,8 +2115,8 @@ function buildTrackingUrl(carrier: string, number: string): string {
 }
 ```
 
-  - [ ] [AGENT] **Create** `api/orders.ts` (GET — list)
-  - [ ] [AGENT] **Create** `api/orders/[id].ts` (PATCH — record tracking + send email)
+  - [ ] (AGENT) **Create** `api/orders.ts` (GET — list)
+  - [ ] (AGENT) **Create** `api/orders/[id].ts` (PATCH — record tracking + send email)
 
 #### Email Templates — `api/_emails/`
 
@@ -2032,8 +2148,8 @@ export function welcomeCouponEmailHtml(args: { code: string; percentOff: number;
 export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: number; expiresInDays: number; lostItems: string[] }): string;
 ```
 
-  - [ ] [AGENT] **Create** `api/_emails/index.ts` with three templated functions
-  - [ ] [AGENT] Copy template HTML from BRAND.md > Email Voice section (brand-consistent)
+  - [ ] (AGENT) **Create** `api/_emails/index.ts` with three templated functions
+  - [ ] (AGENT) Copy template HTML from BRAND.md > Email Voice section (brand-consistent)
 
 ---
 
@@ -2043,29 +2159,29 @@ export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: nu
 
 #### Admin UI — `admin/index.html` + `assets/js/admin.js`
 
-  - [ ] [AGENT] **Create** `admin/index.html` — login form + two tabs after auth: "Products" and "Orders"
-  - [ ] [AGENT] **Create** `assets/js/admin.js`
-  - [ ] [AGENT] **Implement** Supabase Auth login/logout
-  - [ ] [AGENT] **Build** Products tab: product list (table/grid with edit/delete)
-  - [ ] [AGENT] **Build** new product form (all schema fields)
+  - [ ] (AGENT) **Create** `admin/index.html` — login form + two tabs after auth: "Products" and "Orders"
+  - [ ] (AGENT) **Create** `assets/js/admin.js`
+  - [ ] (AGENT) **Implement** Supabase Auth login/logout
+  - [ ] (AGENT) **Build** Products tab: product list (table/grid with edit/delete)
+  - [ ] (AGENT) **Build** new product form (all schema fields)
     - Price input in dollars, convert to cents on save
     - Dynamic lists: features, materials, care_instructions, shipping_details
-  - [ ] [AGENT] **Implement** image upload: file picker → `/api/upload` → CDN URL
-  - [ ] [AGENT] **Implement** save (INSERT or UPDATE to products)
-  - [ ] [AGENT] **Implement** delete with confirmation
+  - [ ] (AGENT) **Implement** image upload: file picker → `/api/upload` → CDN URL
+  - [ ] (AGENT) **Implement** save (INSERT or UPDATE to products)
+  - [ ] (AGENT) **Implement** delete with confirmation
 
 #### Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)
 
-  - [ ] [AGENT] **Build** Orders tab with two sub-tabs: "Needs Shipping" (default) and "Shipped"
-  - [ ] [AGENT] **Fetch** via `GET /api/orders?status=needs_shipping` (authenticated via `PRODUCT_API_KEY` — the admin session gets the key from an env-scoped endpoint, or uses Supabase Auth session token)
-  - [ ] [AGENT] **Render** each order card with:
+  - [ ] (AGENT) **Build** Orders tab with two sub-tabs: "Needs Shipping" (default) and "Shipped"
+  - [ ] (AGENT) **Fetch** via `GET /api/orders?status=needs_shipping` (authenticated via `PRODUCT_API_KEY` — the admin session gets the key from an env-scoped endpoint, or uses Supabase Auth session token)
+  - [ ] (AGENT) **Render** each order card with:
     - Customer name, email
     - Shipping address (with "Copy to clipboard" button for pasting into Shippo)
     - Item: photo + title + order total
     - Form: tracking number input, carrier dropdown (USPS, UPS, FedEx, DHL), "Mark as shipped" button
-  - [ ] [AGENT] **On submit** → `PATCH /api/orders/:id` with `{ tracking_number, tracking_carrier }` → server records + sends Resend tracking email
-  - [ ] [AGENT] **Move** order card from "Needs Shipping" → "Shipped" tab on success
-  - [ ] [AGENT] **Shipped tab**: shows tracking number, carrier, ship date; link to carrier's tracking page
+  - [ ] (AGENT) **On submit** → `PATCH /api/orders/:id` with `{ tracking_number, tracking_carrier }` → server records + sends Resend tracking email
+  - [ ] (AGENT) **Move** order card from "Needs Shipping" → "Shipped" tab on success
+  - [ ] (AGENT) **Shipped tab**: shows tracking number, carrier, ship date; link to carrier's tracking page
 
 > **Emy's day-to-day**: Purchase completes → admin "Needs Shipping" tab shows the order → copy address → paste into Shippo (her browser bookmark) → Shippo prints label + gives tracking number → paste tracking number into admin → click "Mark as shipped" → branded email goes to customer automatically.
 
@@ -2526,9 +2642,9 @@ These use placeholder data.
   </section>
   ```
 
-  - [ ] [AGENT] **Create** `cart.html` (NEW in v1.4 — AR #28): line items + qty + cost estimate + optional email/name capture + [CHECKOUT] button. Recovery overlay (hidden by default). Related products cards section (hidden by default).
-  - [ ] [AGENT] **Create** `checkout.html` — two-stage progressive disclosure. Stage A: info (email/name prefilled from cart, billing, shipping, "same as" checkbox). Stage B unlocks when Stage A valid: Stripe Payment Element + "Confirm & Pay" button. Same URL — stages are stacked sections in the DOM, one hidden until the other is valid.
-  - [ ] [AGENT] **Create** `complete.html` — success/error states (wired in Track C)
+  - [ ] (AGENT) **Create** `cart.html` (NEW in v1.4 — AR #28): line items + qty + cost estimate + optional email/name capture + [CHECKOUT] button. Recovery overlay (hidden by default). Related products cards section (hidden by default).
+  - [ ] (AGENT) **Create** `checkout.html` — two-stage progressive disclosure. Stage A: info (email/name prefilled from cart, billing, shipping, "same as" checkbox). Stage B unlocks when Stage A valid: Stripe Payment Element + "Confirm & Pay" button. Same URL — stages are stacked sections in the DOM, one hidden until the other is valid.
+  - [ ] (AGENT) **Create** `complete.html` — success/error states (wired in Track C)
 
 ---
 
@@ -2847,7 +2963,7 @@ function showSoldRecoveryOnCart(unavailableSlugs, related) {
 }
 ```
 
-  - [ ] [AGENT] **Create** `assets/js/cart.js`
+  - [ ] (AGENT) **Create** `assets/js/cart.js`
 
 Implements the two-stage progressive disclosure on `/checkout.html`. Assumes `/cart.html` already ran `/api/checkout/reserve` and a soft hold exists. This page never triggers the 409 recovery flow — that's /cart.html's job now.
 
@@ -3004,8 +3120,8 @@ function hideCheckoutError() {
 }
 ```
 
-  - [ ] [AGENT] **Create** `assets/js/checkout.js` (the two-stage version above)
-  - [ ] [AGENT] **Create** `assets/js/recovery.js` (shared recovery overlay rendering used by cart.js)
+  - [ ] (AGENT) **Create** `assets/js/checkout.js` (the two-stage version above)
+  - [ ] (AGENT) **Create** `assets/js/recovery.js` (shared recovery overlay rendering used by cart.js)
 
 #### Return Page — `complete.html`
 
@@ -3246,17 +3362,17 @@ All e-commerce events use GA4's standard `items` array format, which unlocks bui
 
 ### Custom Events (no `items` array)
 
-| Event                  | Trigger                      | Parameters                                      |
-| ---------------------- | ---------------------------- | ----------------------------------------------- |
-| `newsletter_signup`    | Successful subscribe         | `{ source }` ('homepage', 'footer', 'checkout') |
-| `contact_form_submit`  | Contact form success         | `{ subject }`                                   |
-| `commission_inquiry`   | Commission form submit       | `{ subject }`                                   |
-| `search_filter`        | Shop filter applied          | `{ filter_type, filter_value }`                 |
-| `gallery_open`         | Lightbox opened              | `{ slug, image_index }`                         |
-| `video_play`           | Product video starts playing | `{ slug, video_index }`                         |
-| `promo_code_generated` | Cart recovery flow completed | `{ code }`                                      |
-| `email_cta_capture`    | Email CTA form submitted     | `{ source, slug }`                              |
-| `customer_email_linked`| Purchase email matches existing subscriber (fired by webhook, sent to GA4 Measurement Protocol) | `{ previous_source }` |
+| Event                   | Trigger                                                                                         | Parameters                                      |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `newsletter_signup`     | Successful subscribe                                                                            | `{ source }` ('homepage', 'footer', 'checkout') |
+| `contact_form_submit`   | Contact form success                                                                            | `{ subject }`                                   |
+| `commission_inquiry`    | Commission form submit                                                                          | `{ subject }`                                   |
+| `search_filter`         | Shop filter applied                                                                             | `{ filter_type, filter_value }`                 |
+| `gallery_open`          | Lightbox opened                                                                                 | `{ slug, image_index }`                         |
+| `video_play`            | Product video starts playing                                                                    | `{ slug, video_index }`                         |
+| `promo_code_generated`  | Cart recovery flow completed                                                                    | `{ code }`                                      |
+| `email_cta_capture`     | Email CTA form submitted                                                                        | `{ source, slug }`                              |
+| `customer_email_linked` | Purchase email matches existing subscriber (fired by webhook, sent to GA4 Measurement Protocol) | `{ previous_source }`                           |
 
 ### Meta Pixel Events (fire alongside GA4)
 
@@ -3469,10 +3585,10 @@ The v1.3.1 doc mixed up Stripe's subscription-centric coupon `duration` setting 
 
 **The two coupons** (set up once in Phase 0 / A1):
 
-| Coupon ID | Name | Discount | Duration | Max redemptions | Purpose |
-|-----------|------|----------|----------|-----------------|---------|
-| `cart-recovery-10` | Haven Finder Apology | 10% off | **Forever** | **BLANK** | Dynamic promotion codes per 409 recovery |
-| `newsletter-welcome-5` | Welcome to the Firelight Council | 5% off | **Forever** | **BLANK** | Dynamic promotion codes per contemplation-offer signup |
+| Coupon ID              | Name                             | Discount | Duration    | Max redemptions | Purpose                                                |
+| ---------------------- | -------------------------------- | -------- | ----------- | --------------- | ------------------------------------------------------ |
+| `cart-recovery-10`     | Haven Finder Apology             | 10% off  | **Forever** | **BLANK**       | Dynamic promotion codes per 409 recovery               |
+| `newsletter-welcome-5` | Welcome to the Firelight Council | 5% off   | **Forever** | **BLANK**       | Dynamic promotion codes per contemplation-offer signup |
 
 Both use `Duration: Forever` because that's the correct setting for one-time payments (`once` is a subscription concept — it means "one billing cycle", which is meaningless for us). Both have **blank max_redemptions** because capping the coupon globally would ruin us — we want every user event to generate its OWN unique code.
 
@@ -3599,16 +3715,16 @@ The agent must be spawned in a fresh context (Explore subagent type) to avoid bi
 
 ## Reference Documents
 
-| Document         | Location                                          | Use                                 |
-| ---------------- | ------------------------------------------------- | ----------------------------------- |
-| Architecture     | `assets/docs/EVERLASTINGS_STORE.md`               | Full technical reference            |
-| Brand Guide      | `assets/docs/BRAND.md`                            | Colors, fonts, voice, copy, email templates |
-| Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                 | Client guide + AI creation protocol |
-| Action Steps     | `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`   | Checklist version of this doc       |
-| KPI + Ads Pitch  | `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | Post-launch contract asset    |
-| Dev Rules        | `.agent/AGENTS.md`                                | Git branching, dev protocols        |
-| Feedback Source  | `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md` | Source of the 12 items that drove v1.4 |
-| Previous Version | `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`   | v1.3.1 archived (do not edit)       |
+| Document         | Location                                               | Use                                         |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------- |
+| Architecture     | `assets/docs/EVERLASTINGS_STORE.md`                    | Full technical reference                    |
+| Brand Guide      | `assets/docs/BRAND.md`                                 | Colors, fonts, voice, copy, email templates |
+| Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                      | Client guide + AI creation protocol         |
+| Action Steps     | `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`        | Checklist version of this doc               |
+| KPI + Ads Pitch  | `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | Post-launch contract asset                  |
+| Dev Rules        | `.agent/AGENTS.md`                                     | Git branching, dev protocols                |
+| Feedback Source  | `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md`     | Source of the 12 items that drove v1.4      |
+| Previous Version | `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`        | v1.3.1 archived (do not edit)               |
 
 ---
-*Every code snippet should be production-ready. Double check all code, leave no placeholders (see Placeholder Hygiene), only production-ready code. Every checkbox is tagged [SEAN] or [AGENT] and represents one action. Track A and B can proceed in parallel to iterate on visual design while development continues on backend functionality. Track C integrates them.*
+*Every code snippet should be production-ready. Double check all code, leave no placeholders (see Placeholder Hygiene), only production-ready code. Every checkbox is tagged (SEAN) or (AGENT) and represents one action. Track A and B can proceed in parallel to iterate on visual design while development continues on backend functionality. Track C integrates them.*
