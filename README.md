@@ -85,13 +85,13 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 
 ## Documentation
 
-| Document                                                                   | Description                                   |
-| -------------------------------------------------------------------------- | --------------------------------------------- |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                  |
-| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy               |
-| [Implementation Guide](/assets/docs/archive/v1_3/v1_3_1_IMPLEMENTATION.md) | Parallel-track build plan with code snippets  |
-| [Action Steps](/assets/docs/archive/v1_3/v1_3_1_ACTION_STEPS.md)           | ADHD-friendly checklist version of impl guide |
-| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                       | Client guide + AI product creation protocol   |
+| Document                                                               | Description                                   |
+| ---------------------------------------------------------------------- | --------------------------------------------- |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                     | Complete technical reference                  |
+| [Brand Guide](/assets/docs/BRAND.md)                                   | Voice, colors, typography, copy               |
+| [Implementation Guide](/assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md) | Parallel-track build plan with code snippets  |
+| [Action Steps](/assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md)         | ADHD-friendly checklist version of impl guide |
+| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                   | Client guide + AI product creation protocol   |
 
 ---
 

@@ -1,7 +1,7 @@
 # Everlastings v1.3.1 Implementation Guide
 
 **Version**: v1.3.1
-**Created**: 2026-04-12 14:52 | 16:16
+**Created**: 2026-04-12 14:52 | 2026-04-12 16:16
 **Previous**: v1.2.1 (2026-04-09)
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary
 **Structure**: 3 parallel tracks (A: Backend, B: Frontend Design, C: Integration)
@@ -15,18 +15,10 @@
   - [Dependencies](#dependencies)
   - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
     - [A1: Services Setup](#a1-services-setup)
-      - [Vercel](#vercel)
-      - [Git + Environment](#git--environment)
-      - [Supabase](#supabase)
-      - [Cloudflare R2](#cloudflare-r2)
-      - [Cloudinary](#cloudinary)
-      - [Stripe](#stripe)
-      - [Meta Pixel + Instagram Shopping](#meta-pixel--instagram-shopping)
-      - [Analytics](#analytics)
     - [A2: API Endpoints](#a2-api-endpoints)
     - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
     - [A4: API Integration Testing](#a4-api-integration-testing)
-  - [TRACK B: Frontend Design](#track-b-frontend-design)
+  - [TRACK B: Frontend Design](#track-b-frontend-design-using-placeholder-content)
     - [B1: Design System](#b1-design-system)
     - [B2: Header, Footer, Nav](#b2-header-footer-nav)
     - [B3: Product Page](#b3-product-page)
@@ -38,10 +30,6 @@
     - [C2: Checkout Flow E2E](#c2-checkout-flow-e2e)
     - [C3: SEO Finalization](#c3-seo-finalization)
     - [C4: Testing + Launch](#c4-testing--launch)
-      - [Stripe Live Mode](#stripe-live-mode)
-      - [Cross-Browser Testing](#cross-browser-testing)
-      - [Performance](#performance)
-      - [Launch](#launch)
 
 ---
 
@@ -208,7 +196,7 @@ Every architectural question answered. No mid-session research. Referenced as "A
 
 ### Where Secrets Live
 
-Three distinct locations, each with a specific purpose:
+  > These live in 3 distinct locations, each with a specific purpose. 
 
 **1. Vercel Dashboard** (all production secrets)
   - Settings → Environment Variables
@@ -252,7 +240,7 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
 **Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
 
-### Switchover Process (Live Launch)
+### Live Launch Switchover Process
 
   1. All development on `dev` with test keys (auto-configured)
   2. Test full purchase flow on preview URL with card `4242 4242 4242 4242`
@@ -286,9 +274,11 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ---
 
-## Product Schema — Hard Reference
+## Product Schema Hard Reference
 
-### TypeScript Interface (for API functions)
+### TypeScript Interface 
+
+These are for API functions. 
 
   ```typescript
   interface Product {
@@ -327,7 +317,9 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   }
   ```
 
-### Supabase SQL — CREATE TABLE (7 tables)
+### Supabase SQL
+
+These are the 7 tables to be created. 
 
   ```sql
   CREATE TABLE products (
@@ -474,7 +466,7 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ## Configuration Files
 
-> These files must be created as actual files in the repository root. Copy the contents below into each file. See Action Steps Pre-Flight for the checklist.
+These files must be created as actual files in the repository root. Copy the contents below into each file. See Action Steps Pre-Flight for the checklist.
 
 ### `vercel.json`
 
@@ -498,7 +490,7 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   }
   ```
 
-> **Note**: CORS `Access-Control-Allow-Origin` is set to production domain. During development on preview URLs (`*.vercel.app`), CORS may need to be handled in API functions with dynamic origin checking. Address during A2 implementation.
+**Note**: CORS `Access-Control-Allow-Origin` is set to production domain. During development on preview URLs (`*.vercel.app`), CORS may need to be handled in API functions with dynamic origin checking. Address during A2 implementation.
 
 ### `tsconfig.json`
 
@@ -603,7 +595,7 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 **YOU WILL HAVE**: All services connected, tables created, env vars set, analytics base installed
 
-> **Pre-requisite**: Sean will create all service accounts (Supabase, Stripe, Cloudflare R2, Cloudinary, GA4) before the first implementation session. A1 assumes accounts exist and focuses on configuration.
+  > **Pre-requisite**: Sean will create all service accounts (Supabase, Stripe, Cloudflare R2, Cloudinary, GA4) before the first implementation session. A1 assumes accounts exist and focuses on configuration.
 
 #### Vercel
 
@@ -698,8 +690,9 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   ```
 
   - [ ] **Create** admin users in Supabase Auth > Users > Invite user:
-    - `admin@everlastingsbyemaline.com` (Sean/developer admin)
-    - `emyh@everlastingsbyemaline.com` (Emy/client admin)
+    - `admin@everlastingsbyemaline.com` (Master)
+    - `sean@everlastingsbyemaline.com` (Developer)
+    - `emyh@everlastingsbyemaline.com` (Client)
   - [ ] **Configure** Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
 
 #### Cloudflare R2
@@ -727,7 +720,9 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
   - [ ] **Create** newsletter coupon: name "Welcome to the Firelight Council", 5% off, duration once, ID `newsletter-welcome-5`
   - [ ] **Enable** receipt emails: Dashboard > Settings > Emails > Successful payments
 
-#### Meta Pixel + Instagram Shopping (AR #25, #27)
+#### Meta Pixel + Instagram Shopping 
+
+From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
   - [ ] **Get** Meta Pixel ID from Meta Events Manager
   - [ ] **Get** Meta Access Token (system user token with `catalog_management` permission) from Meta Business Manager
@@ -1636,6 +1631,7 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
     - Section 1: Client guide (for Emy) — field explanations, photo requirements, admin UI walkthrough
     - Section 2: AI protocol — slug generation, image pipeline, API calls, validation, error handling
     - Replaces both `PRODUCT_GUIDE.md` and `PRODUCT_CREATION_PROTOCOL.md`
+  - [ ] **Review** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
 
 ---
 
@@ -1659,11 +1655,11 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
 
 ---
 
-## TRACK B: Frontend Design (Placeholder Content)
+## TRACK B: Frontend Design
 
-All pages built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum text and placeholder images. Client reviews and iterates on visual design.
+Initial pages are built using placeholder content that needs to be sourced during the build process and saved to the appropriate locations. Every page is built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum text and placeholder images. Client reviews and iterates on visual design.
 
-> **Verified**: All page descriptions from v1.1 planning docs (homepage, shop, product, about, contact, FAQ, shipping, terms, privacy, policies, checkout, complete) are present in Track B below. No pages were lost during restructuring.
+  > **Verified**: All page descriptions from v1.1 planning docs (homepage, shop, product, about, contact, FAQ, shipping, terms, privacy, policies, checkout, complete) are present in Track B below. No pages were lost during restructuring.
 
 ### B1: Design System
 
@@ -1721,7 +1717,9 @@ All pages built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum
   - [ ] **Badges**: "Sold" (fog bg, muted text), "Featured" (gold border)
   - [ ] **Errors**: subtle, non-intrusive, ink text on fog bg
 
-#### Loading States (Skeleton Screens)
+#### Loading States 
+
+Theses are 'Skeleton Screens'. 
 
   - [ ] **Style** skeleton loading placeholders for product page and shop grid
   - [ ] **Animate** with shimmer effect (CSS `@keyframes` gradient sweep)
@@ -1814,7 +1812,9 @@ No icon library. 5-6 simple SVG icons used in product details:
   </script>
   ```
 
-#### Meta Pixel Script Tag (AR #25)
+#### Meta Pixel Script Tag 
+
+These are from AR #25 — see [Architecture Reference](#architecture-reference). 
 
   - [ ] **Add** Meta Pixel base code to `<head>` of all pages (alongside GA4):
 
@@ -1837,7 +1837,9 @@ No icon library. 5-6 simple SVG icons used in product details:
 
   `PageView` fires automatically on every page load. No extra code needed.
 
-#### Email Capture CTA Styles (AR #26)
+#### Email Capture CTA Styles 
+
+These are from AR #26 — see [Architecture Reference](#architecture-reference).
 
   - [ ] **Style** contemplation popup (bottom-right peel-up):
 
@@ -1887,7 +1889,9 @@ No icon library. 5-6 simple SVG icons used in product details:
 
 ---
 
-### B3: Product Page (Placeholder)
+### B3: Product Page 
+
+These use placeholder data.
 
 **YOU WILL HAVE**: Complete product page layout with hardcoded sample product
 
@@ -1936,7 +1940,9 @@ No icon library. 5-6 simple SVG icons used in product details:
   - [ ] **Add** breadcrumb: Home > Shop > The Sunkeeper
   - [ ] **Add** "Related Havens" section placeholder (3-4 product cards, hardcoded)
 
-#### Media rendering (for videos/GIFs in gallery):
+#### Media Rendering 
+
+This if for videos/GIFs in gallery. 
 
   ```html
   <!-- Video -->
@@ -1982,7 +1988,7 @@ When a user has items in cart and navigates away or triggers exit intent:
   - POSTs to `/api/subscribe` with `source: 'cart-exit'`
   - Success: close modal, brief toast "You're on the list."
 
-#### Email CTA 3: Contemplation Popup (3-Minute Timer)
+#### Email CTA 3: 3-Minute Timed Contemplation Popup
 
 When a user has been on a product page for 3+ minutes, a subtle popup peels up from the bottom-right:
 
@@ -2013,7 +2019,9 @@ When a user has been on a product page for 3+ minutes, a subtle popup peels up f
 
 ---
 
-### B4: Shop Grid (Placeholder)
+### B4: Shop Grid 
+
+These use placeholder data.
 
 **YOU WILL HAVE**: Filterable grid layout with hardcoded product tiles
 
@@ -2028,7 +2036,9 @@ When a user has been on a product page for 3+ minutes, a subtle popup peels up f
 
 ---
 
-### B5: Homepage (Placeholder)
+### B5: Homepage 
+
+These use placeholder data.
 
 **YOU WILL HAVE**: Full landing page with all sections, hardcoded content
 
@@ -2045,7 +2055,9 @@ When a user has been on a product page for 3+ minutes, a subtle popup peels up f
 
 ---
 
-### B6: Remaining Pages (Placeholder)
+### B6: Remaining Pages 
+
+These use placeholder data.
 
 **YOU WILL HAVE**: All content pages with placeholder text
 
@@ -2604,13 +2616,13 @@ Follow switchover process (see Environment Strategy section).
 
 ---
 
-## Cart Recovery Flow (409 Conflict)
+## 409 Conflict Cart Recovery Flow
 
 ### What Triggers It
 
 User clicks "Pay" at checkout. The API checks availability for all cart items. One or more items have `available = false` (sold by another customer while browsing). API returns 409 with `{ error, unavailable: ['slug-1', 'slug-2'] }`.
 
-### What the User Sees (Step by Step)
+### What the User Sees 
 
 **Step 1 — Immediate**: Sold items removed from cart. A warm overlay appears:
 
@@ -2641,7 +2653,7 @@ User clicks "Pay" at checkout. The API checks availability for all cart items. O
   - Email captured as subscriber with `source: 'cart-recovery'`
   - If email already exists in subscribers, upsert (don't error)
 
-### Coupon Setup (in A1)
+### Coupon Was Setup In A1 
 
   - Name: "Haven Finder Apology"
   - 10% off, duration once
@@ -2664,7 +2676,7 @@ Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`:
 
 ---
 
-## GA4 Event Definitions (Enhanced E-commerce)
+## Enhanced E-commerce GA4 Event Definitions
 
 All e-commerce events use GA4's standard `items` array format, which unlocks built-in reports under Reports > Monetization (product performance, purchase funnel, revenue by category/brand).
 
@@ -2681,17 +2693,17 @@ All e-commerce events use GA4's standard `items` array format, which unlocks bui
 | `purchase`         | Completion page (success) | `{ transaction_id, currency: 'USD', value, items: [...] }`                 |
 
 **`items` array format** (via `buildGa4Item()` helper in main.js):
-```javascript
-{
-  item_id: product.slug,           // 'the-sunkeeper'
-  item_name: product.title,        // 'The Sunkeeper'
-  item_brand: 'Everlastings by Emaline',
-  item_category: product.product_type,  // 'miniature'
-  item_category2: product.series,       // 'Portals to Peace'
-  price: product.price / 100,      // 245.00
-  quantity: 1
-}
-```
+  ```javascript
+  {
+    item_id: product.slug,           // 'the-sunkeeper'
+    item_name: product.title,        // 'The Sunkeeper'
+    item_brand: 'Everlastings by Emaline',
+    item_category: product.product_type,  // 'miniature'
+    item_category2: product.series,       // 'Portals to Peace'
+    price: product.price / 100,      // 245.00
+    quantity: 1
+  }
+  ```
 
 ### Custom Events (no `items` array)
 
@@ -2809,7 +2821,7 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 
 ---
 
-## Image Pipeline (Cloudinary → R2)
+## Cloudinary → R2 CDN Image Pipeline
 
 ### Naming Convention
 
@@ -2839,19 +2851,21 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ---
 
-## Deferred Items (Post-Launch)
+## Deferred Items 
 
   - **Dark mode** — v0 docs mentioned dark mode variables. Not needed for v1.
-  - **Infinite scroll/pagination** — small catalog (<50 products), standard grid is fine.
-  - **Section-specific hero images** — shop page hero. Defer to post-launch.
-  - **Dynamic shipping rates** — v0 has Stripe dynamic shipping for `ui_mode: embedded`. Doesn't apply to `custom`. For v1: flat-rate or shipping-included pricing.
-  - **Google Drive API integration** — for AI product creation. v1 uses manual download from shared folder.
-  - **Abandoned cart emails** — requires email service (Resend, SendGrid). Note as post-launch.
-  - **Customer accounts** — no login for shoppers. Purchase is anonymous with email/address captured.
+  - **Infinite scroll/pagination** — not a recommended UX pattern. 
+  - **Featured placement control** — add specifics to product entries. Create section to manage by tag on admin page. 
+    - Section-specific hero images 
+    - Homepage components and themes 
+  - **Dynamic shipping rates** — v1 is flat-rate or shipping-included pricing.
+  - **Google Drive API integration** — for AI product creation. v1 uses manual download from shared folder; assess if needed post-launch.
+  - **Abandoned cart emails** — ideally requires email service (Resend, SendGrid). Note as post-launch.
+  - **Customer accounts** — no login for shoppers. Purchase is anonymous with email/address captured. Should build and link with newsletter list. 
 
 ---
 
-## Caching Strategy (Deferred)
+## Deferred Caching Strategy
 
 Not needed for launch. When needed:
   - Supabase queries hit DB directly (acceptable at < 100 products)
@@ -2860,7 +2874,9 @@ Not needed for launch. When needed:
 
 ---
 
-## Post-Launch — 30 days included
+## Post-Launch 
+
+30 days included. 
 
   - Bug fixes and technical support
   - Performance optimization
