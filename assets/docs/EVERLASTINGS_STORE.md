@@ -2,7 +2,7 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo + Resend), corrected coupon strategy, Phase 0/1 split, placeholder hygiene, `customer_email_linked` event
+**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo web UI + Resend tracking emails), corrected coupon strategy (idempotent `api/_bootstrap/coupons.ts`), single Phase 0 setup block (Phase 1 removed as duplicate of A1), placeholder hygiene, `customer_email_linked` event
 **Version**: v1.4.0
 **Status**: Pre-development, architecture finalized
 **Build Guide**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`

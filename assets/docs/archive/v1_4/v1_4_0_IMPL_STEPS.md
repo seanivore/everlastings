@@ -2,147 +2,111 @@
 
 **Version**: v1.4.0
 **Created**: 2026-04-16
+**Revised**: 2026-04-16 (restructured — Phase 1 removed as duplicate of A1; every checkbox tagged)
 **Previous**: v1.3.1 (archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_STEPS.md`)
 **Master Plan**: `assets/docs/archive/v1_4/v1_4_0_IMPL_GUIDE.md`
-**Format**: One checkbox = one action. ADHD-friendly. Every action is tagged `(SEAN)` (you do it in a dashboard/on your laptop) or `(AGENT)` (the implementation-session agent does it via code/CLI/MCP).
+**Format**: One checkbox = one action. ADHD-friendly. Every action tagged `(SEAN)` (you do it in a dashboard/on your laptop), `(AGENT)` (agent does it via code/CLI/MCP), or `(SEAN+AGENT)` (handoff pair).
+
+> **Reading order**: Phase 0 (human setup, done before first session) → Track A (backend) in parallel with Track B (frontend design) → Track C (integration + launch). Reference sections live in the IMPL_GUIDE; they are read-only.
 
 ---
 
 - [Everlastings v1.4.0 Action Steps](#everlastings-v140-action-steps)
-  - [Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
-  - [Phase 1: Agent-Executable Setup](#phase-1-agent-executable-setup)
-  - [Phase 2: Build](#phase-2-build)
-    - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
-      - [A1: Services Setup](#a1-services-setup)
-        - [Vercel](#vercel)
-        - [Supabase (via MCP `apply_migration` preferred, or Studio SQL editor)](#supabase-via-mcp-apply_migration-preferred-or-studio-sql-editor)
-        - [Stripe (via Stripe MCP or Dashboard)](#stripe-via-stripe-mcp-or-dashboard)
-        - [Meta Pixel + Instagram Shopping](#meta-pixel--instagram-shopping)
-        - [Resend](#resend)
-      - [A2: API Endpoints](#a2-api-endpoints)
-      - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
-      - [A4: API Integration Testing](#a4-api-integration-testing)
-    - [TRACK B: Frontend Design](#track-b-frontend-design)
-      - [B1: Design System](#b1-design-system)
-      - [B2: Header, Footer, Nav](#b2-header-footer-nav)
-      - [B3: Product Page](#b3-product-page)
-      - [B4: Shop Grid](#b4-shop-grid)
-      - [B5: Homepage](#b5-homepage)
-      - [B6: Remaining Pages](#b6-remaining-pages)
-    - [TRACK C: Integration](#track-c-integration)
-      - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
-      - [C2: Checkout Flow E2E](#c2-checkout-flow-e2e)
-      - [C3: SEO Finalization](#c3-seo-finalization)
-      - [C4: Testing + Launch](#c4-testing--launch)
-        - [Placeholder Audit](#placeholder-audit)
-        - [Stripe Live Mode](#stripe-live-mode)
-        - [Cross-Browser Testing](#cross-browser-testing)
-        - [Performance](#performance)
-        - [Launch](#launch)
-        - [Post-Session Consistency Sweep (see reference section in IMPL\_GUIDE)](#post-session-consistency-sweep-see-reference-section-in-impl_guide)
+  - [Phase 0: Sean's Prerequisites + Agent Bootstrap](#phase-0-seans-prerequisites--agent-bootstrap)
+  - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
+    - [A1: Services Setup (verification + dependent config)](#a1-services-setup-verification--dependent-config)
+    - [A2: API Endpoints](#a2-api-endpoints)
+    - [A3: Admin UI + Product Protocol](#a3-admin-ui--product-protocol)
+    - [A4: API Integration Testing](#a4-api-integration-testing)
+  - [TRACK B: Frontend Design](#track-b-frontend-design)
+    - [B1: Design System](#b1-design-system)
+    - [B2: Header, Footer, Nav](#b2-header-footer-nav)
+    - [B3: Product Page](#b3-product-page)
+    - [B4: Shop Grid](#b4-shop-grid)
+    - [B5: Homepage](#b5-homepage)
+    - [B6: Remaining Pages](#b6-remaining-pages)
+  - [TRACK C: Integration](#track-c-integration)
+    - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
+    - [C2: Checkout Flow E2E](#c2-checkout-flow-e2e)
+    - [C3: SEO Finalization](#c3-seo-finalization)
+    - [C4: Testing + Launch](#c4-testing--launch)
   - [Dependencies](#dependencies)
 
 ---
 
-## Phase 0: Sean's Prerequisites
+## Phase 0: Sean's Prerequisites + Agent Bootstrap
 
-Human-only — account creation, password decisions, dashboard clicks, domain setup. Done BEFORE an implementation session is kicked off.
+> **ACTION — (SEAN+AGENT).** Human-only service work, interleaved with agent bootstrap tasks. Done BEFORE the first Track-A implementation session. Every secret goes into `.env.local` AND `vercel env add` in the same sitting — one touch per key.
 
-  - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1). Save DB password to password manager (16+ chars)
-  - [ ] (SEAN) **Copy** Supabase anon key + service role key from Settings > API
-  - [ ] (SEAN) **Note** Supabase project URL (format `https://[ref].supabase.co` — cannot be customized on free tier)
-  - [ ] (SEAN) **Invite** admin users in Auth > Users: `admin@everlastingsbyemaline.com`, `sean@everlastingsbyemaline.com`, `emyh@everlastingsbyemaline.com`
-  - [ ] (SEAN) **Create** Stripe account (if new). Copy test publishable + secret keys
-  - [ ] (SEAN) **Enable** Stripe receipts: Dashboard > Settings > Emails > toggle ON "Successful payments" + "Refunds"
-  - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`, enable public access
-  - [ ] (SEAN) **Connect** R2 custom domain: bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com`. Wait for Active status
-  - [ ] (SEAN) **Create** R2 API token: My Profile > API Tokens > R2 — Read & Write, scoped to `everlastings` bucket
-  - [ ] (SEAN) **Create** Cloudinary account (free). Copy cloud name, API key, API secret
-  - [ ] (SEAN) **Create** Resend account (free tier, no credit card). Copy API key
-  - [ ] (SEAN) **Verify** domain `everlastingsbyemaline.com` in Resend (add DNS records in Cloudflare)
-  - [ ] (SEAN) **Create** Shippo Starter account (free, 30 labels/mo). Link USPS account
-  - [ ] (SEAN) **Create** GA4 property. Note Measurement ID `G-XXXXXXXXXX`
-  - [ ] (SEAN) **Verify** Google Search Console ownership (TXT record or HTML file)
-  - [ ] (SEAN) **Get** Meta Pixel ID from Meta Events Manager
-  - [ ] (SEAN) **Get** Meta Access Token (system user, `catalog_management` permission)
-  - [ ] (SEAN) **Emy's Instagram Shopping prerequisites** (tracking — not blocking for launch):
-    - [ ] Instagram account → Business profile
-    - [ ] IG profile connected to a Facebook Page
-    - [ ] Meta Business Manager with FB Page claimed
-    - [ ] Commerce Manager: create catalog (type: E-commerce)
-    - [ ] Domain verification (DNS TXT or meta tag for `everlastingsbyemaline.com`)
-    - [ ] Submit shop for Commerce review (1-2 weeks)
+### Setup the repo and env scaffolding
 
----
-
-## Phase 1: Agent-Executable Setup
-
-Can be done entirely by an implementation-session agent — no dashboard clicks needed. Prefer MCP servers (Supabase, Stripe) where available.
-
-  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` (different value for prod vs preview)
-  - [ ] (AGENT) **Create** config files in repo root (copy from implementation guide):
-    - [ ] `.env.example`
-    - [ ] `vercel.json`
-    - [ ] `tsconfig.json`
-    - [ ] `package.json`
-  - [ ] (AGENT) **Create** `dev` branch: `git checkout main && git checkout -b dev && git push -u origin dev`
-  - [ ] (AGENT) **Create** `.env.local`: `cp .env.example .env.local`, fill in test values from Phase 0
+  - [ ] (AGENT) **Create** `.env.example` (template, no real values) from [Configuration Files](../v1_4/v1_4_0_IMPL_GUIDE.md#configuration-files) in the guide
+  - [ ] (AGENT) **Create** `.env.local` from template: `cp .env.example .env.local`
+  - [ ] (SEAN) **Verify** `.env.local` is in `.gitignore`
+  - [ ] (AGENT) **Create** `vercel.json`, `tsconfig.json`, `package.json` from the guide
   - [ ] (AGENT) **Run** `npm install`
   - [ ] (AGENT) **Verify** `vercel dev` starts without errors
-  - [ ] (AGENT) **Add** Vercel env vars per environment (Production + Preview+Development scopes):
-    - [ ] `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
-    - [ ] `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (test values now; live for production during C4)
-    - [ ] `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
-    - [ ] `CLOUDINARY_URL`
-    - [ ] `PRODUCT_API_KEY`
-    - [ ] `META_PIXEL_ID`, `META_ACCESS_TOKEN`
-    - [ ] `RESEND_API_KEY`, `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com`
+
+### Reconcile branches from current state
+
+  - [ ] (SEAN+AGENT) **Merge** current `everlastings` branch → `main` (PR or direct merge)
+  - [ ] (SEAN+AGENT) **Create** `dev` from `main`: `git checkout main && git checkout -b dev && git push -u origin dev`
+  - [ ] (SEAN) **Delete** local and remote `everlastings` branch once merged
+  - [ ] (AGENT) **Confirm** Vercel auto-deploys `main` → Production, `dev` → Preview
+
+### Services — for each, copy secrets into `.env.local` AND `vercel env add` in one pass
+
+  - [ ] (SEAN) **Supabase**: create project (free tier, us-east-1), save DB password, copy anon + service keys → `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
+  - [ ] (SEAN) **Supabase Auth > Users**: invite `admin@everlastingsbyemaline.com`, `sean@everlastingsbyemaline.com`, `emyh@everlastingsbyemaline.com`
+  - [ ] (SEAN) **Stripe**: create account, copy test keys → `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` (live keys captured at C4 launch)
+  - [ ] (SEAN) **Stripe receipts**: Dashboard > Settings > Emails > toggle ON "Successful payments" + "Refunds"
+  - [ ] (SEAN) **Cloudflare R2**: create bucket `everlastings`, enable public access
+  - [ ] (SEAN) **R2 custom domain**: bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (wait for Active status)
+  - [ ] (SEAN) **R2 API token**: create Read & Write scoped to bucket → `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`, `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`
+  - [ ] (SEAN) **Cloudinary**: create account, compose and copy `CLOUDINARY_URL` (format `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`)
+  - [ ] (SEAN) **Resend**: create account, verify `everlastingsbyemaline.com` domain in Cloudflare DNS → `RESEND_API_KEY`, `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com`
+  - [ ] (SEAN) **Shippo**: create Starter account (free, 30 labels/mo), link USPS account. NO API key in v1 — web UI only
+  - [ ] (SEAN) **Meta**: Business Manager + Commerce Manager catalog + Meta Pixel + domain verification → `META_PIXEL_ID`, `META_ACCESS_TOKEN` (system user, `catalog_management` scope)
+  - [ ] (SEAN) **GA4**: create property, note Measurement ID `G-XXXXXXXXXX`
+  - [ ] (SEAN) **Google Search Console**: verify ownership (TXT record or HTML file)
+  - [ ] (SEAN) **Confirm** `everlastingsbyemaline.com` is on Cloudflare DNS
+  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` (different value per Vercel environment)
+
+### Emy's Instagram Shopping (tracking — can proceed in parallel with build)
+
+  - [ ] (SEAN) **Coordinate** with Emy on her IG Shopping setup (sub-items are Emy's account work in her own Meta accounts):
+    - [ ] (SEAN) Instagram account → Business profile
+    - [ ] (SEAN) IG connected to Facebook Page
+    - [ ] (SEAN) Meta Business Manager claims FB Page
+    - [ ] (SEAN) Commerce Manager catalog (type: E-commerce)
+    - [ ] (SEAN) Domain verification (DNS TXT or meta tag)
+    - [ ] (SEAN) Submit shop for Commerce review (1-2 weeks)
+
+### Agent bootstrap (after all services/env vars exist)
+
+  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration`: all 8 tables + RLS policies + triggers (`set_slug`, `set_updated_at_*`). Canonical SQL in IMPL_GUIDE > Product Schema Hard Reference + A1 Supabase
+  - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
+  - [ ] (AGENT) **Create** `api/_bootstrap/coupons.ts` — idempotent coupon bootstrap (see A1 Stripe in IMPL_GUIDE)
+  - [ ] (AGENT) **Run** `npx tsx api/_bootstrap/coupons.ts` once in test mode — verify both `cart-recovery-10` and `newsletter-welcome-5` exist in Stripe Dashboard > Products > Coupons
+  - [ ] (AGENT) **Create** Stripe test webhook endpoint via CLI/MCP → `{dev-preview-url}/api/webhook`, event `checkout.session.completed`
+
+---
+
+## TRACK A: Foundation + Backend
+
+### A1: Services Setup (verification + dependent config)
+
+> **ACTION — (AGENT) mostly; verification only — Phase 0 did the bulk.**
+
+  - [ ] (SEAN) **Add** custom domain `everlastingsbyemaline.com` to Vercel project (Settings > Domains)
+  - [ ] (AGENT) **Push** to trigger a Vercel deploy; verify it loads
   - [ ] (AGENT) **Verify** DNS: `dig cdn.everlastingsbyemaline.com` resolves to R2 CNAME target
+  - [ ] (AGENT) **Verify** Supabase Database Webhook fires on `products` INSERT (tail logs or insert a test product)
+  - [ ] (AGENT) **Verify** Stripe coupons exist (`cart-recovery-10`, `newsletter-welcome-5`)
 
----
+### A2: API Endpoints
 
-## Phase 2: Build
-
-### TRACK A: Foundation + Backend
-
-#### A1: Services Setup
-
-**Goal**: All services connected, schema created, webhooks configured.
-
-##### Vercel
-  - [ ] (SEAN) **Create** Vercel project — connect GitHub repo
-  - [ ] (SEAN) **Add** custom domain `everlastingsbyemaline.com`
-  - [ ] (AGENT) **Set** Vercel auto-deploy: `main` → Production, all other branches → Preview
-
-##### Supabase (via MCP `apply_migration` preferred, or Studio SQL editor)
-  - [ ] (AGENT) **Run** SQL: create `products` table (with slug trigger, updated_at trigger)
-  - [ ] (AGENT) **Run** SQL: create `customers` table (with updated_at trigger)
-  - [ ] (AGENT) **Run** SQL: create `orders` table (includes `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, `idx_orders_needs_shipping` partial index)
-  - [ ] (AGENT) **Run** SQL: create `subscribers` table (includes `promo_code`, `promo_code_expires_at`)
-  - [ ] (AGENT) **Run** SQL: create `site_config` table
-  - [ ] (AGENT) **Run** SQL: create `webhook_events` table (idempotency — AR #21)
-  - [ ] (AGENT) **Run** SQL: create `product_interests` table (email capture — AR #26)
-  - [ ] (AGENT) **Run** SQL: create `cart_holds` table (soft reservations — AR #28, #29)
-  - [ ] (AGENT) **Enable** RLS on all 8 tables (copy policies from implementation guide)
-  - [ ] (AGENT) **Configure** Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
-
-##### Stripe (via Stripe MCP or Dashboard)
-  - [ ] (AGENT) **Create** test webhook endpoint → `{dev-preview-url}/api/webhook`, event: `checkout.session.completed`
-  - [ ] [AGENT or SEAN] **Create** coupon "Haven Finder Apology": 10% off, **Duration: Forever**, **Max redemptions: BLANK**, ID `cart-recovery-10`
-  - [ ] [AGENT or SEAN] **Create** coupon "Welcome to the Firelight Council": 5% off, **Duration: Forever**, **Max redemptions: BLANK**, ID `newsletter-welcome-5`
-
-##### Meta Pixel + Instagram Shopping
-  - [ ] (SEAN) **Configure** Commerce Manager: catalog feed URL → `https://everlastingsbyemaline.com/api/product-feed` (after A2 endpoint deployed)
-
-##### Resend
-  - [ ] (SEAN) **Verify** Resend domain (DNS records in Cloudflare DNS)
-  - [ ] (AGENT) **Verify** env vars `RESEND_API_KEY`, `RESEND_FROM_EMAIL` set in Vercel
-
----
-
-#### A2: API Endpoints
-
-**Goal**: All server-side endpoints working, testable with curl.
+> **ACTION — (AGENT) only.** Goal: all server-side endpoints working, testable with curl.
 
   - [ ] (AGENT) **Create** `api/config.ts` — public keys (Stripe publishable, Supabase URL + anon key, Meta Pixel ID)
   - [ ] (AGENT) **Create** `api/stripe-sync.ts` — Supabase webhook handler, creates Stripe Product + Price
@@ -160,14 +124,13 @@ Can be done entirely by an implementation-session agent — no dashboard clicks 
   - [ ] (AGENT) **Create** `api/orders.ts` (NEW — AR #30) — GET list of orders (admin auth), filter by shipping status
   - [ ] (AGENT) **Create** `api/orders/[id].ts` (NEW — AR #30) — PATCH to record tracking number/carrier + fire Resend tracking email
   - [ ] (AGENT) **Create** `api/_emails/index.ts` (NEW — AR #30, #31) — shared Resend sender + three HTML templates (tracking, welcome-coupon, cart-recovery-coupon)
+  - [ ] (SEAN) **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed`
 
 **Auth note**: `api/products.ts`, `api/upload.ts`, `api/orders.ts`, `api/orders/[id].ts` use `PRODUCT_API_KEY` for auth (NOT `SUPABASE_SERVICE_KEY`). See AR #20.
 
----
+### A3: Admin UI + Product Protocol
 
-#### A3: Admin UI + Product Protocol
-
-**Goal**: Browser-based product management + order shipping fulfillment + documented AI workflow.
+> **ACTION — (AGENT) builds; (SEAN) reviews Product Protocol doc.**
 
   - [ ] (AGENT) **Create** `admin/index.html` — login form, two tabs after auth ("Products", "Orders")
   - [ ] (AGENT) **Create** `assets/js/admin.js`
@@ -181,11 +144,12 @@ Can be done entirely by an implementation-session agent — no dashboard clicks 
   - [ ] (AGENT) **Render** order cards: customer info, address (with Copy button), item + total, tracking form
   - [ ] (AGENT) **Wire** "Mark as shipped" → `PATCH /api/orders/:id` → triggers Resend tracking email
   - [ ] (AGENT) **Update** `assets/docs/PRODUCT_PROTOCOL.md` if any new fields surface
+  - [ ] (SEAN) **Review** `assets/docs/PRODUCT_PROTOCOL.md`
   - [ ] (AGENT) **Test** full admin flow: login → add product → verify on shop page; then simulate order → mark shipped → verify tracking email delivered
 
----
+### A4: API Integration Testing
 
-#### A4: API Integration Testing
+> **ACTION — (AGENT) runs automated tests; (SEAN) does real-card smoke test at launch (C4).**
 
   - [ ] (AGENT) **Test** stripe-sync: insert product → Stripe product appears
   - [ ] (AGENT) **Test** `api/checkout/reserve`: cart items available → receive `ok, expires_at`, row appears in `cart_holds`
@@ -208,11 +172,11 @@ Can be done entirely by an implementation-session agent — no dashboard clicks 
 
 ---
 
-### TRACK B: Frontend Design
+## TRACK B: Frontend Design
 
-All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!-- PLACEHOLDER: name -->` tags (see Placeholder Hygiene reference in IMPL_GUIDE). No JavaScript data-fetching. Client reviews visual design.
+> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!-- PLACEHOLDER: name -->` tags (see Placeholder Hygiene reference in IMPL_GUIDE). No JavaScript data-fetching. Client reviews visual design.
 
-#### B1: Design System
+### B1: Design System
 
   - [ ] (AGENT) **Create** `assets/css/styles.css`
   - [ ] (AGENT) **Define** color variables (from BRAND.md)
@@ -236,11 +200,13 @@ All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!
   - [ ] (AGENT) **Style** cart recovery overlay (two-step: email capture + related products cards)
   - [ ] (AGENT) **Style** checkout two-stage layout (Stage A info → Stage B payment, stacked sections)
 
-#### B2: Header, Footer, Nav
+### B2: Header, Footer, Nav
+
   - [ ] (AGENT) **Build** header: logo, nav, shop dropdown, cart icon + badge (links to `/cart.html`), mobile hamburger, sticky
   - [ ] (AGENT) **Build** footer: 4 columns, newsletter input, social links, copyright
 
-#### B3: Product Page
+### B3: Product Page
+
   - [ ] (AGENT) **Create** `product.html` — two-column layout (story left, sticky card right)
   - [ ] (AGENT) **Build** image gallery + thumbnail strip
   - [ ] (AGENT) **Build** lightbox: click → fullscreen, keyboard nav
@@ -255,14 +221,16 @@ All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!
   - [ ] (AGENT) **Add** email CTA 3: contemplation popup (bottom-right peel, placeholder)
   - [ ] (AGENT) **Add** email CTA 2: exit intent modal (hidden by default, on all product pages)
 
-#### B4: Shop Grid
+### B4: Shop Grid
+
   - [ ] (AGENT) **Create** `shop.html`
   - [ ] (AGENT) **Build** 6-8 hardcoded product tiles (wrapped in PLACEHOLDER tags)
   - [ ] (AGENT) **Build** filter sidebar: series, type, availability
   - [ ] (AGENT) **Build** sort dropdown
   - [ ] (AGENT) **Style** "Sold" badge and all 5 Shop states (see Error States Reference — Loading / No Products / All Sold / Filter Zero / Fetch Failed)
 
-#### B5: Homepage
+### B5: Homepage
+
   - [ ] (AGENT) **Create** `index.html`
   - [ ] (AGENT) **Build** hero: full viewport, overlay text, CTA
   - [ ] (AGENT) **Build** intro block
@@ -271,7 +239,8 @@ All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!
   - [ ] (AGENT) **Build** testimonial placeholder
   - [ ] (AGENT) **Add** theatrical lighting CSS effect
 
-#### B6: Remaining Pages
+### B6: Remaining Pages
+
   - [ ] (AGENT) **Create** `about.html` — photo, origin story, philosophy, mission
   - [ ] (AGENT) **Create** `contact.html` — form + commission section
   - [ ] (AGENT) **Create** `faq.html`
@@ -285,13 +254,13 @@ All pages: hardcoded HTML/CSS. Every piece of placeholder content wrapped in `<!
 
 ---
 
-### TRACK C: Integration
+## TRACK C: Integration
 
-Wire Track B pages to Track A backend. First task: `grep -rn "PLACEHOLDER" .` → that's the to-do list. Last task before C4: same grep returns zero lines.
+> **ACTION — (AGENT) builds integrations; (SEAN) does final QA + real-card test + DNS flip at launch.** Wire Track B pages to Track A backend. First task: `grep -rn "PLACEHOLDER" .` → that's the to-do list. Last task before C4: same grep returns zero lines.
 
-#### C1: Wire Pages to Backend
+### C1: Wire Pages to Backend
+
   - [ ] (AGENT) **Create** `assets/js/main.js` — Supabase client via `/api/config`, cart functions, utilities, browser session_id (crypto.randomUUID → localStorage)
-  - [ ] (AGENT) **Set** `R2_PUBLIC_URL` to `https://cdn.everlastingsbyemaline.com`
   - [ ] (AGENT) **Seed** test products in Supabase Studio
   - [ ] (AGENT) **Seed** test images in R2 bucket
   - [ ] (AGENT) **Create** `assets/js/product.js` — fetch + render product, gallery, lightbox, related products
@@ -304,28 +273,10 @@ Wire Track B pages to Track A backend. First task: `grep -rn "PLACEHOLDER" .` �
   - [ ] (AGENT) **Wire** CTA 1 (product interest): POST to subscribe + insert product_interests
   - [ ] (AGENT) **Wire** CTA 2 (exit intent): mouse-leave / visibilitychange detection on all product pages
   - [ ] (AGENT) **Wire** CTA 3 (contemplation): 3-min timer + promo code generation via api/subscribe
-  - [ ] (AGENT) **Wire** GA4 + Meta Pixel events:
+  - [ ] (AGENT) **Wire** GA4 + Meta Pixel events per the event table in IMPL_GUIDE > Enhanced E-commerce GA4 Event Definitions
 
-| Event                   | Trigger                             |
-| ----------------------- | ----------------------------------- |
-| `view_item`             | Product page load                   |
-| `add_to_cart`           | Add to Cart click                   |
-| `remove_from_cart`      | Remove from cart                    |
-| `begin_checkout`        | [CHECKOUT] click on /cart.html      |
-| `purchase`              | Completion page success             |
-| `newsletter_signup`     | Successful subscribe                |
-| `email_cta_capture`     | Any of the 3 CTAs                   |
-| `customer_email_linked` | Webhook detects subscriber→customer |
-| `contact_form_submit`   | Contact form success                |
-| `commission_inquiry`    | Commission form submit              |
-| `search_filter`         | Shop filter applied                 |
-| `gallery_open`          | Lightbox opened                     |
-| `video_play`            | Product video starts                |
-| `promo_code_generated`  | Cart recovery completed             |
+### C2: Checkout Flow E2E
 
-Meta Pixel events fire in parallel: `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `Lead`, `Contact`.
-
-#### C2: Checkout Flow E2E
   - [ ] (AGENT) **Create** `assets/js/checkout.js` — two-stage progressive disclosure (Stage A info, Stage B payment). Never triggers 409 recovery (that's /cart.html's job)
   - [ ] (AGENT) **Wire** checkout.html to pull Stripe key from `/api/config` (no hardcoded key)
   - [ ] (AGENT) **Wire** complete.html (session status check, cart clear, session_id localStorage clear)
@@ -337,46 +288,54 @@ Meta Pixel events fire in parallel: `ViewContent`, `AddToCart`, `InitiateCheckou
   - [ ] (AGENT) **Test** related products in recovery overlay render
   - [ ] (AGENT) **Test** 410 on /checkout.html: expire hold manually → user sees "reservation timed out" + redirect to /cart.html
 
-#### C3: SEO Finalization
+### C3: SEO Finalization
+
   - [ ] (AGENT) **Add** dynamic meta titles + descriptions
   - [ ] (AGENT) **Add** Open Graph + Twitter Card tags
   - [ ] (AGENT) **Add** Product schema.org structured data (JSON-LD)
   - [ ] (AGENT) **Create** `sitemap.xml` + `robots.txt`
   - [ ] (SEAN) **Submit** sitemap to Google Search Console
 
-#### C4: Testing + Launch
+### C4: Testing + Launch
 
-##### Placeholder Audit
-  - [ ] (AGENT) **Run** `grep -rn "PLACEHOLDER" .` — MUST return zero matches before launch (see Placeholder Hygiene reference in IMPL_GUIDE)
+**Placeholder Audit**
 
-##### Stripe Live Mode
+  - [ ] (AGENT) **Run** `grep -rn "PLACEHOLDER" .` — MUST return zero matches before launch
+
+**Stripe Live Mode**
+
   - [ ] (AGENT) **Set** live keys for Production scope in Vercel Dashboard
   - [ ] (SEAN) **Create** live webhook endpoint in Stripe Dashboard → production URL
   - [ ] (AGENT) **Set** live `STRIPE_WEBHOOK_SECRET` for Production scope
+  - [ ] (AGENT) **Run** `STRIPE_SECRET_KEY=sk_live_... npx tsx api/_bootstrap/coupons.ts` to populate coupons in live mode
   - [ ] (AGENT) **Merge** `dev` → `main`
-  - [ ] [SEAN + AGENT] **Test** one real transaction (refund after)
+  - [ ] (SEAN+AGENT) **Test** one real transaction (refund after)
 
-##### Cross-Browser Testing
-  - [ ] (AGENT) Chrome, Safari, Firefox, Edge
-  - [ ] (AGENT) iPhone, iPad, Android
-  - [ ] (AGENT) Full checkout flow on production
-  - [ ] (AGENT) Admin flow: login → add product + mark shipped → verify emails
-  - [ ] (AGENT) Newsletter + contact form
-  - [ ] (AGENT) All internal links
+**Cross-Browser Testing**
 
-##### Performance
+  - [ ] (SEAN) Chrome, Safari, Firefox, Edge
+  - [ ] (SEAN) iPhone, iPad, Android
+  - [ ] (SEAN) Full checkout flow on production
+  - [ ] (SEAN) Admin flow: login → add product + mark shipped → verify emails
+  - [ ] (SEAN) Newsletter + contact form
+  - [ ] (SEAN) All internal links
+
+**Performance**
+
   - [ ] (AGENT) Lighthouse 90+ all categories
   - [ ] (AGENT) WCAG AA accessibility
   - [ ] (AGENT) Keyboard navigation (including lightbox)
   - [ ] (AGENT) All images WebP, lazy loaded, alt text
 
-##### Launch
+**Launch**
+
   - [ ] (SEAN) DNS → Vercel, SSL active
-  - [ ] [SEAN + AGENT] 5-10 real products loaded
+  - [ ] (SEAN+AGENT) 5-10 real products loaded (via admin UI or AI protocol)
   - [ ] (SEAN) Final review with Emy
   - [ ] (SEAN) Launch
 
-##### Post-Session Consistency Sweep (see reference section in IMPL_GUIDE)
+**Post-Session Consistency Sweep**
+
   - [ ] (AGENT) Spawn fresh-context Explore subagent to audit all `.md` files for stale references. Report only — Sean drives fixes
 
 ---
@@ -384,15 +343,13 @@ Meta Pixel events fire in parallel: `ViewContent`, `AddToCart`, `InitiateCheckou
 ## Dependencies
 
   ```
-  Phase 0 (Sean) ──→ Phase 1 (Agent) ──→ Phase 2
-                                            │
-                                            ├── A1 ──→ A2 ──→ A3 ──→ A4
-                                            ├── B1 ──→ B2 ──→ B3 ──→ B4 ──→ B5 ──→ B6
-                                            │             │
-                                            └── A2 + B3 ──→ C1 ──→ C2 ──→ C3 ──→ C4
+  Phase 0 (SEAN+AGENT setup) ──→ TRACK A (A1 → A2 → A3 → A4)
+                              ├──→ TRACK B (B1 → B2 → B3 → B4 → B5 → B6)  (parallel with A)
+                              └──→ TRACK C (C1 → C2 → C3 → C4)  (requires A2 + B-complete)
   ```
 
-Phase 0 is Sean-only. Phase 1 is agent-only. Phase 2 tracks A and B proceed in parallel. Track C integrates them.
+Phase 0 merges the former Phase 0 (Sean dashboard work) and Phase 1 (agent bootstrap) into one interleaved block — each secret is handled once. Tracks A and B proceed in parallel once Phase 0 is done. Track C integrates them.
 
 ---
-*One checkbox = one action. Every action tagged (SEAN) or (AGENT). Phase 0 happens once (human setup), Phase 1 happens at session start (agent setup), Phase 2 is the build.*
+
+*One checkbox = one action. Every action tagged (SEAN), (AGENT), or (SEAN+AGENT). Reference material lives in the IMPL_GUIDE; this doc is pure action.*

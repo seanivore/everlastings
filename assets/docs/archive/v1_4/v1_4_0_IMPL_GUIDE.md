@@ -1,40 +1,58 @@
 # Everlastings v1.4.0 Implementation Guide
 
 **Version**: v1.4.0
-**Created**: 2026-04-16 07:35
+**Created**: 2026-04-16
+**Revised**: 2026-04-16 (structural — dedup Phase 0/1 vs A1, universal labels, universal role tags)
 **Previous**: v1.3.1 (2026-04-12), archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
-**Structure**: Phase 0 (Sean setup) → Phase 1 (agent setup) → Phase 2 (3 parallel tracks: A Backend / B Frontend / C Integration)
 **Architecture Reference**: `assets/docs/EVERLASTINGS_STORE.md`
 **Design Reference**: `assets/docs/BRAND.md`
 **Action Steps**: `assets/docs/archive/v1_4/v1_4_0_IMPL_STEPS.md`
 
-> **How to read this doc**: Every actionable checkbox is tagged `(SEAN)` (you do it in a dashboard or on your laptop) or `(AGENT)` (the implementation-session agent does it via code/CLI/MCP). Reference sections (Git Branching Strategy, Environment Strategy, Webhook Contract, Slug Rules, Source of Truth Hierarchy, Stripe Sync Rules, Coupon + Promotion Code Strategy, Shipping Pipeline) are not tasks — they are canonical references to link back to.
+---
+
+### How to read this doc
+
+**Every section is labeled** immediately under its heading:
+
+- `> REFERENCE — no action required.` Read once; linked from action sections that need it. Skip on a linear pass if you already know the material.
+- `> ACTION — (SEAN)` / `(AGENT)` / `(SEAN+AGENT)`. Do these. Every checkbox inside carries a role tag too.
+
+**Every checkbox starts with a role tag**: `(SEAN)` = you do it in a dashboard, on your laptop, or with your judgment. `(AGENT)` = the implementation-session agent does it via code/CLI/MCP. `(SEAN+AGENT)` = handoff pair (Sean does X, then agent does Y). Zero exceptions.
+
+**Structure**:
+
+1. **Architecture Reference** (REF) — all 32 ARs.
+2. **Pre-flight setup references** (REF cluster) — Git Branching, Environment Strategy, Source of Truth, Stripe Sync Rules, Product Schema, Configuration Files. Read before touching Track A.
+3. **Phase 0 — Sean's Prerequisites** (ACTION) — human-only dashboard/account work, done before the first implementation session. No agent involvement.
+4. **Tracks A → B → C** (ACTION) — build.  Track A1 is the canonical setup block (Phase 1 was removed; it duplicated A1).
+5. **Post-build references** (REF cluster) — Webhook Contract, 409 Recovery Flow, Error States, Slug Rules, Image Pipeline, GA4 event definitions, Coupon Strategy, Shipping Pipeline, Placeholder Hygiene, Deferred Items. Consulted during implementation of the tracks that reference them.
+
+**Linear reading works**: every forward reference is ≤50 lines away OR clearly signposted with a section name. If you find a reference you don't recognize, the link tells you exactly where to look.
 
 ---
 
 - [Everlastings v1.4.0 Implementation Guide](#everlastings-v140-implementation-guide)
-  - [Architecture Reference](#architecture-reference)
-  - [Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
-  - [Phase 1: Agent-Executable Setup](#phase-1-agent-executable-setup)
-  - [Git Branching Strategy](#git-branching-strategy)
+  - [REF — Architecture Reference](#architecture-reference)
+  - [ACTION — Phase 0: Sean's Prerequisites](#phase-0-seans-prerequisites)
+  - [REF — Git Branching Strategy](#git-branching-strategy)
     - [Setup Commands](#setup-commands)
-  - [Environment Strategy](#environment-strategy)
+  - [REF — Environment Strategy](#environment-strategy)
     - [Where Secrets Live](#where-secrets-live)
     - [Environment Variable Table](#environment-variable-table)
     - [Live Launch Switchover Process](#live-launch-switchover-process)
-  - [Source of Truth Hierarchy](#source-of-truth-hierarchy)
-  - [Stripe Sync Rules](#stripe-sync-rules)
-  - [Product Schema Hard Reference](#product-schema-hard-reference)
+  - [REF — Source of Truth Hierarchy](#source-of-truth-hierarchy)
+  - [REF — Stripe Sync Rules](#stripe-sync-rules)
+  - [REF — Product Schema Hard Reference](#product-schema-hard-reference)
     - [TypeScript Interface](#typescript-interface)
     - [Supabase SQL](#supabase-sql)
-  - [Configuration Files](#configuration-files)
+  - [REF — Configuration Files](#configuration-files)
     - [`vercel.json`](#verceljson)
     - [`tsconfig.json`](#tsconfigjson)
     - [`package.json`](#packagejson)
     - [`.env.example`](#envexample)
-  - [How the Tracks Work](#how-the-tracks-work)
-  - [TRACK A: Foundation + Backend](#track-a-foundation--backend)
+  - [REF — How the Tracks Work](#how-the-tracks-work)
+  - [ACTION — TRACK A: Foundation + Backend](#track-a-foundation--backend)
     - [A1: Services Setup](#a1-services-setup)
       - [Vercel](#vercel)
       - [Git Branches](#git-branches)
@@ -67,7 +85,7 @@
       - [Admin Orders Tab — Shipping Fulfillment (NEW — AR #30)](#admin-orders-tab--shipping-fulfillment-new--ar-30)
       - [Product Protocol](#product-protocol)
     - [A4: API Integration Testing](#a4-api-integration-testing)
-  - [TRACK B: Frontend Design](#track-b-frontend-design)
+  - [ACTION — TRACK B: Frontend Design](#track-b-frontend-design)
     - [B1: Design System](#b1-design-system)
       - [CSS Custom Properties](#css-custom-properties)
       - [Typography](#typography)
@@ -89,7 +107,7 @@
     - [B4: Shop Grid](#b4-shop-grid)
     - [B5: Homepage](#b5-homepage)
     - [B6: Remaining Pages](#b6-remaining-pages)
-  - [TRACK C: Integration](#track-c-integration)
+  - [ACTION — TRACK C: Integration](#track-c-integration)
     - [C1: Wire Pages to Backend](#c1-wire-pages-to-backend)
       - [Supabase Client — `assets/js/main.js`](#supabase-client--assetsjsmainjs)
       - [Product Page JS — `assets/js/product.js`](#product-page-js--assetsjsproductjs)
@@ -105,18 +123,18 @@
       - [Testing](#testing)
       - [Performance](#performance)
       - [Launch](#launch)
-  - [Webhook Contract](#webhook-contract)
-  - [409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
+  - [REF — Webhook Contract](#webhook-contract)
+  - [REF — 409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)](#409-conflict-cart-recovery-flow-v14--shifted-to-carthtml)
     - [What Triggers It](#what-triggers-it)
     - [What the User Sees](#what-the-user-sees)
     - [Backend Behavior](#backend-behavior)
     - [Coupon Setup (see A1 + Coupon Strategy reference)](#coupon-setup-see-a1--coupon-strategy-reference)
-  - [Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
-  - [Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
+  - [REF — Agentic Pipeline Error Handling](#agentic-pipeline-error-handling)
+  - [REF — Enhanced E-commerce GA4 Event Definitions](#enhanced-e-commerce-ga4-event-definitions)
     - [E-commerce Events (with `items` array)](#e-commerce-events-with-items-array)
     - [Custom Events (no `items` array)](#custom-events-no-items-array)
     - [Meta Pixel Events (fire alongside GA4)](#meta-pixel-events-fire-alongside-ga4)
-  - [Error States Reference](#error-states-reference)
+  - [REF — Error States Reference](#error-states-reference)
       - [Product — Not Found](#product--not-found)
       - [Product — Supabase Fetch Fails](#product--supabase-fetch-fails)
       - [Product — Image Fails to Load](#product--image-fails-to-load)
@@ -142,26 +160,25 @@
       - [Newsletter — Invalid Email](#newsletter--invalid-email)
       - [Admin — Not Authenticated](#admin--not-authenticated)
       - [Admin — Upload Too Large](#admin--upload-too-large)
-  - [Slug Rules](#slug-rules)
-  - [Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
+  - [REF — Slug Rules](#slug-rules)
+  - [REF — Cloudinary → R2 CDN Image Pipeline](#cloudinary--r2-cdn-image-pipeline)
     - [Naming Convention](#naming-convention)
     - [Cloudinary Transform Parameters](#cloudinary-transform-parameters)
     - [Pipeline Steps](#pipeline-steps)
-  - [Deferred Items](#deferred-items)
-  - [Deferred Caching Strategy](#deferred-caching-strategy)
-  - [Post-Launch](#post-launch)
-  - [Reference Sections](#reference-sections)
+  - [REF — Deferred Items](#deferred-items)
+  - [REF — Deferred Caching Strategy](#deferred-caching-strategy)
+  - [REF — Post-Launch](#post-launch)
+  - [REF — Additional Reference Sections](#reference-sections)
     - [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy)
     - [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
     - [Placeholder Hygiene](#placeholder-hygiene)
-    - [Post-Session Consistency Sweep](#post-session-consistency-sweep)
-  - [Reference Documents](#reference-documents)
+  - [REF — Reference Documents](#reference-documents)
 
 ---
 
 ## Architecture Reference
 
-Every architectural question answered. No mid-session research. Referenced as "AR #N" throughout this document.
+> **REFERENCE — no action required.** Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
 
   1. **`ui_mode: 'custom'`** for Stripe Checkout
      - Proven in freelance-payments. Full UI control.
@@ -282,51 +299,69 @@ Every architectural question answered. No mid-session research. Referenced as "A
 
 ## Phase 0: Sean's Prerequisites
 
-These are human-only tasks — account creation, password choices, dashboard clicks, domain setup. An agent cannot do these. Do them BEFORE kicking off an implementation session.
+> **ACTION — (SEAN) only.** All items below are human-only (account creation, password choices, dashboard clicks, domain setup). An agent cannot do these. Complete Phase 0 BEFORE kicking off the first implementation session.
 
-  - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`
-  - [ ] (SEAN) **Copy** Supabase anon key + service role key from Settings > API (save for Phase 1 env vars)
-  - [ ] (SEAN) **Create** Stripe account (if not already). Save publishable + secret test keys from Developers > API keys
+### Secret handling — do this once, not twice
+
+As you copy each key from its dashboard, paste it into `.env.local` AND run `vercel env add` for the same key, in the same sitting. This avoids gathering-then-setting-later churn.
+
+  - `.env.local` (local file, gitignored) is for `vercel dev`
+  - Vercel env vars (set via `vercel env add VAR_NAME preview` and `vercel env add VAR_NAME production`) are for preview and prod deployments
+  - Never paste secrets into this doc, commit messages, or any tracked file
+
+First things first:
+
+  - [ ] (AGENT) **Create** `.env.example` from the [Configuration Files](#configuration-files) reference section (template only, no real values)
+  - [ ] (AGENT) **Create** `.env.local` from template: `cp .env.example .env.local`
+  - [ ] (SEAN) Add `.env.local` to `.gitignore` if not already present (verify: `grep -q "\.env\.local" .gitignore`)
+
+### Repo reconciliation
+
+You are currently on the `everlastings` branch. Before the first implementation session, reconcile to the standard two-branch model documented in [Git Branching Strategy](#git-branching-strategy):
+
+  - [ ] (SEAN+AGENT) **Merge** `everlastings` → `main` (PR or direct merge) so main is up to date
+  - [ ] (SEAN+AGENT) **Create** `dev` from `main`: `git checkout main && git checkout -b dev && git push -u origin dev`
+  - [ ] (SEAN) **Delete** the `everlastings` branch locally and on origin once confirmed merged
+  - [ ] (AGENT) **Confirm** Vercel project auto-promotes main → Production, dev → Preview
+
+### Services (one service per group — complete each service end-to-end before moving on)
+
+Each service below has: (1) a dashboard portion Sean does, (2) env-var loading handled the instant keys are available. A1 in Track A confirms each service is wired correctly; no work is repeated there.
+
+  - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`. Then: copy anon key + service role key from Settings > API → paste into `.env.local` as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` → `vercel env add` each for preview AND production (same values — Supabase project is shared across envs)
+  - [ ] (SEAN) **Create** Stripe account (if not already). Dashboard > Developers > API keys → copy **test** keys. Paste into `.env.local` + `vercel env add` for preview scope only. Live keys are captured at launch switchover (see [Environment Strategy](#environment-strategy) > Live Launch Switchover Process).
   - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
   - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`. Enable public access
   - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
-  - [ ] (SEAN) **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket
-  - [ ] (SEAN) **Create** Cloudinary account (free tier). Copy cloud name, API key, API secret (CLOUDINARY_URL format)
-  - [ ] (SEAN) **Create** Resend account (free tier, no credit card). Get API key from Dashboard > API Keys. Verify domain `everlastingsbyemaline.com` for sending (DNS records provided by Resend)
-  - [ ] (SEAN) **Create** Shippo account (free Starter). Link USPS account (automatic, no fee)
-  - [ ] (SEAN) **Create** Google Analytics 4 property for `everlastingsbyemaline.com`. Note Measurement ID `G-XXXXXXXXXX`
+  - [ ] (SEAN) **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket. Copy the 4 values → paste into `.env.local` + `vercel env add` (same values for preview and production): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`, `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`
+  - [ ] (SEAN) **Create** Cloudinary account (free tier). Copy cloud name, API key, API secret. Paste the combined `CLOUDINARY_URL` (format: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`) into `.env.local` + `vercel env add`
+  - [ ] (SEAN) **Create** Resend account (free tier, no credit card). Verify domain `everlastingsbyemaline.com` for sending (DNS records provided by Resend → add to Cloudflare DNS). Copy API key → paste as `RESEND_API_KEY`; also add `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com`
+  - [ ] (SEAN) **Create** Shippo account (free Starter tier — 30 labels/month, covers expected volume). Link USPS account (automatic, no fee). No API key required for v1 — Emy uses Shippo's web UI only. See [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
+  - [ ] (SEAN) **Create** Meta Business Manager account, Meta Commerce Manager catalog (type: E-commerce), and Meta Pixel. Verify the domain. Copy `META_PIXEL_ID` + generate a system-user `META_ACCESS_TOKEN` (scope: `catalog_management`) → env vars. Full Instagram-Shopping prerequisites checklist in [A1 Meta](#meta-pixel--instagram-shopping)
+  - [ ] (SEAN) **Create** Google Analytics 4 property for `everlastingsbyemaline.com`. Note Measurement ID `G-XXXXXXXXXX` (used later in the GA4 script-tag snippet in Track B1)
   - [ ] (SEAN) **Verify** Google Search Console ownership (TXT record or HTML file)
-  - [ ] (SEAN) **Emy's Instagram Shopping prerequisites** (see A1 Meta section for the full list)
-  - [ ] (SEAN) **Confirm** everlastingsbyemaline.com domain is registered and managed in Cloudflare DNS
+  - [ ] (SEAN) **Confirm** `everlastingsbyemaline.com` domain is registered and managed in Cloudflare DNS
   - [ ] (SEAN) **Invite** admin users in Supabase Auth > Users > Invite user:
     - `admin@everlastingsbyemaline.com` (Master)
     - `sean@everlastingsbyemaline.com` (Developer)
     - `emyh@everlastingsbyemaline.com` (Client)
+  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` → paste into `.env.local` + `vercel env add` (different random value per environment so a leaked preview key doesn't unlock production)
 
----
+### Agent bootstrap (run once, after services exist and env vars are set)
 
-## Phase 1: Agent-Executable Setup
-
-These are tasks the implementation-session agent can do via bash, MCP servers, or Vercel CLI — no dashboard clicks needed. Prefer MCP where available (Supabase MCP can run migrations, Stripe MCP can create coupons). Fall back to CLI where MCP doesn't cover.
-
-  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` — save output
-  - [ ] (AGENT) **Create** config files in repo root (copy from Configuration Files section): `.env.example`, `vercel.json`, `tsconfig.json`, `package.json`
-  - [ ] (AGENT) **Create** `dev` branch: `git checkout main && git checkout -b dev && git push -u origin dev`
-  - [ ] (AGENT) **Create** `.env.local`: `cp .env.example .env.local`, then fill in real test values from Phase 0
-  - [ ] (AGENT) **Add** all env vars to Vercel per environment via `vercel env add` (see Environment Strategy table for per-env scoping). Variables include all Supabase, Stripe (test + live), R2, Cloudinary, Resend, Meta, and `PRODUCT_API_KEY`
+  - [ ] (AGENT) **Create** config files in repo root from the [Configuration Files](#configuration-files) reference: `vercel.json`, `tsconfig.json`, `package.json`
   - [ ] (AGENT) **Run** `npm install`
   - [ ] (AGENT) **Verify** `vercel dev` starts without errors
-  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration` (preferred) OR paste SQL into Supabase Studio:
-    - All 8 table creations (see Product Schema Hard Reference)
-    - All RLS policies (see A1 Supabase section)
-    - Triggers (`set_slug`, `set_updated_at_*`)
+  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration` (preferred) — all 8 tables + RLS policies + triggers. Canonical SQL lives in [Product Schema Hard Reference](#product-schema-hard-reference) and [A1 Supabase](#supabase) (RLS). If MCP is unavailable, paste into Supabase Studio SQL editor.
   - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
-  - [ ] (AGENT) **Create** Stripe coupons via MCP or Dashboard (see A1 Stripe section for exact settings)
-  - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
+  - [ ] (AGENT) **Bootstrap** Stripe coupons idempotently via `api/_bootstrap/coupons.ts` (created in A1 Stripe). Runs once; idempotent. Creates both `cart-recovery-10` and `newsletter-welcome-5` via the Stripe API — no dashboard click required.
+  - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) via Stripe CLI/MCP, pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
 
 ---
 
 ## Git Branching Strategy
+
+> **REFERENCE — no action required** (the actual branch-creation checkboxes live in [Phase 0](#phase-0-seans-prerequisites) > Repo reconciliation).
 
   ```
   main (production — live Stripe keys)
@@ -388,6 +423,8 @@ These are tasks the implementation-session agent can do via bash, MCP servers, o
 ---
 
 ## Environment Strategy
+
+> **REFERENCE — no action required** (actions happen in [Phase 0](#phase-0-seans-prerequisites) as each secret is gathered, and at launch in the Live Launch Switchover Process below).
 
 ### Where Secrets Live
 
@@ -454,6 +491,8 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 
 ## Source of Truth Hierarchy
 
+> **REFERENCE — no action required.** Cited from api/stripe-sync.ts, api/webhook.ts, and api/products.ts.
+
   1. **Supabase** — authoritative product data, customer records, orders, site config
   2. **Stripe** — payment mirror only. Created from Supabase data via webhook, never manually edited
   3. **Cloudflare R2** — asset storage only. URLs referenced from Supabase product records
@@ -465,6 +504,8 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 
 ## Stripe Sync Rules
 
+> **REFERENCE — no action required.** Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` (A2) and `api/products.ts > PUT` (A2).
+
   - On product **INSERT** → create Stripe Product + Price (via `api/stripe-sync.ts`)
   - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase
   - On **title/image/description change** → DO NOTHING in Stripe (Stripe is a payment mirror, not source of truth)
@@ -474,6 +515,8 @@ When in doubt about product data, trust Supabase. Stripe reflects Supabase, not 
 ---
 
 ## Product Schema Hard Reference
+
+> **REFERENCE — no action required** (migrations are applied in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) and again verified in A1 Supabase).
 
 ### TypeScript Interface 
 
@@ -692,7 +735,9 @@ These are the 8 tables to be created.
 
 ## Configuration Files
 
-These files must be created as actual files in the repository root. Copy the contents below into each file. See Action Steps Pre-Flight for the checklist.
+> **REFERENCE — no action required** (actions are in [Phase 0 > Agent bootstrap](#phase-0-seans-prerequisites) — "Create config files in repo root from this reference").
+
+These files must be created as actual files in the repository root. Copy the contents below into each file.
 
 ### `vercel.json`
 
@@ -795,6 +840,8 @@ These files must be created as actual files in the repository root. Copy the con
 
 ## How the Tracks Work
 
+> **REFERENCE — no action required.** Orientation for the three parallel implementation tracks.
+
   ```
   TRACK A (Backend)                    TRACK B (Frontend Design)
   ─────────────────                    ────────────────────────
@@ -821,38 +868,32 @@ These files must be created as actual files in the repository root. Copy the con
 
 ## TRACK A: Foundation + Backend
 
+> **ACTION — mostly (AGENT); handoff points to (SEAN) are tagged per checkbox.** Track A builds the backend: services wired up, database tables live, API endpoints shipped, admin UI functional.
+
 ### A1: Services Setup
+
+> **ACTION — (SEAN+AGENT).** A1 assumes Phase 0 is complete (all accounts created, env vars loaded). A1 verifies each service is correctly wired and completes any agent-side configuration that depends on those services.
 
 **YOU WILL HAVE**: All services connected, tables created, env vars set, analytics base installed
 
-  > **Pre-requisite**: Sean will create all service accounts (Supabase, Stripe, Cloudflare R2, Cloudinary, GA4) before the first implementation session. A1 assumes accounts exist and focuses on configuration.
-
 #### Vercel
 
-  - [ ] **Create** Vercel project — connect GitHub repo
-  - [ ] **Add** custom domain `everlastingsbyemaline.com`
-  - [ ] **Create** `vercel.json` — copy from Configuration Files section
-  - [ ] **Push** and verify deploy loads
+> Covered in Phase 0 except the two steps below:
+
+  - [ ] (SEAN) **Add** custom domain `everlastingsbyemaline.com` to the Vercel project (Settings > Domains)
+  - [ ] (AGENT) **Push** to trigger a Vercel deploy and verify it loads without error
 
 #### Git Branches
 
-  - [ ] **Create** `dev` branch from `main`: `git checkout -b dev && git push -u origin dev`
-  - [ ] **Set** Vercel auto-deploy: `main` → Production, all other branches → Preview
-  - [ ] **Configure** env vars per environment (see Environment Strategy section)
+> Covered in Phase 0 except:
+
+  - [ ] (AGENT) **Verify** Vercel auto-deploys `main` → Production and all other branches → Preview
 
 #### Supabase
 
-> **Sean's part** (Phase 0) covered: project created with DB password, anon + service keys copied. Agent runs everything below via MCP `apply_migration` where possible, otherwise via Supabase Studio SQL editor.
+> Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via MCP `apply_migration`. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
 
-  - [ ] (AGENT) **Run** SQL: create `products` table — copy from Product Schema section
-  - [ ] (AGENT) **Run** SQL: create `customers` table
-  - [ ] (AGENT) **Run** SQL: create `orders` table (includes `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, `idx_orders_needs_shipping`)
-  - [ ] (AGENT) **Run** SQL: create `subscribers` table (includes `promo_code`, `promo_code_expires_at`)
-  - [ ] (AGENT) **Run** SQL: create `site_config` table
-  - [ ] (AGENT) **Run** SQL: create `webhook_events` table (idempotency — AR #21)
-  - [ ] (AGENT) **Run** SQL: create `product_interests` table (email capture — AR #26)
-  - [ ] (AGENT) **Run** SQL: create `cart_holds` table (soft reservations — AR #28, #29)
-  - [ ] (AGENT) **Enable** RLS on all 8 tables:
+  - [ ] (AGENT) **Enable** RLS on all 8 tables (apply as part of the Phase 0 migration, or as a follow-up migration):
 
   ```sql
   -- PRODUCTS: public read, authenticated write
@@ -928,11 +969,8 @@ These files must be created as actual files in the repository root. Copy the con
     ON cart_holds FOR ALL TO service_role USING (true) WITH CHECK (true);
   ```
 
-  - [ ] **Create** admin users in Supabase Auth > Users > Invite user:
-    - `admin@everlastingsbyemaline.com` (Master)
-    - `sean@everlastingsbyemaline.com` (Developer)
-    - `emyh@everlastingsbyemaline.com` (Client)
-  - [ ] **Configure** Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
+  - [ ] (SEAN) **Verify** admin users invited in Supabase Auth > Users (covered in Phase 0 — this is a sanity check)
+  - [ ] (AGENT) **Verify** Database Webhook configured and fires on `products` INSERT (covered in Phase 0 — tail logs or insert a test product)
 
 #### Cloudflare R2
 
@@ -945,31 +983,54 @@ These files must be created as actual files in the repository root. Copy the con
 
 #### Cloudinary
 
-  - [ ] **Note** cloud name, API key, API secret
-  - [ ] **Set** `CLOUDINARY_URL` env var in Vercel
+> Covered in Phase 0 — `CLOUDINARY_URL` is already in Vercel env vars. If you skipped that step, do it now; otherwise proceed.
 
 #### Stripe
 
-> **Coupon strategy note**: See the [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy) reference section. In short: coupons are the discount RULE (created once), promotion codes are single-use delivery (generated on-the-fly per user event).
+> **Coupon strategy** (see [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy) reference for the full rationale): we create 2 base coupons once via an idempotent bootstrap script, then generate unique single-use **promotion codes** per user event (409, newsletter signup). No Sean-does-it-in-dashboard step — removing a manual click that's easy to forget or misconfigure.
 
-  - [ ] (SEAN) **Get** test API keys (publishable + secret) — Dashboard > Developers > API keys
-  - [ ] [SEAN or AGENT-via-MCP] **Create** cart-recovery coupon via Dashboard > Products > Coupons OR `stripe coupons create`:
-    - Name: "Haven Finder Apology"
-    - Percent off: 10
-    - Duration: **Forever** (we use one-time promotion codes for delivery; `once` is a subscription concept and doesn't apply)
-    - Max redemptions: **LEAVE BLANK** (never cap the coupon; each promotion code is the actual single-use)
-    - Apply to: All products
-    - Coupon ID: `cart-recovery-10`
-  - [ ] [SEAN or AGENT-via-MCP] **Create** newsletter coupon:
-    - Name: "Welcome to the Firelight Council"
-    - Percent off: 5
-    - Duration: **Forever**
-    - Max redemptions: **LEAVE BLANK**
-    - Apply to: All products
-    - Coupon ID: `newsletter-welcome-5`
-  - [ ] (AGENT) **Create** test webhook endpoint via Stripe CLI or MCP → `{dev-preview-url}/api/webhook`
-    - Events: `checkout.session.completed`
-  - [ ] (SEAN) Receipt emails already toggled ON in Phase 0 (Dashboard > Settings > Emails > Successful payments + Refunds)
+  - [ ] (AGENT) **Create** `api/_bootstrap/coupons.ts` — idempotent Stripe coupon bootstrap:
+
+    ```typescript
+    // api/_bootstrap/coupons.ts
+    // Creates the two base coupons. Safe to run multiple times (409 on duplicate is caught).
+    import Stripe from 'stripe';
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+    const COUPONS = [
+      { id: 'cart-recovery-10',     name: 'Haven Finder Apology',             percent_off: 10 },
+      { id: 'newsletter-welcome-5', name: 'Welcome to the Firelight Council', percent_off: 5  },
+    ];
+
+    export async function bootstrapCoupons() {
+      for (const c of COUPONS) {
+        try {
+          await stripe.coupons.create({
+            id: c.id,
+            name: c.name,
+            percent_off: c.percent_off,
+            duration: 'forever',  // Correct for one-time payments. `once` is a subscription concept.
+            // max_redemptions intentionally omitted — promotion codes carry the single-use limit.
+          });
+          console.log(`Created coupon: ${c.id}`);
+        } catch (err: any) {
+          if (err.code === 'resource_already_exists') {
+            console.log(`Coupon already exists, skipping: ${c.id}`);
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    // Run as: npx tsx api/_bootstrap/coupons.ts
+    if (require.main === module) bootstrapCoupons().catch(console.error);
+    ```
+
+  - [ ] (AGENT) **Run** `npx tsx api/_bootstrap/coupons.ts` once for **test mode** — verify both coupons exist in Stripe Dashboard > Products > Coupons
+  - [ ] (AGENT) **Create** test webhook endpoint via Stripe CLI or MCP → `{dev-preview-url}/api/webhook` with event `checkout.session.completed`
+  - [ ] (AGENT) At launch switchover: re-run the bootstrap with `STRIPE_SECRET_KEY=sk_live_...` to populate coupons in live mode
+  - [ ] (SEAN) Receipt emails were toggled ON in Phase 0 — no further action here
 
 #### Resend (Transactional Email)
 
@@ -985,43 +1046,39 @@ From AR #30, #31 — Resend handles three email types: shipping tracking, newsle
 
   - [ ] (SEAN) Shippo Starter account already created in Phase 0 (free, 30 labels/month covers expected volume)
   - [ ] (SEAN) USPS account linked inside Shippo (automatic, no fee)
-  - [ ] No env vars for v1
+
+> **No Shippo env var in v1.** Web UI only — Emy pastes Shippo-generated tracking numbers into the admin UI.
 
 #### Meta Pixel + Instagram Shopping 
 
 From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
-  - [ ] **Get** Meta Pixel ID from Meta Events Manager
-  - [ ] **Get** Meta Access Token (system user token with `catalog_management` permission) from Meta Business Manager
-  - [ ] **Set** `META_PIXEL_ID` and `META_ACCESS_TOKEN` env vars in Vercel
-  - [ ] **Verify** Instagram Shopping prerequisites (Emy's responsibility):
+> Meta Pixel ID, Access Token, and env vars are all set in Phase 0. A1 adds only Emy's IG Shopping workflow below.
+
+  - [ ] (SEAN) **Coordinate with Emy** on Instagram Shopping prerequisites (her Instagram + Meta Business Manager accounts):
     1. Instagram account converted to Business profile
     2. IG profile connected to a Facebook Page
     3. Meta Business Manager with FB Page claimed
     4. Commerce Manager: create catalog (type: E-commerce)
     5. Domain verification: DNS TXT record or meta tag for `everlastingsbyemaline.com`
-    6. Submit shop for Commerce review (1-2 weeks)
+    6. Submit shop for Commerce review (1-2 weeks — can happen in parallel with build)
     7. After approval: product tagging available in Instagram app
 
 #### Analytics
 
-  - [ ] **Create** GA4 property for everlastingsbyemaline.com
-  - [ ] **Note** Measurement ID (`G-XXXXXXXXXX`)
-  - [ ] **Verify** Google Search Console (TXT record or HTML file upload)
+> GA4 property creation + Search Console verification + Measurement ID noting are all in Phase 0.
+
+  - [ ] (AGENT) **Confirm** the Measurement ID is recorded (used in Track B1 GA4 script-tag snippet)
 
 #### Config Files
 
-  - [ ] **Create** `.env.example` — copy from Configuration Files section
-  - [ ] **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32`
-  - [ ] **Set** env vars in Vercel Dashboard (per environment — see Environment Strategy)
-  - [ ] **Create** `.env.local` for local dev: `cp .env.example .env.local` then fill in real values
-  - [ ] **Run** `npm install`
-  - [ ] **Create** `tsconfig.json` and `package.json` — copy from Configuration Files section
-  - [ ] **Verify** `vercel dev` starts
+> All config-file creation, env-var loading, `npm install`, and `vercel dev` verification are done in Phase 0 > Agent bootstrap. No A1 work remaining here.
 
 ---
 
 ### A2: API Endpoints
+
+> **ACTION — (AGENT) only.** All endpoints are code. Zero Sean dashboard work in A2 — every secret it depends on was loaded in Phase 0.
 
 **YOU WILL HAVE**: All server-side endpoints working, testable with curl
 
@@ -1043,7 +1100,7 @@ Returns environment-appropriate public configuration. Enables automatic test/liv
   }
   ```
 
-  - [ ] **Create** `api/config.ts` with the code above
+  - [ ] (AGENT) **Create** `api/config.ts` with the code above
 
 #### Stripe Sync — `api/stripe-sync.ts`
 
@@ -1302,7 +1359,7 @@ Called AFTER `/api/checkout/reserve` succeeded. Creates the Stripe Checkout Sess
   }
   ```
 
-  - [ ] **Create** `api/checkout.ts`
+  - [ ] (AGENT) **Create** `api/checkout.ts`
 
 #### Session Status — `api/session-status.ts`
 
@@ -1337,7 +1394,7 @@ Called AFTER `/api/checkout/reserve` succeeded. Creates the Stripe Checkout Sess
   }
   ```
 
-  - [ ] **Create** `api/session-status.ts`
+  - [ ] (AGENT) **Create** `api/session-status.ts`
 
 #### Webhook — `api/webhook.ts`
 
@@ -1493,7 +1550,7 @@ Handles `checkout.session.completed`. See Webhook Contract section for the full 
   }
   ```
 
-  - [ ] **Create** `api/webhook.ts`
+  - [ ] (AGENT) **Create** `api/webhook.ts`
 
 #### Cart Recovery — `api/cart-recovery.ts`
 
@@ -1545,7 +1602,7 @@ See Cart Recovery Flow section for the full UX specification.
   }
   ```
 
-  - [ ] **Create** `api/cart-recovery.ts`
+  - [ ] (AGENT) **Create** `api/cart-recovery.ts`
 
 #### Products API — `api/products.ts`
 
@@ -1731,7 +1788,7 @@ Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #
   }
   ```
 
-  - [ ] **Create** `api/products.ts`
+  - [ ] (AGENT) **Create** `api/products.ts`
 
 #### Image Upload — `api/upload.ts`
 
@@ -1864,7 +1921,7 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
   }
   ```
 
-  - [ ] **Create** `api/upload.ts`
+  - [ ] (AGENT) **Create** `api/upload.ts`
 
 #### Newsletter — `api/subscribe.ts`
 
@@ -1904,8 +1961,8 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
   }
   ```
 
-  - [ ] **Create** `api/subscribe.ts`
-  - [ ] **Create** `api/contact.ts` — similar pattern, stores in Supabase or sends email
+  - [ ] (AGENT) **Create** `api/subscribe.ts`
+  - [ ] (AGENT) **Create** `api/contact.ts` — similar pattern, stores in Supabase or sends email
 
 #### Cart Activity — `api/cart-activity.ts`
 
@@ -1945,7 +2002,7 @@ Fire-and-forget endpoint called when any user adds a product to cart. Checks for
   }
   ```
 
-  - [ ] **Create** `api/cart-activity.ts`
+  - [ ] (AGENT) **Create** `api/cart-activity.ts`
 
 #### Product Feed — `api/product-feed.ts`
 
@@ -1987,133 +2044,133 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
 
 Admin-only endpoints for the shipping fulfillment pipeline.
 
-```typescript
-// api/orders.ts — GET only; lists orders with optional status filter
-import { createClient } from '@supabase/supabase-js';
+  ```typescript
+  // api/orders.ts — GET only; lists orders with optional status filter
+  import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
 
-function authorize(request: Request): boolean {
-  const auth = request.headers.get('authorization');
-  return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
-}
-
-export async function GET(request: Request) {
-  if (!authorize(request)) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  function authorize(request: Request): boolean {
+    const auth = request.headers.get('authorization');
+    return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
   }
 
-  const url = new URL(request.url);
-  const status = url.searchParams.get('status'); // 'needs_shipping' | 'shipped' | 'all'
+  export async function GET(request: Request) {
+    if (!authorize(request)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  let query = supabase.from('orders')
-    .select('*, products(title, thumbnail), customers(name, email)')
-    .order('created_at', { ascending: false });
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status'); // 'needs_shipping' | 'shipped' | 'all'
 
-  if (status === 'needs_shipping') {
-    query = query.is('shipped_at', null).eq('status', 'completed');
-  } else if (status === 'shipped') {
-    query = query.not('shipped_at', 'is', null);
+    let query = supabase.from('orders')
+      .select('*, products(title, thumbnail), customers(name, email)')
+      .order('created_at', { ascending: false });
+
+    if (status === 'needs_shipping') {
+      query = query.is('shipped_at', null).eq('status', 'completed');
+    } else if (status === 'shipped') {
+      query = query.not('shipped_at', 'is', null);
+    }
+
+    const { data, error } = await query;
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ orders: data });
+  }
+  ```
+
+  ```typescript
+  // api/orders/[id].ts — PATCH only; records tracking and sends branded email via Resend
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+
+  function authorize(request: Request): boolean {
+    const auth = request.headers.get('authorization');
+    return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
   }
 
-  const { data, error } = await query;
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json({ orders: data });
-}
-```
+  export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+    if (!authorize(request)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-```typescript
-// api/orders/[id].ts — PATCH only; records tracking and sends branded email via Resend
-import { createClient } from '@supabase/supabase-js';
+    const { tracking_number, tracking_carrier, shipped_at } = await request.json();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+    if (!tracking_number || !tracking_carrier) {
+      return Response.json({ error: 'tracking_number and tracking_carrier required' }, { status: 400 });
+    }
 
-function authorize(request: Request): boolean {
-  const auth = request.headers.get('authorization');
-  return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
-}
+    const shippedAtIso = shipped_at || new Date().toISOString();
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  if (!authorize(request)) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const { data: order, error } = await supabase
+      .from('orders')
+      .update({
+        tracking_number,
+        tracking_carrier,
+        shipped_at: shippedAtIso,
+        status: 'shipped',
+      })
+      .eq('id', params.id)
+      .select('*, products(title, thumbnail), customers(name, email)')
+      .single();
+
+    if (error || !order) {
+      return Response.json({ error: error?.message || 'Order not found' }, { status: 404 });
+    }
+
+    // Send branded tracking email via Resend (see Shipping Pipeline reference)
+    await sendTrackingEmail(order);
+
+    return Response.json({ ok: true, order });
   }
 
-  const { tracking_number, tracking_carrier, shipped_at } = await request.json();
+  async function sendTrackingEmail(order: any) {
+    const email = order.customers?.email || order.customer_email;
+    const name = order.customers?.name || 'Dear collector';
+    if (!email) return;
 
-  if (!tracking_number || !tracking_carrier) {
-    return Response.json({ error: 'tracking_number and tracking_carrier required' }, { status: 400 });
+    const trackingUrl = buildTrackingUrl(order.tracking_carrier, order.tracking_number);
+    const html = `
+      <h1 style="font-family: Georgia, serif;">Your haven is on its way</h1>
+      <p>${name},</p>
+      <p><strong>${order.products?.title}</strong> has been carefully packed and handed to ${order.tracking_carrier}.</p>
+      <p>Tracking number: <strong>${order.tracking_number}</strong></p>
+      <p><a href="${trackingUrl}">Track your package</a></p>
+      <p>With care,<br>Everlastings by Emaline</p>
+    `;
+
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [email],
+        subject: 'Your haven is on its way',
+        html,
+      }),
+    });
   }
 
-  const shippedAtIso = shipped_at || new Date().toISOString();
-
-  const { data: order, error } = await supabase
-    .from('orders')
-    .update({
-      tracking_number,
-      tracking_carrier,
-      shipped_at: shippedAtIso,
-      status: 'shipped',
-    })
-    .eq('id', params.id)
-    .select('*, products(title, thumbnail), customers(name, email)')
-    .single();
-
-  if (error || !order) {
-    return Response.json({ error: error?.message || 'Order not found' }, { status: 404 });
+  function buildTrackingUrl(carrier: string, number: string): string {
+    const urls: Record<string, string> = {
+      'USPS': `https://tools.usps.com/go/TrackConfirmAction?tLabels=${number}`,
+      'UPS': `https://www.ups.com/track?tracknum=${number}`,
+      'FedEx': `https://www.fedex.com/fedextrack/?trknbr=${number}`,
+      'DHL': `https://www.dhl.com/en/express/tracking.html?AWB=${number}`,
+    };
+    return urls[carrier] || `https://www.google.com/search?q=${carrier}+${number}`;
   }
-
-  // Send branded tracking email via Resend (see Shipping Pipeline reference)
-  await sendTrackingEmail(order);
-
-  return Response.json({ ok: true, order });
-}
-
-async function sendTrackingEmail(order: any) {
-  const email = order.customers?.email || order.customer_email;
-  const name = order.customers?.name || 'Dear collector';
-  if (!email) return;
-
-  const trackingUrl = buildTrackingUrl(order.tracking_carrier, order.tracking_number);
-  const html = `
-    <h1 style="font-family: Georgia, serif;">Your haven is on its way</h1>
-    <p>${name},</p>
-    <p><strong>${order.products?.title}</strong> has been carefully packed and handed to ${order.tracking_carrier}.</p>
-    <p>Tracking number: <strong>${order.tracking_number}</strong></p>
-    <p><a href="${trackingUrl}">Track your package</a></p>
-    <p>With care,<br>Everlastings by Emaline</p>
-  `;
-
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL,
-      to: [email],
-      subject: 'Your haven is on its way',
-      html,
-    }),
-  });
-}
-
-function buildTrackingUrl(carrier: string, number: string): string {
-  const urls: Record<string, string> = {
-    'USPS': `https://tools.usps.com/go/TrackConfirmAction?tLabels=${number}`,
-    'UPS': `https://www.ups.com/track?tracknum=${number}`,
-    'FedEx': `https://www.fedex.com/fedextrack/?trknbr=${number}`,
-    'DHL': `https://www.dhl.com/en/express/tracking.html?AWB=${number}`,
-  };
-  return urls[carrier] || `https://www.google.com/search?q=${carrier}+${number}`;
-}
-```
+  ```
 
   - [ ] (AGENT) **Create** `api/orders.ts` (GET — list)
   - [ ] (AGENT) **Create** `api/orders/[id].ts` (PATCH — record tracking + send email)
@@ -2122,31 +2179,31 @@ function buildTrackingUrl(carrier: string, number: string): string {
 
 All transactional emails live in a shared module. Three templates for v1:
 
-```typescript
-// api/_emails/index.ts
-export async function sendEmail(opts: { to: string; subject: string; html: string }) {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL,
-      to: [opts.to],
-      subject: opts.subject,
-      html: opts.html,
-    }),
-  });
-  if (!res.ok) {
-    console.error('Resend email failed:', await res.text());
+  ```typescript
+  // api/_emails/index.ts
+  export async function sendEmail(opts: { to: string; subject: string; html: string }) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [opts.to],
+        subject: opts.subject,
+        html: opts.html,
+      }),
+    });
+    if (!res.ok) {
+      console.error('Resend email failed:', await res.text());
+    }
   }
-}
 
-export function trackingEmailHtml(args: { name: string; productTitle: string; trackingNumber: string; carrier: string; trackingUrl: string }): string;
-export function welcomeCouponEmailHtml(args: { code: string; percentOff: number; expiresInDays: number }): string;
-export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: number; expiresInDays: number; lostItems: string[] }): string;
-```
+  export function trackingEmailHtml(args: { name: string; productTitle: string; trackingNumber: string; carrier: string; trackingUrl: string }): string;
+  export function welcomeCouponEmailHtml(args: { code: string; percentOff: number; expiresInDays: number }): string;
+  export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: number; expiresInDays: number; lostItems: string[] }): string;
+  ```
 
   - [ ] (AGENT) **Create** `api/_emails/index.ts` with three templated functions
   - [ ] (AGENT) Copy template HTML from BRAND.md > Email Voice section (brand-consistent)
@@ -2154,6 +2211,8 @@ export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: nu
 ---
 
 ### A3: Admin UI + Product Protocol
+
+> **ACTION — (AGENT) builds; (SEAN) reviews PRODUCT_PROTOCOL copy.**
 
 **YOU WILL HAVE**: Browser-based product management + documented AI workflow
 
@@ -2187,35 +2246,41 @@ export function cartRecoveryCouponEmailHtml(args: { code: string; percentOff: nu
 
 #### Product Protocol
 
-  - [ ] **Create** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
+  - [ ] (AGENT) **Create** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
     - Section 1: Client guide (for Emy) — field explanations, photo requirements, admin UI walkthrough
     - Section 2: AI protocol — slug generation, image pipeline, API calls, validation, error handling
     - Replaces both `PRODUCT_GUIDE.md` and `PRODUCT_CREATION_PROTOCOL.md`
-  - [ ] **Review** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
+  - [ ] (SEAN) **Review** `assets/docs/PRODUCT_PROTOCOL.md` — consolidated guide
 
 ---
 
 ### A4: API Integration Testing
 
-  - [ ] **Test** stripe-sync: insert product in Supabase → verify Stripe product appears
-  - [ ] **Test** checkout: POST with cart items → receive clientSecret
-  - [ ] **Test** webhook: use Stripe CLI `stripe listen --forward-to localhost:3000/api/webhook`
-  - [ ] **Test** full flow: add to cart → checkout → pay with `4242...` → completion
-  - [ ] **Verify** customer record created in customers table
-  - [ ] **Verify** order records created with customer_id FK
-  - [ ] **Test** multi-item: add 2 products, checkout, verify both marked sold
-  - [ ] **Test** race condition: add item, set `available=false`, checkout → 409
-  - [ ] **Test** recovery: trigger 409 → enter email → get promo code
-  - [ ] **Test** products API: POST/PUT/GET via curl with `PRODUCT_API_KEY` auth
-  - [ ] **Test** upload API: upload image with `PRODUCT_API_KEY`, verify Cloudinary transform + R2 delivery
-  - [ ] **Test** upload validation: wrong file type → 400, file too large → 400, no auth → 401
-  - [ ] **Test** webhook idempotency: replay same event → should be ignored
-  - [ ] **Test** slug conflict: create product, try same title → 409
-  - [ ] **Test** admin: login → add product → see it on shop page
+> **ACTION — (AGENT) runs tests; (SEAN) does the real-card smoke check at launch.**
+
+  - [ ] (AGENT) **Test** stripe-sync: insert product in Supabase → verify Stripe product appears
+  - [ ] (AGENT) **Test** checkout: POST with cart items → receive clientSecret
+  - [ ] (AGENT) **Test** webhook: use Stripe CLI `stripe listen --forward-to localhost:3000/api/webhook`
+  - [ ] (AGENT) **Test** full flow: add to cart → checkout → pay with `4242...` → completion
+  - [ ] (AGENT) **Verify** customer record created in customers table
+  - [ ] (AGENT) **Verify** order records created with customer_id FK
+  - [ ] (AGENT) **Test** multi-item: add 2 products, checkout, verify both marked sold
+  - [ ] (AGENT) **Test** race condition (reserve flow): add item, set `available=false`, click CHECKOUT on /cart.html → 409 recovery overlay appears
+  - [ ] (AGENT) **Test** recovery: trigger 409 → enter email → get promo code (also emailed via Resend)
+  - [ ] (AGENT) **Test** hold expiry: create hold, wait 15+ minutes, attempt /api/checkout → 410 redirect back to cart
+  - [ ] (AGENT) **Test** shipping flow: mark order shipped via admin → verify Resend tracking email delivered
+  - [ ] (AGENT) **Test** products API: POST/PUT/GET via curl with `PRODUCT_API_KEY` auth
+  - [ ] (AGENT) **Test** upload API: upload image with `PRODUCT_API_KEY`, verify Cloudinary transform + R2 delivery
+  - [ ] (AGENT) **Test** upload validation: wrong file type → 400, file too large → 400, no auth → 401
+  - [ ] (AGENT) **Test** webhook idempotency: replay same event → should be ignored
+  - [ ] (AGENT) **Test** slug conflict: create product, try same title → 409
+  - [ ] (AGENT) **Test** admin: login → add product → see it on shop page
 
 ---
 
 ## TRACK B: Frontend Design
+
+> **ACTION — (AGENT) builds; (SEAN) reviews visual design.** Track B is entirely frontend. All hardcoded content must use the `PLACEHOLDER:` convention (see [Placeholder Hygiene](#placeholder-hygiene)) so Track C's grep pass catches everything.
 
 Initial pages are built using placeholder content that needs to be sourced during the build process and saved to the appropriate locations. Every page is built with hardcoded HTML — no JavaScript data-fetching. Lorem ipsum text and placeholder images. Client reviews and iterates on visual design.
 
@@ -2223,14 +2288,16 @@ Initial pages are built using placeholder content that needs to be sourced durin
 
 ### B1: Design System
 
+> **ACTION — (AGENT) only.**
+
 **YOU WILL HAVE**: CSS variables, typography, base components, responsive scaffolding
 
 #### CSS Custom Properties
 
-  - [ ] **Create** `assets/css/styles.css`
-  - [ ] **Define** color variables — copy from `BRAND.md` > CSS Custom Properties
-  - [ ] **Define** typography variables (font-display, font-body, size scale)
-  - [ ] **Define** spacing, shadow, radius, transition, z-index tokens:
+  - [ ] (AGENT) **Create** `assets/css/styles.css`
+  - [ ] (AGENT) **Define** color variables — copy from `BRAND.md` > CSS Custom Properties
+  - [ ] (AGENT) **Define** typography variables (font-display, font-body, size scale)
+  - [ ] (AGENT) **Define** spacing, shadow, radius, transition, z-index tokens:
 
   ```css
   :root {
@@ -2264,25 +2331,25 @@ Initial pages are built using placeholder content that needs to be sourced durin
 
 #### Typography
 
-  - [ ] **Add** Cormorant Garamond via Google Fonts
-  - [ ] **Style** heading hierarchy (h1-h6 using --font-display)
-  - [ ] **Style** body text (--font-body, line-height 1.6)
+  - [ ] (AGENT) **Add** Cormorant Garamond via Google Fonts
+  - [ ] (AGENT) **Style** heading hierarchy (h1-h6 using --font-display)
+  - [ ] (AGENT) **Style** body text (--font-body, line-height 1.6)
 
 #### Base Components
 
-  - [ ] **Buttons**: primary (plum bg), secondary (outline), ghost, disabled
-  - [ ] **Cards**: product tiles with hover shadow lift + scale 1.05
-  - [ ] **Forms**: border, focus state (plum outline), padding, radius
-  - [ ] **Images**: `object-fit: cover`, `aspect-ratio: 4/5`, `loading="lazy"`
-  - [ ] **Badges**: "Sold" (fog bg, muted text), "Featured" (gold border)
-  - [ ] **Errors**: subtle, non-intrusive, ink text on fog bg
+  - [ ] (AGENT) **Buttons**: primary (plum bg), secondary (outline), ghost, disabled
+  - [ ] (AGENT) **Cards**: product tiles with hover shadow lift + scale 1.05
+  - [ ] (AGENT) **Forms**: border, focus state (plum outline), padding, radius
+  - [ ] (AGENT) **Images**: `object-fit: cover`, `aspect-ratio: 4/5`, `loading="lazy"`
+  - [ ] (AGENT) **Badges**: "Sold" (fog bg, muted text), "Featured" (gold border)
+  - [ ] (AGENT) **Errors**: subtle, non-intrusive, ink text on fog bg
 
 #### Loading States 
 
 Theses are 'Skeleton Screens'. 
 
-  - [ ] **Style** skeleton loading placeholders for product page and shop grid
-  - [ ] **Animate** with shimmer effect (CSS `@keyframes` gradient sweep)
+  - [ ] (AGENT) **Style** skeleton loading placeholders for product page and shop grid
+  - [ ] (AGENT) **Animate** with shimmer effect (CSS `@keyframes` gradient sweep)
 
   ```css
   .skeleton {
@@ -2300,9 +2367,9 @@ Theses are 'Skeleton Screens'.
 
 #### Lightbox Component
 
-  - [ ] **Style** fullscreen overlay: dark bg, centered image, close button
-  - [ ] **Add** left/right navigation arrows
-  - [ ] **Support** keyboard: Escape to close, Arrow keys to navigate
+  - [ ] (AGENT) **Style** fullscreen overlay: dark bg, centered image, close button
+  - [ ] (AGENT) **Add** left/right navigation arrows
+  - [ ] (AGENT) **Support** keyboard: Escape to close, Arrow keys to navigate
 
   ```css
   .lightbox {
@@ -2348,19 +2415,19 @@ Theses are 'Skeleton Screens'.
 
 No icon library. 5-6 simple SVG icons used in product details:
 
-  - [ ] **Create** icons: dimensions (ruler), weight (scale), materials (palette), lighting (sun), care (shield), shipping (truck)
-  - [ ] **Style** at 20x20px, `currentColor` fill
+  - [ ] (AGENT) **Create** icons: dimensions (ruler), weight (scale), materials (palette), lighting (sun), care (shield), shipping (truck)
+  - [ ] (AGENT) **Style** at 20x20px, `currentColor` fill
 
 #### Responsive Foundation
 
-  - [ ] **Set** base mobile (393px)
-  - [ ] **Add** tablet breakpoint (768px)
-  - [ ] **Add** desktop breakpoint (1024px)
-  - [ ] **Add** large desktop (1440px)
+  - [ ] (AGENT) **Set** base mobile (393px)
+  - [ ] (AGENT) **Add** tablet breakpoint (768px)
+  - [ ] (AGENT) **Add** desktop breakpoint (1024px)
+  - [ ] (AGENT) **Add** large desktop (1440px)
 
 #### GA4 Script Tag
 
-  - [ ] **Add** `gtag.js` snippet to `<head>` of all pages (include in header template):
+  - [ ] (AGENT) **Add** `gtag.js` snippet to `<head>` of all pages (include in header template):
 
   ```html
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
@@ -2376,7 +2443,7 @@ No icon library. 5-6 simple SVG icons used in product details:
 
 These are from AR #25 — see [Architecture Reference](#architecture-reference). 
 
-  - [ ] **Add** Meta Pixel base code to `<head>` of all pages (alongside GA4):
+  - [ ] (AGENT) **Add** Meta Pixel base code to `<head>` of all pages (alongside GA4):
 
   ```html
   <script>
@@ -2401,7 +2468,7 @@ These are from AR #25 — see [Architecture Reference](#architecture-reference)
 
 These are from AR #26 — see [Architecture Reference](#architecture-reference).
 
-  - [ ] **Style** contemplation popup (bottom-right peel-up):
+  - [ ] (AGENT) **Style** contemplation popup (bottom-right peel-up):
 
   ```css
   .contemplation-popup {
@@ -2422,46 +2489,50 @@ These are from AR #26 — see [Architecture Reference](#architecture-reference)
   }
   ```
 
-  - [ ] **Style** exit intent modal (centered overlay)
-  - [ ] **Style** product interest CTA (below sticky card buttons)
+  - [ ] (AGENT) **Style** exit intent modal (centered overlay)
+  - [ ] (AGENT) **Style** product interest CTA (below sticky card buttons)
 
 ---
 
 ### B2: Header, Footer, Nav
 
+> **ACTION — (AGENT) only.**
+
 **YOU WILL HAVE**: Consistent navigation on all pages (hardcoded, no JS needed)
 
 #### Header
 
-  - [ ] **Logo** (left, links to homepage)
-  - [ ] **Nav**: Home, Shop (dropdown), About, Commissions, Contact
-  - [ ] **Shop dropdown**: All | Portals to Peace | Book Nooks & Story Lofts | Seasonal & Limited | Sold Archive
-  - [ ] **Cart icon** with count badge (right) — links to `/checkout.html`
-  - [ ] **Mobile**: hamburger (left), logo (center), cart icon (right)
-  - [ ] **Sticky** on scroll
+  - [ ] (AGENT) **Logo** (left, links to homepage)
+  - [ ] (AGENT) **Nav**: Home, Shop (dropdown), About, Commissions, Contact
+  - [ ] (AGENT) **Shop dropdown**: All | Portals to Peace | Book Nooks & Story Lofts | Seasonal & Limited | Sold Archive
+  - [ ] (AGENT) **Cart icon** with count badge (right) — links to `/checkout.html`
+  - [ ] (AGENT) **Mobile**: hamburger (left), logo (center), cart icon (right)
+  - [ ] (AGENT) **Sticky** on scroll
 
 #### Footer
 
-  - [ ] **Four columns**: About, Shop, Support, Connect
-  - [ ] **Newsletter signup**: email input (wired in Track C)
-  - [ ] **Social links**: Instagram, Facebook, Pinterest, TikTok
-  - [ ] **Bottom bar**: copyright, "Site by Sean August Horvath", Terms | Privacy
+  - [ ] (AGENT) **Four columns**: About, Shop, Support, Connect
+  - [ ] (AGENT) **Newsletter signup**: email input (wired in Track C)
+  - [ ] (AGENT) **Social links**: Instagram, Facebook, Pinterest, TikTok
+  - [ ] (AGENT) **Bottom bar**: copyright, "Site by Sean August Horvath", Terms | Privacy
 
 ---
 
 ### B3: Product Page 
 
+> **ACTION — (AGENT) only.**
+
 These use placeholder data.
 
 **YOU WILL HAVE**: Complete product page layout with hardcoded sample product
 
-  - [ ] **Create** `product.html` — two-column layout:
+  - [ ] (AGENT) **Create** `product.html` — two-column layout:
     - Left: `.product-story` — scrollable gallery + story card
     - Right: `.product-sticky-card` — sticky details card
-  - [ ] **Hardcode** sample product (The Sunkeeper) with placeholder text and images
-  - [ ] **Build** image gallery: main image + thumbnail strip
-  - [ ] **Build** lightbox: click gallery image → fullscreen overlay with nav
-  - [ ] **Build** sticky product card:
+  - [ ] (AGENT) **Hardcode** sample product (The Sunkeeper) with placeholder text and images
+  - [ ] (AGENT) **Build** image gallery: main image + thumbnail strip
+  - [ ] (AGENT) **Build** lightbox: click gallery image → fullscreen overlay with nav
+  - [ ] (AGENT) **Build** sticky product card:
 
   ```html
   <aside class="product-sticky-card">
@@ -2492,13 +2563,13 @@ These use placeholder data.
   </aside>
   ```
 
-  - [ ] **Style** sticky behavior: `position: sticky; top: calc(var(--header-height) + var(--space-lg));`
-  - [ ] **Mobile** (< 768px): not sticky, card below gallery in normal flow
-  - [ ] **Build** features list with inline SVG icons
-  - [ ] **Build** details sections: dimensions, materials, care, shipping
-  - [ ] **Build** story card section with poetic lorem ipsum
-  - [ ] **Add** breadcrumb: Home > Shop > The Sunkeeper
-  - [ ] **Add** "Related Havens" section placeholder (3-4 product cards, hardcoded)
+  - [ ] (AGENT) **Style** sticky behavior: `position: sticky; top: calc(var(--header-height) + var(--space-lg));`
+  - [ ] (AGENT) **Mobile** (< 768px): not sticky, card below gallery in normal flow
+  - [ ] (AGENT) **Build** features list with inline SVG icons
+  - [ ] (AGENT) **Build** details sections: dimensions, materials, care, shipping
+  - [ ] (AGENT) **Build** story card section with poetic lorem ipsum
+  - [ ] (AGENT) **Add** breadcrumb: Home > Shop > The Sunkeeper
+  - [ ] (AGENT) **Add** "Related Havens" section placeholder (3-4 product cards, hardcoded)
 
 #### Media Rendering 
 
@@ -2581,34 +2652,38 @@ When a user has been on a product page for 3+ minutes, a subtle popup peels up f
 
 ### B4: Shop Grid 
 
+> **ACTION — (AGENT) only.**
+
 These use placeholder data.
 
 **YOU WILL HAVE**: Filterable grid layout with hardcoded product tiles
 
-  - [ ] **Create** `shop.html` — filter sidebar + product grid
-  - [ ] **Hardcode** 6-8 product tiles with placeholder data
-  - [ ] **Build** filter sidebar: series, product_type, availability checkboxes
-  - [ ] **Build** sort dropdown: price (low/high), newest, name (A-Z)
-  - [ ] **Style** tiles: 4:5 aspect ratio, hover scale + shadow, lazy images
-  - [ ] **Style** "Sold" badge overlay
-  - [ ] **Style** "No results" state
-  - [ ] **Style** skeleton loading state (shown before data loads in Track C)
+  - [ ] (AGENT) **Create** `shop.html` — filter sidebar + product grid
+  - [ ] (AGENT) **Hardcode** 6-8 product tiles with placeholder data
+  - [ ] (AGENT) **Build** filter sidebar: series, product_type, availability checkboxes
+  - [ ] (AGENT) **Build** sort dropdown: price (low/high), newest, name (A-Z)
+  - [ ] (AGENT) **Style** tiles: 4:5 aspect ratio, hover scale + shadow, lazy images
+  - [ ] (AGENT) **Style** "Sold" badge overlay
+  - [ ] (AGENT) **Style** "No results" state
+  - [ ] (AGENT) **Style** skeleton loading state (shown before data loads in Track C)
 
 ---
 
 ### B5: Homepage 
 
+> **ACTION — (AGENT) only.**
+
 These use placeholder data.
 
 **YOU WILL HAVE**: Full landing page with all sections, hardcoded content
 
-  - [ ] **Create** `index.html`
-  - [ ] **Build** hero: full-viewport image + overlay + CTA "Enter Elsewhere"
-  - [ ] **Build** intro block: "When the world cracked open..."
-  - [ ] **Build** featured carousel: horizontal scroll with 3-4 hardcoded product cards
-  - [ ] **Build** brand pillars: Story, Craftsmanship, Sanctuary
-  - [ ] **Build** testimonial strip placeholder
-  - [ ] **Add** theatrical lighting CSS effect:
+  - [ ] (AGENT) **Create** `index.html`
+  - [ ] (AGENT) **Build** hero: full-viewport image + overlay + CTA "Enter Elsewhere"
+  - [ ] (AGENT) **Build** intro block: "When the world cracked open..."
+  - [ ] (AGENT) **Build** featured carousel: horizontal scroll with 3-4 hardcoded product cards
+  - [ ] (AGENT) **Build** brand pillars: Story, Craftsmanship, Sanctuary
+  - [ ] (AGENT) **Build** testimonial strip placeholder
+  - [ ] (AGENT) **Add** theatrical lighting CSS effect:
     - CSS mask/spotlight: radial gradient shifts on scroll
     - `translateY()` on background layers opposite to scroll
     - `will-change: transform` for GPU acceleration
@@ -2617,17 +2692,19 @@ These use placeholder data.
 
 ### B6: Remaining Pages 
 
+> **ACTION — (AGENT) only.**
+
 These use placeholder data.
 
 **YOU WILL HAVE**: All content pages with placeholder text
 
-  - [ ] **Create** `about.html` — photo + logo + origin story + philosophy + mission
-  - [ ] **Create** `contact.html` — form (name, email, subject, message) + commission section
-  - [ ] **Create** `faq.html`
-  - [ ] **Create** `shipping.html` — shipping & returns info
-  - [ ] **Create** `terms.html` — terms of service
-  - [ ] **Create** `privacy.html` — privacy policy
-  - [ ] **Create** `policies.html` — includes availability section:
+  - [ ] (AGENT) **Create** `about.html` — photo + logo + origin story + philosophy + mission
+  - [ ] (AGENT) **Create** `contact.html` — form (name, email, subject, message) + commission section
+  - [ ] (AGENT) **Create** `faq.html`
+  - [ ] (AGENT) **Create** `shipping.html` — shipping & returns info
+  - [ ] (AGENT) **Create** `terms.html` — terms of service
+  - [ ] (AGENT) **Create** `privacy.html` — privacy policy
+  - [ ] (AGENT) **Create** `policies.html` — includes availability section:
 
   ```html
   <section id="availability">
@@ -2650,9 +2727,13 @@ These use placeholder data.
 
 ## TRACK C: Integration
 
-Wire Track B frontend pages to Track A backend services. Replace hardcoded placeholders with dynamic data.
+> **ACTION — (AGENT) builds; (SEAN) does final testing, real-card checkout, DNS flip at launch.** Track C wires Track B frontend pages to Track A backend services and replaces placeholders with live data.
+
+**First task of Track C**: `grep -rn "PLACEHOLDER" .` — every hit from Track B is a to-do entry. At end of C4, same grep must return zero results. See [Placeholder Hygiene](#placeholder-hygiene).
 
 ### C1: Wire Pages to Backend
+
+> **ACTION — (AGENT) only.**
 
 **YOU WILL HAVE**: All pages loading real data from Supabase
 
@@ -2811,314 +2892,316 @@ Wire Track B frontend pages to Track A backend services. Replace hardcoded place
   });
   ```
 
-  - [ ] **Create** `assets/js/main.js`
+  - [ ] (AGENT) **Create** `assets/js/main.js`
 
 #### Product Page JS — `assets/js/product.js`
 
-  - [ ] **Create** `assets/js/product.js` — replaces hardcoded product data with Supabase fetch
-  - [ ] **Wire** Add to Cart / Buy Now buttons
-  - [ ] **Wire** gallery with lightbox (click → fullscreen)
-  - [ ] **Add** GA4 enhanced e-commerce: `gtag('event', 'view_item', { currency: 'USD', value: price/100, items: [buildGa4Item(product)] })`
-  - [ ] **Add** Meta Pixel: `trackMeta('ViewContent', { content_ids: [slug], content_type: 'product', content_name: title, value: price/100, currency: 'USD' })`
-  - [ ] **Add** related products: fetch 3-4 products from same series, render below story
-  - [ ] **Wire** CTA 1 (product interest form): POST to `/api/subscribe` with `source: 'product-interest'` + insert into `product_interests` table
-  - [ ] **Wire** CTA 3 (contemplation popup): 3-min timer, POST to `/api/subscribe` with `source: 'contemplation-offer'`, generate promo code
-  - [ ] **Add** `video_play` event: `gtag('event', 'video_play', { slug, video_index })` when product video plays
+  - [ ] (AGENT) **Create** `assets/js/product.js` — replaces hardcoded product data with Supabase fetch
+  - [ ] (AGENT) **Wire** Add to Cart / Buy Now buttons
+  - [ ] (AGENT) **Wire** gallery with lightbox (click → fullscreen)
+  - [ ] (AGENT) **Add** GA4 enhanced e-commerce: `gtag('event', 'view_item', { currency: 'USD', value: price/100, items: [buildGa4Item(product)] })`
+  - [ ] (AGENT) **Add** Meta Pixel: `trackMeta('ViewContent', { content_ids: [slug], content_type: 'product', content_name: title, value: price/100, currency: 'USD' })`
+  - [ ] (AGENT) **Add** related products: fetch 3-4 products from same series, render below story
+  - [ ] (AGENT) **Wire** CTA 1 (product interest form): POST to `/api/subscribe` with `source: 'product-interest'` + insert into `product_interests` table
+  - [ ] (AGENT) **Wire** CTA 3 (contemplation popup): 3-min timer, POST to `/api/subscribe` with `source: 'contemplation-offer'`, generate promo code
+  - [ ] (AGENT) **Add** `video_play` event: `gtag('event', 'video_play', { slug, video_index })` when product video plays
 
 #### Shop Grid JS — `assets/js/shop.js`
 
-  - [ ] **Create** `assets/js/shop.js` — fetches products, renders tiles, handles filters
-  - [ ] **Wire** filter sidebar to real data
-  - [ ] **Wire** URL state: `?series=portals-to-peace&sort=price-asc`
-  - [ ] **Replace** skeleton loaders with real content on load
-  - [ ] **Add** GA4 event: `gtag('event', 'search_filter', { filter_type, filter_value })`
+  - [ ] (AGENT) **Create** `assets/js/shop.js` — fetches products, renders tiles, handles filters
+  - [ ] (AGENT) **Wire** filter sidebar to real data
+  - [ ] (AGENT) **Wire** URL state: `?series=portals-to-peace&sort=price-asc`
+  - [ ] (AGENT) **Replace** skeleton loaders with real content on load
+  - [ ] (AGENT) **Add** GA4 event: `gtag('event', 'search_filter', { filter_type, filter_value })`
 
 #### Homepage JS — `assets/js/homepage.js`
 
-  - [ ] **Create** `assets/js/homepage.js`
-  - [ ] **Fetch** featured products for carousel
-  - [ ] **Fetch** theme from `site_config`
-  - [ ] **Apply** dynamic CSS variables
+  - [ ] (AGENT) **Create** `assets/js/homepage.js`
+  - [ ] (AGENT) **Fetch** featured products for carousel
+  - [ ] (AGENT) **Fetch** theme from `site_config`
+  - [ ] (AGENT) **Apply** dynamic CSS variables
 
 #### Newsletter JS — `assets/js/newsletter.js`
 
-  - [ ] **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
-  - [ ] **Add** GA4 event: `gtag('event', 'newsletter_signup', { source: 'homepage' })`
-  - [ ] **Add** Meta Pixel: `trackMeta('Lead', { content_name: 'Newsletter Signup' })`
-  - [ ] **Wire** exit intent modal (CTA 2): detect mouse leave / visibilitychange, show if cart not empty, POST to `/api/subscribe` with `source: 'cart-exit'`
+  - [ ] (AGENT) **Create** `assets/js/newsletter.js` — POST to `/api/subscribe`
+  - [ ] (AGENT) **Add** GA4 event: `gtag('event', 'newsletter_signup', { source: 'homepage' })`
+  - [ ] (AGENT) **Add** Meta Pixel: `trackMeta('Lead', { content_name: 'Newsletter Signup' })`
+  - [ ] (AGENT) **Wire** exit intent modal (CTA 2): detect mouse leave / visibilitychange, show if cart not empty, POST to `/api/subscribe` with `source: 'cart-exit'`
 
 ---
 
 ### C2: Checkout Flow End-to-End
 
+> **ACTION — (AGENT) builds; (SEAN) smoke-tests with real card at launch (A4 + C4).**
+
 **YOU WILL HAVE**: Complete purchase flow working — /cart.html availability check + /checkout.html progressive disclosure
 
 #### Cart JS — `assets/js/cart.js` (NEW — AR #28)
 
-```javascript
-// assets/js/cart.js
-// Handles /cart.html — line items, email/name capture, [CHECKOUT] button
+  ```javascript
+  // assets/js/cart.js
+  // Handles /cart.html — line items, email/name capture, [CHECKOUT] button
 
-function getOrCreateBrowserSessionId() {
-  let id = localStorage.getItem('everlastings_session_id');
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem('everlastings_session_id', id);
-  }
-  return id;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const cart = getCart();
-  const container = document.getElementById('cart-container');
-  const emptyState = document.getElementById('cart-empty');
-
-  if (!cart.length) {
-    container.classList.add('hidden');
-    emptyState.classList.remove('hidden');
-    return;
-  }
-
-  renderCartLines(cart);
-  document.getElementById('cart-total').textContent = formatPrice(getCartTotal());
-
-  // Prefill email/name if user entered previously in this session
-  const savedEmail = sessionStorage.getItem('checkout_email') || '';
-  const savedName = sessionStorage.getItem('checkout_name') || '';
-  document.getElementById('cart-email').value = savedEmail;
-  document.getElementById('cart-name').value = savedName;
-
-  document.getElementById('cart-checkout-btn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    const btn = e.target;
-    btn.disabled = true;
-    btn.textContent = 'Checking availability…';
-
-    const email = document.getElementById('cart-email').value.trim();
-    const name = document.getElementById('cart-name').value.trim();
-    if (email) sessionStorage.setItem('checkout_email', email);
-    if (name) sessionStorage.setItem('checkout_name', name);
-
-    const session_id = getOrCreateBrowserSessionId();
-
-    try {
-      const res = await fetch('/api/checkout/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(i => ({ product_id: i.product_id, slug: i.slug })),
-          session_id,
-          email: email || undefined,
-          name: name || undefined,
-        }),
-      });
-
-      if (res.status === 409) {
-        const data = await res.json();
-        data.unavailable.forEach(slug => {
-          const item = cart.find(i => i.slug === slug);
-          if (item) removeFromCart(item.product_id);
-        });
-        showSoldRecoveryOnCart(data.unavailable, data.related || []);
-        btn.disabled = false;
-        btn.textContent = 'CHECKOUT';
-        return;
-      }
-
-      if (!res.ok) {
-        alert('Something went awry. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'CHECKOUT';
-        return;
-      }
-
-      gtag('event', 'begin_checkout', {
-        currency: 'USD',
-        value: getCartTotal() / 100,
-        items: cart.map(buildGa4Item),
-      });
-      trackMeta('InitiateCheckout', {
-        content_ids: cart.map(i => i.slug),
-        content_type: 'product',
-        num_items: cart.length,
-        value: getCartTotal() / 100,
-        currency: 'USD',
-      });
-
-      window.location.href = '/checkout.html';
-    } catch (err) {
-      console.error(err);
-      btn.disabled = false;
-      btn.textContent = 'CHECKOUT';
+  function getOrCreateBrowserSessionId() {
+    let id = localStorage.getItem('everlastings_session_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('everlastings_session_id', id);
     }
-  });
-});
+    return id;
+  }
 
-function showSoldRecoveryOnCart(unavailableSlugs, related) {
-  const popup = document.getElementById('sold-recovery-popup');
-  const names = unavailableSlugs.join(', ');
-  popup.innerHTML = renderRecoveryStep1(names, related);
-  popup.classList.remove('hidden');
-  wireRecoveryForm(popup, unavailableSlugs);
-}
-```
+  document.addEventListener('DOMContentLoaded', () => {
+    const cart = getCart();
+    const container = document.getElementById('cart-container');
+    const emptyState = document.getElementById('cart-empty');
+
+    if (!cart.length) {
+      container.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      return;
+    }
+
+    renderCartLines(cart);
+    document.getElementById('cart-total').textContent = formatPrice(getCartTotal());
+
+    // Prefill email/name if user entered previously in this session
+    const savedEmail = sessionStorage.getItem('checkout_email') || '';
+    const savedName = sessionStorage.getItem('checkout_name') || '';
+    document.getElementById('cart-email').value = savedEmail;
+    document.getElementById('cart-name').value = savedName;
+
+    document.getElementById('cart-checkout-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const btn = e.target;
+      btn.disabled = true;
+      btn.textContent = 'Checking availability…';
+
+      const email = document.getElementById('cart-email').value.trim();
+      const name = document.getElementById('cart-name').value.trim();
+      if (email) sessionStorage.setItem('checkout_email', email);
+      if (name) sessionStorage.setItem('checkout_name', name);
+
+      const session_id = getOrCreateBrowserSessionId();
+
+      try {
+        const res = await fetch('/api/checkout/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map(i => ({ product_id: i.product_id, slug: i.slug })),
+            session_id,
+            email: email || undefined,
+            name: name || undefined,
+          }),
+        });
+
+        if (res.status === 409) {
+          const data = await res.json();
+          data.unavailable.forEach(slug => {
+            const item = cart.find(i => i.slug === slug);
+            if (item) removeFromCart(item.product_id);
+          });
+          showSoldRecoveryOnCart(data.unavailable, data.related || []);
+          btn.disabled = false;
+          btn.textContent = 'CHECKOUT';
+          return;
+        }
+
+        if (!res.ok) {
+          alert('Something went awry. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'CHECKOUT';
+          return;
+        }
+
+        gtag('event', 'begin_checkout', {
+          currency: 'USD',
+          value: getCartTotal() / 100,
+          items: cart.map(buildGa4Item),
+        });
+        trackMeta('InitiateCheckout', {
+          content_ids: cart.map(i => i.slug),
+          content_type: 'product',
+          num_items: cart.length,
+          value: getCartTotal() / 100,
+          currency: 'USD',
+        });
+
+        window.location.href = '/checkout.html';
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'CHECKOUT';
+      }
+    });
+  });
+
+  function showSoldRecoveryOnCart(unavailableSlugs, related) {
+    const popup = document.getElementById('sold-recovery-popup');
+    const names = unavailableSlugs.join(', ');
+    popup.innerHTML = renderRecoveryStep1(names, related);
+    popup.classList.remove('hidden');
+    wireRecoveryForm(popup, unavailableSlugs);
+  }
+  ```
 
   - [ ] (AGENT) **Create** `assets/js/cart.js`
 
 Implements the two-stage progressive disclosure on `/checkout.html`. Assumes `/cart.html` already ran `/api/checkout/reserve` and a soft hold exists. This page never triggers the 409 recovery flow — that's /cart.html's job now.
 
-```javascript
-// assets/js/checkout.js
+  ```javascript
+  // assets/js/checkout.js
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const cart = getCart();
-  const sessionId = localStorage.getItem('everlastings_session_id');
+  document.addEventListener('DOMContentLoaded', async () => {
+    const cart = getCart();
+    const sessionId = localStorage.getItem('everlastings_session_id');
 
-  if (!cart.length || !sessionId) {
-    window.location.href = '/cart.html';
-    return;
-  }
-
-  renderOrderSummary(cart);
-
-  const configRes = await fetch('/api/config');
-  const config = await configRes.json();
-  const stripe = Stripe(config.publishableKey);
-
-  const emailPrefill = sessionStorage.getItem('checkout_email') || '';
-  const namePrefill = sessionStorage.getItem('checkout_name') || '';
-
-  // Stage A: info form (address + email)
-  const stageA = document.getElementById('stage-a-info');
-  const stageB = document.getElementById('stage-b-payment');
-  document.getElementById('checkout-email').value = emailPrefill;
-  document.getElementById('checkout-name').value = namePrefill;
-
-  document.getElementById('info-continue-btn').addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('checkout-email').value.trim();
-    const name = document.getElementById('checkout-name').value.trim();
-    if (!email || !name) {
-      showCheckoutError('Please complete your name and email.');
+    if (!cart.length || !sessionId) {
+      window.location.href = '/cart.html';
       return;
     }
 
-    // Create Stripe session now (hold was already created at /cart.html)
-    let data;
-    try {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(item => ({
-            product_id: item.product_id,
-            slug: item.slug,
-            stripe_price_id: item.stripe_price_id,
-          })),
-          session_id: sessionId,
-          email,
-          name,
-        }),
-      });
+    renderOrderSummary(cart);
 
-      if (response.status === 410) {
-        // Hold expired — punt back to /cart.html for re-check
-        showCheckoutError('Your reservation timed out. Returning to cart…');
-        setTimeout(() => { window.location.href = '/cart.html'; }, 2000);
+    const configRes = await fetch('/api/config');
+    const config = await configRes.json();
+    const stripe = Stripe(config.publishableKey);
+
+    const emailPrefill = sessionStorage.getItem('checkout_email') || '';
+    const namePrefill = sessionStorage.getItem('checkout_name') || '';
+
+    // Stage A: info form (address + email)
+    const stageA = document.getElementById('stage-a-info');
+    const stageB = document.getElementById('stage-b-payment');
+    document.getElementById('checkout-email').value = emailPrefill;
+    document.getElementById('checkout-name').value = namePrefill;
+
+    document.getElementById('info-continue-btn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('checkout-email').value.trim();
+      const name = document.getElementById('checkout-name').value.trim();
+      if (!email || !name) {
+        showCheckoutError('Please complete your name and email.');
         return;
       }
 
-      if (!response.ok) {
-        showCheckoutError('Something went awry. Please try again.');
+      // Create Stripe session now (hold was already created at /cart.html)
+      let data;
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: cart.map(item => ({
+              product_id: item.product_id,
+              slug: item.slug,
+              stripe_price_id: item.stripe_price_id,
+            })),
+            session_id: sessionId,
+            email,
+            name,
+          }),
+        });
+
+        if (response.status === 410) {
+          // Hold expired — punt back to /cart.html for re-check
+          showCheckoutError('Your reservation timed out. Returning to cart…');
+          setTimeout(() => { window.location.href = '/cart.html'; }, 2000);
+          return;
+        }
+
+        if (!response.ok) {
+          showCheckoutError('Something went awry. Please try again.');
+          return;
+        }
+
+        data = await response.json();
+      } catch (err) {
+        showCheckoutError('Unable to load checkout. Please refresh.');
         return;
       }
 
-      data = await response.json();
-    } catch (err) {
-      showCheckoutError('Unable to load checkout. Please refresh.');
-      return;
-    }
-
-    // Mount Stripe Elements for Stage B
-    const checkout = stripe.initCheckout({
-      clientSecret: data.clientSecret,
-      elementsOptions: {
-        appearance: {
-          theme: 'stripe',
-          variables: {
-            colorPrimary: '#4A1942',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      // Mount Stripe Elements for Stage B
+      const checkout = stripe.initCheckout({
+        clientSecret: data.clientSecret,
+        elementsOptions: {
+          appearance: {
+            theme: 'stripe',
+            variables: {
+              colorPrimary: '#4A1942',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            },
           },
         },
-      },
-    });
+      });
 
-    const paymentElement = checkout.createPaymentElement();
-    paymentElement.mount('#payment-element');
+      const paymentElement = checkout.createPaymentElement();
+      paymentElement.mount('#payment-element');
 
-    const addressElement = checkout.createAddressElement('shipping');
-    addressElement.mount('#address-element');
+      const addressElement = checkout.createAddressElement('shipping');
+      addressElement.mount('#address-element');
 
-    addressElement.on('change', (ev) => {
-      if (!ev.complete) {
-        showCheckoutError('Please complete your shipping address.');
-      } else {
-        hideCheckoutError();
-      }
-    });
+      addressElement.on('change', (ev) => {
+        if (!ev.complete) {
+          showCheckoutError('Please complete your shipping address.');
+        } else {
+          hideCheckoutError();
+        }
+      });
 
-    checkout.on('change', (session) => {
-      document.getElementById('submit-btn').disabled = !session.canConfirm;
-    });
+      checkout.on('change', (session) => {
+        document.getElementById('submit-btn').disabled = !session.canConfirm;
+      });
 
-    // Stage B unlocks
-    stageA.classList.add('collapsed');
-    stageB.classList.remove('hidden');
-    stageB.scrollIntoView({ behavior: 'smooth' });
+      // Stage B unlocks
+      stageA.classList.add('collapsed');
+      stageB.classList.remove('hidden');
+      stageB.scrollIntoView({ behavior: 'smooth' });
 
-    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Processing…';
-      try {
-        const actions = await checkout.loadActions();
-        const result = await actions.confirm();
-        if (result.type === 'error') {
-          showCheckoutError(result.error.message);
+      document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing…';
+        try {
+          const actions = await checkout.loadActions();
+          const result = await actions.confirm();
+          if (result.type === 'error') {
+            showCheckoutError(result.error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Bring This Haven Home';
+          }
+        } catch (err) {
+          showCheckoutError('Payment could not be processed. Please try again.');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Bring This Haven Home';
         }
-      } catch (err) {
-        showCheckoutError('Payment could not be processed. Please try again.');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Bring This Haven Home';
-      }
+      });
     });
   });
-});
 
-function renderOrderSummary(cart) {
-  const el = document.getElementById('order-summary');
-  if (!el) return;
-  el.innerHTML = cart.map(item => `
-    <div class="order-item">
-      <img src="${item.thumbnail}" alt="${item.title}" class="order-thumb">
-      <div><strong>${item.title}</strong><span>${formatPrice(item.price)}</span></div>
-    </div>
-  `).join('') + `<div class="order-total"><strong>Total: ${formatPrice(getCartTotal())}</strong></div>`;
-}
+  function renderOrderSummary(cart) {
+    const el = document.getElementById('order-summary');
+    if (!el) return;
+    el.innerHTML = cart.map(item => `
+      <div class="order-item">
+        <img src="${item.thumbnail}" alt="${item.title}" class="order-thumb">
+        <div><strong>${item.title}</strong><span>${formatPrice(item.price)}</span></div>
+      </div>
+    `).join('') + `<div class="order-total"><strong>Total: ${formatPrice(getCartTotal())}</strong></div>`;
+  }
 
-function showCheckoutError(message) {
-  const el = document.getElementById('checkout-error');
-  el.textContent = message;
-  el.classList.remove('hidden');
-}
+  function showCheckoutError(message) {
+    const el = document.getElementById('checkout-error');
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
 
-function hideCheckoutError() {
-  document.getElementById('checkout-error').classList.add('hidden');
-}
-```
+  function hideCheckoutError() {
+    document.getElementById('checkout-error').classList.add('hidden');
+  }
+  ```
 
   - [ ] (AGENT) **Create** `assets/js/checkout.js` (the two-stage version above)
   - [ ] (AGENT) **Create** `assets/js/recovery.js` (shared recovery overlay rendering used by cart.js)
@@ -3170,59 +3253,67 @@ function hideCheckoutError() {
   }
   ```
 
-  - [ ] **Wire** checkout.html to use `api/config` for Stripe key (no hardcoded key)
-  - [ ] **Start** Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhook`
-  - [ ] **Test** full flow: product → cart → checkout → pay → completion
-  - [ ] **Verify** customer + order records created, product marked sold, cart cleared
+  - [ ] (AGENT) **Wire** checkout.html to use `api/config` for Stripe key (no hardcoded key)
+  - [ ] (AGENT) **Start** Stripe CLI: `stripe listen --forward-to localhost:3000/api/webhook`
+  - [ ] (AGENT) **Test** full flow: product → cart → checkout → pay → completion
+  - [ ] (AGENT) **Verify** customer + order records created, product marked sold, cart cleared
 
 ---
 
 ### C3: SEO Finalization
 
-  - [ ] **Add** dynamic meta titles + descriptions (product pages from Supabase data)
-  - [ ] **Add** Open Graph + Twitter Card tags
-  - [ ] **Add** Product schema.org structured data (JSON-LD)
-  - [ ] **Create** `sitemap.xml` + `robots.txt`
-  - [ ] **Submit** sitemap to Google Search Console
+> **ACTION — (AGENT) builds; (SEAN) submits sitemap in Search Console.**
+
+  - [ ] (AGENT) **Add** dynamic meta titles + descriptions (product pages from Supabase data)
+  - [ ] (AGENT) **Add** Open Graph + Twitter Card tags
+  - [ ] (AGENT) **Add** Product schema.org structured data (JSON-LD)
+  - [ ] (AGENT) **Create** `sitemap.xml` + `robots.txt`
+  - [ ] (SEAN) **Submit** sitemap to Google Search Console
 
 ---
 
 ### C4: Testing + Launch Prep
 
+> **ACTION — (SEAN+AGENT).** Agent runs automated checks; Sean does final QA, real-card test, DNS flip.
+
 **YOU WILL HAVE**: Production-ready site
+
+  - [ ] (AGENT) **Run** `grep -rn "PLACEHOLDER" .` — MUST return zero results before proceeding
 
 #### Stripe Live Mode
 
-Follow switchover process (see Environment Strategy section).
+Follow switchover process (see [Live Launch Switchover Process](#live-launch-switchover-process)).
 
 #### Testing
 
-  - [ ] Cross-browser: Chrome, Safari, Firefox, Edge
-  - [ ] Mobile: iPhone, iPad, Android
-  - [ ] Full checkout flow: product → cart → pay → "Sold" status
-  - [ ] Admin flow: login → add product → see it on shop page
-  - [ ] Newsletter from homepage + footer
-  - [ ] Contact form
-  - [ ] All internal links
+  - [ ] (SEAN) Cross-browser: Chrome, Safari, Firefox, Edge
+  - [ ] (SEAN) Mobile: iPhone, iPad, Android
+  - [ ] (SEAN) Full checkout flow: product → cart → pay → "Sold" status (one real card, refund after)
+  - [ ] (SEAN) Admin flow: login → add product → see it on shop page
+  - [ ] (SEAN) Newsletter from homepage + footer
+  - [ ] (SEAN) Contact form
+  - [ ] (SEAN) All internal links
 
 #### Performance
 
-  - [ ] Lighthouse 90+ all categories
-  - [ ] All images WebP, lazy loaded
-  - [ ] WCAG AA accessibility
-  - [ ] Keyboard navigation (including lightbox)
-  - [ ] Alt text on every image
+  - [ ] (AGENT) Lighthouse 90+ all categories
+  - [ ] (AGENT) All images WebP, lazy loaded
+  - [ ] (AGENT) WCAG AA accessibility
+  - [ ] (AGENT) Keyboard navigation (including lightbox)
+  - [ ] (AGENT) Alt text on every image
 
 #### Launch
 
-  - [ ] DNS pointed to Vercel
-  - [ ] SSL active
-  - [ ] Real products loaded (5-10 minimum)
-  - [ ] Final review with Sean + Emy
+  - [ ] (SEAN) DNS pointed to Vercel
+  - [ ] (SEAN) SSL active
+  - [ ] (SEAN) Real products loaded (5-10 minimum) via admin UI or the AI protocol
+  - [ ] (SEAN) Final review with Sean + Emy
 
 ---
 
 ## Webhook Contract
+
+> **REFERENCE — no action required.** Implemented in `api/webhook.ts` (A2).
 
 **Event**: `checkout.session.completed`
 
@@ -3254,9 +3345,11 @@ Follow switchover process (see Environment Strategy section).
 
 ## 409 Conflict Cart Recovery Flow (v1.4 — shifted to /cart.html)
 
+> **REFERENCE — no action required.** UX and backend spec for the sold-while-you-browse recovery. Implemented across `api/checkout/reserve.ts` (A2), `api/cart-recovery.ts` (A2), `cart.html` (B6), and `assets/js/cart.js` + `recovery.js` (C2).
+
 ### What Triggers It
 
-User clicks **[CHECKOUT]** on `/cart.html`. The browser fires `POST /api/checkout/reserve`. The server checks availability across all cart items (including any active holds held by other sessions). If any item is unavailable, the API returns **409** with `{ error, unavailable: ['slug-1', ...], related: [Product, Product, Product] }`.
+User clicks **{CHECKOUT}** on `/cart.html`. The browser fires `POST /api/checkout/reserve`. The server checks availability across all cart items (including any active holds held by other sessions). If any item is unavailable, the API returns **409** with `{ error, unavailable: ['slug-1', ...], related: [Product, Product, Product] }`.
 
 **Crucially**: this happens on the cart page, BEFORE the user has entered a single address character or card digit. The old v1.3.1 behavior — 409 at the "Pay" button moment — is removed entirely. Reference: AR #28.
 
@@ -3265,7 +3358,7 @@ User clicks **[CHECKOUT]** on `/cart.html`. The browser fires `POST /api/checkou
 **Step 1 — Immediate**: Sold items removed from cart. A warm overlay appears over the cart page content:
 
   > **Heading**: "These havens have found their homes"
-  > **Body**: "[Product Name] sold while you were browsing. We're sorry for the heartache."
+  > **Body**: "{Product Name} sold while you were browsing. We're sorry for the heartache."
   > **Offer**: "As a thank you for your interest, here's a one-time discount on your next purchase:"
   > **Email input**: placeholder "Your email" (pre-filled from sessionStorage if user entered it on cart page)
   > **Button**: "Send My Discount"
@@ -3275,14 +3368,14 @@ User clicks **[CHECKOUT]** on `/cart.html`. The browser fires `POST /api/checkou
 
 Below the email form, show 2-3 "While you're here — these havens still await" product cards pulled from the `related` array returned by the API (same series or product_type, `available = true`).
 
-```html
-<div class="recovery-related">
-  <p class="related-heading">While you're here — these havens still await:</p>
-  <div class="related-cards-mini">
-    <!-- Rendered from API response: related: Product[] -->
+  ```html
+  <div class="recovery-related">
+    <p class="related-heading">While you're here — these havens still await:</p>
+    <div class="related-cards-mini">
+      <!-- Rendered from API response: related: Product[] -->
+    </div>
   </div>
-</div>
-```
+  ```
 
 Clicking a related card navigates to the product page WITHOUT losing the recovery overlay state (email persisted via sessionStorage).
 
@@ -3291,7 +3384,7 @@ Clicking a related card navigates to the product page WITHOUT losing the recover
 **Step 3 — Promo code display (in overlay)**:
 
   > **Heading**: "A small gift for your patience"
-  > **Body**: "Use code **[AUTO-GENERATED-CODE]** for 10% off your next purchase."
+  > **Body**: "Use code **{AUTO-GENERATED-CODE}** for 10% off your next purchase."
   > **Expiry note**: "Valid for 30 days. We've also emailed it to you."
   > **Button**: "Continue Shopping" (navigates to /shop.html)
 
@@ -3307,18 +3400,20 @@ Clicking a related card navigates to the product page WITHOUT losing the recover
   - Resend sends the coupon email from `RESEND_FROM_EMAIL`
   - Upsert on subscribers (email already exists → update `promo_code`, `promo_code_expires_at`)
 
-### Coupon Setup (see A1 + Coupon Strategy reference)
+### Coupon Setup
+
+Created automatically by `api/_bootstrap/coupons.ts` (see [A1 Stripe](#stripe) and [Coupon + Promotion Code Strategy](#coupon--promotion-code-strategy)). For this flow specifically:
 
   - Name: "Haven Finder Apology"
-  - 10% off, **Duration: Forever** (v1.3.1 said "once" — that was wrong; `once` is for subscriptions)
-  - Max redemptions: **BLANK**
+  - 10% off, **Duration: Forever** (`once` is a subscription concept and does nothing for one-time payments)
+  - Max redemptions: **BLANK** (single-use limit lives on each generated promotion code)
   - Coupon ID: `cart-recovery-10`
 
 ---
 
 ## Agentic Pipeline Error Handling
 
-Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`:
+> **REFERENCE — no action required.** Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`.
 
   1. **Image upload failure**: Retry once. If second attempt fails, **STOP** the entire process. Do not proceed to product creation with missing images.
   2. **Product creation failure**: Do **NOT** retry blindly. Log the error, report to user. Common causes:
@@ -3332,6 +3427,8 @@ Rules for AI agents creating products via `api/products.ts` and `api/upload.ts`:
 ---
 
 ## Enhanced E-commerce GA4 Event Definitions
+
+> **REFERENCE — no action required.** Event inventory. Wiring lives throughout Track B (script tags) and Track C (event triggers in page-specific JS).
 
 All e-commerce events use GA4's standard `items` array format, which unlocks built-in reports under Reports > Monetization (product performance, purchase funnel, revenue by category/brand).
 
@@ -3362,17 +3459,19 @@ All e-commerce events use GA4's standard `items` array format, which unlocks bui
 
 ### Custom Events (no `items` array)
 
-| Event                   | Trigger                                                                                         | Parameters                                      |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `newsletter_signup`     | Successful subscribe                                                                            | `{ source }` ('homepage', 'footer', 'checkout') |
-| `contact_form_submit`   | Contact form success                                                                            | `{ subject }`                                   |
-| `commission_inquiry`    | Commission form submit                                                                          | `{ subject }`                                   |
-| `search_filter`         | Shop filter applied                                                                             | `{ filter_type, filter_value }`                 |
-| `gallery_open`          | Lightbox opened                                                                                 | `{ slug, image_index }`                         |
-| `video_play`            | Product video starts playing                                                                    | `{ slug, video_index }`                         |
-| `promo_code_generated`  | Cart recovery flow completed                                                                    | `{ code }`                                      |
-| `email_cta_capture`     | Email CTA form submitted                                                                        | `{ source, slug }`                              |
-| `customer_email_linked` | Purchase email matches existing subscriber (fired by webhook, sent to GA4 Measurement Protocol) | `{ previous_source }`                           |
+| Event                   | Trigger                                     | Parameters                                      |
+| ----------------------- | ------------------------------------------- | ----------------------------------------------- |
+| `newsletter_signup`     | Successful subscribe                        | `{ source }` ('homepage', 'footer', 'checkout') |
+| `contact_form_submit`   | Contact form success                        | `{ subject }`                                   |
+| `commission_inquiry`    | Commission form submit                      | `{ subject }`                                   |
+| `search_filter`         | Shop filter applied                         | `{ filter_type, filter_value }`                 |
+| `gallery_open`          | Lightbox opened                             | `{ slug, image_index }`                         |
+| `video_play`            | Product video starts playing                | `{ slug, video_index }`                         |
+| `promo_code_generated`  | Cart recovery flow completed                | `{ code }`                                      |
+| `email_cta_capture`     | Email CTA form submitted                    | `{ source, slug }`                              |
+| `customer_email_linked` | Purchase email matches existing subscriber* | `{ previous_source }`                           |
+
+*fired by webhook, sent to GA4 Measurement Protocol
 
 ### Meta Pixel Events (fire alongside GA4)
 
@@ -3393,6 +3492,8 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 ---
 
 ## Error States Reference
+
+> **REFERENCE — no action required.** Every error state the site can surface, with user-facing copy and implementation notes. Used by A4 and C4 test cases.
 
 #### Product — Not Found
   - **User sees**: "This haven could not be found." + link to shop
@@ -3497,6 +3598,8 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 
 ## Slug Rules
 
+> **REFERENCE — no action required.** Implemented in `api/products.ts` (A2) and DB trigger (Schema).
+
   - **Generation**: `title.toLowerCase().replaceAll(' ', '-')` (AR #23)
   - **Example**: "The Sunkeeper" → `the-sunkeeper`
   - **Immutable**: once created, slug never changes (URL stability, SEO, R2 path depends on it)
@@ -3509,6 +3612,8 @@ Each GA4 e-commerce event has a Meta Pixel equivalent fired in the same code pat
 ---
 
 ## Cloudinary → R2 CDN Image Pipeline
+
+> **REFERENCE — no action required.** Implemented in `api/upload.ts` (A2).
 
 ### Naming Convention
 
@@ -3540,6 +3645,8 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Deferred Items 
 
+> **REFERENCE — no action required.** Explicitly out of scope for v1; tracked for post-launch conversation.
+
   - **Dark mode** — v0 docs mentioned dark mode variables. Not needed for v1.
   - **Infinite scroll/pagination** — not a recommended UX pattern. 
   - **Featured placement control** — add specifics to product entries. Create section to manage by tag on admin page. 
@@ -3556,7 +3663,7 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
 
 ## Deferred Caching Strategy
 
-Not needed for launch. When needed:
+> **REFERENCE — no action required.** Not needed at launch. When needed:
   - Supabase queries hit DB directly (acceptable at < 100 products)
   - Product images already CDN-cached by Cloudflare R2
   - Add `stale-while-revalidate` headers or Vercel Edge Config when scale requires
@@ -3565,7 +3672,7 @@ Not needed for launch. When needed:
 
 ## Post-Launch 
 
-30 days included. 
+> **REFERENCE — no action required.** Scope of the 30-day post-launch support window.
 
   - Bug fixes and technical support
   - Performance optimization
@@ -3575,7 +3682,7 @@ Not needed for launch. When needed:
 
 ## Reference Sections
 
-Canonical references used throughout this doc. Not checkboxes — read once, link back.
+> **REFERENCE — no action required.** Canonical references used throughout this doc. Not checkboxes — read once, link back.
 
 ### Coupon + Promotion Code Strategy
 
@@ -3583,41 +3690,44 @@ The v1.3.1 doc mixed up Stripe's subscription-centric coupon `duration` setting 
 
 **The core rule**: A Stripe **coupon** is the discount RULE. A Stripe **promotion code** is a single-use redemption of that rule. We never expose the coupon ID to customers — we generate unique promotion codes per event.
 
-**The two coupons** (set up once in Phase 0 / A1):
+**The two coupons** (created once at setup by `api/_bootstrap/coupons.ts` — see [A1 Stripe](#stripe)):
 
-| Coupon ID              | Name                             | Discount | Duration    | Max redemptions | Purpose                                                |
-| ---------------------- | -------------------------------- | -------- | ----------- | --------------- | ------------------------------------------------------ |
-| `cart-recovery-10`     | Haven Finder Apology             | 10% off  | **Forever** | **BLANK**       | Dynamic promotion codes per 409 recovery               |
-| `newsletter-welcome-5` | Welcome to the Firelight Council | 5% off   | **Forever** | **BLANK**       | Dynamic promotion codes per contemplation-offer signup |
+| Purpose | Coupon ID              | Name                             | Discount | Duration    | Max redemptions |
+| ------- | ---------------------- | -------------------------------- | -------- | ----------- | --------------- |
+| 1       | `cart-recovery-10`     | Haven Finder Apology             | 10% off  | **Forever** | **BLANK**       |
+| 2       | `newsletter-welcome-5` | Welcome to the Firelight Council | 5% off   | **Forever** | **BLANK**       |
+
+  1. for *Dynamic promotion codes per 409 recovery*
+  2. for *Dynamic promotion codes per contemplation-offer signup*
 
 Both use `Duration: Forever` because that's the correct setting for one-time payments (`once` is a subscription concept — it means "one billing cycle", which is meaningless for us). Both have **blank max_redemptions** because capping the coupon globally would ruin us — we want every user event to generate its OWN unique code.
 
 **Per-event code generation**:
 
-```typescript
-// Example: cart-recovery (api/cart-recovery.ts)
-const promoCode = await stripe.promotionCodes.create({
-  coupon: 'cart-recovery-10',
-  max_redemptions: 1,                             // single-use
-  expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),  // 30 days
-  metadata: { source: 'cart-recovery', email, lost_items: JSON.stringify(lost_items) },
-});
-// promoCode.code → e.g. 'HAVEN-A9X2P7'
-```
+  ```typescript
+  // Example: cart-recovery (api/cart-recovery.ts)
+  const promoCode = await stripe.promotionCodes.create({
+    coupon: 'cart-recovery-10',
+    max_redemptions: 1,                             // single-use
+    expires_at: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),  // 30 days
+    metadata: { source: 'cart-recovery', email, lost_items: JSON.stringify(lost_items) },
+  });
+  // promoCode.code → e.g. 'HAVEN-A9X2P7'
+  ```
 
 Store the generated code in the relevant table:
-- Cart-recovery: stored in Stripe metadata + linked via email in `subscribers`
-- Newsletter welcome: stored in `subscribers.promo_code` + `subscribers.promo_code_expires_at`
+  - Cart-recovery: stored in Stripe metadata + linked via email in `subscribers`
+  - Newsletter welcome: stored in `subscribers.promo_code` + `subscribers.promo_code_expires_at`
 
 **Email delivery** (Resend):
-- Cart recovery coupon: `api/cart-recovery.ts` sends email with the code after generating
-- Newsletter welcome with coupon (only from `contemplation-offer` source): `api/subscribe.ts` generates a code, saves it, and emails a welcome email that contains the code
-- Other newsletter sources (footer, homepage, checkout-started) get a welcome email WITHOUT a code — they're opting in, not being offered an apology/incentive
+  - Cart recovery coupon: `api/cart-recovery.ts` sends email with the code after generating
+  - Newsletter welcome with coupon (only from `contemplation-offer` source): `api/subscribe.ts` generates a code, saves it, and emails a welcome email that contains the code
+  - Other newsletter sources (footer, homepage, checkout-started) get a welcome email WITHOUT a code — they're opting in, not being offered an apology/incentive
 
 **What NOT to do**:
-- ❌ Setting `max_redemptions` on the coupon itself (caps total redemptions globally)
-- ❌ Handing out the coupon ID directly (`cart-recovery-10`) as the code
-- ❌ Using `Duration: Once` (subscription concept; has no effect on payment intents)
+  - ❌ Setting `max_redemptions` on the coupon itself (caps total redemptions globally)
+  - ❌ Handing out the coupon ID directly (`cart-recovery-10`) as the code
+  - ❌ Using `Duration: Once` (subscription concept; has no effect on payment intents)
 
 ---
 
@@ -3626,33 +3736,33 @@ Store the generated code in the relevant table:
 **Tools**: Shippo (label printing, free Starter = 30 labels/mo) + Resend (branded tracking emails, free tier = 3k/mo).
 
 **Data model** (see `orders` table in Product Schema Hard Reference):
-- `tracking_number`, `tracking_carrier` — filled when Emy marks shipped
-- `shipped_at` — set by `PATCH /api/orders/:id`
-- `delivered_at` — post-launch, set by Shippo webhook
-- `idx_orders_needs_shipping` partial index for fast admin queue lookups
+  - `tracking_number`, `tracking_carrier` — filled when Emy marks shipped
+  - `shipped_at` — set by `PATCH /api/orders/:id`
+  - `delivered_at` — post-launch, set by Shippo webhook
+  - `idx_orders_needs_shipping` partial index for fast admin queue lookups
 
 **Flow**:
 
-1. Purchase completes → webhook creates `orders` row with `status: 'completed'`, `shipped_at: NULL`
-2. Admin `/admin/orders?status=needs_shipping` shows the queue
-3. Emy clicks order card → sees customer address → clicks "Copy address" button
-4. Emy pastes address into her Shippo tab → Shippo prints USPS/UPS label
-5. Emy copies the Shippo tracking number → pastes into the admin form → clicks "Mark as shipped"
-6. `PATCH /api/orders/:id` updates row + sends Resend tracking email from the brand domain
-7. Customer receives: "Your haven is on its way" with tracking number + carrier tracking link
-8. Admin card moves from "Needs Shipping" → "Shipped" tab
+  1. Purchase completes → webhook creates `orders` row with `status: 'completed'`, `shipped_at: NULL`
+  2. Admin `/admin/orders?status=needs_shipping` shows the queue
+  3. Emy clicks order card → sees customer address → clicks "Copy address" button
+  4. Emy pastes address into her Shippo tab → Shippo prints USPS/UPS label
+  5. Emy copies the Shippo tracking number → pastes into the admin form → clicks "Mark as shipped"
+  6. `PATCH /api/orders/:id` updates row + sends Resend tracking email from the brand domain
+  7. Customer receives: "Your haven is on its way" with tracking number + carrier tracking link
+  8. Admin card moves from "Needs Shipping" → "Shipped" tab
 
 **Why this split** (not fully automated Shippo API integration in v1):
-- Emy has final control and approval of every label
-- Shippo free tier doesn't require API setup
-- Zero vendor lock-in — if we switch carriers, nothing in our code changes
-- Post-launch can bolt on Shippo API for automation without refactoring the order model
+  - Emy has final control and approval of every label
+  - Shippo free tier doesn't require API setup
+  - Zero vendor lock-in — if we switch carriers, nothing in our code changes
+  - Post-launch can bolt on Shippo API for automation without refactoring the order model
 
 **Tracking URL mapping** (in `api/orders/[id].ts > buildTrackingUrl`):
-- USPS: `https://tools.usps.com/go/TrackConfirmAction?tLabels={number}`
-- UPS: `https://www.ups.com/track?tracknum={number}`
-- FedEx: `https://www.fedex.com/fedextrack/?trknbr={number}`
-- DHL: `https://www.dhl.com/en/express/tracking.html?AWB={number}`
+  - USPS: `https://tools.usps.com/go/TrackConfirmAction?tLabels={number}`
+  - UPS: `https://www.ups.com/track?tracknum={number}`
+  - FedEx: `https://www.fedex.com/fedextrack/?trknbr={number}`
+  - DHL: `https://www.dhl.com/en/express/tracking.html?AWB={number}`
 
 **Stripe receipts** (separate system): When `Dashboard > Settings > Emails > Successful payments` is toggled ON (Phase 0), Stripe sends a standard receipt on `checkout.session.completed`. This is additive to our tracking email, not a replacement. v1 uses Stripe's default template.
 
@@ -3695,25 +3805,9 @@ const sampleCart = [{ title: 'The Sunkeeper', price: 24500 }];
 
 ---
 
-### Post-Session Consistency Sweep
-
-After v1.4.0 documentation lands, **spawn a fresh-context Explore subagent** with this exact prompt:
-
-> Read every file matching `assets/docs/**/*.md` and `README.md` and `CLAUDE.md`. Identify any:
-> - References to deprecated file paths (e.g., `v1_3_1_IMPL_GUIDE.md` as the primary reference)
-> - Stale version numbers (should be v1.4.0 throughout in primary docs)
-> - Outdated table counts (schema is now 8 tables; watch for "7 tables" or "6 tables")
-> - Contradictions between docs (e.g., BRAND.md saying one voice, email templates using another)
-> - Missing cross-references (e.g., IMPL_GUIDE references a section in EVERLASTINGS_STORE.md that doesn't exist)
-> - Dead links to files that have been moved to archive
->
-> Report findings as a list — do NOT make fixes. Sean reviews and drives targeted fixes.
-
-The agent must be spawned in a fresh context (Explore subagent type) to avoid bias from the writing session.
-
----
-
 ## Reference Documents
+
+> **REFERENCE — no action required.** Cross-document pointers.
 
 | Document         | Location                                               | Use                                         |
 | ---------------- | ------------------------------------------------------ | ------------------------------------------- |
