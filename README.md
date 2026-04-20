@@ -87,14 +87,14 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 
 ## Documentation
 
-| Document                                                                        | Description                                      |
-| ------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                              | Complete technical reference                     |
-| [Brand Guide](/assets/docs/BRAND.md)                                            | Voice, colors, typography, copy, email templates |
-| [Implementation Guide](/assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md)          | Phase 0 setup + Tracks A/B/C build               |
-| [Action Steps](/assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md)                  | Checklist version                                |
-| [GA4 KPIs + Advertising](/assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                |
-| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                            | AI product creation protocol, client guide       |
+| Document                                                               | Description                                      |
+| ---------------------------------------------------------------------- | ------------------------------------------------ |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                     | Complete technical reference                     |
+| [Brand Guide](/assets/docs/BRAND.md)                                   | Voice, colors, typography, copy, email templates |
+| [Implementation Guide](/assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md) | Phase 0 setup + Tracks A/B/C build               |
+| [Action Steps](/assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md)         | Checklist version                                |
+| [GA4 KPIs + Advertising](/assets/docs/GA4_KPIS_AND_ADVERTISING.md)     | KPI + ad strategy                                |
+| [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                   | AI product creation protocol, client guide       |
 
 ---
 

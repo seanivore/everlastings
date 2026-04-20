@@ -152,7 +152,9 @@ Do this once, both for development and production environments. Never paste secr
   - [ ] **Setup** test secrets in dev branch
   - [ ] **Send** test secrets to preview Vercel environment `vercel env add VAR_NAME preview`
 
-### Services (one service per group — complete each service end-to-end before moving on)
+### Services 
+
+One service per group — complete each service end-to-end before moving on.
 
 Each service below has: (1) a dashboard portion Sean does, (2) env-var loading handled the instant keys are available. A1 in Track A confirms each service is wired correctly; no work is repeated there.
 
