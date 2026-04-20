@@ -11,6 +11,46 @@
 
 ---
 
+## Tech Stack at a Glance
+
+| Layer          | What we use                                                     | Why                                                                                              |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Frontend       | Vanilla HTML + CSS + JS, loaded directly in the browser         | No build step, no framework, no React. Proven pattern.                                           |
+| Frontend libs  | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN          | Script tags only. No npm install for the browser.                                                |
+| Backend        | TypeScript in Vercel Serverless Functions (Node.js)             | Type safety for Stripe + Supabase server-side calls.                                             |
+| Backend libs   | `npm install` only inside `/api/*.ts` world                     | `package.json` drives a normal Node/TS toolchain for the API.                                    |
+| Runtime        | Vercel (free tier)                                              | Auto-deploy, per-branch env vars, serverless functions.                                          |
+| Database       | Supabase Postgres (free tier)                                   | REST API + RLS + Auth + Studio UI.                                                               |
+| Product CDN    | Cloudflare R2 at `cdn.everlastingsbyemaline.com`                | Public CDN for product images/video. Cloudinary is a stateless transformer only — not a host.    |
+| Payments       | Stripe Custom Checkout (`ui_mode: 'custom'`)                    | On-site checkout with full brand control.                                                        |
+| Email          | Resend                                                          | Transactional email; free tier 3k/mo.                                                            |
+| Shipping       | Shippo Starter (web UI only in v1)                              | 30 free USPS labels/mo.                                                                          |
+| Analytics      | GA4 (gtag.js) + Meta Pixel                                      | CDN script tags. No GTM.                                                                         |
+
+**What we are NOT using** (and why vendor docs might suggest these):
+
+  + **No Next.js, no React, no SSR.** Supabase's dashboard "Connect" modal and the `@supabase/ssr` package assume Next.js — ignore them.
+  + **No MCP-first toolchain.** Where a standard CLI (Supabase CLI, Stripe CLI, Vercel CLI) does the job, use it. MCP is an optional fallback only.
+  + **No Supabase Branching and no Supabase/Vercel Marketplace integration.** Both are optimized for branching-based dev workflows; the `is_test` flag + shared-project design already handles dev/prod separation.
+
+---
+
+## Plain-English Glossary
+
+Terms used throughout this guide that are easy to misread if you're coming from a different stack:
+
+| Term in docs                       | What it actually means                                                                                     | Simpler equivalent you may know                                                                          |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| "Apply migrations"                 | Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers                           | "Run the create-tables SQL once"                                                                         |
+| "Migrations via MCP"               | Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same.                 | We use **Supabase CLI `supabase db push`** as the default.                                               |
+| "Supabase DB webhook"              | A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL"                      | An HTTP trigger — fired by the database — like an IFTTT rule on row insert.                              |
+| "Stripe webhook" (different)       | Stripe's outbound notification when a payment completes                                                    | Standard Stripe webhook. Unrelated to the Supabase DB webhook above.                                     |
+| "Stripe coupon bootstrap"          | A one-time script that creates the two base coupons in Stripe via API so dev and prod match                | "Run this once; it creates the two coupons." Alternative: click-create them in the Stripe dashboard.     |
+| "Preview CORS smoke test"          | Push a throwaway branch; open the Vercel preview URL; confirm API calls work                               | A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.                  |
+| "Publishable key / secret key"     | Supabase's new (Nov 2025+) API key format. Replaces legacy `anon` / `service_role` one-for-one.            | Frontend-safe key / server-only key. Same roles, new names.                                              |
+
+---
+
 ## Architecture Reference
 
 Every architectural question answered. No mid-session research. Cited as "AR #N" throughout the tracks.
@@ -42,8 +82,8 @@ Every architectural question answered. No mid-session research. Cited as "AR #N"
   9. **Error states**: fallback message + disabled buttons + console.log
      - Every page has a failure mode documented.
      - See Error States Reference
-  10. **Supabase anon key hardcoded** in `main.js`
-      - Public by design, RLS-protected.
+  10. **Supabase publishable key hardcoded** in `main.js`
+      - Public by design, RLS-protected. (New Nov-2025 key format replaces the legacy `anon` key one-for-one.)
       - No build step = no env var injection for frontend
   11. **CDN loading** for frontend libs
       - Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr.
@@ -74,9 +114,9 @@ Every architectural question answered. No mid-session research. Cited as "AR #N"
       - Stripe sends receipts natively (enable in Dashboard → Settings → Emails)
   20. **Custom `PRODUCT_API_KEY` for external API auth**
       - Random 64-char string, stored as env var
-      - API endpoints validate this key, then use `SUPABASE_SERVICE_KEY` internally
+      - API endpoints validate this key, then use `SUPABASE_SECRET_KEY` internally
       - If `PRODUCT_API_KEY` leaks, rotate just that key without affecting Supabase
-      - `SUPABASE_SERVICE_KEY` is NEVER exposed in client, agent, or cURL usage
+      - `SUPABASE_SECRET_KEY` is NEVER exposed in client, agent, or cURL usage
   21. **Webhook idempotency via `webhook_events` table**
       - Store `event.id` on successful processing
       - Skip already-processed events (Stripe retries)
@@ -160,176 +200,76 @@ Each service below has: (1) a dashboard portion Sean does, (2) env-var loading h
 
 > **SERVICES CONT. BELOW**
 
-#### Supabase 
+#### Supabase
 
-**PROJECT PAUSED ALERT QUESTION**: 
-  + Research: How often and why does this happen for free accounts? What prevents it from happening? 
-  + Alert: The project "everlastings" is currently paused. All data, including backups and storage objects, remains safe. You can resume this project from the dashboard within 90 days (until 19 Jul 2026). After that, this project will not be resumable, but data will still be available for download. To prevent future pauses, consider upgrading to Pro. Project last paused on 20 Apr 2026. *RESUME*: Your project’s data will be restored to when it was initially paused.
+The Nov-2025 dashboard and docs look nothing like older tutorials. Ignore the "Connect" modal — it's built for Next.js users, not us. Here's the **only** path that applies to this project.
 
-**BRANCHES QUESTION**: 
-  + This appears to be relatively new information. It looks like GitHub can be set up with SupaBase and that it would mirror branches. The current, default, branch is 'main' and set to 'Production'. I mention this because I know we discussed how Vercel has different Production/Development environment and am wondering if this is similar. 
-  + There is a Vercel integration with the details "How does the Vercel integration work? - Supabase will keep your environment variables up to date in each of the projects you assign to a Supabase project. You can also link multiple Vercel Projects to the same Supabase project."  
-  + There is a GitHub Integration and "How does the GitHub integration work? - Connecting to GitHub allows you to sync preview branches with a chosen GitHub branch, keep your production branch in sync, and automatically create preview branches for every pull request." 
+**Key concepts**
 
-**KEYS**: 
-  + It also looks like our naming of keys is dated. It says "We've updated our API keys to better support your application needs." 
-  + The primary option that we should probably be using to be current, listed under Project > Settings, is "Publishable and secret API keys" — and then the old that seems ot have the same wording as what we expected in the implementation guide is "Legacy anon, service_role API keys". 
-  + On the main page there is a spot to copy or create more "Publishable key" and "Secret keys". 
-  + Then on another tab there are "JWT Keys"
-  + There also a "Data API" integration which has details and then links to here: `https://supabase.com/docs/guides/api`
+  + **New key format (Nov 2025+).** Supabase reissued all API keys:
+    - `sb_publishable_...` replaces the legacy `anon` key. Frontend-safe; RLS-enforced.
+    - `sb_secret_...` replaces the legacy `service_role` key. Backend-only; bypasses RLS.
+    - Functionally identical — only the names changed. We use `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` as env var names everywhere.
+    - Legacy JWT-format keys are not issued to new projects after Nov 2025. The "JWT Keys" tab in Studio is a separate Auth-internals concern we do not touch.
+  + **DB password is not an env var.** The Postgres password from Studio > Settings > Database is only used for direct Postgres connections (psql, ORM) or when the Supabase CLI prompts for it one time during `supabase link` (it then caches the credential in `~/.supabase/`). It is **not** referenced by our app at runtime. Save it to a password manager and move on. If you paste it into `.env.local`, that's fine but unused.
+  + **Data API** (Studio > Integrations > Data API) is the REST endpoint our `supabase-js` library calls. Nothing to configure — it's on by default. The "Project Settings > API Keys" page is simply the credentials for this endpoint.
+  + **Free-tier auto-pause**: the project pauses after 7 days of no activity. Data is preserved. Resume from the dashboard when you sit down to work. If pauses become painful post-launch, upgrade to Pro ($25/mo).
 
-**DETAILS PULLED FROM**: `https://supabase.com/dashboard/project/rvnxftbfeaxymhzxxhjm`
+**What we skip (and why)**
 
-  1. PROJECT NAME: everlastings
-  2. PUBLISHABLE KEY: sb_publishable_SvdSORHm8Ot0hcvfB6b9YQ_eRvlyx_c
-  3. DIRECT CONNECTION STRING: postgresql://postgres:[YOUR-PASSWORD]@db.rvnxftbfeaxymhzxxhjm.supabase.co:5432/postgres
-  4. CLI SETUP COMMANDS:
-```bash
-supabase login
-supabase init
-supabase link --project-ref rvnxftbfeaxymhzxxhjm
-```
-  5. DATABASE PASSWORD**: q6Zjwx5xMHbXUlpy
-  6. ENFORCE SSL CONNECTION**: YES | NO ?
-  7. CONNECT YOUR APP LLM PASTE**: 
+  + **"Connect to your project" modal** (Framework / Direct / ORM / MCP tabs): none apply. Framework pushes Next.js boilerplate (`@supabase/ssr`, `cookies()`, `NEXT_PUBLIC_` prefixes) we can't use. Direct is a connection string for psql/CLI only. ORM covers Prisma/Drizzle, which we don't use. MCP is an optional agent tool — we prefer CLIs (see Glossary).
+  + **Supabase Branching**: real product, but assigns a separate DB per branch. Contradicts our `is_test` flag + shared-project design. Skip for v1.
+  + **Supabase/Vercel Marketplace integration**: writes `NEXT_PUBLIC_`-prefixed env vars assuming Next.js. Skip — we use `vercel env add` manually, which Supabase + Vercel docs fully support for non-framework projects.
+  + **Supabase GitHub integration**: auto-creates preview branches per PR. Same branching paradigm we're skipping. Skip.
+  + **`@supabase/ssr` package**: Next.js App Router only. We use `@supabase/supabase-js` instead.
 
-  **STEP A** — *Install packages* - Run this command to install the required dependencies.
+**The only two integration patterns we use**
 
-```bash 
-npm install @supabase/supabase-js @supabase/ssr
-```
-
-  **STEP B** — *Add files* - Add env variables, create Supabase client helpers, and set up middleware to keep sessions refreshed.
-  
-  File: `.env.local`
-  
-```
-NEXT_PUBLIC_SUPABASE_URL=https://rvnxftbfeaxymhzxxhjm.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SvdSORHm8Ot0hcvfB6b9YQ_eRvlyx_c
-```
-
-  File: `page.tsx`
-
-```tsx
-  import { createClient } from '@/utils/supabase/server'
-  import { cookies } from 'next/headers'
-
-  export default async function Page() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: todos } = await supabase.from('todos').select()
-
-  return (
-    <ul>
-      {todos?.map((todo) => (
-        <li key={todo.id}>{todo.name}</li>
-      ))}
-    </ul>
-    )
-  }
-```
-
-  File: `utils/supabase/server.ts`
-
-```ts 
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>) => {
-  return createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    },
+```html
+<!-- Frontend: script tag via jsDelivr, no build step -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabase = supabase.createClient(
+    'https://[ref].supabase.co',
+    'sb_publishable_...'  // hardcoded — public by design, RLS-enforced
   );
-};
+</script>
 ```
 
-  File: `utils/supabase/client.ts`
+```ts
+// Backend: /api/*.ts — npm import, server-only secret key
+import { createClient } from '@supabase/supabase-js';
 
-```ts 
-import { createBrowserClient } from "@supabase/ssr";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-export const createClient = () =>
-  createBrowserClient(
-    supabaseUrl!,
-    supabaseKey!,
-  );
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!  // bypasses RLS — never exposed to browser
+);
 ```
 
-  File: `utils/supabase/middleware.ts`
+**Setup checklist**
 
-```ts 
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+  - [ ] (SEAN) **Resume** paused project from Supabase dashboard if it auto-paused.
+  - [ ] (SEAN) **Rotate DB password** if it has ever been pasted into a tracked file (Settings > Database > Reset database password). Save the new value in a password manager only.
+  - [ ] (SEAN) **Copy keys** from Settings > API Keys:
+    - Publishable key (`sb_publishable_...`) → `SUPABASE_PUBLISHABLE_KEY`
+    - Secret key (`sb_secret_...`) → `SUPABASE_SECRET_KEY`
+    - Project URL (`https://[ref].supabase.co`) → `SUPABASE_URL`
+  - [ ] (SEAN+AGENT) Paste all three into `.env.local`, then run `vercel env add` for each across Production, Preview, and Development scopes (same values — Supabase project is shared across envs).
+  - [ ] (SEAN) **Invite admins** in Auth > Users > Invite user:
+    - `admin@everlastingsbyemaline.com` (Master)
+    - `sean@everlastingsbyemaline.com` (Developer)
+    - `emyh@everlastingsbyemaline.com` (Client)
+  - [ ] (AGENT) **Install Supabase CLI**: `brew install supabase/tap/supabase` (or `npm i -g supabase`).
+  - [ ] (AGENT) `supabase login` (opens browser OAuth — creates a Management API access token automatically).
+  - [ ] (AGENT) `supabase link --project-ref [ref]` (Sean enters DB password at one-time prompt; stored in `~/.supabase/`).
+  - [ ] (AGENT, deferred to Track A) `supabase db push` to apply all 8 tables + RLS + triggers from [Product Schema Hard Reference](#product-schema-hard-reference).
+  - [ ] (AGENT, deferred to Track A) Configure Supabase DB Webhook (Studio > Database > Webhooks): on `products` INSERT → `POST {VERCEL_URL}/api/stripe-sync`.
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-export const createClient = (request: NextRequest) => {
-  // Create an unmodified response
-  let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  const supabase = createServerClient(
-    supabaseUrl!,
-    supabaseKey!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    },
-  );
-
-  return supabaseResponse
-};
-```
-
-   **STEP C** — *Install Agent Skills* (Optional) - Agent Skills give AI coding tools ready-made instructions, scripts, and resources for working with Supabase more accurately and efficiently.
-
-```bash
-npx skills add supabase/agent-skills
-```
 
 > **SERVICES CONT.**
 
-  - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`. Then: copy anon key + service role key from Settings > API → paste into `.env.local` as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` → `vercel env add` each for preview AND production (same values — Supabase project is shared across envs)
-  - [ ] (SEAN) **Create** Stripe account (if not already). Dashboard > Developers > API keys → copy **test** keys. Paste into `.env.local` + `vercel env add` for preview scope only. Live keys are captured at launch switchover (see [Environment Strategy](#environment-strategy-reference) > Live Launch Switchover Process). **ERROR**: we're supposed to be setting up the LIVE KEYS, then create the main branch (we're on everlastings now), then once set, create the dev branch and update the env details for dev — that way we are not dealing with keys and secrets more than this one setup, which is the same time we're setting up the branches. *This needs to be fixed.*
+  - [ ] (SEAN) **Supabase** — follow the [Supabase section above](#supabase). Summary: resume project if paused, copy publishable + secret keys, invite 3 admins, paste `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` into `.env.local` + `vercel env add` across all scopes.
+  - [ ] (SEAN) **Stripe** — create account (if not already). Dashboard > Developers > API keys → copy **test** keys (`sk_test_...`, `pk_test_...`). Paste into `.env.local` + `vercel env add` for Preview + Development scopes. Live keys (`sk_live_...`, `pk_live_...`) are added to the Production scope only, during this same Phase 0 alongside branch setup, so keys/secrets are handled once. Vercel scoping keeps them separated automatically — see [Environment Strategy](#environment-strategy-reference).
   - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
   - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`. Enable public access
   - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
@@ -352,10 +292,10 @@ npx skills add supabase/agent-skills
   - [ ] (AGENT) **Create** config files in repo root from the [Configuration Files](#configuration-files-reference) reference: `vercel.json`, `tsconfig.json`, `package.json`
   - [ ] (AGENT) **Run** `npm install`
   - [ ] (AGENT) **Verify** `vercel dev` starts without errors
-  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration` (preferred) — all 8 tables + RLS policies + triggers. Canonical SQL lives in [Product Schema Hard Reference](#product-schema-hard-reference) and [A1 Supabase](#supabase) (RLS). If MCP is unavailable, paste into Supabase Studio SQL editor.
-  - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
-  - [ ] (AGENT) **Bootstrap** Stripe coupons idempotently via `api/_bootstrap/coupons.ts` (created in A1 Stripe). Runs once; idempotent. Creates both `cart-recovery-10` and `newsletter-welcome-5` via the Stripe API — no dashboard click required.
-  - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) via Stripe CLI/MCP, pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`
+  - [ ] (AGENT) **Apply** Supabase migrations via Supabase CLI (`supabase db push`, preferred) — all 8 tables + RLS policies + triggers. Canonical SQL lives in [Product Schema Hard Reference](#product-schema-hard-reference) and [A1 Supabase](#supabase) (RLS). Alternative paths: paste into Supabase Studio SQL editor, or use the Supabase MCP `apply_migration` tool if CLI is unavailable.
+  - [ ] (AGENT) **Configure** Supabase Database Webhook (Studio > Database > Webhooks): on `products` INSERT → `POST {VERCEL_URL}/api/stripe-sync`. (This is the "when a row is inserted, fire an HTTP request" trigger — unrelated to the Stripe webhook below.)
+  - [ ] (AGENT) **Bootstrap** Stripe coupons idempotently via `api/_bootstrap/coupons.ts` (created in A1 Stripe). "Bootstrap" here = a one-time script that creates both `cart-recovery-10` and `newsletter-welcome-5` via the Stripe API so dev and prod match. Runs once; idempotent. Alternative: click-create them in the Stripe dashboard.
+  - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) via Stripe CLI (`stripe listen` for dev, `stripe webhook_endpoints create` for live), pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`. (Stripe MCP is a fallback; Stripe CLI is the standard.)
   - [ ] (AGENT) **Verify preview URL is functional**: push a throwaway commit on a `feat/_preview-smoketest` branch → open the auto-generated `*.vercel.app` preview URL in a browser → DevTools console must show no CORS errors → `fetch('/api/config').then(r => r.json())` from the console must return the **test** publishable key (`pk_test_...`). Delete the branch after. This catches the failure mode where every previous Vercel project's preview deployments "loaded nothing" due to hardcoded CORS origins. See [Dev/Test Data Hygiene > CORS allowlist](#1-cors-allowlist-the-reason-previews-load-at-all).
 
 ---
@@ -462,8 +402,8 @@ Vercel Dashboard → Settings → Environment Variables. Each var scoped by envi
 | `STRIPE_PUBLISHABLE_KEY` | `pk_live_...`                     | `pk_test_...`           |
 | `STRIPE_WEBHOOK_SECRET`  | live signing secret               | test signing secret     |
 | `SUPABASE_URL`           | same                              | same                    |
-| `SUPABASE_ANON_KEY`      | same                              | same                    |
-| `SUPABASE_SERVICE_KEY`   | same                              | same                    |
+| `SUPABASE_PUBLISHABLE_KEY`      | same                              | same                    |
+| `SUPABASE_SECRET_KEY`   | same                              | same                    |
 | `PRODUCT_API_KEY`        | random 64-char string             | different random string |
 | `R2_ACCOUNT_ID`          | same                              | same                    |
 | `R2_ACCESS_KEY_ID`       | same                              | same                    |
@@ -882,10 +822,10 @@ These files must be created as actual files in the repository root. Copy the con
 ### `.env.example`
 
 ```bash
-# Supabase
+# Supabase (new Nov-2025 key format — replaces legacy anon/service_role)
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_KEY=eyJ...
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # frontend-safe, RLS-enforced
+SUPABASE_SECRET_KEY=sb_secret_...            # backend only, bypasses RLS
 
 # Stripe (set test keys for Preview+Development, live keys for Production)
 STRIPE_SECRET_KEY=sk_test_...
@@ -964,7 +904,7 @@ A1 assumes Phase 0 is complete (all accounts created, env vars loaded) by verify
 
 #### Supabase
 
-Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via MCP `apply_migration`. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
+Table creation (all 8 tables) is done in Phase 0 > Agent bootstrap via Supabase CLI `supabase db push` (preferred), Studio SQL editor, or MCP `apply_migration` as fallback. The RLS block below is the canonical policy SQL — apply it as part of the same migration.
 
 > **v1 auth scope — intentional**: policies gate by `authenticated` role (any logged-in Supabase user), not by individual user or per-user role. All three invited admins (`admin@`, `sean@`, `emyh@`) have identical read/write/delete permissions across products, orders, customers, subscribers. This is acceptable for v1 because the admin set is small, trusted, and fixed. **v1.1 upgrade path** when Emy hires a helper or adds a second brand: add a `user_roles` table (user_id → role enum) and rewrite the policies to check `auth.jwt() ->> 'role'` instead of just `authenticated`. Do not add this complexity before v1 needs it.
   
@@ -1200,7 +1140,7 @@ From AR #25, #27 — see [Architecture Reference](#architecture-reference).
 
 Returns environment-appropriate public configuration. Enables automatic test/live Stripe key switching.
 
-> **Security note**: This endpoint serves ONLY public keys — Stripe publishable key (`pk_*`), Supabase URL, and Supabase anon key. These are designed to be public (Stripe publishable keys are meant for client-side use; Supabase anon keys are protected by RLS). No secrets are exposed. This endpoint requires no authentication. (AR #15)
+> **Security note**: This endpoint serves ONLY public keys — Stripe publishable key (`pk_*`), Supabase URL, and Supabase publishable key (`sb_publishable_*`). These are designed to be public (Stripe publishable keys are meant for client-side use; Supabase publishable keys are protected by RLS). No secrets are exposed. This endpoint requires no authentication. (AR #15)
 
   ```typescript
   // api/config.ts
@@ -1211,7 +1151,7 @@ Returns environment-appropriate public configuration. Enables automatic test/liv
       {
         publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
         supabaseUrl: process.env.SUPABASE_URL,
-        supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+        supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
         metaPixelId: process.env.META_PIXEL_ID || null,
       },
       { headers: corsHeaders(req) },
@@ -1237,7 +1177,7 @@ Called by Supabase Database Webhook when a product is inserted. See Stripe Sync 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function POST(request: Request) {
@@ -1299,7 +1239,7 @@ Called when user clicks `[CHECKOUT]` on `/cart.html`. Runs the availability chec
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   const HOLD_TTL_MINUTES = 15;
@@ -1408,7 +1348,7 @@ Called AFTER `/api/checkout/reserve` succeeded. Creates the Stripe Checkout Sess
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   interface CartItem {
@@ -1531,7 +1471,7 @@ Handles `checkout.session.completed`. See Webhook Contract section for the full 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function POST(request: Request) {
@@ -1687,7 +1627,7 @@ See Cart Recovery Flow section for the full UX specification.
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function POST(request: Request) {
@@ -1731,7 +1671,7 @@ See Cart Recovery Flow section for the full UX specification.
 
 Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #20).
 
-> **Security**: This endpoint validates against `PRODUCT_API_KEY` (a random string you generate). Internally, it uses `SUPABASE_SERVICE_KEY` to write to the database. `SUPABASE_SERVICE_KEY` is NEVER exposed in external requests.
+> **Security**: This endpoint validates against `PRODUCT_API_KEY` (a random string you generate). Internally, it uses `SUPABASE_SECRET_KEY` to write to the database. `SUPABASE_SECRET_KEY` is NEVER exposed in external requests.
 
   ```typescript
   // api/products.ts
@@ -1743,7 +1683,7 @@ Enables AI-assisted product creation. Authenticated with `PRODUCT_API_KEY` (AR #
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   function authorize(request: Request): boolean {
@@ -2070,7 +2010,7 @@ Accepts image, transforms via Cloudinary (4:5 crop, WebP, compress), uploads to 
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function POST(request: Request) {
@@ -2113,7 +2053,7 @@ Fire-and-forget endpoint called when any user adds a product to cart. Checks for
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function POST(request: Request) {
@@ -2153,7 +2093,7 @@ CSV endpoint for Meta Commerce Catalog sync. Meta polls this URL daily to sync I
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
+    process.env.SUPABASE_PUBLISHABLE_KEY!
   );
 
   export async function GET() {
@@ -2191,7 +2131,7 @@ Admin-only endpoints for the shipping fulfillment pipeline.
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   // Returns the authenticated user, or null if the token is missing/invalid.
@@ -2215,7 +2155,7 @@ Admin-only endpoints for the shipping fulfillment pipeline.
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function GET(request: Request) {
@@ -2263,7 +2203,7 @@ Admin-only endpoints for the shipping fulfillment pipeline.
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -3087,15 +3027,15 @@ These use placeholder data.
   // assets/js/main.js
 
   // Fetch config from server (auto test/live switching)
-  let SUPABASE_URL, SUPABASE_ANON_KEY;
+  let SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY;
 
   async function initConfig() {
     try {
       const res = await fetch('/api/config');
       const config = await res.json();
       SUPABASE_URL = config.supabaseUrl;
-      SUPABASE_ANON_KEY = config.supabaseAnonKey;
-      window._supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      SUPABASE_PUBLISHABLE_KEY = config.supabasePublishableKey;
+      window._supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     } catch {
       console.error('Failed to load config');
     }

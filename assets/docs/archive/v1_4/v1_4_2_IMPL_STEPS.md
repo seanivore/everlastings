@@ -64,7 +64,7 @@
 
 ### Services — for each, copy secrets into `.env.local` AND `vercel env add` in one pass
 
-  - [ ] (SEAN) **Supabase**: create project (free tier, us-east-1), save DB password, copy anon + service keys → `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`
+  - [ ] (SEAN) **Supabase**: create/resume project (free tier, us-east-1), save DB password to password manager (not an env var), copy publishable + secret keys → `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`. Full walkthrough: IMPL_GUIDE > [Supabase section](./v1_4_2_IMPL_GUIDE.md#supabase)
   - [ ] (SEAN) **Supabase Auth > Users**: invite `admin@everlastingsbyemaline.com`, `sean@everlastingsbyemaline.com`, `emyh@everlastingsbyemaline.com`
   - [ ] (SEAN) **Stripe**: create account, copy test keys → `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` (live keys captured at C4 launch)
   - [ ] (SEAN) **Stripe receipts**: Dashboard > Settings > Emails > toggle ON "Successful payments" + "Refunds"
@@ -92,16 +92,23 @@
 
 ### Agent bootstrap (after all services/env vars exist)
 
-  - [ ] (AGENT) **Apply** Supabase migrations via MCP `apply_migration`: all 8 tables + RLS policies + triggers (`set_slug`, `set_updated_at_*`) + `is_test` column on the 6 transactional tables + partial indexes. Canonical SQL in IMPL_GUIDE > Product Schema Hard Reference + A1 Supabase
+  - [ ] (AGENT) **Apply** Supabase migrations via Supabase CLI (`supabase db push`, preferred): all 8 tables + RLS policies + triggers (`set_slug`, `set_updated_at_*`) + `is_test` column on the 6 transactional tables + partial indexes. Canonical SQL in IMPL_GUIDE > Product Schema Hard Reference + A1 Supabase. Alternative paths: Studio SQL editor, or MCP `apply_migration` as fallback
   - [ ] (AGENT) **Configure** Supabase Database Webhook: on `products` INSERT → POST to `{VERCEL_URL}/api/stripe-sync`
   - [ ] (AGENT) **Create** `api/_bootstrap/coupons.ts` — idempotent coupon bootstrap (see A1 Stripe in IMPL_GUIDE)
   - [ ] (AGENT) **Run** `npx tsx api/_bootstrap/coupons.ts` once in test mode — verify both `cart-recovery-10` and `newsletter-welcome-5` exist in Stripe Dashboard > Products > Coupons
-  - [ ] (AGENT) **Create** Stripe test webhook endpoint via CLI/MCP → pinned to `dev` branch's preview URL (e.g. `https://everlastings-git-dev-{team}.vercel.app/api/webhook`), event `checkout.session.completed`. For `feat/*` branches, use `stripe listen` instead — see IMPL_GUIDE > Dev/Test Data Hygiene > Stripe webhook endpoint pinning
+  - [ ] (AGENT) **Create** Stripe test webhook endpoint via Stripe CLI (preferred) → pinned to `dev` branch's preview URL (e.g. `https://everlastings-git-dev-{team}.vercel.app/api/webhook`), event `checkout.session.completed`. For `feat/*` branches, use `stripe listen` instead — see IMPL_GUIDE > Dev/Test Data Hygiene > Stripe webhook endpoint pinning
   - [ ] (AGENT) **Smoke-test preview URL functionality**: push throwaway commit on `feat/_preview-smoketest` branch → open the auto-generated `*.vercel.app` preview URL → DevTools console must show no CORS errors → `fetch('/api/config').then(r => r.json())` returns the **test** publishable key. Delete branch after. Catches the failure mode where every prior Vercel project's previews "loaded nothing" due to hardcoded CORS
 
 ---
 
 ## TRACK A: Foundation + Backend
+
+> **Prerequisites for Track A**
+>
+>  - Phase 0 "Setup the repo and env scaffolding" complete (`.env.example`, `.env.local`, `vercel.json`, `tsconfig.json`, `package.json` all present; `vercel dev` starts cleanly).
+>  - All service env vars loaded into `.env.local` AND Vercel (via `vercel env add`) — Supabase, Stripe, R2, Cloudinary, Resend, Meta, GA4, PRODUCT_API_KEY. Meta is the only acceptable TBD (it's Emy-blocked and can be wired later).
+>  - Agent bootstrap complete (schema applied, DB webhook configured, coupons bootstrapped, Stripe webhook endpoints created, preview-CORS smoke test passed).
+>  - Domain + DNS: `everlastingsbyemaline.com` on Cloudflare DNS, R2 custom domain `cdn.everlastingsbyemaline.com` showing Active.
 
 ### A1: Services Setup (verification + dependent config)
 
@@ -139,7 +146,7 @@
   - [ ] (AGENT) **Apply** the `corsHeaders(req)` + `preflight(req)` pattern from `api/_lib/cors.ts` to every endpoint above (no exceptions). Without this, browser fetches from `*.vercel.app` previews are silently blocked
   - [ ] (SEAN) **Configure** Meta Commerce Manager: Catalog > Data Sources > Add Feed > URL: `https://everlastingsbyemaline.com/api/product-feed` (production URL only — preview URLs would expose test products if Meta ever consumed them)
 
-**Auth note**: `api/products.ts`, `api/upload.ts`, `api/orders.ts`, `api/orders/[id].ts` use `PRODUCT_API_KEY` for auth (NOT `SUPABASE_SERVICE_KEY`). See AR #20.
+**Auth note**: `api/products.ts`, `api/upload.ts`, `api/orders.ts`, `api/orders/[id].ts` use `PRODUCT_API_KEY` for auth (NOT `SUPABASE_SECRET_KEY`). See AR #20.
 
 ### A3: Admin UI + Product Protocol
 
@@ -189,6 +196,12 @@
 ---
 
 ## TRACK B: Frontend Design
+
+> **Prerequisites for Track B**
+>
+>  - `package.json`, `vercel.json`, `tsconfig.json` in place so `vercel dev` serves the HTML pages.
+>  - BRAND.md design tokens finalized (colors, type, spacing).
+>  - That's it — Track B is **not** blocked on Phase 0 services. It can start the moment docs reconciliation finishes. Every page is hardcoded HTML/CSS + `PLACEHOLDER:` tags; no backend calls yet. That work lands in Track C.
 
 > **ACTION — (AGENT) builds; (SEAN) reviews visual design.** 
 > All pages: hardcoded HTML/CSS. 

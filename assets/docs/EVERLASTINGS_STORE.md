@@ -16,6 +16,30 @@
 
 ---
 
+## Tech Stack at a Glance
+
+| Layer             | What we use                                                     | Why                                                                                                 |
+| ----------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Frontend          | Vanilla HTML + CSS + JS, loaded directly in the browser         | No build step, no framework, no React. Proven pattern.                                              |
+| Frontend libs     | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN          | Script tags only. No npm install for the browser.                                                   |
+| Backend           | TypeScript in Vercel Serverless Functions (Node.js)             | Type safety for Stripe + Supabase server-side calls.                                                |
+| Backend libs      | `npm install` only inside `/api/*.ts` world                     | `package.json` drives a normal Node/TS toolchain for the API.                                       |
+| Runtime           | Vercel (free tier)                                              | Auto-deploy, per-branch env vars, serverless functions.                                             |
+| Database          | Supabase Postgres (free tier)                                   | REST API + RLS + Auth + Studio UI.                                                                  |
+| Product CDN       | Cloudflare R2 at `cdn.everlastingsbyemaline.com`                | Public CDN for product images/video. Cloudinary is a stateless transformer only — not a host.       |
+| Payments          | Stripe Custom Checkout (`ui_mode: 'custom'`)                    | On-site checkout with full brand control.                                                           |
+| Email             | Resend                                                          | Transactional email; free tier 3k/mo.                                                               |
+| Shipping          | Shippo Starter (web UI only in v1)                              | 30 free USPS labels/mo.                                                                             |
+| Analytics         | GA4 (gtag.js) + Meta Pixel                                      | CDN script tags. No GTM.                                                                            |
+
+**What we are NOT using** (and why some vendor docs might suggest these):
+
+  + **No Next.js, no React, no SSR.** Supabase's dashboard "Connect" modal and the `@supabase/ssr` package assume Next.js — ignore them.
+  + **No MCP-first toolchain.** Where a standard CLI (Supabase CLI, Stripe CLI, Vercel CLI) does the job, use it. MCP is an optional fallback only.
+  + **No Supabase Branching and no Supabase/Vercel Marketplace integration.** Both are optimized for branching-based dev workflows; the `is_test` flag + shared-project design already handles dev/prod separation.
+
+---
+
 ## Table of Contents
 
   1. [Project Overview](#project-overview)
@@ -126,7 +150,7 @@
 
   12. **GA4 analytics** — `gtag.js` CDN script, no Google Tag Manager. Custom events: view_product, add_to_cart, begin_checkout, purchase, newsletter_signup, and 5 more (see implementation guide).
 
-  13. **Custom `PRODUCT_API_KEY` for external API auth** — Random 64-char string for AI agents and external API access. Replaces `SUPABASE_SERVICE_KEY` in all external calls. `SUPABASE_SERVICE_KEY` is server-only, never exposed.
+  13. **Custom `PRODUCT_API_KEY` for external API auth** — Random 64-char string for AI agents and external API access. Replaces `SUPABASE_SECRET_KEY` in all external calls. `SUPABASE_SECRET_KEY` is server-only, never exposed.
 
   14. **Webhook idempotency** — `webhook_events` table stores processed Stripe `event.id` values. Prevents duplicate processing on retries.
 
@@ -194,10 +218,10 @@
 Create `.env.local` (see also `.env.example` in impl guide):
 
   ```bash
-  # Supabase
+  # Supabase (new key system, Nov 2025+)
   SUPABASE_URL=https://your-project.supabase.co
-  SUPABASE_ANON_KEY=your-anon-key
-  SUPABASE_SERVICE_KEY=your-service-key
+  SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # frontend-safe, replaces legacy anon key
+  SUPABASE_SECRET_KEY=sb_secret_...            # backend only, replaces legacy service_role key
 
   # Stripe (test keys for dev, live keys for production)
   STRIPE_SECRET_KEY=sk_test_...
@@ -598,9 +622,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 | Variable                 | Purpose                                                 | Required |
 | ------------------------ | ------------------------------------------------------- | -------- |
-| `SUPABASE_URL`           | Supabase project URL                                    | Yes      |
-| `SUPABASE_ANON_KEY`      | Supabase anonymous key (frontend)                       | Yes      |
-| `SUPABASE_SERVICE_KEY`   | Supabase service key (backend only)                     | Yes      |
+| `SUPABASE_URL`              | Supabase project URL                                 | Yes      |
+| `SUPABASE_PUBLISHABLE_KEY`  | Supabase publishable key (frontend-safe)             | Yes      |
+| `SUPABASE_SECRET_KEY`       | Supabase secret key (backend only)                   | Yes      |
 | `STRIPE_SECRET_KEY`      | Stripe API secret                                       | Yes      |
 | `STRIPE_PUBLISHABLE_KEY` | Stripe frontend key                                     | Yes      |
 | `STRIPE_WEBHOOK_SECRET`  | Webhook signature validation                            | Yes      |
@@ -626,6 +650,33 @@ Set in Vercel Dashboard → Settings → Environment Variables:
   4. Test checkout with Stripe test card
   5. Verify webhook updates product status in Supabase
   6. Check admin UI login and product creation
+
+### Post-Launch Operations
+
+Free-tier services have caps and auto-pause behavior. This is the operational checklist for the first year of production — the things that don't show up in architecture docs but will absolutely interrupt the site if ignored.
+
+| What                           | Cadence               | What to watch                                                                                                                                                 | Upgrade trigger                                                                                 |
+| ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Supabase free-tier auto-pause  | Every 7 days idle     | Project pauses after 7 days of no activity. Data is preserved. If production traffic keeps it alive, no action. During dev lulls, resume from dashboard.      | Pro tier ($25/mo) when pauses affect the live site or when Emy needs daily admin access.        |
+| Resend email cap               | Monthly               | Free tier = 3,000 emails/mo. Monitor from the Resend dashboard around month-end.                                                                              | Paid tier ($20/mo for 50k) when monthly volume crosses ~2,500.                                  |
+| Shippo label cap               | Monthly               | Free Starter = 30 USPS labels/mo. Emy tracks manually from Shippo's dashboard.                                                                                | Pay-as-you-go ($0.05/label) when monthly volume crosses 25.                                     |
+| Stripe receipt emails          | Verify post-launch    | Dashboard > Settings > Emails: "Successful payments" + "Refunds" both toggled ON. Re-verify after any Stripe account change.                                  | N/A — always on.                                                                                |
+| Cloudflare R2 storage          | Quarterly             | Free tier = 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo. A typical site stays well under.                                                          | Paid tier ($0.015/GB + ops) when hitting caps — unlikely for v1.                                |
+| Vercel hobby plan              | Quarterly             | Hobby tier caps: 100 GB bandwidth/mo, 1k serverless function invocations/day average. Usage dashboard shows current.                                          | Pro tier ($20/mo) when bandwidth or function volume approaches caps.                            |
+| Domain renewal                 | Annually              | `everlastingsbyemaline.com` is on Cloudflare Registrar at renewal cost. Auto-renew on.                                                                        | N/A — auto-renew.                                                                               |
+| SSL certificates               | Automatic             | Vercel auto-renews via Let's Encrypt. Monitor via Vercel dashboard only if an alert fires.                                                                    | N/A — auto-renew.                                                                               |
+| Meta Commerce Manager feed     | After each product    | New products appear in Instagram Shopping within 24 hours of publishing. Check catalog health in Meta Commerce Manager monthly.                               | N/A — free.                                                                                     |
+| Stripe API key rotation        | Annually or on leak   | Rotate live secret key if a device is lost or a key is ever pasted into a shared tool. Update Vercel Production scope after rotation.                         | N/A — operational hygiene.                                                                      |
+| Supabase DB password           | Annually or on leak   | Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed.                          | N/A — operational hygiene.                                                                      |
+| `PRODUCT_API_KEY` rotation     | Annually or on leak   | `openssl rand -hex 32`; update both Production and Preview scopes in Vercel. Update the Custom GPT's Bearer token to match.                                   | N/A — operational hygiene.                                                                      |
+
+**First-month warm-up checklist** (2026-05-ish):
+
+  - [ ] Confirm all post-launch emails deliver (Stripe receipt, Resend tracking, Resend welcome, Resend cart-recovery).
+  - [ ] Sign in to Meta Commerce Manager and confirm all live products appear in the catalog feed.
+  - [ ] Run one Lighthouse audit from a fresh browser profile; log Core Web Vitals.
+  - [ ] Confirm GA4 and Meta Pixel both show live traffic.
+  - [ ] Verify Supabase has not auto-paused (it shouldn't with live traffic, but confirm).
 
 ---
 
