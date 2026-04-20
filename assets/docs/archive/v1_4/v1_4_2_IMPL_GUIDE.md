@@ -158,6 +158,176 @@ One service per group — complete each service end-to-end before moving on.
 
 Each service below has: (1) a dashboard portion Sean does, (2) env-var loading handled the instant keys are available. A1 in Track A confirms each service is wired correctly; no work is repeated there.
 
+> **SERVICES CONT. BELOW**
+
+#### Supabase 
+
+**PROJECT PAUSED ALERT QUESTION**: 
+  + Research: How often and why does this happen for free accounts? What prevents it from happening? 
+  + Alert: The project "everlastings" is currently paused. All data, including backups and storage objects, remains safe. You can resume this project from the dashboard within 90 days (until 19 Jul 2026). After that, this project will not be resumable, but data will still be available for download. To prevent future pauses, consider upgrading to Pro. Project last paused on 20 Apr 2026. *RESUME*: Your project’s data will be restored to when it was initially paused.
+
+**BRANCHES QUESTION**: 
+  + This appears to be relatively new information. It looks like GitHub can be set up with SupaBase and that it would mirror branches. The current, default, branch is 'main' and set to 'Production'. I mention this because I know we discussed how Vercel has different Production/Development environment and am wondering if this is similar. 
+  + There is a Vercel integration with the details "How does the Vercel integration work? - Supabase will keep your environment variables up to date in each of the projects you assign to a Supabase project. You can also link multiple Vercel Projects to the same Supabase project."  
+  + There is a GitHub Integration and "How does the GitHub integration work? - Connecting to GitHub allows you to sync preview branches with a chosen GitHub branch, keep your production branch in sync, and automatically create preview branches for every pull request." 
+
+**KEYS**: 
+  + It also looks like our naming of keys is dated. It says "We've updated our API keys to better support your application needs." 
+  + The primary option that we should probably be using to be current, listed under Project > Settings, is "Publishable and secret API keys" — and then the old that seems ot have the same wording as what we expected in the implementation guide is "Legacy anon, service_role API keys". 
+  + On the main page there is a spot to copy or create more "Publishable key" and "Secret keys". 
+  + Then on another tab there are "JWT Keys"
+  + There also a "Data API" integration which has details and then links to here: `https://supabase.com/docs/guides/api`
+
+**DETAILS PULLED FROM**: `https://supabase.com/dashboard/project/rvnxftbfeaxymhzxxhjm`
+
+  1. PROJECT NAME: everlastings
+  2. PUBLISHABLE KEY: sb_publishable_SvdSORHm8Ot0hcvfB6b9YQ_eRvlyx_c
+  3. DIRECT CONNECTION STRING: postgresql://postgres:[YOUR-PASSWORD]@db.rvnxftbfeaxymhzxxhjm.supabase.co:5432/postgres
+  4. CLI SETUP COMMANDS:
+```bash
+supabase login
+supabase init
+supabase link --project-ref rvnxftbfeaxymhzxxhjm
+```
+  5. DATABASE PASSWORD**: q6Zjwx5xMHbXUlpy
+  6. ENFORCE SSL CONNECTION**: YES | NO ?
+  7. CONNECT YOUR APP LLM PASTE**: 
+
+  **STEP A** — *Install packages* - Run this command to install the required dependencies.
+
+```bash 
+npm install @supabase/supabase-js @supabase/ssr
+```
+
+  **STEP B** — *Add files* - Add env variables, create Supabase client helpers, and set up middleware to keep sessions refreshed.
+  
+  File: `.env.local`
+  
+```
+NEXT_PUBLIC_SUPABASE_URL=https://rvnxftbfeaxymhzxxhjm.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_SvdSORHm8Ot0hcvfB6b9YQ_eRvlyx_c
+```
+
+  File: `page.tsx`
+
+```tsx
+  import { createClient } from '@/utils/supabase/server'
+  import { cookies } from 'next/headers'
+
+  export default async function Page() {
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
+
+  const { data: todos } = await supabase.from('todos').select()
+
+  return (
+    <ul>
+      {todos?.map((todo) => (
+        <li key={todo.id}>{todo.name}</li>
+      ))}
+    </ul>
+    )
+  }
+```
+
+  File: `utils/supabase/server.ts`
+
+```ts 
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>) => {
+  return createServerClient(
+    supabaseUrl!,
+    supabaseKey!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    },
+  );
+};
+```
+
+  File: `utils/supabase/client.ts`
+
+```ts 
+import { createBrowserClient } from "@supabase/ssr";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+export const createClient = () =>
+  createBrowserClient(
+    supabaseUrl!,
+    supabaseKey!,
+  );
+```
+
+  File: `utils/supabase/middleware.ts`
+
+```ts 
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+export const createClient = (request: NextRequest) => {
+  // Create an unmodified response
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    supabaseUrl!,
+    supabaseKey!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    },
+  );
+
+  return supabaseResponse
+};
+```
+
+   **STEP C** — *Install Agent Skills* (Optional) - Agent Skills give AI coding tools ready-made instructions, scripts, and resources for working with Supabase more accurately and efficiently.
+
+```bash
+npx skills add supabase/agent-skills
+```
+
+> **SERVICES CONT.**
+
   - [ ] (SEAN) **Create** Supabase project (free tier, us-east-1 region) — choose and save a strong DB password (16+ chars, password manager). Note the project ref URL `https://[ref].supabase.co`. Then: copy anon key + service role key from Settings > API → paste into `.env.local` as `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY` → `vercel env add` each for preview AND production (same values — Supabase project is shared across envs)
   - [ ] (SEAN) **Create** Stripe account (if not already). Dashboard > Developers > API keys → copy **test** keys. Paste into `.env.local` + `vercel env add` for preview scope only. Live keys are captured at launch switchover (see [Environment Strategy](#environment-strategy-reference) > Live Launch Switchover Process).
   - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
