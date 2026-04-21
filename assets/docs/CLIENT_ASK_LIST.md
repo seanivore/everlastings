@@ -10,30 +10,113 @@ Nothing here involves code. Most items are clicks in a dashboard. If anything fe
 
 ---
 
-## 0. Supabase access (do this first — it's already waiting for you)
+## Supabase: Accept Invite, ~5min 
 
-Supabase is the database that holds all your products, customers, and orders. I need you to create an account on it and accept the invite I already sent, so you can see admin data if you ever need to.
+The Supabase database holds all products, customers, orders, and more. We are both currently set to full permissions but your email my be verified via the invite email. 
 
-  1. **Find the invite email**: check your inbox for the subject line **"admin has invited you to join Everlastings by Emaline"**.
-  2. **Create a Supabase account** at `supabase.com` using `emyh@everlastingsbyemaline.com` as the login email.
-  3. **Confirm your email**: check your inbox for the subject line **"Confirm your email and launch your projects on Supabase"** → click the confirm link.
-  4. **Let me know**: email or message me at `sean@everlastingsbyemaline.com` saying "Supabase invite accepted." Then I'll add you to the Everlastings project on my end (Project Settings → Manage Members). You don't need to do anything else on the Supabase side after that.
+  1. Find email to `emyh@everlastingsbyemaline.com` with **subject line "admin has invited you to join Everlastings by Emaline"**
+  2. **Click link and create an account** using that email and adding a password 
+  3. Verify new account via **link in email with subject line "Confirm your email and launch your projects on Supabase"**
+  4. Message `sean@everlastingsbyemaline.com` to let me know when you have **Supabase Invite Accepted** and I'll finalize permissions 
 
-  + **Time**: 5 minutes.
-  + **Why it matters**: If there's ever a weird order or missing product, you or I can log in and look directly. It's also required if you want backup access in case something happens to me. There's nothing for you to *do* in Supabase day-to-day — the admin panel on the site handles everything.
+You'll likely never have to to use this tool yourself again in the future. However, it might help if ever there is an issue with missing order or product inventory inconsistency. Changes to products, however, you'll be able to perform on the website in your Administrator Panel. 
 
 ---
 
-## 1. Meta / Instagram Shopping setup
+## Role of Advertising and Marketing in E-Commerce 
 
-This bucket is the boring gate before the magic. I know Meta Business Manager has been the bane of basically everyone's existence since it was invented — I wouldn't ask if it didn't open a lot of doors. **Here's everything it unlocks for you once we're through it:**
+Take you time taking all of this really powerful information in. META is known globally as the premier advertising platform. I'll illustrate a bit with some exciting examples. 
 
-  + **Shoppable Instagram posts** — every product photo on your grid gets tagged with the product, and anyone scrolling can tap → land on the product page → buy. Your existing audience starts converting without anyone clicking a "link in bio."
-  + **Shoppable Reels + Stories** — same tagging extends to short-form content, which is where discovery happens now.
-  + **Automatic catalog sync** — when you add a new product on the site, it shows up in your Instagram shop within 24 hours. No manual reuploading.
-  + **Retargeting ads** — anyone who visits the site but doesn't buy can see a gentle follow-up ad on Instagram or Facebook later. ("Still thinking about the Sunkeeper?") Studies put these at 10× the conversion rate of cold ads.
-  + **Ad-level sales attribution** — every ad you ever run will know if it drove a real purchase. No more guessing which post worked. This is the foundation for spending smart on ads when you're ready.
-  + **Future AI-assisted ads** — once the pixel is collecting data, I can wire AI agents that look at what's converting and propose new ad angles, captions, audiences. Basically outsource the "planning the ads" part to AI while you do the making.
+In the future, if you find someone to maintain these ads and social media presence, I would be more than happy to offer my services educating on how to target effectively and make sure you're paying pennies per view or click. 
+
+That way we'll make sure you have the best visuals — images, photos — for "creative" and we'll make sure we target the posts exactly to who wants to see the content, where they want to see it (the bus, in bed, at dinner), and how they want to see it — talk the talk and walk the walk.  
+
+### Creative Leads The Show 
+
+  + 70–80% of Meta ad performance is now driven by creative quality 
+    - AppsFlyer research, cited in [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+
+  + Top DTC brands using UGC (user-generated content) + retargeting report 4–6x ROAS. 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+
+Everlastings has a structural advantage here: the work is inherently photogenic, each piece has a poetic story, and the brand voice is distinctive. These are exactly the creative assets Meta's algorithm rewards. We don't need to manufacture "content" — we already have it.
+
+### Retargeting Opportunities 
+
+Retargeting means showing ads specifically to people who already visited the site. They've seen the work, they know the brand — they just didn't buy yet. Every Meta Pixel event we're already tracking populates retargeting audiences automatically.
+
+Because retargeting relies on the Meta Pixel already being installed (we've built it in from day one), we can start running retargeting the day the first ad-free traffic visits the site. Zero additional engineering, zero setup friction.
+
+  + Retargeted ads convert 2–4x higher than cold traffic**. 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/ecommerce-benchmarks) 
+    - [NewswireJet, 2025](https://newswirejet.com/retargeting-statistics/)
+
+  + Cold social traffic typically converts at 0.5–1.5%. 
+    - [Digital Web Solutions, 2025](https://www.digitalwebsolutions.com/blog/ecommerce-conversion-rate-statistics/)
+
+  + Standard advice: allocate 15–30% of total ad budget to retargeting, with short (7–14 day) windows outperforming longer windows by ~30%. 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/ecommerce-benchmarks)
+
+### Ad Performance By Category 
+
+For the Home & Interior / Art Decor categories most adjacent to Everlastings:
+
+  + Home & Interior Design benchmark ROAS: 13.9x in 2025 (high-end, visually-driven). 
+    - [WebFX, 2026](https://www.webfx.com/blog/social-media/meta-benchmarks/)
+
+  + Home & Garden category ROAS: 2.18 with an 18.47% year-over-year conversion rate improvement. 
+    - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
+
+  + Art and Home Decor leads in click-through rate at 2.92% — the highest of any category. 
+    - [Enrich Labs, 2026](https://www.enrichlabs.ai/blog/meta-ads-benchmarks-2025)
+
+
+
+A well-run artisan home-goods campaign should expect 2.5–4x ROAS in the first 60 days and improve from there. A 4x ROAS at a $245 average order value means every $60 in ad spend produces a sale.
+
+---
+
+## 1. Meta / Instagram Shopping Setup
+
+  + For the most effective sales media and access to the worlds best advertising targeting tools 
+  + Purchase right from Instagram Post, Reels (which have high reach), and Stories (the real fans) 
+
+| #   | Method                       | Estimated Conversion/CTR | Best Use Case               |
+| --- | ---------------------------- | ------------------------ | --------------------------- |
+| 1   | Instagram Shopping (Tagging) | *~37% Sales Increase*    | Immediate product sales     |
+| 2   | *DM Automation* ("Comment")  | 12–18% CTR               | Driving urgent clicks/sales |
+| 3   | Link in Bio                  | *2–3% CTR*               | General traffic/portfolios  |
+
+1. They *LOVE* when they can click, use Apple Pay, and buy from Instagram in under a minute — no friction. 
+2. New-ish tactic is really strong especially for *small and medium sized brand* platforms — be their BFF, its the key. 
+3. If *2-3%* click through bio, then ~1.5% of those users have to convert — sad numbers. 
+
+  + CONVENIENCE FOR YOU: Adding products to your website? 
+    - It **AUTOMATICALLY STAYS SYNCED** with Instagram Shop 
+    - No need to upload new images 
+    - Maybe just a video Instagram Reels post here and there 
+
+  + SMART TECH TO FIND BUYERS: User click from social to website? 
+    - Their social profile is tagged with what they looked at on the website 
+    - We can see their age, location, socioeconomic status, even things like types of credit card purchases  
+    - Without even needing to know their name, we can **TARGET THESE PEOPLE SPECIFICALLY**
+    - Gentle follow-up ad on social later like "Still thinking about the Sunkeeper?" can increase conversion rate by 10X 
+
+  + META'S PIXEL MAKES FOR INTELLIGENT ADS: Know what is working and what isn't? 
+    - Meta/FB has been using AI in their advertising tools for over a decade now 
+    - Instead of numbers and critical thinking, they show you what worked, what didn't, and how to spend smart on ads 
+
+  > *Meta commands 68.31% of total DTC (Direct to Consumer) ad budgets — because it works.* 
+    - [Triple Whale, 2025](https://www.triplewhale.com/blog/facebook-ads-benchmarks)
+  
+  + TODAY WE CAN MAKE IT SMARTER: What if AI crunches the data and learns what works and doesn't? 
+    - Today we can add our own AI by letting agents see the data on what ads worked 
+    - They can come up with why and suggest new angles, captions, audiences 
+    - Even create new creative (visuals) for the post if we want. 
+    - Basically outsource the "planning the ads" part to AI while you do the making.
+
+
+
 
 The setup below is a chain — each step has to happen before the next works — but most are 2–5 minutes of clicks. I'll coordinate with you on step 1g (domain verification) because that one needs us both.
 
@@ -101,20 +184,10 @@ Shippo handles the actual shipping label printing for orders. Free tier gives us
 
 ---
 
-## 3. Stripe account (payments)
+## 3. Stripe Account Is Complete ✅
 
-Stripe processes the actual credit card transactions.
-
-### 3a. Confirm account ownership
-  + **What**: Decide if the Stripe account should be owned by you (Emy, personally or via Everlastings LLC/sole prop) or by me on your behalf. For a real business you almost certainly want it in your name — that's where payouts go.
-  + **Why**: Stripe payouts land in a bank account tied to the account holder. It also determines whose tax ID is on file.
-  + **Send me**: "I'll own it" or "you own it on my behalf" — then I'll hand off the next steps accordingly.
-
-### 3b. Provide account profile info (if you own it)
-  + **What**: Stripe will ask for: business name, address, phone, EIN or SSN (for payouts), bank account details.
-  + **Why**: Regulatory requirement — Stripe is a regulated money-transmitter and needs to verify who's receiving payments.
-  + **Time**: 20 minutes once you're ready. They do ask for real documents (ID, maybe business registration).
-  + **Send me**: Confirm when signup + bank verification is done. I don't need any keys or secrets — I'll grab those from the dashboard.
+  + **Ownership transferred** into Emy's name and business 
+  + **Banking and tax details** are all accurate 
 
 ---
 
@@ -147,22 +220,22 @@ Not blocking the build, but the sooner these exist, the sooner the site stops sh
 
 When you finish each piece, here's the cheat sheet of what lands back in my inbox:
 
-| Item                           | What to send me                               |
-| ------------------------------ | --------------------------------------------- |
-| 0 — Supabase invite accepted   | "Supabase invite accepted"                    |
-| 1a — Business Manager access   | "Confirmed" + screenshot                      |
-| 1b — IG Business profile       | "Done"                                        |
-| 1c — IG connected to FB Page   | "Done"                                        |
-| 1d — Commerce catalog created  | Catalog name                                  |
-| 1e — Meta Pixel created        | **Pixel ID** (number string)                  |
-| 1f — System-user token         | **Token** (via private channel)               |
-| 1g — Domain verification       | Coordinate with me — wait for my signal       |
-| 1h — Shop submitted for review | Screenshot of "submitted" confirmation        |
-| 2  — Shippo ready              | "Shippo ready, USPS linked"                   |
-| 3a — Stripe ownership decision | "I'll own it" or "you own it"                 |
-| 3b — Stripe signup done        | "Stripe ready, bank verified"                 |
+| Item                           | What to send me                                 |
+| ------------------------------ | ----------------------------------------------- |
+| 0 — Supabase invite accepted   | "Supabase invite accepted"                      |
+| 1a — Business Manager access   | "Confirmed" + screenshot                        |
+| 1b — IG Business profile       | "Done"                                          |
+| 1c — IG connected to FB Page   | "Done"                                          |
+| 1d — Commerce catalog created  | Catalog name                                    |
+| 1e — Meta Pixel created        | **Pixel ID** (number string)                    |
+| 1f — System-user token         | **Token** (via private channel)                 |
+| 1g — Domain verification       | Coordinate with me — wait for my signal         |
+| 1h — Shop submitted for review | Screenshot of "submitted" confirmation          |
+| 2  — Shippo ready              | "Shippo ready, USPS linked"                     |
+| 3a — Stripe ownership decision | "I'll own it" or "you own it"                   |
+| 3b — Stripe signup done        | "Stripe ready, bank verified"                   |
 | 4  — Privacy policy sign-off   | "Approved" after reading (I'll send pre-launch) |
-| 5  — Content                   | Shared folder or Drive link                   |
+| 5  — Content                   | Shared folder or Drive link                     |
 
 ---
 
