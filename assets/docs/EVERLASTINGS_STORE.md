@@ -845,7 +845,6 @@ Compared to v1.3.1:
 
   - **Brand Guide**: `assets/docs/BRAND.md`
   - **Implementation Guide (current)**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
-  - **Action Steps (current)**: `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Product Protocol**: `assets/docs/PRODUCT_PROTOCOL.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`

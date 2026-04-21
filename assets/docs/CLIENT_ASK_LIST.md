@@ -26,7 +26,16 @@ Supabase is the database that holds all your products, customers, and orders. I 
 
 ## 1. Meta / Instagram Shopping setup
 
-This is the biggest bucket and it unlocks Instagram Shopping (shoppable tags on posts, product catalog in your profile). It's a multi-step chain — each step has to happen in order before the next works.
+This bucket is the boring gate before the magic. I know Meta Business Manager has been the bane of basically everyone's existence since it was invented — I wouldn't ask if it didn't open a lot of doors. **Here's everything it unlocks for you once we're through it:**
+
+  + **Shoppable Instagram posts** — every product photo on your grid gets tagged with the product, and anyone scrolling can tap → land on the product page → buy. Your existing audience starts converting without anyone clicking a "link in bio."
+  + **Shoppable Reels + Stories** — same tagging extends to short-form content, which is where discovery happens now.
+  + **Automatic catalog sync** — when you add a new product on the site, it shows up in your Instagram shop within 24 hours. No manual reuploading.
+  + **Retargeting ads** — anyone who visits the site but doesn't buy can see a gentle follow-up ad on Instagram or Facebook later. ("Still thinking about the Sunkeeper?") Studies put these at 10× the conversion rate of cold ads.
+  + **Ad-level sales attribution** — every ad you ever run will know if it drove a real purchase. No more guessing which post worked. This is the foundation for spending smart on ads when you're ready.
+  + **Future AI-assisted ads** — once the pixel is collecting data, I can wire AI agents that look at what's converting and propose new ad angles, captions, audiences. Basically outsource the "planning the ads" part to AI while you do the making.
+
+The setup below is a chain — each step has to happen before the next works — but most are 2–5 minutes of clicks. I'll coordinate with you on step 1g (domain verification) because that one needs us both.
 
 ### 1a. Confirm your Meta Business Manager access
   + **What**: Go to `business.facebook.com` and log in. Confirm you see the "Everlastings by Emaline" (or similar) business.

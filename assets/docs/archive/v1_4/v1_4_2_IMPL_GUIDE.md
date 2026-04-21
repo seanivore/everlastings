@@ -7,8 +7,6 @@
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
 **Architecture Reference**: `assets/docs/EVERLASTINGS_STORE.md`
 **Design Reference**: `assets/docs/BRAND.md`
-**Action Steps**: `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`
-
 ---
 
 **CURRENT FOCUS**: Work through Pass 1 service checklists. Each service = create account → copy keys → paste into `.env.local` → `vercel env add` for Production + Development scopes. Pass 2 handles live Stripe keys + Preview-scope backfills after branches reconcile. Pass 3 is agent bootstrap (schema push, DB webhook, Stripe coupons, CORS smoke test).
@@ -261,52 +259,52 @@ const supabase = createClient(
   - [x] **Sign up** at `vercel.com/signup` via GitHub. Rename the auto-created Hobby team to something clean (Vercel no longer offers a personal-scope-only path — every account gets a free Hobby team).
   - [x] **Run** `vercel login` in Terminal.app (one-time OAuth).
   - [x] **Run** `vercel link --yes` from the repo root. Creates the project, connects GitHub, writes `.vercel/project.json`, auto-appends `.vercel` to `.gitignore`.
-  - [ ] **Verify** the project appears on the Vercel dashboard with the GitHub repo linked.
+  - [x] **Verify** the project appears on the Vercel dashboard with the GitHub repo linked.
 
 #### Cloudinary Checklist
 
   - [x] **Create** Cloudinary account.
   - [x] **Add** `CLOUDINARY_URL` (format `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`) to `.env.local`.
-  - [ ] **Run** `vercel env add CLOUDINARY_URL` for Production + Development scopes.
+  - [x] **Run** `vercel env add CLOUDINARY_URL` for Production + Development scopes.
 
 #### Stripe Checklist
 
   - [x] **Create** Stripe account.
-  - [ ] **Copy test keys** from Dashboard > Developers > API keys (`sk_test_...`, `pk_test_...`) → `.env.local`.
-  - [ ] **Run** `vercel env add STRIPE_SECRET_KEY development` and `vercel env add STRIPE_PUBLISHABLE_KEY development`.
+  - [x] **Copy test keys** from Dashboard > Developers > API keys (`sk_test_...`, `pk_test_...`) → `.env.local`.
+  - [x] **Run** `vercel env add STRIPE_SECRET_KEY development` and `vercel env add STRIPE_PUBLISHABLE_KEY development`.
   - [ ] **DEFER** Preview scope for Stripe to Pass 2 (same Vercel-plugin quirk as Supabase).
   - [x] **Copy live keys** (`sk_live_...`, `pk_live_...`) to a secure notes doc. Do NOT load anywhere yet; Pass 2 handles this.
-  - [ ] **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" + "Refunds".
-  - [ ] **Create test webhook secret**: run `stripe listen --forward-to localhost:3000/api/webhook` once locally. It prints a `whsec_...` value — that's the test webhook signing secret. Copy to `.env.local` as `STRIPE_WEBHOOK_SECRET`.
-  - [ ] **Run** `vercel env add STRIPE_WEBHOOK_SECRET development` with the test value.
+  - [x] **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" + "Refunds".
+  - [x] **Create test webhook secret**: run `stripe listen --forward-to localhost:3000/api/webhook` once locally. It prints a `whsec_...` value — that's the test webhook signing secret. Copy to `.env.local` as `STRIPE_WEBHOOK_SECRET`.
+  - [x] **Run** `vercel env add STRIPE_WEBHOOK_SECRET development` with the test value.
 
 > **Stripe live keys + live webhook endpoint → Pass 2**. They only go live after branches are reconciled.
 
 #### Cloudflare CDN Checklist
 
   - [x] **Confirm** `everlastingsbyemaline.com` is registered and on Cloudflare DNS.
-  - [ ] **Get** credit/debit card from Emy (Cloudflare R2 requires a payment method on file even for free tier).
-  - [ ] **Create** R2 bucket `everlastings` with public access enabled.
-  - [ ] **Connect** R2 custom domain: bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com`. Wait for Active status.
-  - [ ] **Create** R2 API token via the **R2-specific path** (critical — see gotcha below): R2 Object Storage > click into `everlastings` bucket > scroll to bottom > **Account Details** section > **API Tokens** > **{ } Manage** → Create Token, Object Read & Write, scoped to `everlastings`. Result page shows S3-format Access Key ID + Secret Access Key.
+  - [x] **Got** credit/debit card (using Sean's for now — billing can swap to Emy's later; at expected volume R2 stays in free tier).
+  - [x] **Create** R2 bucket `everlastings` with public access enabled.
+  - [x] **Connect** R2 custom domain: bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com`. Wait for Active status.
+  - [x] **Create** R2 API token via the **R2-specific path** (critical — see gotcha below): R2 Object Storage > click into `everlastings` bucket > scroll to bottom > **Account Details** section > **API Tokens** > **{ } Manage** → Create Token, Object Read & Write, scoped to `everlastings`. Result page shows S3-format Access Key ID + Secret Access Key.
     + **Gotcha**: the generic "My Profile → API Tokens → Create Token → R2 permissions" path opens a visually-identical creation form but produces a Cloudflare API token (`cfat_...`) instead of S3 credentials. `@aws-sdk/client-s3` needs S3-format credentials, not the `cfat_` token. Use the R2-specific path above.
-  - [ ] **Copy** the 4 values to `.env.local`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`. Also add `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`.
-  - [ ] **Run** `vercel env add` for all 5 vars across Production + Development scopes.
+  - [x] **Copy** the 4 values to `.env.local`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`. Also add `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`.
+  - [x] **Run** `vercel env add` for all 5 vars across Production + Development scopes.
 
 #### Resend Checklist
 
-  - [ ] **Create** Resend account (free tier, no credit card).
-  - [ ] **Verify** domain `everlastingsbyemaline.com`: Resend provides DNS records → add them to Cloudflare DNS → wait for verification.
-  - [ ] **Copy** API key to `.env.local` as `RESEND_API_KEY`.
-  - [ ] **Add** `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com` to `.env.local`.
-  - [ ] **Run** `vercel env add` for both vars across Production + Development scopes.
+  - [x] **Create** Resend account (free tier, no credit card).
+  - [x] **Verify** domain `everlastingsbyemaline.com`: Resend provides DNS records → add them to Cloudflare DNS → wait for verification.
+  - [x] **Copy** API key to `.env.local` as `RESEND_API_KEY` (Sending-access scope only — principle of least privilege).
+  - [x] **Add** `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com` + `RESEND_REPLY_TO_EMAIL=hello@everlastingsbyemaline.com` to `.env.local`.
+  - [x] **Run** `vercel env add` for all 3 Resend vars across Production + Development scopes.
 
 #### Shippo Checklist
 
-  - [ ] **Create** Shippo account (free Starter tier — 30 labels/month).
-  - [ ] **Create** USPS account.
-  - [ ] **Link** USPS to Shippo (automatic, no fee).
-  - [ ] **No API key needed for v1** — Emy uses Shippo's web UI only.
+  - [x] **Create** Shippo account (free Starter tier — 30 labels/month).
+  - [ ] **Create** USPS account (deferred — needs info from Emy; not blocking).
+  - [ ] **Link** USPS to Shippo (deferred — see above).
+  - [x] **No API key needed for v1** — Emy uses Shippo's web UI only. (Sean has requested an API key for v2 integration per `v2_0/SHIPPO_API.md` roadmap.)
 
 #### Meta Business Checklist
 
@@ -319,16 +317,18 @@ const supabase = createClient(
 
 #### Google Analytics Checklist
 
-  - [ ] **Create** GA4 property for `everlastingsbyemaline.com`. Note the Measurement ID (`G-XXXXXXXXXX`).
-  - [ ] **Add** `GA4_MEASUREMENT_ID` to `.env.local` and `vercel env add` for Production + Development.
-  - [ ] **Verify** Google Search Console ownership via DNS TXT record in Cloudflare.
+  - [x] **Create** GA4 property for `everlastingsbyemaline.com`. Note the Measurement ID (`G-XXXXXXXXXX`). Google Signals enabled to sidestep the June 2026 Ads/Analytics control consolidation.
+  - [x] **Add** `GA4_MEASUREMENT_ID` to `.env.local` and `vercel env add` for Production + Development.
+  - [x] **Verify** Google Search Console ownership via DNS TXT record in Cloudflare.
 
 #### Product API Checklist
 
   - [ ] **Generate** a different random key per Vercel scope (so a leaked Preview key doesn't unlock Production):
     - Production: `openssl rand -hex 32` → save for Pass 2 (goes into `.env.local` on `main` branch + Vercel Production scope).
     - Preview: `openssl rand -hex 32` → save for Pass 2 (goes into `.env.local` on `dev` branch + Vercel Preview scope).
-    - Development: `openssl rand -hex 32` → paste into current `.env.local` + `vercel env add PRODUCT_API_KEY development`.
+    - [x] Development: `openssl rand -hex 32` → paste into current `.env.local` + `vercel env add PRODUCT_API_KEY development`. **Done.**
+    - [ ] Production random → deferred to Pass 2.
+    - [ ] Preview random → deferred to Pass 2.
 
 ---
 
@@ -4180,7 +4180,7 @@ Track B builds frontend pages with hardcoded placeholder content (images, text, 
 | Architecture     | `assets/docs/EVERLASTINGS_STORE.md`                    | Full technical reference                    |
 | Brand Guide      | `assets/docs/BRAND.md`                                 | Colors, fonts, voice, copy, email templates |
 | Product Protocol | `assets/docs/PRODUCT_PROTOCOL.md`                      | Client guide + AI creation protocol         |
-| Action Steps     | `assets/docs/archive/v1_4/v1_4_2_IMPL_STEPS.md`        | Checklist version of this doc               |
+| Client Ask List  | `assets/docs/CLIENT_ASK_LIST.md`                       | One-email setup checklist for Emy           |
 | KPI + Ads Pitch  | `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md` | Post-launch contract asset                  |
 | Dev Rules        | `.agent/AGENTS.md`                                     | Git branching, dev protocols                |
 | Feedback Source  | `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md`     | Source of the 12 items that drove v1.4      |
