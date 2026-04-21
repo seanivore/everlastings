@@ -10,6 +10,20 @@ Nothing here involves code. Most items are clicks in a dashboard. If anything fe
 
 ---
 
+## 0. Supabase access (do this first — it's already waiting for you)
+
+Supabase is the database that holds all your products, customers, and orders. I need you to create an account on it and accept the invite I already sent, so you can see admin data if you ever need to.
+
+  1. **Find the invite email**: check your inbox for the subject line **"admin has invited you to join Everlastings by Emaline"**.
+  2. **Create a Supabase account** at `supabase.com` using `emyh@everlastingsbyemaline.com` as the login email.
+  3. **Confirm your email**: check your inbox for the subject line **"Confirm your email and launch your projects on Supabase"** → click the confirm link.
+  4. **Let me know**: email or message me at `sean@everlastingsbyemaline.com` saying "Supabase invite accepted." Then I'll add you to the Everlastings project on my end (Project Settings → Manage Members). You don't need to do anything else on the Supabase side after that.
+
+  + **Time**: 5 minutes.
+  + **Why it matters**: If there's ever a weird order or missing product, you or I can log in and look directly. It's also required if you want backup access in case something happens to me. There's nothing for you to *do* in Supabase day-to-day — the admin panel on the site handles everything.
+
+---
+
 ## 1. Meta / Instagram Shopping setup
 
 This is the biggest bucket and it unlocks Instagram Shopping (shoppable tags on posts, product catalog in your profile). It's a multi-step chain — each step has to happen in order before the next works.
@@ -112,6 +126,7 @@ When you finish each piece, here's the cheat sheet of what lands back in my inbo
 
 | Item                           | What to send me                               |
 | ------------------------------ | --------------------------------------------- |
+| 0 — Supabase invite accepted   | "Supabase invite accepted"                    |
 | 1a — Business Manager access   | "Confirmed" + screenshot                      |
 | 1b — IG Business profile       | "Done"                                        |
 | 1c — IG connected to FB Page   | "Done"                                        |

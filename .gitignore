@@ -54,3 +54,4 @@ rusty-tags.vi
 # Design Spec Images 
 .agent/apple-ui-design/**.jpeg
 .agent/apple-ui-design/**.jpg
+.vercel

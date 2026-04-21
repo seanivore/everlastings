@@ -11,21 +11,25 @@
 
 ---
 
+**MUST DO NEXT**: Find "RELOCATE" and CLEANUP" in the PHASE 0 items and polish document for ease of use in the flow, and ease of future reference. Use H4 "Checklist" sections as example reference. 
+
+---
+
 ## Tech Stack at a Glance
 
-| Layer          | What we use                                                     | Why                                                                                              |
-| -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Frontend       | Vanilla HTML + CSS + JS, loaded directly in the browser         | No build step, no framework, no React. Proven pattern.                                           |
-| Frontend libs  | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN          | Script tags only. No npm install for the browser.                                                |
-| Backend        | TypeScript in Vercel Serverless Functions (Node.js)             | Type safety for Stripe + Supabase server-side calls.                                             |
-| Backend libs   | `npm install` only inside `/api/*.ts` world                     | `package.json` drives a normal Node/TS toolchain for the API.                                    |
-| Runtime        | Vercel (free tier)                                              | Auto-deploy, per-branch env vars, serverless functions.                                          |
-| Database       | Supabase Postgres (free tier)                                   | REST API + RLS + Auth + Studio UI.                                                               |
-| Product CDN    | Cloudflare R2 at `cdn.everlastingsbyemaline.com`                | Public CDN for product images/video. Cloudinary is a stateless transformer only — not a host.    |
-| Payments       | Stripe Custom Checkout (`ui_mode: 'custom'`)                    | On-site checkout with full brand control.                                                        |
-| Email          | Resend                                                          | Transactional email; free tier 3k/mo.                                                            |
-| Shipping       | Shippo Starter (web UI only in v1)                              | 30 free USPS labels/mo.                                                                          |
-| Analytics      | GA4 (gtag.js) + Meta Pixel                                      | CDN script tags. No GTM.                                                                         |
+| Layer         | What we use                                          | Why                                      |
+| ------------- | ---------------------------------------------------- | ---------------------------------------- |
+| Frontend      | Vanilla HTML/CSS/JS, browser loaded                  | No build or framework. Proven pattern    |
+| Frontend libs | `@supabase/supabase-js`+`stripe.js` via jsDelivr CDN | Script tags. No npm browser install      |
+| Backend       | TypeScript in Vercel Serverless Functions (Node.js)  | Stripe type safe + Supabase server calls |
+| Backend libs  | `npm install` only inside `/api/*.ts` world          | `package.json` Node/TS API toolchain     |
+| Runtime       | Vercel (free tier)                                   | Deploy, branch env, serverless functions |
+| Database      | Supabase Postgres (free tier)                        | REST API + RLS + Auth + Studio UI.       |
+| Product CDN   | Cloudflare R2 at `cdn.everlastingsbyemaline.com`     | Public image CDN; stateless, not a host  |
+| Payments      | Stripe Custom Checkout (`ui_mode: 'custom'`)         | On-site checkout with full brand control |
+| Email         | Resend                                               | Transactional email; free tier 3k/mo     |
+| Shipping      | Shippo Starter (web UI only in v1)                   | 30 free USPS labels/mo                   |
+| Analytics     | GA4 (gtag.js) + Meta Pixel                           | CDN script tags. No GTM                  |
 
 **What we are NOT using** (and why vendor docs might suggest these):
 
@@ -39,15 +43,29 @@
 
 Terms used throughout this guide that are easy to misread if you're coming from a different stack:
 
-| Term in docs                       | What it actually means                                                                                     | Simpler equivalent you may know                                                                          |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| "Apply migrations"                 | Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers                           | "Run the create-tables SQL once"                                                                         |
-| "Migrations via MCP"               | Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same.                 | We use **Supabase CLI `supabase db push`** as the default.                                               |
-| "Supabase DB webhook"              | A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL"                      | An HTTP trigger — fired by the database — like an IFTTT rule on row insert.                              |
-| "Stripe webhook" (different)       | Stripe's outbound notification when a payment completes                                                    | Standard Stripe webhook. Unrelated to the Supabase DB webhook above.                                     |
-| "Stripe coupon bootstrap"          | A one-time script that creates the two base coupons in Stripe via API so dev and prod match                | "Run this once; it creates the two coupons." Alternative: click-create them in the Stripe dashboard.     |
-| "Preview CORS smoke test"          | Push a throwaway branch; open the Vercel preview URL; confirm API calls work                               | A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.                  |
-| "Publishable key / secret key"     | Supabase's new (Nov 2025+) API key format. Replaces legacy `anon` / `service_role` one-for-one.            | Frontend-safe key / server-only key. Same roles, new names.                                              |
+  **Term in docs** - What it actual means 
+  + Simpler equivalent you may know
+
+  **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers 
+  + Run the create-tables SQL once
+
+  **Migrations via MCP** - Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same
+  + We use **Supabase CLI `supabase db push`** as the default
+
+  **Supabase DB webhook** - A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL"
+  + An HTTP trigger — fired by the database — like an IFTTT rule on row insert.
+
+  **Stripe webhook** - Stripe's outbound notification when a payment completes
+  + Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
+
+  **Stripe coupon bootstrap** - A one-time script that creates the two base coupons in Stripe via API so dev and prod match
+  + Run this once; it creates the two coupons. Alternative: click-create them in the Stripe dashboard.
+
+  **Preview CORS smoke test** - Push a throwaway branch; open the Vercel preview URL; confirm API calls work
+  + A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.
+
+  **Publishable key / secret key** - Supabase's new (Nov 2025+) API key format. Replaces legacy `anon` / `service_role` one-for-one.
+  + Frontend-safe key / server-only key. Same roles, new names.
 
 ---
 
@@ -183,109 +201,152 @@ Do this once, both for development and production environments. Never paste secr
   - [x] **Create** `.env.example`
   - [x] **Create** `.env.local` from template
   - [x] **Update** `.gitignore` `.env.local` 
-  - [ ] **Setup** all services and save keys to drafting pad 
+  - [ ] **Setup** all services and save keys 
+        - Supabase
+        - Vercel 
+        - Cloudinary 
+        - Stripe 
+        - Cloudflare 
+        - Resend 
+        - Shippo 
+        - Meta Business 
+        - Google Analytics 
+        - Product API 
   - [ ] **Merge** `everlastings` → `main`
-  - [ ] **Setup** live secrets in main branch 
-  - [ ] **Send** live secrets to production Vercel environment `vercel env add VAR_NAME production`
+  - [ ] **Ensure** live secrets in main branch 
+  - [ ] **Confirm** live secrets are sent to production Vercel environment `vercel env add VAR_NAME production`
   - [ ] **Delete** the `everlastings` branch locally and on origin once confirmed merged
   - [ ] **Create** dev branch 
-  - [ ] **Setup** test secrets in dev branch
-  - [ ] **Send** test secrets to preview Vercel environment `vercel env add VAR_NAME preview`
+  - [ ] **Ensure** test secrets in dev branch
+  - [ ] **Confirm** test secrets are sent to preview Vercel environment `vercel env add VAR_NAME preview`
 
-### Services 
+#### Supabase Checklist
 
-One service per group — complete each service end-to-end before moving on.
+  - [x] **Rotate DB password** save locally on computer; we don't need it.
+  - [x] **Add auth users** for Sean, Emy next to current main Admin email account 
+  - [x] **Add keys to `.env.local`** including "Publishable", "Secret", and "Project URL"
+  - [x] **Run** `vercel env add` for Development scope
+  - [x] **DEFER** Preview scope until [Step 5: Branch reconciliation](#git-branching-strategy-reference)
+  - [x] **Install Supabase CLI**: `brew install supabase/tap/supabase` (or `npm i -g supabase`)
+  - [x] **Run CLI `supabase login`** to open browser OAuth, add Management API access token
+  - [ ] **Enter DB Password once using** `supabase link --project-ref [ref]`; enter it at prompt; stored in `~/.supabase/`)
 
-Each service below has: (1) a dashboard portion Sean does, (2) env-var loading handled the instant keys are available. A1 in Track A confirms each service is wired correctly; no work is repeated there.
 
-> **SERVICES CONT. BELOW**
+**RELOCATE**: Write simpler and move to properly locations in project flow, removing it from this section to keep ability to look back at progress clear, quick, and easy; or delete if redundant or unnecessary to move forward
+  ```
+    - the Claude-Code Vercel plugin's non-interactive mode blocks generic `vercel env add VAR preview` (requires explicit git-branch). Add Preview vars after [Step 5: Branch reconciliation](#git-branching-strategy-reference) creates the `dev` branch — at that point the form `vercel env add VAR preview dev --value ... --yes` is accepted. Alternatively: Sean runs the generic form outside Claude Code in his own terminal.
+    - `emyh@everlastingsbyemaline.com` (Client) — she accepts from her inbox; see [Client Ask List > section 0](../../../CLIENT_ASK_LIST.md) for the handoff flow. **Grant Emy Supabase-project member access** (so she can open Supabase Studio directly if ever needed — separate from the Auth user above). **Wait for Emy to**: (a) accept the Auth invite, (b) create a Supabase account at `supabase.com` using `emyh@everlastingsbyemaline.com`, (c) confirm her Supabase email, (d) notify `sean@everlastingsbyemaline.com`. Then: Project Settings (left panel) > General > Project Access > **Manage Members** > add her email.
+    - (AGENT, deferred to Track A) `supabase db push` to apply all 8 tables + RLS + triggers from [Product Schema Hard Reference](#product-schema-hard-reference).
+    - (AGENT, deferred to Track A) Configure Supabase DB Webhook (Studio > Database > Webhooks): on `products` INSERT → `POST {VERCEL_URL}/api/stripe-sync`.
 
-#### Supabase
+  **Note**: Free-tier has auto-pause after 7 days of no activity. Data is preserved. Resume from dashboard when you sit down to work. If pauses become painful post-launch, upgrade to Pro ($25/mo). *How can we streamline this post launch in a free way? Can the website have a timer to just PING the database and maintain activity every day or every few days?*
 
-The Nov-2025 dashboard and docs look nothing like older tutorials. Ignore the "Connect" modal — it's built for Next.js users, not us. Here's the **only** path that applies to this project.
+  **Concepts & Nov 2025 Update**
 
-**Key concepts**
-
-  + **New key format (Nov 2025+).** Supabase reissued all API keys:
     - `sb_publishable_...` replaces the legacy `anon` key. Frontend-safe; RLS-enforced.
     - `sb_secret_...` replaces the legacy `service_role` key. Backend-only; bypasses RLS.
-    - Functionally identical — only the names changed. We use `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY` as env var names everywhere.
-    - Legacy JWT-format keys are not issued to new projects after Nov 2025. The "JWT Keys" tab in Studio is a separate Auth-internals concern we do not touch.
-  + **DB password is not an env var.** The Postgres password from Studio > Settings > Database is only used for direct Postgres connections (psql, ORM) or when the Supabase CLI prompts for it one time during `supabase link` (it then caches the credential in `~/.supabase/`). It is **not** referenced by our app at runtime. Save it to a password manager and move on. If you paste it into `.env.local`, that's fine but unused.
-  + **Data API** (Studio > Integrations > Data API) is the REST endpoint our `supabase-js` library calls. Nothing to configure — it's on by default. The "Project Settings > API Keys" page is simply the credentials for this endpoint.
-  + **Free-tier auto-pause**: the project pauses after 7 days of no activity. Data is preserved. Resume from the dashboard when you sit down to work. If pauses become painful post-launch, upgrade to Pro ($25/mo).
 
-**What we skip (and why)**
+  **Integration Patters We Use**:
 
-  + **"Connect to your project" modal** (Framework / Direct / ORM / MCP tabs): none apply. Framework pushes Next.js boilerplate (`@supabase/ssr`, `cookies()`, `NEXT_PUBLIC_` prefixes) we can't use. Direct is a connection string for psql/CLI only. ORM covers Prisma/Drizzle, which we don't use. MCP is an optional agent tool — we prefer CLIs (see Glossary).
-  + **Supabase Branching**: real product, but assigns a separate DB per branch. Contradicts our `is_test` flag + shared-project design. Skip for v1.
-  + **Supabase/Vercel Marketplace integration**: writes `NEXT_PUBLIC_`-prefixed env vars assuming Next.js. Skip — we use `vercel env add` manually, which Supabase + Vercel docs fully support for non-framework projects.
-  + **Supabase GitHub integration**: auto-creates preview branches per PR. Same branching paradigm we're skipping. Skip.
-  + **`@supabase/ssr` package**: Next.js App Router only. We use `@supabase/supabase-js` instead.
+  ```html
+  <!-- Frontend: script tag via jsDelivr, no build step -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabase = supabase.createClient(
+      'https://[ref].supabase.co',
+      'sb_publishable_...'  // hardcoded — public by design, RLS-enforced
+    );
+  </script>
+  ``
 
-**The only two integration patterns we use**
+  ```ts
+  // Backend: /api/*.ts — npm import, server-only secret key
+  import { createClient } from '@supabase/supabase-js';
 
-```html
-<!-- Frontend: script tag via jsDelivr, no build step -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const supabase = supabase.createClient(
-    'https://[ref].supabase.co',
-    'sb_publishable_...'  // hardcoded — public by design, RLS-enforced
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SECRET_KEY!  // bypasses RLS — never exposed to browser
   );
-</script>
-```
+  ```
 
-```ts
-// Backend: /api/*.ts — npm import, server-only secret key
-import { createClient } from '@supabase/supabase-js';
+#### Vercel Checklist
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!  // bypasses RLS — never exposed to browser
-);
-```
+  - [ ] **Sign up on website** and connect to GitHub
+  - [ ] **CLI login once** for `vercel login` to open browser OAuth
+  - [x] (AGENT) `vercel link --yes` from the repo root — creates project, connects GitHub, writes `.vercel/project.json`.
+  - [ ] (AGENT) Verify by visiting the Vercel dashboard — the project should appear with the GitHub repo linked.
 
-**Setup checklist**
+**RELOCATE**: Write simpler and move to properly locations in project flow, removing it from this section to keep ability to look back at progress clear, quick, and easy; or delete if redundant or unnecessary to move forward 
+  ```
+  + This is new ground compared to older versions of the guide — Vercel's onboarding UI changed in 2026 and no longer offers a "personal scope only" path. The flow below reflects the current reality.
+  + **Account creation auto-creates a Hobby team.** Vercel no longer lets new signups skip team creation — every account gets a free Hobby team scope automatically. Rename it to something clean (e.g. `everlastingsbyemaline`) immediately after signup. Pricing remains Hobby as long as the team has one member; adding a second seat kicks it to Pro ($20/mo/seat).
+  + **Linking the repo**: from the repo root, run `vercel link --yes`. The CLI creates the project on Vercel, connects it to the GitHub repo, creates a `.vercel/project.json` file, and auto-appends `.vercel` to `.gitignore`.
+  + **Env vars from Claude Code** use the Vercel plugin's non-interactive mode. Form that works: `echo "$value" | vercel env add VAR production` (and the same for `development`). Form that is **blocked by the plugin**: generic `vercel env add VAR preview` — the plugin requires an explicit git-branch because Preview can have per-branch overrides. See "Preview scope" below.
+  + **Preview scope**: defer adding Preview vars until the `dev` branch exists (created in [Step 5: Branch reconciliation](#git-branching-strategy-reference)). Then run `vercel env add VAR preview dev --value "$val" --yes` for each. Alternatively, Sean can run the generic form in a plain terminal (outside Claude Code) — the plugin only intercepts tool calls made by the agent.
+  ```
 
-  - [ ] (SEAN) **Resume** paused project from Supabase dashboard if it auto-paused.
-  - [ ] (SEAN) **Rotate DB password** if it has ever been pasted into a tracked file (Settings > Database > Reset database password). Save the new value in a password manager only.
-  - [ ] (SEAN) **Copy keys** from Settings > API Keys:
-    - Publishable key (`sb_publishable_...`) → `SUPABASE_PUBLISHABLE_KEY`
-    - Secret key (`sb_secret_...`) → `SUPABASE_SECRET_KEY`
-    - Project URL (`https://[ref].supabase.co`) → `SUPABASE_URL`
-  - [ ] (SEAN+AGENT) Paste all three into `.env.local`, then run `vercel env add` for each across Production, Preview, and Development scopes (same values — Supabase project is shared across envs).
-  - [ ] (SEAN) **Invite admins** in Auth > Users > Invite user:
-    - `admin@everlastingsbyemaline.com` (Master)
-    - `sean@everlastingsbyemaline.com` (Developer)
-    - `emyh@everlastingsbyemaline.com` (Client)
-  - [ ] (AGENT) **Install Supabase CLI**: `brew install supabase/tap/supabase` (or `npm i -g supabase`).
-  - [ ] (AGENT) `supabase login` (opens browser OAuth — creates a Management API access token automatically).
-  - [ ] (AGENT) `supabase link --project-ref [ref]` (Sean enters DB password at one-time prompt; stored in `~/.supabase/`).
-  - [ ] (AGENT, deferred to Track A) `supabase db push` to apply all 8 tables + RLS + triggers from [Product Schema Hard Reference](#product-schema-hard-reference).
-  - [ ] (AGENT, deferred to Track A) Configure Supabase DB Webhook (Studio > Database > Webhooks): on `products` INSERT → `POST {VERCEL_URL}/api/stripe-sync`.
+#### Cloudinary Checklist 
 
+  - [x] **Create** Cloudinary account 
+  - [x] **Add `CLOUDINARY_URL`** with API key, API secret, etc. into `.env.local` 
+  - [ ] **Add `CLOUDINARY_URL`** to `vercel env add` as well 
 
-> **SERVICES CONT.**
+#### Stripe Checklist 
 
-  - [ ] (SEAN) **Supabase** — follow the [Supabase section above](#supabase). Summary: resume project if paused, copy publishable + secret keys, invite 3 admins, paste `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` into `.env.local` + `vercel env add` across all scopes.
-  - [ ] (SEAN) **Stripe** — create account (if not already). Dashboard > Developers > API keys → copy **test** keys (`sk_test_...`, `pk_test_...`). Paste into `.env.local` + `vercel env add` for Preview + Development scopes. Live keys (`sk_live_...`, `pk_live_...`) are added to the Production scope only, during this same Phase 0 alongside branch setup, so keys/secrets are handled once. Vercel scoping keeps them separated automatically — see [Environment Strategy](#environment-strategy-reference).
-  - [ ] (SEAN) **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
-  - [ ] (SEAN) **Create** Cloudflare R2 bucket `everlastings`. Enable public access
-  - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (Cloudflare auto-creates the CNAME since the domain is already on Cloudflare DNS). Wait for status Active
-  - [ ] (SEAN) **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket. Copy the 4 values → paste into `.env.local` + `vercel env add` (same values for preview and production): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`, `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`
-  - [ ] (SEAN) **Create** Cloudinary account (free tier). Copy cloud name, API key, API secret. Paste the combined `CLOUDINARY_URL` (format: `cloudinary://API_KEY:API_SECRET@CLOUD_NAME`) into `.env.local` + `vercel env add`
-  - [ ] (SEAN) **Create** Resend account (free tier, no credit card). Verify domain `everlastingsbyemaline.com` for sending (DNS records provided by Resend → add to Cloudflare DNS). Copy API key → paste as `RESEND_API_KEY`; also add `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com`
-  - [ ] (SEAN) **Create** Shippo account (free Starter tier — 30 labels/month, covers expected volume). Link USPS account (automatic, no fee). No API key required for v1 — Emy uses Shippo's web UI only. See [Shipping + Order Fulfillment Pipeline](#shipping--order-fulfillment-pipeline)
-  - [ ] (SEAN) **Create** Meta Business Manager account, Meta Commerce Manager catalog (type: E-commerce), and Meta Pixel. Verify the domain. Copy `META_PIXEL_ID` + generate a system-user `META_ACCESS_TOKEN` (scope: `catalog_management`) → env vars. Full Instagram-Shopping prerequisites checklist in [A1 Meta](#meta-pixel--instagram-shopping)
-  - [ ] (SEAN) **Create** Google Analytics 4 property for `everlastingsbyemaline.com`. Note Measurement ID `G-XXXXXXXXXX` (used later in the GA4 script-tag snippet in Track B1)
-  - [ ] (SEAN) **Verify** Google Search Console ownership (TXT record or HTML file)
-  - [ ] (SEAN) **Confirm** `everlastingsbyemaline.com` domain is registered and managed in Cloudflare DNS
-  - [ ] (SEAN) **Invite** admin users in Supabase Auth > Users > Invite user:
-    - `admin@everlastingsbyemaline.com` (Master)
-    - `sean@everlastingsbyemaline.com` (Developer)
-    - `emyh@everlastingsbyemaline.com` (Client)
-  - [ ] (AGENT) **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32` → paste into `.env.local` + `vercel env add` (different random value per environment so a leaked preview key doesn't unlock production)
+  - [ ] **Create** Stripe account
+  - [ ] **Copy test keys** Dashboard > Developers > API keys (`sk_test_...`, `pk_test_...`) into `.env.local`
+  - [ ] **Add test keys** to `vercel env add` for Preview + Development scopes
+  - [ ] **Copy live keys** (`sk_live_...`, `pk_live_...`) into `.env.local`
+  - [ ] **Add live keys** to `vercel env add` for Production scope
+  - [ ] **Enable** Stripe receipt emails: Dashboard > Settings > Emails > toggle ON "Successful payments" and "Refunds"
+
+#### Cloudflare CDN Checklist 
+
+  - [x] **Confirm** `everlastingsbyemaline.com` domain is registered and managed in Cloudflare DNS
+  - [ ] **Create** Cloudflare R2 bucket `everlastings`. Enable public access
+  - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (CNAME added; wait until active)
+  - [ ] **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket. 
+  - [ ] **Copy the 4 values** → paste into `.env.local`
+  - [ ] **Add the 4 values** to `vercel env add` (same values for preview and production)
+
+#### Resend Checklist 
+
+  - [ ] **Create** Resend account
+  - [ ] **Verify** domain `everlastingsbyemaline.com` for sending by adding DNS from Resend to Cloudflare 
+  - [ ] **Copy API key** → paste as `RESEND_API_KEY`
+  - [ ] **Also add** `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com`
+
+#### Shippo Checklist 
+
+  - [ ] **Create** Shippo account 
+  - [ ] **Create** USPS account 
+  - [ ] **Link USPS account**; automatic, no fee
+  - [ ] **No API key required for v1** because Emy uses Shippo's web UI only
+
+#### Meta Business Checklist  
+
+  - [ ] **Get invite** from Emy to her business account 
+  - [ ] **Create** any necessary additional assets: Business Manager, Commerce Manager type: E-commerce, Pixel 
+  - [ ] **Verify the domain**
+  - [ ] **Copy** `META_PIXEL_ID` + generate a system-user `META_ACCESS_TOKEN` (scope: `catalog_management`) → env vars 
+  - [ ] **Review and relay** Instagram-Shopping prerequisites checklist to Emy 
+
+#### Google Analytics Checklist 
+
+  - [ ] **Create** Google Analytics 4 property for `everlastingsbyemaline.com` 
+  - [ ] Note Measurement ID `G-XXXXXXXXXX` to use later in the GA4 script-tag snippet
+  - [ ] **Verify** Google Search Console ownership with DNS records via TXT record or HTML file 
+
+#### Product API Checklist 
+
+  - [ ] **Generate** `PRODUCT_API_KEY`: `openssl rand -hex 32`
+  - [ ] **Paste key into** `.env.local` + `vercel env add` 
+  - [ ] **Ensure a different random value per environment** so a leaked preview key doesn't unlock production
+
+--- **CLEANUP**: BELOW ---
+
+  - [ ] (SEAN) **Stripe** — create account (if not already).  → 
+ . Paste into  + . Live keys (`sk_live_...`, `pk_live_...`) are added to the Production scope only, during this same Phase 0 alongside branch setup, so keys/secrets are handled once. Vercel scoping keeps them separated automatically — see [Environment Strategy](#environment-strategy-reference).
 
 ### Agent bootstrap (run once, after services exist and env vars are set)
 
@@ -297,6 +358,8 @@ const supabase = createClient(
   - [ ] (AGENT) **Bootstrap** Stripe coupons idempotently via `api/_bootstrap/coupons.ts` (created in A1 Stripe). "Bootstrap" here = a one-time script that creates both `cart-recovery-10` and `newsletter-welcome-5` via the Stripe API so dev and prod match. Runs once; idempotent. Alternative: click-create them in the Stripe dashboard.
   - [ ] (AGENT) **Create** Stripe webhook endpoints (test + live) via Stripe CLI (`stripe listen` for dev, `stripe webhook_endpoints create` for live), pointing to `{preview-url}/api/webhook` and `{prod-url}/api/webhook`. Events: `checkout.session.completed`. (Stripe MCP is a fallback; Stripe CLI is the standard.)
   - [ ] (AGENT) **Verify preview URL is functional**: push a throwaway commit on a `feat/_preview-smoketest` branch → open the auto-generated `*.vercel.app` preview URL in a browser → DevTools console must show no CORS errors → `fetch('/api/config').then(r => r.json())` from the console must return the **test** publishable key (`pk_test_...`). Delete the branch after. This catches the failure mode where every previous Vercel project's preview deployments "loaded nothing" due to hardcoded CORS origins. See [Dev/Test Data Hygiene > CORS allowlist](#1-cors-allowlist-the-reason-previews-load-at-all).
+
+--- **CLEANUP**: ABOVE ---
 
 ---
 
@@ -396,25 +459,25 @@ vercel dev
 
 Vercel Dashboard → Settings → Environment Variables. Each var scoped by environment.
 
-| Variable                 | Production                        | Preview + Development   |
-| ------------------------ | --------------------------------- | ----------------------- |
-| `STRIPE_SECRET_KEY`      | `sk_live_...`                     | `sk_test_...`           |
-| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...`                     | `pk_test_...`           |
-| `STRIPE_WEBHOOK_SECRET`  | live signing secret               | test signing secret     |
-| `SUPABASE_URL`           | same                              | same                    |
-| `SUPABASE_PUBLISHABLE_KEY`      | same                              | same                    |
-| `SUPABASE_SECRET_KEY`   | same                              | same                    |
-| `PRODUCT_API_KEY`        | random 64-char string             | different random string |
-| `R2_ACCOUNT_ID`          | same                              | same                    |
-| `R2_ACCESS_KEY_ID`       | same                              | same                    |
-| `R2_SECRET_ACCESS_KEY`   | same                              | same                    |
-| `R2_BUCKET_NAME`         | same                              | same                    |
-| `R2_PUBLIC_URL`          | same                              | same                    |
-| `CLOUDINARY_URL`         | same                              | same                    |
-| `META_PIXEL_ID`          | same                              | same                    |
-| `META_ACCESS_TOKEN`      | same                              | same                    |
-| `RESEND_API_KEY`         | same                              | same                    |
-| `RESEND_FROM_EMAIL`      | `hello@everlastingsbyemaline.com` | same                    |
+| Variable                   | Production                        | Preview + Development   |
+| -------------------------- | --------------------------------- | ----------------------- |
+| `STRIPE_SECRET_KEY`        | `sk_live_...`                     | `sk_test_...`           |
+| `STRIPE_PUBLISHABLE_KEY`   | `pk_live_...`                     | `pk_test_...`           |
+| `STRIPE_WEBHOOK_SECRET`    | live signing secret               | test signing secret     |
+| `SUPABASE_URL`             | same                              | same                    |
+| `SUPABASE_PUBLISHABLE_KEY` | same                              | same                    |
+| `SUPABASE_SECRET_KEY`      | same                              | same                    |
+| `PRODUCT_API_KEY`          | random 64-char string             | different random string |
+| `R2_ACCOUNT_ID`            | same                              | same                    |
+| `R2_ACCESS_KEY_ID`         | same                              | same                    |
+| `R2_SECRET_ACCESS_KEY`     | same                              | same                    |
+| `R2_BUCKET_NAME`           | same                              | same                    |
+| `R2_PUBLIC_URL`            | same                              | same                    |
+| `CLOUDINARY_URL`           | same                              | same                    |
+| `META_PIXEL_ID`            | same                              | same                    |
+| `META_ACCESS_TOKEN`        | same                              | same                    |
+| `RESEND_API_KEY`           | same                              | same                    |
+| `RESEND_FROM_EMAIL`        | `hello@everlastingsbyemaline.com` | same                    |
 
 **Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
 **Resend**: single API key for both environments (free tier 3k/mo). Uses same verified domain.
