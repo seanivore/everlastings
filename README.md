@@ -96,6 +96,7 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 | [GA4 KPIs + Advertising](/assets/docs/GA4_KPIS_AND_ADVERTISING.md)     | KPI + ad strategy                                |
 | [Product Protocol](/assets/docs/PRODUCT_PROTOCOL.md)                   | AI product creation protocol, client guide       |
 | [Client Ask List](/assets/docs/CLIENT_ASK_LIST.md)                     | One-email setup checklist to send to Emy         |
+| [v2.0 Email/AI Pipeline Planning](/assets/docs/archive/v2_0/)          | Post-launch roadmap — AI-assisted email marketing, inbox agents |
 
 ---
 

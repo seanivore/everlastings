@@ -225,8 +225,11 @@
   - [ ] (AGENT) **Style** lightbox (fullscreen overlay, nav arrows, keyboard support)
   - [ ] (AGENT) **Create** inline SVG icons: dimensions, weight, materials, lighting, care, shipping
   - [ ] (AGENT) **Set** responsive breakpoints: 393px, 768px, 1024px, 1440px
+  - [ ] (AGENT) **Add** Consent Mode v2 default-denied snippet to page `<head>` template (fires BEFORE gtag.js and fbq load — see IMPL_GUIDE AR #33)
   - [ ] (AGENT) **Add** GA4 `gtag.js` snippet to page `<head>` template
-  - [ ] (AGENT) **Add** Meta Pixel base code to page `<head>` template (alongside GA4)
+  - [ ] (AGENT) **Add** Meta Pixel base code to page `<head>` template (alongside GA4) with default-revoked consent call
+  - [ ] (AGENT) **Style** cookie consent banner (bottom-fixed, Accept / Reject / Customize buttons)
+  - [ ] (AGENT) **Style** privacy/cookie preferences modal (category toggles: Essential / Analytics / Advertising)
   - [ ] (AGENT) **Style** contemplation popup (bottom-right peel-up animation)
   - [ ] (AGENT) **Style** exit intent modal (centered overlay)
   - [ ] (AGENT) **Style** product interest CTA (below sticky card buttons)
@@ -311,7 +314,9 @@
   - [ ] (AGENT) **Wire** CTA 1 (product interest): POST to subscribe + insert product_interests
   - [ ] (AGENT) **Wire** CTA 2 (exit intent): mouse-leave / visibilitychange detection on all product pages
   - [ ] (AGENT) **Wire** CTA 3 (contemplation): 3-min timer + promo code generation via api/subscribe
-  - [ ] (AGENT) **Wire** GA4 + Meta Pixel events per the event table in IMPL_GUIDE > Enhanced E-commerce GA4 Event Definitions
+  - [ ] (AGENT) **Create** `assets/js/consent.js` — cookie consent banner logic: show on first visit, persist choice in localStorage as `{analytics: bool, advertising: bool, timestamp}`, update gtag Consent Mode + Meta Pixel consent on change, expose `window.openConsentModal()` for the footer revoke link. See IMPL_GUIDE AR #33.
+  - [ ] (AGENT) **Wire** GA4 + Meta Pixel events per the event table in IMPL_GUIDE > Enhanced E-commerce GA4 Event Definitions. Every event fires only if consent granted for that category.
+  - [ ] (AGENT) **Add** "Cookie preferences" link to footer on every page, opens the consent modal via `window.openConsentModal()`.
 
 ### C2: Checkout Flow E2E
 

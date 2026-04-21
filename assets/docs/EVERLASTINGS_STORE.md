@@ -678,6 +678,25 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
   - [ ] Confirm GA4 and Meta Pixel both show live traffic.
   - [ ] Verify Supabase has not auto-paused (it shouldn't with live traffic, but confirm).
 
+### Email Infrastructure
+
+All outbound transactional email routes through Resend (sending) and all reply/inbound email routes through Google Workspace (receiving). Resend cannot receive email directly — replies to our `From:` address land in Emy's Google Workspace inbox via configured aliases.
+
+**Google Workspace aliases** (all route to Emy's primary inbox):
+  + `admin@everlastingsbyemaline.com` — master admin address
+  + `hello@everlastingsbyemaline.com` — customer-facing general inbox; used as `RESEND_FROM_EMAIL` and `RESEND_REPLY_TO_EMAIL`
+  + `orders@everlastingsbyemaline.com` — potential future segmentation for order-specific notifications
+  + `shipping@everlastingsbyemaline.com` — potential future segmentation for tracking/shipping notifications
+  + `sunkeeper@everlastingsbyemaline.com` — reserved for per-product or campaign-specific sending
+
+**Resend domain setup**: `everlastingsbyemaline.com` (apex) verified; Return-Path on `send.everlastingsbyemaline.com` (auto-handled by Resend) for SPF/DMARC reputation isolation; click tracking ON; open tracking OFF (inaccurate in modern mail clients).
+
+**Post-v1 email roadmap** — `assets/docs/archive/v2_0/` contains exploratory planning docs for AI-assisted email marketing, inbox agents, and multi-platform chat integrations. Planned as a quick post-launch follow-up to this deliverable, before the advertising phase. Key documents:
+  + `EMAIL_MARKETING.md` — marketing planner for the full v3 email strategy
+  + `RESEND_LLMS_FULL.md` — full Resend reference for LLMs
+  + `GIVE_AGENT_INBOX.md` — agent-readable inbox pattern
+  + Additional integration refs: `RESEND_CLI.md`, `VERCEL_RESEND.md`, `SUPABASE_RESEND.md`, `RESEND_VERCEL_CHAT_SDK.md`, `CHAT_SDK_CARD_EMAILS.md`, `CLOUDFLARE_WORKERS_RESEND.md`, `PYTHON_RESEND_SDK.md`
+
 ---
 
 ## Supabase Schema

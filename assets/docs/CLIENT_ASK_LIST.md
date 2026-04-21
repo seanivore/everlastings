@@ -109,7 +109,21 @@ Stripe processes the actual credit card transactions.
 
 ---
 
-## 4. Content (optional — separate track)
+## 4. Privacy policy sign-off (quick review pre-launch)
+
+Before we launch, I'll draft a privacy policy + cookie policy for the site. It'll be plain-English (no lawyer jargon), covering:
+  + What data we collect (names, emails, shipping addresses — for orders only)
+  + What cookies the site uses (Stripe checkout, Google Analytics if consented, Meta Pixel if consented)
+  + How users can opt out / delete their data
+  + Contact info for privacy requests
+
+  + **What you do**: read it, tell me if anything looks wrong or needs softening, sign off. I'll put it on the site as `/privacy` and `/cookies`.
+  + **Time**: 10 minutes reading, zero work otherwise.
+  + **When**: I'll send it during final QA (~1 week pre-launch).
+
+---
+
+## 5. Content (optional — separate track)
 
 Not blocking the build, but the sooner these exist, the sooner the site stops showing placeholders.
 
@@ -138,7 +152,8 @@ When you finish each piece, here's the cheat sheet of what lands back in my inbo
 | 2  — Shippo ready              | "Shippo ready, USPS linked"                   |
 | 3a — Stripe ownership decision | "I'll own it" or "you own it"                 |
 | 3b — Stripe signup done        | "Stripe ready, bank verified"                 |
-| 4  — Content                   | Shared folder or Drive link                   |
+| 4  — Privacy policy sign-off   | "Approved" after reading (I'll send pre-launch) |
+| 5  — Content                   | Shared folder or Drive link                   |
 
 ---
 
