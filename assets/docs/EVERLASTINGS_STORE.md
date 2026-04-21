@@ -669,6 +669,7 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
 | Stripe API key rotation        | Annually or on leak   | Rotate live secret key if a device is lost or a key is ever pasted into a shared tool. Update Vercel Production scope after rotation.                         | N/A — operational hygiene.                                                                      |
 | Supabase DB password           | Annually or on leak   | Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed.                          | N/A — operational hygiene.                                                                      |
 | `PRODUCT_API_KEY` rotation     | Annually or on leak   | `openssl rand -hex 32`; update both Production and Preview scopes in Vercel. Update the Custom GPT's Bearer token to match.                                   | N/A — operational hygiene.                                                                      |
+| DMARC policy tightening        | ~30 days post-launch  | Launch with `p=none` (observe-only). After 30 days of clean send history, upgrade TXT record to `p=quarantine`, then 30 days later to `p=reject` for full spoofing protection. | N/A — operational hygiene. Tightens email deliverability + anti-spoofing over time. |
 
 **First-month warm-up checklist** (2026-05-ish):
 

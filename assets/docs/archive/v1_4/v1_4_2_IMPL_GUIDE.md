@@ -288,7 +288,8 @@ const supabase = createClient(
   - [ ] **Get** credit/debit card from Emy (Cloudflare R2 requires a payment method on file even for free tier).
   - [ ] **Create** R2 bucket `everlastings` with public access enabled.
   - [ ] **Connect** R2 custom domain: bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com`. Wait for Active status.
-  - [ ] **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to the `everlastings` bucket.
+  - [ ] **Create** R2 API token via the **R2-specific path** (critical — see gotcha below): R2 Object Storage > click into `everlastings` bucket > scroll to bottom > **Account Details** section > **API Tokens** > **{ } Manage** → Create Token, Object Read & Write, scoped to `everlastings`. Result page shows S3-format Access Key ID + Secret Access Key.
+    + **Gotcha**: the generic "My Profile → API Tokens → Create Token → R2 permissions" path opens a visually-identical creation form but produces a Cloudflare API token (`cfat_...`) instead of S3 credentials. `@aws-sdk/client-s3` needs S3-format credentials, not the `cfat_` token. Use the R2-specific path above.
   - [ ] **Copy** the 4 values to `.env.local`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=everlastings`. Also add `R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com`.
   - [ ] **Run** `vercel env add` for all 5 vars across Production + Development scopes.
 
