@@ -39,6 +39,8 @@ Details to start the process of thinking about how and what needs to be done to 
 | Added Resend Claude Code Skills               | `npx skills add resend/resend-skills`                   |
 | Added Resend Claude Code Email Best Practices | `npx skills add resend/email-best-practices`            |
 | Full LLM TXT Resend Documentation             | `assets/docs/archive/v2_0/RESEND_LLMS_FULL.md`          |
+| Shippo API Reference                          | `assets/docs/archive/v2_0/SHIPPO_API.md`                |
+| Shippo LLM TXT Full                           | `assets/docs/archive/v2_0/SHIPPO_LLMS_FULL.md`          |
 
 ---
 

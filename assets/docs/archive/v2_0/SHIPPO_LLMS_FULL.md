@@ -1,0 +1,205 @@
+# Shippo API Documentation
+
+## Docs
+
+- [Create a new address](https://docs.goshippo.com/api-reference/address-book/create-a-new-address.md): Stores a new address to your address book
+- [Delete an address](https://docs.goshippo.com/api-reference/address-book/delete-an-address.md): Removes an existing address from your address book using an object ID
+- [Retrieve a single address](https://docs.goshippo.com/api-reference/address-book/retrieve-a-single-address.md): Returns an existing address using an object ID
+- [Retrieve addresses](https://docs.goshippo.com/api-reference/address-book/retrieve-addresses.md): Returns a list of addresses based on search criteria
+- [Update an address](https://docs.goshippo.com/api-reference/address-book/update-an-address.md): Updates values in an existing address
+- [Create a new address](https://docs.goshippo.com/api-reference/addresses/create-a-new-address.md): Creates a new address object. You can use address objects to create new shipments, calculate rates, and to create orders.
+- [List all addresses](https://docs.goshippo.com/api-reference/addresses/list-all-addresses.md): Returns a list of all address objects that have been created in this account.
+- [Retrieve an address](https://docs.goshippo.com/api-reference/addresses/retrieve-an-address.md): Returns an existing address using an object ID.
+- [Validate an address](https://docs.goshippo.com/api-reference/addresses/validate-an-address.md): Validates an existing address using an object ID
+- [Batch](https://docs.goshippo.com/api-reference/batch.md)
+- [Add shipments to a batch](https://docs.goshippo.com/api-reference/batches/add-shipments-to-a-batch.md): Adds batch shipments to an existing batch.
+- [Create a batch](https://docs.goshippo.com/api-reference/batches/create-a-batch.md): Creates a new batch object for purchasing shipping labels for many shipments at once. Batches are created asynchronously. This means that the API response won't include your batch shipments yet. You need to retrieve the batch later to verify that all batch shipments are valid.
+- [Purchase a batch](https://docs.goshippo.com/api-reference/batches/purchase-a-batch.md): Purchases an existing batch with a status of `VALID`.  Once you send a POST request to the purchase endpoint the batch status will change to `PURCHASING`.  When all the shipments are purchased, the status will change to `PURCHASED` and you will receive a  `batch_purchased` webhook indicating that th…
+- [Remove shipments from a batch](https://docs.goshippo.com/api-reference/batches/remove-shipments-from-a-batch.md): Removes shipments from an existing batch shipment.
+- [Retrieve a batch](https://docs.goshippo.com/api-reference/batches/retrieve-a-batch.md): Returns a batch using an object ID. <br> Batch shipments are displayed 100 at a time.  You can iterate  through each `page` using the `?page= query` parameter.  You can also filter based on batch shipment  status, for example, by passing a query param like `?object_results=creation_failed`. <br>  Fo…
+- [Add a Shippo carrier account](https://docs.goshippo.com/api-reference/carrier-accounts/add-a-shippo-carrier-account.md): Adds a Shippo carrier account
+- [Connect an existing carrier account using OAuth 2.0](https://docs.goshippo.com/api-reference/carrier-accounts/connect-an-existing-carrier-account-using-oauth-20.md): Used by client applications to setup or reconnect an existing carrier account with carriers that support OAuth 2.0
+- [Create a new carrier account](https://docs.goshippo.com/api-reference/carrier-accounts/create-a-new-carrier-account.md): Creates a new carrier account or connects an existing carrier account to the Shippo account.
+- [Get Carrier Registration status](https://docs.goshippo.com/api-reference/carrier-accounts/get-carrier-registration-status.md): Returns the registration status for the given account for the given carrier
+- [List all carrier accounts](https://docs.goshippo.com/api-reference/carrier-accounts/list-all-carrier-accounts.md): Returns a list of all carrier accounts connected to your Shippo account. These carrier accounts include both Shippo carrier accounts and your own carrier accounts that you have connected to your Shippo account.
+- [Retrieve a carrier account](https://docs.goshippo.com/api-reference/carrier-accounts/retrieve-a-carrier-account.md): Returns an existing carrier account using an object ID.
+- [Update a carrier account](https://docs.goshippo.com/api-reference/carrier-accounts/update-a-carrier-account.md): Updates an existing carrier account object. The account_id and carrier can't be updated. This is because they form the unique identifier together.
+- [List all carrier parcel templates](https://docs.goshippo.com/api-reference/carrier-parcel-templates/list-all-carrier-parcel-templates.md): List all carrier parcel template objects. <br> Use the following query string params to filter the results as needed. <br> <ul> <li>`include=all` (the default). Includes templates from all carriers </li> <li>`include=user`. Includes templates only from carriers which the user has added (whether or n…
+- [Retrieve a carrier parcel templates](https://docs.goshippo.com/api-reference/carrier-parcel-templates/retrieve-a-carrier-parcel-templates.md): Fetches the parcel template information for a specific carrier parcel template, identified by the token.
+- [Create a new customs declaration](https://docs.goshippo.com/api-reference/customs-declarations/create-a-new-customs-declaration.md): Creates a new customs declaration object
+- [List all customs declarations](https://docs.goshippo.com/api-reference/customs-declarations/list-all-customs-declarations.md): Returns a list of all customs declaration objects
+- [Retrieve a customs declaration](https://docs.goshippo.com/api-reference/customs-declarations/retrieve-a-customs-declaration.md): Returns an existing customs declaration using an object ID
+- [Create a new customs item](https://docs.goshippo.com/api-reference/customs-items/create-a-new-customs-item.md): Creates a new customs item object.
+- [List all customs items](https://docs.goshippo.com/api-reference/customs-items/list-all-customs-items.md): Returns a list all customs items objects.
+- [Retrieve a customs item](https://docs.goshippo.com/api-reference/customs-items/retrieve-a-customs-item.md): Returns an existing customs item using an object ID
+- [Create a new manifest](https://docs.goshippo.com/api-reference/manifests/create-a-new-manifest.md): Creates a new manifest object.
+- [List all manifests](https://docs.goshippo.com/api-reference/manifests/list-all-manifests.md): Returns a list of all manifest objects.
+- [Retrieve a manifest](https://docs.goshippo.com/api-reference/manifests/retrieve-a-manifest.md): Returns an existing manifest using an object ID.
+- [Create a new order](https://docs.goshippo.com/api-reference/orders/create-a-new-order.md): Creates a new order object.
+- [List all orders](https://docs.goshippo.com/api-reference/orders/list-all-orders.md): Returns a list of all order objects.
+- [Retrieve an order](https://docs.goshippo.com/api-reference/orders/retrieve-an-order.md): Retrieves an existing order using an object ID.
+- [API Reference Overview](https://docs.goshippo.com/api-reference/overview.md): Learn about the Shippo API — authentication, request format, versioning, and core REST principles.
+- [Parcel Templates](https://docs.goshippo.com/api-reference/parcel-templates/index.md): Predefined parcel templates with preset dimensions for supported carriers. Use these tokens when creating parcels.
+- [Create a new parcel](https://docs.goshippo.com/api-reference/parcels/create-a-new-parcel.md): Creates a new parcel object.
+- [List all parcels](https://docs.goshippo.com/api-reference/parcels/list-all-parcels.md): Returns a list of all parcel objects.
+- [Retrieve an existing parcel](https://docs.goshippo.com/api-reference/parcels/retrieve-an-existing-parcel.md): Returns parcel details using an existing parcel object ID (this will not return parcel details associated with un-purchased shipment/rate parcel object IDs).
+- [Parse Address](https://docs.goshippo.com/api-reference/parser/parse-address.md): Parses a single string into an Address model
+- [Create a pickup](https://docs.goshippo.com/api-reference/pickups/create-a-pickup.md): Creates a pickup object. This request is for a carrier to come to a specified location to take a package for shipping.
+- [Clear current default parcel template](https://docs.goshippo.com/api-reference/rates-at-checkout/clear-current-default-parcel-template.md): Clears the currently configured default parcel template for live rates.
+- [Generate a live rates request](https://docs.goshippo.com/api-reference/rates-at-checkout/generate-a-live-rates-request.md): Initiates a live rates request. Include either the object ID for an existing address record or a fully formed address object when entering an address value. You can also enter the object ID of an existing user parcel template or a fully formed user parcel template object as the parcel value.
+- [Show current default parcel template](https://docs.goshippo.com/api-reference/rates-at-checkout/show-current-default-parcel-template.md): Retrieve and display the currently configured default parcel template for live rates.
+- [Update default parcel template](https://docs.goshippo.com/api-reference/rates-at-checkout/update-default-parcel-template.md): Update the currently configured default parcel template for live rates. The object_id in the request payload should identify the user parcel template to be the new default.
+- [Retrieve a rate](https://docs.goshippo.com/api-reference/rates/retrieve-a-rate.md): Returns an existing rate using a rate object ID. Rates older than 390 days are not returned.
+- [Retrieve shipment rates](https://docs.goshippo.com/api-reference/rates/retrieve-shipment-rates.md): Returns a paginated list of rates associated with a shipment. Rates for shipments older than 390 days are not returned.
+- [Retrieve shipment rates in currency](https://docs.goshippo.com/api-reference/rates/retrieve-shipment-rates-in-currency.md): Returns all available shipping rates for a shipment object.
+- [Create a refund](https://docs.goshippo.com/api-reference/refunds/create-a-refund.md): Creates a new refund object.
+- [List all refunds](https://docs.goshippo.com/api-reference/refunds/list-all-refunds.md): Returns a list all refund objects.
+- [Retrieve a refund](https://docs.goshippo.com/api-reference/refunds/retrieve-a-refund.md): Returns an existing rate using a rate object ID.
+- [Create a new service group](https://docs.goshippo.com/api-reference/service-groups/create-a-new-service-group.md): Creates a new service group.
+- [Delete a service group](https://docs.goshippo.com/api-reference/service-groups/delete-a-service-group.md): Deletes an existing service group using an object ID.
+- [List all service groups](https://docs.goshippo.com/api-reference/service-groups/list-all-service-groups.md): Returns a list of service group objects.
+- [Update an existing service group](https://docs.goshippo.com/api-reference/service-groups/update-an-existing-service-group.md): Updates an existing service group object. <br>The object_id cannot be updated as it is the unique identifier for the object.
+- [Service Levels](https://docs.goshippo.com/api-reference/service-levels/index.md): Service level tokens for all supported carriers. Use these tokens when creating shipments, transactions, and rates.
+- [Create a new shipment](https://docs.goshippo.com/api-reference/shipments/create-a-new-shipment.md): Creates a new shipment object.
+- [List all shipments](https://docs.goshippo.com/api-reference/shipments/list-all-shipments.md): Returns a list of all shipment objects.<br><br> In order to filter results, you must use the below path parameters.  Provided dates should be ISO 8601 UTC dates (timezone offsets are currently not supported).<br><br>
+- [Retrieve a shipment](https://docs.goshippo.com/api-reference/shipments/retrieve-a-shipment.md): Returns an existing shipment using an object ID. Shipment objects older than 390 days are not returned.
+- [Create a Shippo Account](https://docs.goshippo.com/api-reference/shippo-accounts/create-a-shippo-account.md): Creates a new <a href="https://docs.goshippo.com/docs/platformaccounts/platform_using_accounts/">Shippo Managed Account</a>.
+- [List all Shippo Accounts](https://docs.goshippo.com/api-reference/shippo-accounts/list-all-shippo-accounts.md): Returns a list of Shippo Managed Accounts objects.
+- [Retrieve a Shippo Account](https://docs.goshippo.com/api-reference/shippo-accounts/retrieve-a-shippo-account.md): Returns a Shippo Managed Account using an object ID.
+- [Update a Shippo Account](https://docs.goshippo.com/api-reference/shippo-accounts/update-a-shippo-account.md): Updates a Shippo Managed Account using an object ID.
+- [Track](https://docs.goshippo.com/api-reference/track.md)
+- [Get a tracking status](https://docs.goshippo.com/api-reference/tracking-status/get-a-tracking-status.md): Returns the tracking status of a shipment using a carrier name and a tracking number.
+- [Register a tracking webhook](https://docs.goshippo.com/api-reference/tracking-status/register-a-tracking-webhook.md): Registers a webhook that will send HTTP notifications to you when the status of your tracked package changes. For more details on creating a webhook, see our guides on <a href="https://docs.goshippo.com/docs/tracking/webhooks/">Webhooks</a> and <a href="https://docs.goshippo.com/docs/tracking/tracki…
+- [Transaction](https://docs.goshippo.com/api-reference/transaction.md)
+- [Create a shipping label](https://docs.goshippo.com/api-reference/transactions/create-a-shipping-label.md): Creates a new transaction object and purchases the shipping label using a rate object that has previously been created. <br> OR <br> Creates a new transaction object and purchases the shipping label instantly using shipment details, an existing carrier account, and an existing service level token.
+- [List all shipping labels](https://docs.goshippo.com/api-reference/transactions/list-all-shipping-labels.md): Returns a list of all transaction objects.
+- [Retrieve a shipping label](https://docs.goshippo.com/api-reference/transactions/retrieve-a-shipping-label.md): Returns an existing transaction using an object ID.
+- [Create a new user parcel template](https://docs.goshippo.com/api-reference/user-parcel-templates/create-a-new-user-parcel-template.md): Creates a new user parcel template. <br>You can choose to create a parcel template using a preset carrier template as a starting point, or you can create an entirely custom one. To use a preset carrier template, pass in a unique template token from <a href="/shippoapi/public-api/parcel-templates">th…
+- [Delete a user parcel template](https://docs.goshippo.com/api-reference/user-parcel-templates/delete-a-user-parcel-template.md): Deletes a user parcel template using an object ID.
+- [List all user parcel templates](https://docs.goshippo.com/api-reference/user-parcel-templates/list-all-user-parcel-templates.md): Returns a list all of all user parcel template objects.
+- [Retrieves a user parcel template](https://docs.goshippo.com/api-reference/user-parcel-templates/retrieves-a-user-parcel-template.md): Returns the parcel template information for a specific user parcel template, identified by the object ID.
+- [Update an existing user parcel template](https://docs.goshippo.com/api-reference/user-parcel-templates/update-an-existing-user-parcel-template.md): Updates an existing user parcel template.
+- [Validate address](https://docs.goshippo.com/api-reference/validation/validate-address.md): Returns validation test results along with a recommended address. <br>  Validates both US and international addresses.<br><br>**US required combinations**<br> state_province + city_locality + address_line_1<br>**or**<br>address_line_1 + postal_code<br><br> **International required combinations** <br…
+- [Create a new webhook](https://docs.goshippo.com/api-reference/webhooks/create-a-new-webhook.md): Creates a new webhook to send notifications to a URL when a specific event occurs.
+- [Delete a specific webhook](https://docs.goshippo.com/api-reference/webhooks/delete-a-specific-webhook.md): Deletes a specific webhook using the webhook object ID.
+- [List all webhooks](https://docs.goshippo.com/api-reference/webhooks/list-all-webhooks.md): Returns a list of all webhooks you have created.
+- [Retrieve a specific webhook](https://docs.goshippo.com/api-reference/webhooks/retrieve-a-specific-webhook.md): Returns the details of a specific webhook using the webhook object ID.
+- [Update an existing webhook](https://docs.goshippo.com/api-reference/webhooks/update-an-existing-webhook.md): Updates an existing webhook using the webhook object ID.
+- [Shippo API release notes](https://docs.goshippo.com/docs/API_Concepts/APIChangeLog.md): Track backwards-compatible and backwards-incompatible changes in each Shippo API version release.
+- [Expand response](https://docs.goshippo.com/docs/API_Concepts/APIExpand.md): Learn how to use the expand query parameter to include full object details in Shippo API responses.
+- [HTTP response status codes](https://docs.goshippo.com/docs/API_Concepts/APIHTTPStatusCodes.md): Reference guide for HTTP response status codes returned by the Shippo API, from 200 OK to 5xx errors.
+- [API versions](https://docs.goshippo.com/docs/API_Concepts/APIVersioning.md): Learn how Shippo API versioning works, how to set your version, and how to test before upgrading.
+- [Shippo API upgrade guide](https://docs.goshippo.com/docs/API_Concepts/API_Upgrade_Guides/upgrade_guide.md): Step-by-step instructions to identify your current Shippo API version and safely upgrade to the latest.
+- [Upgrading from v20140211 to v20180208](https://docs.goshippo.com/docs/API_Concepts/API_Upgrade_Guides/v20140211_to_2018.md): Review deprecated and added fields when upgrading from Shippo API v20140211 to v20180208.
+- [Upgrading from v20161025 to v20180208](https://docs.goshippo.com/docs/API_Concepts/API_Upgrade_Guides/v20161025_to_2018.md): Review deprecated and added fields when upgrading from Shippo API v20161025 to v20180208.
+- [Upgrading from v20170329 to v20180208](https://docs.goshippo.com/docs/API_Concepts/API_Upgrade_Guides/v20170329_to_2018.md): Review deprecated and added fields when upgrading from Shippo API v20170329 to v20180208.
+- [Upgrading from v20170801  to v20180208](https://docs.goshippo.com/docs/API_Concepts/API_Upgrade_Guides/v20170801_to_2018.md): Review the fields added when upgrading from Shippo API v20170801 to v20180208, with no deprecations.
+- [Asynchronous API response handling](https://docs.goshippo.com/docs/API_Concepts/AsynchronusAPICall.md): Learn how asynchronous API responses work in Shippo and when to use sync versus async requests.
+- [Filtering](https://docs.goshippo.com/docs/API_Concepts/Filtering.md): Learn how to use query parameters to filter and paginate results from Shippo API endpoints.
+- [Glossary](https://docs.goshippo.com/docs/API_Concepts/Glossary.md): Definitions of common shipping and Shippo API terms, from address validation to white-label integrations.
+- [IP addresses and domains](https://docs.goshippo.com/docs/API_Concepts/IPAddressesAndDomains.md): Find the domain names and IP addresses you need to allowlist for your Shippo API integration.
+- [Rate limits](https://docs.goshippo.com/docs/API_Concepts/RateLimits.md): View per-endpoint rate limits for the Shippo API and learn what to do if you need higher limits.
+- [API objects](https://docs.goshippo.com/docs/API_Concepts/api-objects.md): Understand how Shippo API objects and object IDs work, and learn how to create, retrieve, and use them.
+- [Address book](https://docs.goshippo.com/docs/AddressAPI/address_book.md): Store, retrieve, update, and delete addresses using the Shippo Addresses API address book.
+- [Addresses API introduction](https://docs.goshippo.com/docs/AddressAPI/address_intro.md): Get started with the Shippo Addresses API for storing, validating, and parsing addresses in your application.
+- [Address parser](https://docs.goshippo.com/docs/AddressAPI/address_parser.md): Convert an address string into a structured address object using the Shippo Addresses API parser.
+- [Address validation](https://docs.goshippo.com/docs/AddressAPI/address_validate.md): Validate shipping addresses with the Shippo API to prevent failed deliveries and correction surcharges.
+- [Address validation](https://docs.goshippo.com/docs/Addresses/AddressValidation.md): Validate addresses before creating labels using the Shippo API to avoid failed deliveries and surcharges.
+- [Refunding labels](https://docs.goshippo.com/docs/Billing_and_Invoices/RefundingLabels.md): Learn how to request refunds for unused shipping labels via the Shippo API, including refund statuses and carrier policies.
+- [Carrier accounts](https://docs.goshippo.com/docs/Carriers/CarrierAccounts.md): Connect Shippo carrier accounts or your own carrier accounts to get shipping rates and purchase labels through the API.
+- [Carrier capabilities](https://docs.goshippo.com/docs/Carriers/CarrierCapabilities.md): View supported features, service areas, and account requirements for each carrier available through the Shippo API.
+- [Carrier authorization using OAuth](https://docs.goshippo.com/docs/Carriers/CarrierOAuth.md): Authorize carrier accounts like UPS using OAuth so Shippo can request rates and buy labels on your behalf.
+- [Carrier reference fields](https://docs.goshippo.com/docs/Carriers/CarrierReferenceFields.md): Add custom reference information like order numbers to your shipping labels using supported carrier reference fields.
+- [DHL eCommerce](https://docs.goshippo.com/docs/Carriers/DHLeCommerce.md): Connect your DHL eCommerce account to Shippo and learn how to get rates and purchase shipping labels.
+- [ePost Global](https://docs.goshippo.com/docs/Carriers/EPostGlobal.md): Learn about ePost Global requirements for including line items in the parcel object for domestic shipment rates and labels.
+- [Get your Carrier Account Details](https://docs.goshippo.com/docs/Carriers/Integration_guides/APG/create_an_account.md): Add your APG carrier account credentials to Shippo so you can generate shipping rates and create labels.
+- [Create shipment](https://docs.goshippo.com/docs/Carriers/Integration_guides/APG/create_shipment.md): Create an APG shipment with addresses, parcel details, and customs declarations to generate shipping rates.
+- [Multi-parcel support](https://docs.goshippo.com/docs/Carriers/Integration_guides/APG/multiparcel-support.md): Create multi-parcel shipments with APG using the one-step or two-step label creation process in Shippo.
+- [Purchase label](https://docs.goshippo.com/docs/Carriers/Integration_guides/APG/purchase_label.md): Purchase an APG shipping label from a created shipment or generate one in a single API call using Shippo.
+- [Weights and dimensions rules](https://docs.goshippo.com/docs/Carriers/Integration_guides/APG/weights_and_dimensions_rules.md): Review APG weight limits and dimension rules by destination country and product type for international shipments.
+- [Get your Carrier Account Details](https://docs.goshippo.com/docs/Carriers/Integration_guides/BetterTrucks/create_an_account.md): Add your Better Trucks carrier account to Shippo using your API key and account ID to start creating shipments.
+- [Create shipment](https://docs.goshippo.com/docs/Carriers/Integration_guides/BetterTrucks/create_shipment.md): Create a Better Trucks shipment with addresses, parcel details, and extras like signature confirmation to get rates.
+- [Purchase label](https://docs.goshippo.com/docs/Carriers/Integration_guides/BetterTrucks/purchase_label.md): Purchase a Better Trucks shipping label from an existing shipment rate or create one in a single API call.
+- [Track](https://docs.goshippo.com/docs/Carriers/Integration_guides/BetterTrucks/track.md): Track your Better Trucks shipments using the Shippo Tracking API with the tracking number from your label purchase.
+- [Get your Carrier Account Details](https://docs.goshippo.com/docs/Carriers/Integration_guides/Colissimo/create_an_account.md): Use Shippo's built-in Colissimo account or connect your own Colissimo carrier account to start creating shipments.
+- [Create shipment](https://docs.goshippo.com/docs/Carriers/Integration_guides/Colissimo/create_shipment.md): Create a Colissimo shipment with addresses, parcels, and customs declarations for domestic or international shipping.
+- [Purchase label](https://docs.goshippo.com/docs/Carriers/Integration_guides/Colissimo/purchase_label.md): Purchase a Colissimo shipping label from an existing shipment or create one in a single API call through Shippo.
+- [Create shipment](https://docs.goshippo.com/docs/Carriers/Integration_guides/RoyalMail-Tracked/create_shipment.md): Create a Royal Mail Tracked shipment with addresses, parcel details, and customs declarations for UK and international shipping.
+- [Purchase label](https://docs.goshippo.com/docs/Carriers/Integration_guides/RoyalMail-Tracked/purchase_label.md): Purchase a Royal Mail Tracked shipping label by submitting a rate object ID to the Shippo transactions endpoint.
+- [Terms Acceptance](https://docs.goshippo.com/docs/Carriers/Integration_guides/RoyalMail-Tracked/terms_and_conditions_acceptance.md): Accept Royal Mail Terms and Conditions before your first label purchase via the Shippo Web App or API Portal.
+- [Tracking](https://docs.goshippo.com/docs/Carriers/Integration_guides/RoyalMail-Tracked/track.md): Track Royal Mail Tracked shipments and receive webhook notifications for status changes using the Shippo Tracking API.
+- [UPS Mail Innovations](https://docs.goshippo.com/docs/Carriers/UPSMailInnovations.md): Ship lightweight parcels and letters using UPS Mail Innovations through your Shippo integration for US domestic shipments.
+- [API Quickstart Guide](https://docs.goshippo.com/docs/Guides_general/API_quickstart.md): Make your first Shippo API call by creating an address, setting up your token, and testing a request.
+- [SDKs](https://docs.goshippo.com/docs/Guides_general/ClientLibraries.md): Find Shippo SDKs for Python, Node.js, Java, C#, PHP, and Go, plus our Postman collection for API testing.
+- [MCP Server](https://docs.goshippo.com/docs/Guides_general/MCPServer.md): Use the Shippo MCP Server to let AI assistants create shipments, generate labels, track packages, and manage shipping.
+- [Instalabel - single call label creation](https://docs.goshippo.com/docs/Guides_general/Single_call.md): Create a shipping label in one API call using Instalabel when you already know your carrier and service level.
+- [Authentication](https://docs.goshippo.com/docs/Guides_general/authentication.md): Learn how to authenticate Shippo API requests using live and test API keys, and manage your tokens securely.
+- [Authentication using JWT](https://docs.goshippo.com/docs/Guides_general/authentication_using_JWT.md): Generate JWTs to securely authenticate client-side apps with the Shippo API for white label or gray label integrations.
+- [Generate your first label](https://docs.goshippo.com/docs/Guides_general/generate_shipping_label.md): Create your first shipping label with the Shippo API using a two-step rate-then-purchase flow or a single API call.
+- [Generate your first label using Postman](https://docs.goshippo.com/docs/Guides_general/generate_shipping_label_postman.md): Create your first Shippo shipping label step by step using our Postman collection with video walkthroughs.
+- [Choosing Your Integration Path](https://docs.goshippo.com/docs/Guides_general/integration-paths.md): Understand which Shippo integration model fits your product before you write your first API call.
+- [Testing the Shippo API](https://docs.goshippo.com/docs/Guides_general/testing.md): Use Shippo test mode to try all API features, including label creation, without being charged.
+- [International shipping](https://docs.goshippo.com/docs/International_Shipping/InternationalShipping.md): Ship internationally with the Shippo API by creating customs declarations and items to clear customs for your packages.
+- [Manifests and SCAN forms](https://docs.goshippo.com/docs/Manifests_and_Pickups/ManifestAndScanForms.md): Create manifests and SCAN forms to close out daily shipments so carriers can accept all packages with a single scan.
+- [Pickups](https://docs.goshippo.com/docs/Manifests_and_Pickups/Pickups.md): Schedule carrier pickups with USPS and DHL Express for your Shippo shipments using the pickups endpoint.
+- [OAuth](https://docs.goshippo.com/docs/OAuth_Integrations/OAuth.md): Set up OAuth to let your platform users create or connect Shippo accounts and authorize your app to ship on their behalf.
+- [Orders](https://docs.goshippo.com/docs/Orders/Orders.md): Create, retrieve, list, and manage orders via the Shippo API, then purchase labels and track shipments for each order.
+- [Appendix](https://docs.goshippo.com/docs/Partner_Integration/appendix.md): Glossary of key Shippo integration concepts including address validation, rate shopping, label purchase, and tracking.
+- [Business Cases for the Shippo API](https://docs.goshippo.com/docs/Partner_Integration/business_cases.md): Learn how platforms, 3PLs, single merchants, and returns providers integrate with the Shippo API for order fulfillment.
+- [Choosing Business Cases/User Stories](https://docs.goshippo.com/docs/Partner_Integration/choosing_business_cases.md): Select user stories for your Shippo integration covering shipments, customs, multi-parcel, refunds, and tracking scenarios.
+- [Designing Your Shipping Solution](https://docs.goshippo.com/docs/Partner_Integration/design_solution.md): Review the recommended minimum shipping features to include at launch, from rate shopping and label purchase to tracking.
+- [Data flow sequence](https://docs.goshippo.com/docs/Partner_Integration/flow.md): View data flow diagrams showing how merchants, platforms, Shippo, and carriers interact during label purchase and tracking.
+- [Where to Get Information](https://docs.goshippo.com/docs/Partner_Integration/get_info.md): Find where to access Shippo technical documentation, API guides, support resources, and reference materials.
+- [Integration Foundation Decisions](https://docs.goshippo.com/docs/Partner_Integration/int_decisions.md): Decide between gray label and white label account types and choose your UI approach for your Shippo integration.
+- [Shippo API Integration Guide](https://docs.goshippo.com/docs/Partner_Integration/intro.md): Overview of the Shippo API Integration Guide for partners adding order fulfillment to e-commerce platforms.
+- [Prerequisites](https://docs.goshippo.com/docs/Partner_Integration/prereqs.md): Set up your Shippo account and generate an API key before you start integrating with the Shippo API.
+- [Sandbox testing](https://docs.goshippo.com/docs/Partner_Integration/sandbox_testing.md): Set up a sandbox environment to build and test your Shippo integration using test API tokens and dedicated accounts.
+- [Test plan](https://docs.goshippo.com/docs/Partner_Integration/test_plan.md): Build a test plan for your Shippo integration with scenarios for address validation, carrier setup, rating, and labels.
+- [Platform Accounts](https://docs.goshippo.com/docs/PlatformAccounts/platform_accounts.md): Learn how Platform Accounts let you create and manage Managed Shippo Accounts for your marketplace or 3PL customers.
+- [Migrating from Platform API to Shippo API](https://docs.goshippo.com/docs/PlatformAccounts/platform_api_migrate.md): Migrate your integration from the Shippo for Platforms API to the Shippo API with updated URLs, headers, and endpoints.
+- [Upgrade to a Platform Account](https://docs.goshippo.com/docs/PlatformAccounts/platform_upgrade_account.md): Follow these steps to upgrade your Shippo account to a Platform Account and start using Managed Shippo Accounts.
+- [Using your Platform Account](https://docs.goshippo.com/docs/PlatformAccounts/platform_using_accounts.md): Create Managed Shippo Accounts, add carriers, generate rates, and purchase labels for your platform customers.
+- [Alcohol shipments](https://docs.goshippo.com/docs/Shipments/AlcoholShipments.md): Learn how to create shipping labels for alcohol shipments using the extras field in the Shippo Shipment object.
+- [Batch label creation](https://docs.goshippo.com/docs/Shipments/BatchLabelCreation.md): Create and purchase up to 10,000 shipping labels in a single API request using the Shippo Batch endpoint.
+- [Drop off and Pickup](https://docs.goshippo.com/docs/Shipments/DropoffPickup.md): Learn how to create drop-off shipments and schedule carrier pickups using the Shippo API, including QR code support.
+- [Dry ice shipments](https://docs.goshippo.com/docs/Shipments/DryIceShipment.md): Learn how to create shipping labels for dry ice shipments using the extras field in the Shippo Shipment object.
+- [Multi-piece shipment](https://docs.goshippo.com/docs/Shipments/MultiPieceShipment.md): Save on shipping by grouping multiple parcels going to the same destination into a single multi-piece shipment with Shippo.
+- [QR codes](https://docs.goshippo.com/docs/Shipments/QRCode.md): Generate QR codes for printerless shipping with USPS, Royal Mail, and Evri so merchants can print labels at drop-off.
+- [Rate shopping with carriers](https://docs.goshippo.com/docs/Shipments/RateShoppingWithCarriers.md): Compare shipping rates from multiple carriers in a single API call to find the best price and service for your shipment.
+- [Returns](https://docs.goshippo.com/docs/Shipments/Returns.md): Generate scan-based return labels for USPS, FedEx, and UPS, and set custom return addresses using the Shippo API.
+- [Saturday delivery](https://docs.goshippo.com/docs/Shipments/SaturdayDelivery.md): Learn how to request Saturday delivery shipping rates by setting the saturday_delivery option in your Shippo shipment.
+- [Create a shipment](https://docs.goshippo.com/docs/Shipments/Shipments.md): Learn how to create a Shipment object in the Shippo API to automatically retrieve available shipping rates.
+- [Shipping insurance](https://docs.goshippo.com/docs/Shipments/ShippingInsurance.md): Add shipping insurance to your shipments through Shippo's built-in coverage or directly from FedEx, UPS, and Ontrac.
+- [Shipping label sizes](https://docs.goshippo.com/docs/Shipments/ShippingLabelSizes.md): Choose from multiple shipping label formats and sizes including PDF, PNG, and ZPL when purchasing labels through Shippo.
+- [Hazardous or dangerous materials shipping](https://docs.goshippo.com/docs/Shipments/hazmat.md): Declare hazardous materials like lithium batteries and biological items when creating shipments with the Shippo API.
+- [Elements release notes](https://docs.goshippo.com/docs/ShippingElements/ElementsChangeLog.md): View the release notes and recent updates for Shippo Shipping Elements, including bug fixes and new features.
+- [Authorization](https://docs.goshippo.com/docs/ShippingElements/auth.md): Set up secure authorization for Shippo Shipping Elements using JWT tokens for white label and gray label integrations.
+- [Bulk labels](https://docs.goshippo.com/docs/ShippingElements/bulk.md): Use Shippo Shipping Elements to let your merchants purchase up to 50 shipping labels at once with bulk label creation.
+- [Customization](https://docs.goshippo.com/docs/ShippingElements/customisation.md): Customize the look of Shippo Shipping Elements in your site using theme options for colors, buttons, cards, and more.
+- [Elements Data Flow](https://docs.goshippo.com/docs/ShippingElements/data_flow.md): Understand how data flows between Shippo Shipping Elements and your web application, including best practices.
+- [Error and Debugging](https://docs.goshippo.com/docs/ShippingElements/errors.md): Handle errors and debug issues in Shippo Shipping Elements using event listeners and the onAny logging method.
+- [Events](https://docs.goshippo.com/docs/ShippingElements/events.md): Use Shippo Shipping Elements events to respond to user actions like label purchases, order creation, and errors.
+- [Introduction](https://docs.goshippo.com/docs/ShippingElements/index.md): Add shipping label purchasing directly to your website using Shippo Shipping Elements, with no custom UI required.
+- [Install the Shippo Shipping Elements SDK](https://docs.goshippo.com/docs/ShippingElements/install.md): Install the Shippo Shipping Elements SDK and configure the init and labelPurchase methods to render the widget.
+- [Shippo Shipping Elements quickstart](https://docs.goshippo.com/docs/ShippingElements/quickstart.md): Try Shippo Shipping Elements with our live demo or run the React sample app locally to see how it works.
+- [Accessing webhook subscriptions](https://docs.goshippo.com/docs/Tracking/CreatingWebhooks.md): Register, retrieve, update, and delete webhook subscriptions programmatically using the Shippo Webhooks API.
+- [Tracking](https://docs.goshippo.com/docs/Tracking/Tracking.md): Track shipments across all carriers with normalized data, real-time webhook updates, and complete tracking history.
+- [Tracking carriers using webhooks](https://docs.goshippo.com/docs/Tracking/TrackingCarrier.md): View the list of carriers that support webhook-only tracking for parcels shipped outside of Shippo.
+- [Tracking Carriers](https://docs.goshippo.com/docs/Tracking/TrackingCarriers.md): View the full list of carriers supported for parcel tracking through the Shippo API, including tokens for each carrier.
+- [Webhook debugging](https://docs.goshippo.com/docs/Tracking/WebhookDebugging.md): Test and debug your Shippo webhooks using your own server or third-party webhook testing sites.
+- [Webhook metadata](https://docs.goshippo.com/docs/Tracking/WebhookMetadata.md): Attach custom metadata to transactions and tracking objects to include your own data in Shippo webhook payloads.
+- [Webhook security](https://docs.goshippo.com/docs/Tracking/WebhookSecurity.md): Secure your Shippo webhooks using IP allowlists, self-generated URL tokens, or HMAC-based message authentication.
+- [Webhooks](https://docs.goshippo.com/docs/Tracking/Webhooks.md): Set up Shippo webhooks to receive automatic notifications for tracking updates, label creation, and batch purchases.
+- [Ship to international customers](https://docs.goshippo.com/docs/stories/intl_rating_guide.md): Follow a step-by-step guide to ship internationally with the Shippo API, including customs declarations and label purchase.
+- [Split a shipment into multiple packages](https://docs.goshippo.com/docs/stories/multi_piece_guide.md): Learn how to ship multiple packages to the same customer in a single multi-piece shipment using the Shippo API.
+- [Get a shipping label](https://docs.goshippo.com/docs/stories/single_rating_guide.md): Follow a step-by-step guide to get shipping rates and purchase a label using the Shippo API for your first shipment.
+- [Welcome to the Shippo API](https://docs.goshippo.com/index.md): Add a complete shipping solution to your app with the Shippo API. Compare carrier rates, create labels, track packages, and manage returns.
+
+## OpenAPI Specs
+
+- [public-api](https://docs.goshippo.com/spec/shippoapi/public-api.yaml)
+- [openapi](https://docs.goshippo.com/api-reference/openapi.json)
+- [invoices-api](https://docs.goshippo.com/realm/shipporeportinvoices/invoices-api.yaml)
+- [carrier_acc](https://docs.goshippo.com/realm/docs/Carriers/spec/carrier_acc.yaml)
+- [address_v2](https://docs.goshippo.com/realm/addressesapi/address_v2.yaml)
+- [devex-sandbox](https://docs.goshippo.com/api/v2/devex-sandbox.yaml)

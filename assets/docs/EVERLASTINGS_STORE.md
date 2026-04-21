@@ -691,11 +691,12 @@ All outbound transactional email routes through Resend (sending) and all reply/i
 
 **Resend domain setup**: `everlastingsbyemaline.com` (apex) verified; Return-Path on `send.everlastingsbyemaline.com` (auto-handled by Resend) for SPF/DMARC reputation isolation; click tracking ON; open tracking OFF (inaccurate in modern mail clients).
 
-**Post-v1 email roadmap** — `assets/docs/archive/v2_0/` contains exploratory planning docs for AI-assisted email marketing, inbox agents, and multi-platform chat integrations. Planned as a quick post-launch follow-up to this deliverable, before the advertising phase. Key documents:
-  + `EMAIL_MARKETING.md` — marketing planner for the full v3 email strategy
-  + `RESEND_LLMS_FULL.md` — full Resend reference for LLMs
-  + `GIVE_AGENT_INBOX.md` — agent-readable inbox pattern
-  + Additional integration refs: `RESEND_CLI.md`, `VERCEL_RESEND.md`, `SUPABASE_RESEND.md`, `RESEND_VERCEL_CHAT_SDK.md`, `CHAT_SDK_CARD_EMAILS.md`, `CLOUDFLARE_WORKERS_RESEND.md`, `PYTHON_RESEND_SDK.md`
+**Post-v1 roadmap (`assets/docs/archive/v2_0/`)** — exploratory planning for post-launch "eliminate manual ops work" wave, theme-grouped:
+
+  + **Email/marketing AI pipeline**: `EMAIL_MARKETING.md`, `RESEND_LLMS_FULL.md`, `GIVE_AGENT_INBOX.md`, plus integration refs (`RESEND_CLI.md`, `VERCEL_RESEND.md`, `SUPABASE_RESEND.md`, `RESEND_VERCEL_CHAT_SDK.md`, `CHAT_SDK_CARD_EMAILS.md`, `CLOUDFLARE_WORKERS_RESEND.md`, `PYTHON_RESEND_SDK.md`)
+  + **Shipping automation (Shippo API integration)**: `SHIPPO_API.md` (includes pricing snapshot), `SHIPPO_LLMS_FULL.md`. v1 ships with the manual "copy address from admin panel → paste into Shippo web UI" flow. v2 integrates the **free** Shippo API Starter tier (also 30 labels/month, plus no carrier-connection fee) so orders push directly, labels print from the admin panel, and tracking numbers auto-populate the tracking email. The v2 case is pure UX + AI automation (e.g., AI-authored personal notes printed alongside labels), not cost savings.
+
+The theme ("replace manual rituals with AI-managed workflows") carries through from PRODUCT_PROTOCOL's AI-assisted authoring into v2's shipping + email automation. Each piece is reusable template material for the SMB-AI-ops portfolio angle.
 
 ---
 

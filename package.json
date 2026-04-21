@@ -5,8 +5,9 @@
     "dev": "vercel dev"
   },
   "dependencies": {
-    "stripe": "^17.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
     "@supabase/supabase-js": "^2.0.0",
-    "@aws-sdk/client-s3": "^3.0.0"
+    "shippo": "^2.18.0",
+    "stripe": "^17.0.0"
   }
 }
