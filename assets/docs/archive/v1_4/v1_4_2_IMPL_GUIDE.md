@@ -11,7 +11,7 @@
 
 ---
 
-**MUST DO NEXT**: Find "RELOCATE" and CLEANUP" in the PHASE 0 items and polish document for ease of use in the flow, and ease of future reference. Use H4 "Checklist" sections as example reference, however, please review those sections to ensure that all setup directions for both environments, in Vercel and when creating branches, is both clear and properly notated in the appropriate section so that it doesn't get overlooked when final branches are created. 
+**MUST DO NEXT**: Find "RELOCATE" and CLEANUP" in the PHASE 0 items and polish document for ease of use in the flow, and ease of future reference. Use H4 "Checklist" sections as example reference, however, please review those sections to ensure that all setup directions for both environments, in Vercel and when creating branches, is both clear and properly notated in the appropriate section so that it doesn't get overlooked when final branches are created. Please then review rest of document and ensure that all sections are clear, concise, and easy to follow, not the sort of chaotic overwhelm of excess information that we originally had at the top in PHASE 0, and still have in some other sections. 
 
 ---
 
@@ -41,29 +41,22 @@
 
 ## Plain-English Glossary
 
-Terms used throughout this guide that are easy to misread if you're coming from a different stack:
+- Terms used throughout this guide that are easy to misread if you're coming from a different stack:
 
-  **Term in docs** - What it actual means 
+  **Term in docs** — What it actual means 
   + Simpler equivalent you may know
-
   **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers 
   + Run the create-tables SQL once
-
   **Migrations via MCP** - Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same
   + We use **Supabase CLI `supabase db push`** as the default
-
   **Supabase DB webhook** - A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL"
   + An HTTP trigger — fired by the database — like an IFTTT rule on row insert.
-
   **Stripe webhook** - Stripe's outbound notification when a payment completes
   + Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
-
   **Stripe coupon bootstrap** - A one-time script that creates the two base coupons in Stripe via API so dev and prod match
   + Run this once; it creates the two coupons. Alternative: click-create them in the Stripe dashboard.
-
   **Preview CORS smoke test** - Push a throwaway branch; open the Vercel preview URL; confirm API calls work
   + A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.
-
   **Publishable key / secret key** - Supabase's new (Nov 2025+) API key format. Replaces legacy `anon` / `service_role` one-for-one.
   + Frontend-safe key / server-only key. Same roles, new names.
 
