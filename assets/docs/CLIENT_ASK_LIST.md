@@ -74,6 +74,94 @@ For the Home & Interior / Art Decor categories most adjacent to Everlastings:
 
 A well-run artisan home-goods campaign should expect 2.5–4x ROAS in the first 60 days and improve from there. A 4x ROAS at a $245 average order value means every $60 in ad spend produces a sale.
 
+### Instagram Without Ads Is Almost Invisible Now 
+
+This is the hardest pill — and the reason ads aren't optional anymore, even for brands whose work is *already* incredible.
+
+  + THE COLLAPSE: What % of your followers even see each post?
+    - *Only 3.5%* of your followers see any given Instagram post (down from *10–15% in 2020*)
+    - *87% of businesses* report significant reach decline over the past 18 months
+    - Accounts over 10,000 followers often see **under 1% reach**
+    - [social.plus, 2025](https://www.social.plus/blog/only-3-5-of-followers-see-your-instagram-posts---why-organic-reach-is-no-longer-a-growth-strategy)
+
+  + THE MATH FOR YOU: If Everlastings has 1,000 Instagram followers, how many see each new piece?
+    - *About 35 people* — full stop
+    - At a realistic 2% conversion rate: **less than 1 sale per post**
+    - This is the *structural ceiling* of organic-only — it's not about content quality
+
+  + THE FIX: Ads are how you actually reach the people who'd love your work
+    - *Paid media is arithmetic* — show the work to enough of the right people 
+    - The Pixel is already installed; the catalog already syncs; all infrastructure is built 
+    - The only remaining question is whether to turn it on
+
+### Real Numbers: What Your Ad Budget Actually Buys 
+
+  + UGC BEATS POLISHED: What's UGC?
+    - User-generated content — phone-shot, authentic, real-feeling
+    - *UGC-style ads convert 23% better* than studio-produced brand videos 
+    - Meta's algorithm actively *rewards* the real over the perfect
+
+  + YOU ALREADY MAKE THE CONTENT: So what exactly does ad money buy?
+    - The photos and Reels you post already ARE the ad creative 
+    - Your phone IS the production studio 
+    - Your honest process IS the brand asset
+
+  + AD SPEND = REACH, NOT PRODUCTION: So where does the money go?
+    - Pure audience size — *the more you spend, the more of the right people see what you already made*
+    - Content load barely changes across tiers — what changes is **how many eyeballs**
+
+| #   | You Spend     | You Make (roughly)          | Who Sees It                                                  |
+| --- | ------------- | --------------------------- | ------------------------------------------------------------ |
+| 1   | **$100/mo**   | 1 Reel + 2–3 photos/week    | **~5,000 new people** + 30 past visitors re-shown daily      |
+| 2   | **$500/mo**   | Same + 2–3 variants each    | **~10,000 new** + 200 past visitors daily + "customer twins" |
+| 3   | **$2,000/mo** | 10–15 pieces + story videos | **~30,000 new** + 500 past visitors daily + Reels ad slots   |
+
+1. **TIER 1 IS TRAINING.** You test the system with *your* real work; Meta learns who buys. Ads mostly pay for themselves.
+2. **TIER 2 IS INFLECTION.** Ads return *3×* what you put in. "Customer twins" unlock — Meta finds thousands of strangers who look just like your real buyers.
+3. **TIER 3 IS ACTIVE GROWTH.** Reels ad slots become cheap, retargeting saturates, customer list compounds. *Month 6 is when you feel it most.*
+
+**Your content workload at Tier 3 isn't 20× heavier than Tier 1. It's maybe 2× heavier. The 20× is in the eyeballs.**
+
+### Zooming In: What $100/Month Actually Does
+
+  + SEEN IT: How many eyeballs?
+    - *3,000–5,000 unique people* see your content per month 
+    - *8,000–10,000 total views* (some see it 2–3 times)
+
+  + CLICKED IT: How many visit the site?
+    - *150–250 site visits per month* from ads 
+    - Cost per visit: *about $0.50–$0.70*
+
+  + BOUGHT IT: How many actually buy?
+    - *1–2 sales per month* at cost per sale of *~$50–$100* 
+    - Revenue at your $245 average order: *$245–$490/month* 
+    - **Your profit after paying for ads: *$145–$390/month***
+
+  + THE INVISIBLE COMPOUND: What else is happening?
+    - *Every visitor who didn't buy joins the retargeting pool* 
+    - That pool makes Tier 2 and 3 dramatically cheaper when you're ready 
+    - *Month 6 is when the compounding becomes obvious*, not month 1
+
+1. **For every $1 in, about $2–$2.50 back.** Ads pay for themselves + a little more.
+2. **Retargeting pool grows month-over-month** — *free* future value, no extra work.
+3. **The real cost isn't ad spend** — it's the lost future from not starting.
+
+### Before & After: What 3 Months of Ads Changes 
+
+Real benchmarks, side-by-side, so you can see what changes with just $500/month in ads running for 90 days:
+
+| What You Measure         | Without Ads   | With $500/mo Ads |
+| ------------------------ | ------------- | ---------------- |
+| Monthly unique visitors  | 500–1,000     | **2,500–5,000**  |
+| Product views per visit  | 2.5           | 3.0              |
+| Add-to-cart rate         | 4–6%          | **6–8%**         |
+| Completed purchase rate  | 1.5–2%        | **2.5–3.5%**     |
+| Email list growth        | ~20/month     | **80–150/month** |
+| Blended return on ad $   | N/A           | **3–4×**         |
+| **Monthly revenue**      | $500–$1,500   | **$3,000–$8,000** |
+
+Every one of these numbers is *already wired to measure itself* — GA4, Meta Pixel, and the site's own database will surface them automatically. You don't track them; they track themselves.
+
 ---
 
 ## 1. Meta / Instagram Shopping Setup
