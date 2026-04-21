@@ -11,7 +11,7 @@
 
 ---
 
-**MUST DO NEXT**: Find "RELOCATE" and CLEANUP" in the PHASE 0 items and polish document for ease of use in the flow, and ease of future reference. Use H4 "Checklist" sections as example reference. 
+**MUST DO NEXT**: Find "RELOCATE" and CLEANUP" in the PHASE 0 items and polish document for ease of use in the flow, and ease of future reference. Use H4 "Checklist" sections as example reference, however, please review those sections to ensure that all setup directions for both environments, in Vercel and when creating branches, is both clear and properly notated in the appropriate section so that it doesn't get overlooked when final branches are created. 
 
 ---
 
@@ -288,12 +288,12 @@ Do this once, both for development and production environments. Never paste secr
 #### Cloudinary Checklist 
 
   - [x] **Create** Cloudinary account 
-  - [x] **Add `CLOUDINARY_URL`** with API key, API secret, etc. into `.env.local` 
-  - [ ] **Add `CLOUDINARY_URL`** to `vercel env add` as well 
+  - [x] **Add `CLOUDINARY_URL`** with API key, API secret, etc. into `.env.local` to be same in both environments 
+  - [ ] **Add `CLOUDINARY_URL`** to `vercel env add` as well, for both environments 
 
 #### Stripe Checklist 
 
-  - [ ] **Create** Stripe account
+  - [x] **Create** Stripe account
   - [ ] **Copy test keys** Dashboard > Developers > API keys (`sk_test_...`, `pk_test_...`) into `.env.local`
   - [ ] **Add test keys** to `vercel env add` for Preview + Development scopes
   - [ ] **Copy live keys** (`sk_live_...`, `pk_live_...`) into `.env.local`
@@ -303,11 +303,12 @@ Do this once, both for development and production environments. Never paste secr
 #### Cloudflare CDN Checklist 
 
   - [x] **Confirm** `everlastingsbyemaline.com` domain is registered and managed in Cloudflare DNS
-  - [ ] **Create** Cloudflare R2 bucket `everlastings`. Enable public access
-  - [ ] (SEAN) **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain > `cdn.everlastingsbyemaline.com` (CNAME added; wait until active)
+  - [ ] **Get credit/debit card** from Emy 
+  - [ ] **Create** Cloudflare R2 bucket `everlastings` with public access enabled
+  - [ ] **Connect** R2 custom domain: R2 bucket > Settings > Public access > Custom Domains > Connect Domain 
   - [ ] **Create** R2 API token: My Profile > API Tokens > R2 > Create, Read & Write scoped to `everlastings` bucket. 
-  - [ ] **Copy the 4 values** → paste into `.env.local`
-  - [ ] **Add the 4 values** to `vercel env add` (same values for preview and production)
+  - [ ] **Copy the 4 values** → paste into `.env.local` for both environments 
+  - [ ] **Add the 4 values** to `vercel env add` with same values for preview and production 
 
 #### Resend Checklist 
 
