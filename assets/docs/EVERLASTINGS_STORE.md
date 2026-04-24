@@ -2,7 +2,7 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo web UI + Resend tracking emails), corrected coupon strategy (idempotent `api/_bootstrap/coupons.ts`), single Phase 0 setup block (Phase 1 removed as duplicate of A1), placeholder hygiene, `customer_email_linked` event
+**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo web UI + Resend tracking emails), corrected coupon strategy (idempotent `api/_bootstrap/coupons.ts`), single Phase 0 setup block (Phase 1 removed as duplicate of A1), placeholder hygiene, `customer_email_linked` event (Reviewed by SH on 2026-04-24 15:47)
 **Version**: v1.4.0
 **Status**: Pre-development, architecture finalized
 **Build Guide**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
@@ -18,19 +18,19 @@
 
 ## Tech Stack at a Glance
 
-| Layer             | What we use                                                     | Why                                                                                                 |
-| ----------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Frontend          | Vanilla HTML + CSS + JS, loaded directly in the browser         | No build step, no framework, no React. Proven pattern.                                              |
-| Frontend libs     | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN          | Script tags only. No npm install for the browser.                                                   |
-| Backend           | TypeScript in Vercel Serverless Functions (Node.js)             | Type safety for Stripe + Supabase server-side calls.                                                |
-| Backend libs      | `npm install` only inside `/api/*.ts` world                     | `package.json` drives a normal Node/TS toolchain for the API.                                       |
-| Runtime           | Vercel (free tier)                                              | Auto-deploy, per-branch env vars, serverless functions.                                             |
-| Database          | Supabase Postgres (free tier)                                   | REST API + RLS + Auth + Studio UI.                                                                  |
-| Product CDN       | Cloudflare R2 at `cdn.everlastingsbyemaline.com`                | Public CDN for product images/video. Cloudinary is a stateless transformer only — not a host.       |
-| Payments          | Stripe Custom Checkout (`ui_mode: 'custom'`)                    | On-site checkout with full brand control.                                                           |
-| Email             | Resend                                                          | Transactional email; free tier 3k/mo.                                                               |
-| Shipping          | Shippo Starter (web UI only in v1)                              | 30 free USPS labels/mo.                                                                             |
-| Analytics         | GA4 (gtag.js) + Meta Pixel                                      | CDN script tags. No GTM.                                                                            |
+| Layer         | What we use                                             | Why                                                                                  |
+| ------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Frontend      | Vanilla HTML + CSS + JS, loaded directly in the browser | No build step, no framework, no React. Proven pattern.                               |
+| Frontend libs | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN  | Script tags only. No npm install for the browser.                                    |
+| Backend       | TypeScript in Vercel Serverless Functions (Node.js)     | Type safety for Stripe + Supabase server-side calls.                                 |
+| Backend libs  | `npm install` only inside `/api/*.ts` world             | `package.json` drives a normal Node/TS toolchain for the API.                        |
+| Runtime       | Vercel (free tier)                                      | Auto-deploy, per-branch env vars, serverless functions.                              |
+| Database      | Supabase Postgres (free tier)                           | REST API + RLS + Auth + Studio UI.                                                   |
+| Product CDN   | Cloudflare R2 at `cdn.everlastingsbyemaline.com`        | Public CDN for product images/video. Cloudinary is stateless transformer, not a host |
+| Payments      | Stripe Custom Checkout (`ui_mode: 'custom'`)            | On-site checkout with full brand control.                                            |
+| Email         | Resend                                                  | Transactional email; free tier 3k/mo.                                                |
+| Shipping      | Shippo Starter (web UI only in v1)                      | 30 free USPS labels/mo.                                                              |
+| Analytics     | GA4 (gtag.js) + Meta Pixel                              | CDN script tags. No GTM.                                                             |
 
 **What we are NOT using** (and why some vendor docs might suggest these):
 
@@ -74,7 +74,7 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │            VERCEL SERVERLESS FUNCTIONS — TypeScript                 │
 │                                                                     │
-│  /api/checkout/reserve.ts → Availability check + soft cart hold      │
+│  /api/checkout/reserve.ts → Availability check + soft cart hold     │
 │  /api/checkout.ts       →  Create Stripe session (requires hold)    │
 │  /api/session-status.ts →  Return page: verify payment status       │
 │  /api/webhook.ts        →  Handle Stripe payment events             │
@@ -90,7 +90,7 @@
 │  /api/subscribe.ts      →  Newsletter email capture + optional code │
 │  /api/contact.ts        →  Contact form handler                     │
 │  /api/_emails/          →  Resend templates (tracking, welcome,     │
-│                            cart-recovery)                            │
+│                            cart-recovery)                           │
 └──────────┬───────────────────────────────────┬──────────────────────┘
            │                                   │
            ▼                                   ▼
@@ -107,8 +107,8 @@
 │    product_interests     │   │  /brand/                           │
 │    cart_holds            │   │    logo.svg, favicon, etc.         │
 │                          │   │                                    │
-│  Auth: admin login       │   │  Public CDN access via              │
-│  RLS: row-level security │   │  cdn.everlastingsbyemaline.com      │
+│  Auth: admin login       │   │  Public CDN access via             │
+│  RLS: row-level security │   │  cdn.everlastingsbyemaline.com     │
 │  DB Webhooks: on INSERT  │   │                                    │
 └──────────────────────────┘   └────────────────────────────────────┘
            │
@@ -178,20 +178,20 @@
 
   * **Custom e-commerce website for a handcrafted miniature diorama artist**
 
-  + Artisan storefront with rich storytelling (poetic story cards per product)
-  + Stripe Custom Checkout (ui_mode: 'custom') for purchasing one-of-a-kind pieces with standard cart flow
-  + Admin UI for non-technical client to manage products
-  + Dynamic homepage with rotating themes pulled from product data
-  + Template-friendly architecture for two upcoming non-store client sites
+    + Artisan storefront with rich storytelling (poetic story cards per product)
+    + Stripe Custom Checkout (ui_mode: 'custom') for purchasing one-of-a-kind pieces with standard cart flow
+    + Admin UI for non-technical client to manage products
+    + Dynamic homepage with rotating themes pulled from product data
+    + Template-friendly architecture for two upcoming non-store client sites
 
 ### The Core Innovation
 
   * **Database-driven static site with custom on-site checkout**
 
-  + Products live in Supabase, not in code — client edits content, site reflects instantly
-  + Stripe catalog auto-syncs when products are added (via database webhook)
-  + No CMS subscription, no framework overhead, no git knowledge required
-  + Vercel free tier + Supabase free tier + R2 ≈ $15-75/year total
+    + Products live in Supabase, not in code — client edits content, site reflects instantly
+    + Stripe catalog auto-syncs when products are added (via database webhook)
+    + No CMS subscription, no framework overhead, no git knowledge required
+    + Vercel free tier + Supabase free tier + R2 ≈ $15-75/year total
 
 ### Client & Purpose
 
@@ -217,42 +217,42 @@
 
 Create `.env.local` (see also `.env.example` in impl guide):
 
-  ```bash
-  # Supabase (new key system, Nov 2025+)
-  SUPABASE_URL=https://your-project.supabase.co
-  SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # frontend-safe, replaces legacy anon key
-  SUPABASE_SECRET_KEY=sb_secret_...            # backend only, replaces legacy service_role key
+```bash
+# Supabase (new key system, Nov 2025+)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_...  # frontend-safe, replaces legacy anon key
+SUPABASE_SECRET_KEY=sb_secret_...            # backend only, replaces legacy service_role key
 
-  # Stripe (test keys for dev, live keys for production)
-  STRIPE_SECRET_KEY=sk_test_...
-  STRIPE_PUBLISHABLE_KEY=pk_test_...
-  STRIPE_WEBHOOK_SECRET=whsec_...
+# Stripe (test keys for dev, live keys for production)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-  # Cloudflare R2
-  R2_ACCOUNT_ID=your-account-id
-  R2_ACCESS_KEY_ID=your-access-key
-  R2_SECRET_ACCESS_KEY=your-secret-key
-  R2_BUCKET_NAME=everlastings
-  R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
+# Cloudflare R2
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key
+R2_SECRET_ACCESS_KEY=your-secret-key
+R2_BUCKET_NAME=everlastings
+R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
 
-  # Cloudinary (stateless image transforms)
-  CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
-  ```
+# Cloudinary (stateless image transforms)
+CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+```
 
 **Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys, served at `everlastingsbyemaline.com`). `dev`/`feat/*` branches → Preview (test Stripe keys, served at auto-generated `*.vercel.app` URLs — these are the dev environment). The shared Supabase project and R2 bucket are kept clean via an `is_test` row flag and a `test/` R2 path prefix. Full conventions: see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > [Environment Strategy](archive/v1_4/v1_4_2_IMPL_GUIDE.md#environment-strategy-reference) and [Dev/Test Data Hygiene](archive/v1_4/v1_4_2_IMPL_GUIDE.md#devtest-data-hygiene-reference).
 
 ### Local Development
 
-  ```bash
-  # Install dependencies
-  npm install
+```bash
+# Install dependencies
+npm install
 
-  # Start Vercel dev server (serves static files + API functions)
-  vercel dev
+# Start Vercel dev server (serves static files + API functions)
+vercel dev
 
-  # In a separate terminal, forward Stripe webhooks
-  stripe listen --forward-to localhost:3000/api/webhook
-  ```
+# In a separate terminal, forward Stripe webhooks
+stripe listen --forward-to localhost:3000/api/webhook
+```
 
 ### Testing Checkout Flow
 
@@ -268,124 +268,124 @@ Create `.env.local` (see also `.env.example` in impl guide):
 
   ```text
   ~/Development/everlastings-website/
-  ├── index.html              # Homepage (long landing page)
-  ├── shop.html               # Product grid with filters
-  ├── product.html            # Individual product page template
-  ├── checkout.html           # Embedded Stripe checkout
-  ├── about.html              # About Emaline
-  ├── contact.html            # Contact + commissions
-  ├── admin/                  # Admin panel (Supabase Auth protected)
-  │   └── index.html          # Product management UI
+  ├── index.html                       # Homepage (long landing page)
+  ├── shop.html                        # Product grid with filters
+  ├── product.html                     # Individual product page template
+  ├── checkout.html                    # Embedded Stripe checkout
+  ├── about.html                       # About Emaline
+  ├── contact.html                     # Contact + commissions
+  ├── admin/                           # Admin panel (Supabase Auth protected)
+  │   └── index.html                   # Product management UI
   │
   ├── assets/
   │   ├── css/
-  │   │   └── styles.css      # All styles, CSS custom properties
+  │   │   └── styles.css                # All styles, CSS custom properties
   │   ├── js/
-  │   │   ├── main.js         # Shared utilities, Supabase client init
-  │   │   ├── product.js      # Product page: fetch + render from Supabase
-  │   │   ├── shop.js         # Shop grid: filters, sort, tile rendering
-  │   │   ├── homepage.js     # Homepage: featured carousel, theme rotation
-  │   │   ├── checkout.js     # Stripe custom checkout mount
-  │   │   ├── admin.js        # Admin panel: CRUD, image upload
-  │   │   └── newsletter.js   # Newsletter signup handler
-  │   ├── docs/               # Project documentation
-  │   │   ├── EVERLASTINGS_STORE.md   # This file
-  │   │   ├── PRODUCT_PROTOCOL.md     # Client guide + AI creation protocol
-  │   │   └── archive/                # v0 and v1 planning docs
-  │   ├── favicon/            # Favicon files
-  │   └── fonts/              # Cormorant Garamond font files
+  │   │   ├── main.js                   # Shared utilities, Supabase client init
+  │   │   ├── product.js                # Product page: fetch + render from Supabase
+  │   │   ├── shop.js                   # Shop grid: filters, sort, tile rendering
+  │   │   ├── homepage.js               # Homepage: featured carousel, theme rotation
+  │   │   ├── checkout.js               # Stripe custom checkout mount
+  │   │   ├── admin.js                  # Admin panel: CRUD, image upload
+  │   │   └── newsletter.js             # Newsletter signup handler
+  │   ├── docs/                         # Project documentation
+  │   │   ├── EVERLASTINGS_STORE.md     # This file
+  │   │   ├── PRODUCT_PROTOCOL.md       # Client guide + AI creation protocol
+  │   │   └── archive/                  # v0 and v1 planning docs
+  │   ├── favicon/                      # Favicon files
+  │   └── fonts/                        # Cormorant Garamond font files
   │
-  ├── api/                    # Vercel serverless functions
-  │   ├── checkout.ts         # Create Stripe checkout session (cart items)
-  │   ├── session-status.ts   # Return page payment verification
-  │   ├── webhook.ts          # Handle Stripe webhooks
-  │   ├── stripe-sync.ts      # Create Stripe Product+Price on new product
-  │   ├── upload.ts           # Cloudinary transform → R2 upload
-  │   ├── cart-recovery.ts    # Sold-in-cart promo code + email
-  │   ├── products.ts         # CRUD for AI product creation (service key auth)
-  │   ├── config.ts           # Public config (Stripe key per environment)
-  │   ├── subscribe.ts        # Newsletter email capture
-  │   └── contact.ts          # Contact form handler
+  ├── api/                              # Vercel serverless functions
+  │   ├── checkout.ts                   # Create Stripe checkout session (cart items)
+  │   ├── session-status.ts             # Return page payment verification
+  │   ├── webhook.ts                    # Handle Stripe webhooks
+  │   ├── stripe-sync.ts                # Create Stripe Product+Price on new product
+  │   ├── upload.ts                     # Cloudinary transform → R2 upload
+  │   ├── cart-recovery.ts              # Sold-in-cart promo code + email
+  │   ├── products.ts                   # CRUD for AI product creation (service key auth)
+  │   ├── config.ts                     # Public config (Stripe key per environment)
+  │   ├── subscribe.ts                  # Newsletter email capture
+  │   └── contact.ts                    # Contact form handler
   │
-  ├── vercel.json             # Vercel config: rewrites, headers
-  ├── package.json            # Dependencies (stripe, @supabase/supabase-js)
-  ├── tsconfig.json           # TypeScript config for API functions
-  ├── .env.example            # Environment variable template
-  ├── .env.local              # Local env vars (gitignored)
+  ├── vercel.json                       # Vercel config: rewrites, headers
+  ├── package.json                      # Dependencies (stripe, @supabase/supabase-js)
+  ├── tsconfig.json                     # TypeScript config for API functions
+  ├── .env.example                      # Environment variable template
+  ├── .env.local                        # Local env vars (gitignored)
   │
-  ├── .agent/                 # AI agent instructions
-  │   ├── AGENTS.md           # Core agent rules and human profile
-  │   ├── DEV_RULES.md        # Git branching, dev protocols
-  │   └── 2026_MOBILE_DESIGN_SPECS.md  # iOS/iPadOS viewport specs
+  ├── .agent/                           # AI agent instructions
+  │   ├── AGENTS.md                     # Core agent rules and human profile
+  │   ├── DEV_RULES.md                  # Git branching, dev protocols
+  │   └── 2026_MOBILE_DESIGN_SPECS.md   # iOS/iPadOS viewport specs
   │
-  ├── complete.html            # Order completion page
-  ├── faq.html                # FAQ
-  ├── shipping.html           # Shipping & returns
-  ├── terms.html              # Terms of service
-  ├── privacy.html            # Privacy policy
-  ├── policies.html           # Policies (availability, cart, returns)
-  ├── README.md               # Public-facing README
-  └── .gitignore              # Ignores .env.local, node_modules, etc.
+  ├── complete.html                     # Order completion page
+  ├── faq.html                          # FAQ
+  ├── shipping.html                     # Shipping & returns
+  ├── terms.html                        # Terms of service
+  ├── privacy.html                      # Privacy policy
+  ├── policies.html                     # Policies (availability, cart, returns)
+  ├── README.md                         # Public-facing README
+  └── .gitignore                        # Ignores .env.local, node_modules, etc.
   ```
 
 ### Key Frontend Files
 
-**`assets/js/main.js`** — Supabase client initialization, shared utilities
-  + Loads Supabase via CDN script tag, creates client with hardcoded anon key (public, RLS-protected)
-  + Shared functions: formatPrice(), slugify(), getProductBySlug(), getProducts()
-  + Cart state management (localStorage): addToCart(), removeFromCart(), getCart(), clearCart(), updateCartBadge()
+  * **`assets/js/main.js`** — Supabase client initialization, shared utilities
+    + Loads Supabase via CDN script tag, creates client with hardcoded anon key (public, RLS-protected)
+    + Shared functions: formatPrice(), slugify(), getProductBySlug(), getProducts()
+    + Cart state management (localStorage): addToCart(), removeFromCart(), getCart(), clearCart(), updateCartBadge()
 
-**`assets/js/product.js`** — Product page controller
-  + Fetches product by slug from Supabase
-  + Renders two-column layout (story + details)
-  + Image gallery with lightbox
-  + Stripe checkout button handler
+  * **`assets/js/product.js`** — Product page controller
+    + Fetches product by slug from Supabase
+    + Renders two-column layout (story + details)
+    + Image gallery with lightbox
+    + Stripe checkout button handler
 
-**`assets/js/shop.js`** — Shop grid controller
-  + Fetches all products from Supabase
-  + Multi-select filter by series, product_type, availability
-  + Sort by price, date, name
-  + Smart filter: hides single-option dropdowns
+  * **`assets/js/shop.js`** — Shop grid controller
+    + Fetches all products from Supabase
+    + Multi-select filter by series, product_type, availability
+    + Sort by price, date, name
+    + Smart filter: hides single-option dropdowns
 
-**`assets/js/homepage.js`** — Homepage controller
-  + Fetches featured products for carousel
-  + Loads theme config from site_config table
-  + Theatrical lighting effects (CSS masks + scroll transforms)
-  + Theme rotation on return visits
+  * **`assets/js/homepage.js`** — Homepage controller
+    + Fetches featured products for carousel
+    + Loads theme config from site_config table
+    + Theatrical lighting effects (CSS masks + scroll transforms)
+    + Theme rotation on return visits
 
 ### Key API Functions
 
-**`api/checkout.ts`** — Stripe session creation
-  + Checks product availability in Supabase before creating session
-  + Creates checkout session with `ui_mode: 'custom'`
-  + Collects email, phone, and shipping address
-  + Passes metadata: `{ items: [{id, slug}] }` for webhook identification
-  + Enables shipping address collection (US only) and phone number collection
-  + Returns client_secret for frontend Stripe Elements mount
+  * **`api/checkout.ts`** — Stripe session creation
+    + Checks product availability in Supabase before creating session
+    + Creates checkout session with `ui_mode: 'custom'`
+    + Collects email, phone, and shipping address
+    + Passes metadata: `{ items: [{id, slug}] }` for webhook identification
+    + Enables shipping address collection (US only) and phone number collection
+    + Returns client_secret for frontend Stripe Elements mount
 
-**`api/webhook.ts`** — Stripe event handler
-  + Reads raw body via `request.text()` for signature verification
-  + Validates webhook signature with `stripe.webhooks.constructEvent()`
-  + Idempotency: checks `webhook_events` table for duplicate `event.id`, skips if already processed
-  + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records, records event.id
+  * **`api/webhook.ts`** — Stripe event handler
+    + Reads raw body via `request.text()` for signature verification
+    + Validates webhook signature with `stripe.webhooks.constructEvent()`
+    + Idempotency: checks `webhook_events` table for duplicate `event.id`, skips if already processed
+    + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records, records event.id
 
-**`api/products.ts`** — Product CRUD for AI assistants
-  + GET: fetch product by slug (public, no auth)
-  + POST: create product (requires `PRODUCT_API_KEY` auth, validates fields, generates slug, checks conflicts)
-  + PUT: update product (requires `PRODUCT_API_KEY` auth, handles Stripe price archiving if price changes)
+  * **`api/products.ts`** — Product CRUD for AI assistants
+    + GET: fetch product by slug (public, no auth)
+    + POST: create product (requires `PRODUCT_API_KEY` auth, validates fields, generates slug, checks conflicts)
+    + PUT: update product (requires `PRODUCT_API_KEY` auth, handles Stripe price archiving if price changes)
 
-**`api/config.ts`** — Public configuration
-  + Returns Stripe publishable key and Supabase config per environment
-  + Enables automatic test/live switching without hardcoding keys
+  * **`api/config.ts`** — Public configuration
+    + Returns Stripe publishable key and Supabase config per environment
+    + Enables automatic test/live switching without hardcoding keys
 
-**`api/session-status.ts`** — Checkout return page verification
-  + Retrieves Checkout Session by ID
-  + Returns session status for the completion page UI
+  * **`api/session-status.ts`** — Checkout return page verification
+    + Retrieves Checkout Session by ID
+    + Returns session status for the completion page UI
 
-**`api/stripe-sync.ts`** — Product catalog sync
-  + Called by Supabase database webhook on products INSERT
-  + Creates Stripe Product + Price via API
-  + Writes stripe_product_id + stripe_price_id back to row
+  * **`api/stripe-sync.ts`** — Product catalog sync
+    + Called by Supabase database webhook on products INSERT
+    + Creates Stripe Product + Price via API
+    + Writes stripe_product_id + stripe_price_id back to row
 
 ---
 
@@ -459,18 +459,18 @@ Create `.env.local` (see also `.env.example` in impl guide):
 
 ### Color Scheme
 
-  ```css
-  :root {
-      --color-plum: #4A1942;
-      --color-lavender: #B8A5C8;
-      --color-fog: #D4D4D4;
-      --color-cream: #FFF8E7;
-      --color-gold: #D4AF7A;
-      --color-ink: #1A1A1A;
-      --color-star-blue: #1B3A52;
-      --color-amethyst: #9B6B9E;
-  }
-  ```
+```css
+:root {
+    --color-plum: #4A1942;
+    --color-lavender: #B8A5C8;
+    --color-fog: #D4D4D4;
+    --color-cream: #FFF8E7;
+    --color-gold: #D4AF7A;
+    --color-ink: #1A1A1A;
+    --color-star-blue: #1B3A52;
+    --color-amethyst: #9B6B9E;
+}
+```
 
 ### Design Principles
 
@@ -491,11 +491,11 @@ Create `.env.local` (see also `.env.example` in impl guide):
 
 ### Typography
 
-  ```css
-  :root {
-      --font-display: "Cormorant Garamond", Georgia, serif;
-      --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
+```css
+:root {
+    --font-display: "Cormorant Garamond", Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
   ```
 
   - Cormorant Garamond: hero text, section headings, product titles, taglines
@@ -503,13 +503,13 @@ Create `.env.local` (see also `.env.example` in impl guide):
 
 ### Responsive Breakpoints
 
-  ```css
-  /* Mobile-first */
-  /* Base: 393px (iPhone) */
-  @media (min-width: 768px) { /* Tablet */ }
-  @media (min-width: 1024px) { /* Desktop */ }
-  @media (min-width: 1440px) { /* Large desktop */ }
-  ```
+```css
+/* Mobile-first */
+/* Base: 393px (iPhone) */
+@media (min-width: 768px) { /* Tablet */ }
+@media (min-width: 1024px) { /* Desktop */ }
+@media (min-width: 1440px) { /* Large desktop */ }
+```
 
 ### Full brand reference: `assets/docs/BRAND.md`
 
@@ -602,11 +602,11 @@ Create `.env.local` (see also `.env.example` in impl guide):
 
 No build step for frontend — static HTML/CSS/JS files served directly by Vercel. API functions are compiled by Vercel's TypeScript support automatically.
 
-  ```bash
-  # Deploy (from developer machine only)
-  git push origin main
-  # Vercel auto-deploys on push
-  ```
+```bash
+# Deploy (from developer machine only)
+git push origin main
+# Vercel auto-deploys on push
+```
 
 ### Hosting Configuration
 
@@ -620,25 +620,25 @@ No build step for frontend — static HTML/CSS/JS files served directly by Verce
 
 Set in Vercel Dashboard → Settings → Environment Variables:
 
-| Variable                 | Purpose                                                 | Required |
-| ------------------------ | ------------------------------------------------------- | -------- |
-| `SUPABASE_URL`              | Supabase project URL                                 | Yes      |
-| `SUPABASE_PUBLISHABLE_KEY`  | Supabase publishable key (frontend-safe)             | Yes      |
-| `SUPABASE_SECRET_KEY`       | Supabase secret key (backend only)                   | Yes      |
-| `STRIPE_SECRET_KEY`      | Stripe API secret                                       | Yes      |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe frontend key                                     | Yes      |
-| `STRIPE_WEBHOOK_SECRET`  | Webhook signature validation                            | Yes      |
-| `R2_ACCOUNT_ID`          | Cloudflare account                                      | Yes      |
-| `R2_ACCESS_KEY_ID`       | R2 access credentials                                   | Yes      |
-| `R2_SECRET_ACCESS_KEY`   | R2 secret credentials                                   | Yes      |
-| `R2_BUCKET_NAME`         | R2 bucket name                                          | Yes      |
-| `R2_PUBLIC_URL`          | CDN public base URL                                     | Yes      |
-| `CLOUDINARY_URL`         | Cloudinary API credentials                              | Yes      |
-| `PRODUCT_API_KEY`        | AI/external API auth key                                | Yes      |
-| `META_PIXEL_ID`          | Meta Pixel ID for tracking                              | Yes      |
-| `META_ACCESS_TOKEN`      | Meta Conversions API token                              | Yes      |
-| `RESEND_API_KEY`         | Resend transactional email API key                      | Yes      |
-| `RESEND_FROM_EMAIL`      | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes      |
+| Variable                   | Purpose                                                 | Required |
+| -------------------------- | ------------------------------------------------------- | -------- |
+| `SUPABASE_URL`             | Supabase project URL                                    | Yes      |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (frontend-safe)                | Yes      |
+| `SUPABASE_SECRET_KEY`      | Supabase secret key (backend only)                      | Yes      |
+| `STRIPE_SECRET_KEY`        | Stripe API secret                                       | Yes      |
+| `STRIPE_PUBLISHABLE_KEY`   | Stripe frontend key                                     | Yes      |
+| `STRIPE_WEBHOOK_SECRET`    | Webhook signature validation                            | Yes      |
+| `R2_ACCOUNT_ID`            | Cloudflare account                                      | Yes      |
+| `R2_ACCESS_KEY_ID`         | R2 access credentials                                   | Yes      |
+| `R2_SECRET_ACCESS_KEY`     | R2 secret credentials                                   | Yes      |
+| `R2_BUCKET_NAME`           | R2 bucket name                                          | Yes      |
+| `R2_PUBLIC_URL`            | CDN public base URL                                     | Yes      |
+| `CLOUDINARY_URL`           | Cloudinary API credentials                              | Yes      |
+| `PRODUCT_API_KEY`          | AI/external API auth key                                | Yes      |
+| `META_PIXEL_ID`            | Meta Pixel ID for tracking                              | Yes      |
+| `META_ACCESS_TOKEN`        | Meta Conversions API token                              | Yes      |
+| `RESEND_API_KEY`           | Resend transactional email API key                      | Yes      |
+| `RESEND_FROM_EMAIL`        | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes      |
 
 **Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 
@@ -655,21 +655,33 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 Free-tier services have caps and auto-pause behavior. This is the operational checklist for the first year of production — the things that don't show up in architecture docs but will absolutely interrupt the site if ignored.
 
-| What                           | Cadence               | What to watch                                                                                                                                                 | Upgrade trigger                                                                                 |
-| ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Supabase free-tier auto-pause  | Every 7 days idle     | Project pauses after 7 days of no activity. Data is preserved. If production traffic keeps it alive, no action. During dev lulls, resume from dashboard.      | Pro tier ($25/mo) when pauses affect the live site or when Emy needs daily admin access.        |
-| Resend email cap               | Monthly               | Free tier = 3,000 emails/mo. Monitor from the Resend dashboard around month-end.                                                                              | Paid tier ($20/mo for 50k) when monthly volume crosses ~2,500.                                  |
-| Shippo label cap               | Monthly               | Free Starter = 30 USPS labels/mo. Emy tracks manually from Shippo's dashboard.                                                                                | Pay-as-you-go ($0.05/label) when monthly volume crosses 25.                                     |
-| Stripe receipt emails          | Verify post-launch    | Dashboard > Settings > Emails: "Successful payments" + "Refunds" both toggled ON. Re-verify after any Stripe account change.                                  | N/A — always on.                                                                                |
-| Cloudflare R2 storage          | Quarterly             | Free tier = 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo. A typical site stays well under.                                                          | Paid tier ($0.015/GB + ops) when hitting caps — unlikely for v1.                                |
-| Vercel hobby plan              | Quarterly             | Hobby tier caps: 100 GB bandwidth/mo, 1k serverless function invocations/day average. Usage dashboard shows current.                                          | Pro tier ($20/mo) when bandwidth or function volume approaches caps.                            |
-| Domain renewal                 | Annually              | `everlastingsbyemaline.com` is on Cloudflare Registrar at renewal cost. Auto-renew on.                                                                        | N/A — auto-renew.                                                                               |
-| SSL certificates               | Automatic             | Vercel auto-renews via Let's Encrypt. Monitor via Vercel dashboard only if an alert fires.                                                                    | N/A — auto-renew.                                                                               |
-| Meta Commerce Manager feed     | After each product    | New products appear in Instagram Shopping within 24 hours of publishing. Check catalog health in Meta Commerce Manager monthly.                               | N/A — free.                                                                                     |
-| Stripe API key rotation        | Annually or on leak   | Rotate live secret key if a device is lost or a key is ever pasted into a shared tool. Update Vercel Production scope after rotation.                         | N/A — operational hygiene.                                                                      |
-| Supabase DB password           | Annually or on leak   | Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed.                          | N/A — operational hygiene.                                                                      |
-| `PRODUCT_API_KEY` rotation     | Annually or on leak   | `openssl rand -hex 32`; update both Production and Preview scopes in Vercel. Update the Custom GPT's Bearer token to match.                                   | N/A — operational hygiene.                                                                      |
-| DMARC policy tightening        | ~30 days post-launch  | Launch with `p=none` (observe-only). After 30 days of clean send history, upgrade TXT record to `p=quarantine`, then 30 days later to `p=reject` for full spoofing protection. | N/A — operational hygiene. Tightens email deliverability + anti-spoofing over time. |
+| #   | Service         | Limit                                                                            |
+| --- | --------------- | -------------------------------------------------------------------------------- |
+| 1   | Supabase        | Project pause after 7 days idle                                                  |
+| 2   | Resend          | Free tier = 3,000 emails/mo                                                      |
+| 3   | Shippo          | Starter = 30 USPS labels/mo                                                      |
+| 4   | Stripe          | Dashboard > Settings > Emails: "Successful payments" + "Refunds" both toggled ON |
+| 5   | Cloudflare R2   | 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo                           |
+| 6   | Vercel          | 100 GB bandwidth/mo, 1k serverless function invocations/day                      |
+| 7   | SquareSpace     | Domain auto-renewal paid through Google Workspace                                |
+| 8   | Meta Commerce   | New products appear in Instagram Shopping within 24 hours of publishing          |
+| 9   | Stripe API Key  | Rotate if a device is lost or key is shared                                      |
+| 10  | DB Password     | Supabase password rotate if exposed                                              |
+| 11  | PRODUCT_API_KEY | Rotate if exposed                                                                |
+| 12  | DMARC policy    | Launch with p=none; upgrade if clean send history or monthly volume > 1,000      |
+
+  1. Traffic keeps it alive; Pro tier ($25/mo) doesn't pause — consider built in ping every few days or daily 
+  2. Paid tier ($20/mo for 50k) when monthly volume crosses ~2,500
+  3. Pay-as-you-go ($0.05/label) when monthly volume crosses 25
+  4. Re-verify after any Stripe account change
+  5. Unlikely to hit cap on normal site; enough traffic to require upgrade is a lot
+  6. Pro tier ($20/mo) when bandwidth or function volume approaches caps
+  7. Maintain auto renew 
+  8. Check catalog health in Meta Commerce Manager monthly
+  9. Update Vercel Production scope after rotation
+  10. Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed
+  11. `PRODUCT_API_KEY` created via `openssl rand -hex 32`; update Prod, Preview in Vercel; update CustomGPT's Bearer token to match 
+  12. Upgrade TXT record to `p=quarantine` or `p=reject` to tighten email delivery 
 
 **First-month warm-up checklist** (2026-05-ish):
 
@@ -683,14 +695,16 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
 
 All outbound transactional email routes through Resend (sending) and all reply/inbound email routes through Google Workspace (receiving). Resend cannot receive email directly — replies to our `From:` address land in Emy's Google Workspace inbox via configured aliases.
 
-**Google Workspace aliases** (all route to Emy's primary inbox):
-  + `admin@everlastingsbyemaline.com` — master admin address
-  + `hello@everlastingsbyemaline.com` — customer-facing general inbox; used as `RESEND_FROM_EMAIL` and `RESEND_REPLY_TO_EMAIL`
+**Google Workspace aliases** (all route to inbox within User space created for 'Sean Horvath'):
+  + `admin@everlastingsbyemaline.com` — master admin address used for login of services 
+  + `sunkeeper@everlastingsbyemaline.com` — used as `RESEND_FROM_EMAIL` for emails from Resend
+  + `hello@everlastingsbyemaline.com` — set as the *reply-to* email `RESEND_REPLY_TO_EMAIL` in Resend emails 
   + `orders@everlastingsbyemaline.com` — potential future segmentation for order-specific notifications
   + `shipping@everlastingsbyemaline.com` — potential future segmentation for tracking/shipping notifications
-  + `sunkeeper@everlastingsbyemaline.com` — reserved for per-product or campaign-specific sending
+  
+*Note: Resend currently uses the same domain that Google Workspaces uses for email, this means that a "reply to" address is REQUIRED. Any replies sent from users directly to the email address from outgoing Resend email will not be received. Without upgrading to have a second custom domain used just for direct replies, we would need to set up a subdomain, e.g. `m.everlastingsbyemaline.com` for outgoing and incoming Resend emails. As of no there does not seem reason to need incoming emails; this only currently seems necessary if there was a high volume of replies from customers directly to our emails and back-and-forth email conversations.*
 
-**Resend domain setup**: `everlastingsbyemaline.com` (apex) verified; Return-Path on `send.everlastingsbyemaline.com` (auto-handled by Resend) for SPF/DMARC reputation isolation; click tracking ON; open tracking OFF (inaccurate in modern mail clients).
+**Resend domain setup**: `everlastingsbyemaline.com` (apex) verified 
 
 **Post-v1 roadmap (`assets/docs/archive/v2_0/`)** — exploratory planning for post-launch "eliminate manual ops work" wave, theme-grouped:
 

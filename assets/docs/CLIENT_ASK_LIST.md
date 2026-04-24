@@ -150,15 +150,15 @@ This is the hardest pill — and the reason ads aren't optional anymore, even fo
 
 Real benchmarks, side-by-side, so you can see what changes with just $500/month in ads running for 90 days:
 
-| What You Measure         | Without Ads   | With $500/mo Ads |
-| ------------------------ | ------------- | ---------------- |
-| Monthly unique visitors  | 500–1,000     | **2,500–5,000**  |
-| Product views per visit  | 2.5           | 3.0              |
-| Add-to-cart rate         | 4–6%          | **6–8%**         |
-| Completed purchase rate  | 1.5–2%        | **2.5–3.5%**     |
-| Email list growth        | ~20/month     | **80–150/month** |
-| Blended return on ad $   | N/A           | **3–4×**         |
-| **Monthly revenue**      | $500–$1,500   | **$3,000–$8,000** |
+| What You Measure        | Without Ads | With $500/mo Ads  |
+| ----------------------- | ----------- | ----------------- |
+| Monthly unique visitors | 500–1,000   | **2,500–5,000**   |
+| Product views per visit | 2.5         | 3.0               |
+| Add-to-cart rate        | 4–6%        | **6–8%**          |
+| Completed purchase rate | 1.5–2%      | **2.5–3.5%**      |
+| Email list growth       | ~20/month   | **80–150/month**  |
+| Blended return on ad $  | N/A         | **3–4×**          |
+| **Monthly revenue**     | $500–$1,500 | **$3,000–$8,000** |
 
 Every one of these numbers is *already wired to measure itself* — GA4, Meta Pixel, and the site's own database will surface them automatically. You don't track them; they track themselves.
 
