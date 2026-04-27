@@ -243,7 +243,14 @@ Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before uplo
 
 ---
 
-## Logo Specs
+## Logo
+
+I got the SVG file and started create quite a large variety of versions and sizes, primarily in .jpg or .wepb and you can find them all here. Let me know if there are any to create specifically or to adjust. 
+
+`assets/brand/favicon/`
+`assets/brand/logo/`
+
+### Specs
 
   - **Style**: 1950s-inspired silhouette
   - **Imagery**: Miniature house cupped in hands
@@ -252,6 +259,30 @@ Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before uplo
   - **Color**: Deep plum/wine (`#4A1942`)
   - **Usage**: Clean, simple, evocative without being literal
   - **Format needed**: SVG preferred, high-res PNG fallback, light/dark variants
+
+### About Design 
+
+  **The Meaning Behind the Everlastings by Emaline Logo**
+
+  The Everlastings by Emaline logo was intentionally designed to represent the heart of the work: creating small places of peace in a world that often feels overwhelming.
+
+  The silhouette of the woman is inspired by mid-century illustration styles from the 1950s. That era evokes a sense of nostalgia, warmth, and timeless storytelling. Qualities that are deeply woven into the miniature worlds I create. 
+
+  The figure is elegant but simple, meant to feel both classic and approachable, like a character stepping out of an old storybook. She is slightly bent forward, holding a tiny house gently in her cupped hands.
+
+  That gesture is the center of the logo meaning.
+
+  She is not presenting the house like a product. She is offering it carefully, almost protectively. The small house represents the miniature worlds I build; places of quiet, wonder, breath and reflection. They are intentionally small enough to hold, symbolizing the idea that sometimes comfort, imagination, and beauty come in the smallest spaces.
+
+  The house is a metaphor for what the work represents: a moment of peace, a story, a memory, or an “Elsewhere” someone can step into when the real world feels heavy.
+
+  The figure herself can be read in multiple ways. She is the maker, the storyteller, the caretaker of these small worlds, but she also represents the viewer. The gesture invites people to imagine holding a place of peace in their own hands.
+
+  The lace detail along the hem of her skirt carries the brand name, "Everlastings by Emaline," reinforcing the idea that the work blends craftsmanship, storytelling, and artistry.
+
+  The logo reflects the core philosophy behind the brand: Small things can hold enormous meaning. These miniature houses are not just objects. They are tiny sanctuaries, handcrafted havens for stories, memories, and moments of stillness.
+
+  The logo captures that moment of offering: a quiet invitation to step into Elsewhere
 
 ---
 
