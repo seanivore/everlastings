@@ -235,7 +235,7 @@ export BASE_URL="https://everlastingsbyemaline.com"
 export BASE_URL="https://everlastings-git-dev-team.vercel.app"
 ```
 
-When `BASE_URL` points to a preview URL, the API automatically tags created rows with `is_test = true` and uploads images under R2's `test/` namespace (CDN URLs become `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`). No manual cleanup is needed before launch — see the implementation guide's [Dev/Test Data Hygiene](archive/v1_4/v1_4_2_IMPL_GUIDE.md#devtest-data-hygiene-reference) section.
+When `BASE_URL` points to a preview URL, the API automatically tags created rows with `is_test = true` and uploads images under R2's `test/` namespace (CDN URLs become `https://cdn.everlastingsbyemaline.com/test/{slug}/test_{role}-{slug}.webp`). No manual cleanup is needed before launch — see the implementation guide's [Dev/Test Data Hygiene](archive/v1_4/v1_4_2_IMPLEMENT.md#devtest-data-hygiene-reference) section.
 
 `PRODUCT_API_KEY` differs per environment too — use the test value from `.env.local` when `BASE_URL` is a preview URL, and the live value (managed by Sean) only for production seeding.
 

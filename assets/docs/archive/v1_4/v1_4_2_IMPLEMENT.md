@@ -224,7 +224,7 @@ Complete each service end-to-end before moving to the next. No forward reference
   - [x] **Install** Supabase CLI: `brew install supabase/tap/supabase`.
   - [x] **Run** `supabase login` in Terminal.app (opens browser OAuth; token stored in macOS Keychain).
   - [x] **Run** `supabase link --project-ref rvnxftbfeaxymhzxxhjm` (no DB password needed in CLI v2.90+).
-  - [ ] **Grant Emy Supabase-project member access** (separate from Auth invite). Wait for her to accept the Auth invite, create a Supabase account using `emyh@everlastingsbyemaline.com`, confirm her email, and notify Sean. Then: Project Settings > General > Project Access > Manage Members > add her email. See [CLIENT_ASK_LIST.md > section 0](../../CLIENT_ASK_LIST.md).
+  - [ ] **Grant Emy Supabase-project member access** (separate from Auth invite). Wait for her to accept the Auth invite, create a Supabase account using `emyh@everlastingsbyemaline.com`, confirm her email, and notify Sean. Then: Project Settings > General > Project Access > Manage Members > add her email. See [CLIENT_ASK_LIST.md > section 0](../CLIENT_ASK_LIST.md).
 
 **Concepts reference** (new Nov-2025 key format):
 
@@ -313,7 +313,7 @@ const supabase = createClient(
   - [ ] **Verify** the domain in Meta (DNS record in Cloudflare).
   - [ ] **Copy** `META_PIXEL_ID` + generate a system-user `META_ACCESS_TOKEN` (scope: `catalog_management`) → `.env.local`.
   - [ ] **Run** `vercel env add` for both vars across Production + Development scopes.
-  - [ ] **Relay** Instagram Shopping prerequisites checklist to Emy (see [CLIENT_ASK_LIST.md](../../CLIENT_ASK_LIST.md) section 1).
+  - [ ] **Relay** Instagram Shopping prerequisites checklist to Emy (see [CLIENT_ASK_LIST.md](../CLIENT_ASK_LIST.md) section 1).
 
 #### Google Analytics Checklist
 
