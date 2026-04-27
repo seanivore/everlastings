@@ -10,19 +10,19 @@ Scope for this session (confirmed with Sean): walk through **all Phase 0 service
 
 ## Tech Stack at a Glance (NEW — to be pinned at top of both docs)
 
-| Layer          | What we use                                            | Why                                                             |
-| -------------- | ------------------------------------------------------ | --------------------------------------------------------------- |
-| Frontend       | Vanilla HTML + CSS + JS, loaded directly in the browser| No build step, no framework, no React. Proven pattern.          |
-| Frontend libs  | `@supabase/supabase-js` + `stripe.js` via CDN          | Script tags only. No npm install for the browser.               |
-| Backend        | TypeScript in Vercel Serverless Functions (Node.js)    | Type safety for Stripe + Supabase server-side calls.            |
-| Backend libs   | `npm install` only inside `/api/*.ts` world            | `package.json` drives a normal Node/TS toolchain for the API.   |
-| Runtime        | Vercel (free tier)                                     | Auto-deploy, per-branch env vars, serverless functions.         |
-| Database       | Supabase Postgres (free tier)                          | REST API + RLS + Auth + Studio UI.                              |
-| Assets         | Cloudflare R2 + `cdn.everlastingsbyemaline.com`        | Public CDN for images/video. Cloudinary is a stateless transformer only — not a host. |
-| Payments       | Stripe Custom Checkout (`ui_mode: 'custom'`)           | On-site checkout with full brand control.                       |
-| Email          | Resend                                                 | Transactional email; free tier 3k/mo.                           |
-| Shipping       | Shippo Starter (web UI only in v1)                     | 30 free USPS labels/mo.                                         |
-| Analytics      | GA4 (gtag.js) + Meta Pixel                             | CDN script tags. No GTM.                                        |
+| Layer         | What we use                                             | Why                                                                                   |
+| ------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Frontend      | Vanilla HTML + CSS + JS, loaded directly in the browser | No build step, no framework, no React. Proven pattern.                                |
+| Frontend libs | `@supabase/supabase-js` + `stripe.js` via CDN           | Script tags only. No npm install for the browser.                                     |
+| Backend       | TypeScript in Vercel Serverless Functions (Node.js)     | Type safety for Stripe + Supabase server-side calls.                                  |
+| Backend libs  | `npm install` only inside `/api/*.ts` world             | `package.json` drives a normal Node/TS toolchain for the API.                         |
+| Runtime       | Vercel (free tier)                                      | Auto-deploy, per-branch env vars, serverless functions.                               |
+| Database      | Supabase Postgres (free tier)                           | REST API + RLS + Auth + Studio UI.                                                    |
+| Assets        | Cloudflare R2 + `cdn.everlastingsbyemaline.com`         | Public CDN for images/video. Cloudinary is a stateless transformer only — not a host. |
+| Payments      | Stripe Custom Checkout (`ui_mode: 'custom'`)            | On-site checkout with full brand control.                                             |
+| Email         | Resend                                                  | Transactional email; free tier 3k/mo.                                                 |
+| Shipping      | Shippo Starter (web UI only in v1)                      | 30 free USPS labels/mo.                                                               |
+| Analytics     | GA4 (gtag.js) + Meta Pixel                              | CDN script tags. No GTM.                                                              |
 
 **What we are NOT using** (and why docs might look weird when they suggest these):
 - **No Next.js, no React, no SSR.** Supabase's "CONNECT" dropdown and `@supabase/ssr` package assume Next.js — ignore them.
@@ -33,14 +33,14 @@ Scope for this session (confirmed with Sean): walk through **all Phase 0 service
 
 ## Plain-English glossary for confusing IMPL_GUIDE terms
 
-| Term in docs                       | What it actually means                                                                           | Simpler equivalent you may know                                |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| "Apply migrations"                 | Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers                 | "Run the create-tables SQL once"                               |
-| "Migrations via MCP"               | Using the Supabase MCP server tool to run that SQL. Optional — CLI does the same.                | We'll use **Supabase CLI `supabase db push`** instead.         |
-| "Supabase DB webhook"              | A setting inside Supabase Studio that says "when a row is inserted into `products`, POST to ___" | An HTTP trigger — like an IFTTT rule — fired by the database.  |
-| "Stripe webhook" (different thing) | Stripe's outbound notification when a payment completes                                          | Standard Stripe webhook. Unrelated to the Supabase DB webhook. |
+| Term in docs                       | What it actually means                                                                           | Simpler equivalent you may know                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| "Apply migrations"                 | Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers                 | "Run the create-tables SQL once"                                                                            |
+| "Migrations via MCP"               | Using the Supabase MCP server tool to run that SQL. Optional — CLI does the same.                | We'll use **Supabase CLI `supabase db push`** instead.                                                      |
+| "Supabase DB webhook"              | A setting inside Supabase Studio that says "when a row is inserted into `products`, POST to ___" | An HTTP trigger — like an IFTTT rule — fired by the database.                                               |
+| "Stripe webhook" (different thing) | Stripe's outbound notification when a payment completes                                          | Standard Stripe webhook. Unrelated to the Supabase DB webhook.                                              |
 | "Stripe coupon bootstrap"          | A one-time script that creates the two base coupons in Stripe via API so dev and prod match      | "Run this once; it creates the two coupons for us." Alternative: click-create them in the Stripe dashboard. |
-| "Preview CORS smoke test"          | Push a throwaway branch; open the Vercel preview URL; confirm API calls work                     | A 2-minute sanity check we added because past projects had invisible CORS bugs on preview. |
+| "Preview CORS smoke test"          | Push a throwaway branch; open the Vercel preview URL; confirm API calls work                     | A 2-minute sanity check we added because past projects had invisible CORS bugs on preview.                  |
 
 ---
 

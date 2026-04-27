@@ -1,9 +1,6 @@
-# Everlastings v1.4.2 Implementation Guide
+# Everlastings v1.4.3 Implementation Guide
 
-**Version**: v1.4.2
-**Created**: 2026-04-16 from `assets/docs/archive/v1_4/FEEDBACK_FROM_v1_3_1.md` via `assets/docs/archive/v1_4/v1_4_0_FEEDBACK_PLAN.md`
-**Revised**: 2026-04-16 via `assets/docs/archive/v1_4/v1_4_1_FEEDBACK_PLAN.md` and `assets/docs/archive/v1_4/v1_4_2_FEEDBACK_PLAN.md`
-**Previous**: v1.3.1 (2026-04-12), archived at `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
+**Version**: v1.4.3
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
 **Architecture Reference**: `assets/docs/EVERLASTINGS_STORE.md`
 **Design Reference**: `assets/docs/BRAND.md`
