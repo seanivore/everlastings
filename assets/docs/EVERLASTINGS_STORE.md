@@ -2,10 +2,15 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-16 — v1.4.0: two-stage checkout with pre-PII availability check, `cart_holds` soft reservations (8th table), shipping pipeline (Shippo web UI + Resend tracking emails), corrected coupon strategy (idempotent `api/_bootstrap/coupons.ts`), single Phase 0 setup block (Phase 1 removed as duplicate of A1), placeholder hygiene, `customer_email_linked` event (Reviewed by SH on 2026-04-24 15:47)
-**Version**: v1.4.0
-**Status**: Pre-development, architecture finalized
-**Build Guide**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
+**Updated**: 2026-04-29 — v1.4.3: Phase 0 complete. Implementation guide split into three track-specific guides (A: backend, B: frontend, C: integration) for parallel orchestrator-agent execution. Added 33-item Architecture Reference, Plain-English Glossary, and Stripe Sync Rules sections — canonical references for all tracks.
+**Version**: v1.4.3
+**Status**: Phase 0 complete; parallel implementation tracks ready to launch (A, B, C)
+**Build Guides** (track-specific, parallel execution):
+  - `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md` — Foundation + Backend
+  - `assets/docs/archive/v1_4/v1_4_3_B_IMPLEMENT.md` — Frontend Design
+  - `assets/docs/archive/v1_4/v1_4_3_C_IMPLEMENT.md` — Integration
+  - `assets/docs/archive/v1_4/v1_4_3_INIT_PROMPTS.md` — Track initiation prompts
+  - `assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md` — Original combined guide (chronological archive)
 
 ---
 
@@ -37,6 +42,20 @@
   + **No Next.js, no React, no SSR.** Supabase's dashboard "Connect" modal and the `@supabase/ssr` package assume Next.js — ignore them.
   + **No MCP-first toolchain.** Where a standard CLI (Supabase CLI, Stripe CLI, Vercel CLI) does the job, use it. MCP is an optional fallback only.
   + **No Supabase Branching and no Supabase/Vercel Marketplace integration.** Both are optimized for branching-based dev workflows; the `is_test` flag + shared-project design already handles dev/prod separation.
+
+---
+
+## Plain-English Glossary
+
+Terms used throughout the implementation guides that are easy to misread if you're coming from a different stack:
+
+- **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers. Equivalent: run the create-tables SQL once.
+- **Migrations via MCP** — Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same. Default: **Supabase CLI `supabase db push`**.
+- **Supabase DB webhook** — A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL." An HTTP trigger fired by the database, like an IFTTT rule on row insert.
+- **Stripe webhook** — Stripe's outbound notification when a payment completes. Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
+- **Stripe coupon bootstrap** — A one-time script that creates the two base coupons in Stripe via API so dev and prod match. Run once. Alternative: click-create them in the Stripe dashboard.
+- **Preview CORS smoke test** — Push a throwaway branch; open the Vercel preview URL; confirm API calls work. A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.
+- **Publishable key / secret key** — Supabase's new (Nov 2025+) API key format. Replaces legacy `anon` / `service_role` one-for-one. Frontend-safe key / server-only key. Same roles, new names.
 
 ---
 
@@ -169,6 +188,147 @@
   21. **Coupon = rule, promotion code = single-use delivery** (v1.4) — Stripe coupons are `Duration: Forever`, `Max redemptions: BLANK`. Every user event generates a unique promotion code via `stripe.promotionCodes.create` with `max_redemptions: 1` and 30-day expiry. Code is emailed via Resend.
 
   22. **Placeholder hygiene** (v1.4) — Track B hardcoded content wrapped in `<!-- PLACEHOLDER: name -->` tags (and equivalents for CSS/JS). Track C begins and ends with a grep against the codebase to guarantee nothing slips through.
+
+---
+
+## Architecture Reference
+
+Implementation-level architectural decisions, cited as "AR #N" throughout the v1.4.3 track-specific implementation guides. Where any conflict exists between this list and `Key Architectural Decisions` above, this list (sourced from the canonical `v1_4_3_IMPLEMENT.md`) takes precedence.
+
+  1. **`ui_mode: 'custom'`** for Stripe Checkout
+     - Proven in freelance-payments. Full UI control.
+     - On-site checkout per client contract. Follows Stripe quickstart guide
+  2. **Standard cart flow**
+     - Add to Cart → keep shopping → view cart → checkout.
+     - Normal e-commerce UX. Cart stored in localStorage
+  3. **Availability check at checkout for all cart items**
+     - Query `available === true` for every item before creating Stripe session
+     - If any sold, 409 + recovery flow
+  4. **Stripe products are write-once**
+     - Never UPDATE Stripe products/prices. Price change = archive old price, create new.
+     - "Stripe is a payment mirror, not source of truth"
+  5. **R2 path**: `/products/{slug}/{role}-{slug}.webp`
+     - SEO-friendly, predictable, collision-free.
+     - Example: `/products/the-sunkeeper/hero-the-sunkeeper.webp`
+  6. **Image aspect ratio**: 4:5
+     - Prevents messy grids.
+     - Enforced via Cloudinary transform on upload
+  7. **Slug rules**: immutable after creation
+     - `title.toLowerCase().replaceAll(' ', '-')`
+     - URL stability, SEO preservation
+  8. **Stripe metadata**: `items` field
+     - JSON array of `{ id, slug }`
+     - Parsed with `JSON.parse(metadata.items)`
+  9. **Error states**: fallback message + disabled buttons + console.log
+     - Every page has a failure mode documented.
+     - See Error States Reference (in track-specific guides)
+  10. **Supabase publishable key hardcoded** in `main.js`
+      - Public by design, RLS-protected. (New Nov-2025 key format replaces the legacy `anon` key one-for-one.)
+      - No build step = no env var injection for frontend
+  11. **CDN loading** for frontend libs
+      - Stripe.js via `js.stripe.com`, Supabase.js via jsDelivr.
+      - No npm/build step for frontend
+  12. **Vercel Web API pattern** for serverless functions
+      - `export async function POST(request: Request)`
+      - Modern pattern, not legacy `(req, res)`
+  13. **R2 custom domain**: `cdn.everlastingsbyemaline.com`
+      - Cloudflare DNS CNAME → R2 bucket
+      - Branded CDN URL for all product assets
+  14. **Customers table with upsert-on-checkout**
+      - Email as unique key. No pre-checkout accounts.
+      - Newsletter subscribers linked on purchase
+  15. **Frontend Stripe key via `api/config.ts`**
+      - Enables automatic test/live switching per Vercel environment
+      - Nothing hardcoded
+  16. **GA4 via `gtag.js` CDN, no GTM**
+      - Simple, no-build-step analytics
+      - Custom events via `gtag('event', ...)`
+  17. **Cloudinary as stateless transform layer**
+      - Proven in 360-design. Upload → transform → download → R2 → delete from Cloudinary.
+      - Stay on free tier
+  18. **AI product creation via API endpoints**
+      - `POST /api/products` + `POST /api/upload`
+      - Enable any AI assistant to create products programmatically
+  19. **Order confirmation via Stripe Dashboard emails**
+      - No custom email system for v1.
+      - Stripe sends receipts natively (enable in Dashboard → Settings → Emails)
+  20. **Custom `PRODUCT_API_KEY` for external API auth**
+      - Random 64-char string, stored as env var
+      - API endpoints validate this key, then use `SUPABASE_SECRET_KEY` internally
+      - If `PRODUCT_API_KEY` leaks, rotate just that key without affecting Supabase
+      - `SUPABASE_SECRET_KEY` is NEVER exposed in client, agent, or cURL usage
+  21. **Webhook idempotency via `webhook_events` table**
+      - Store `event.id` on successful processing
+      - Skip already-processed events (Stripe retries)
+  22. **Source of truth hierarchy**: Supabase > Stripe > R2 > Frontend
+      - Supabase = authoritative data
+      - Stripe = payment mirror only
+      - R2 = asset storage only
+      - Frontend = read-only consumer
+  23. **Slug generated API-side before image upload**
+      - Compute `title.toLowerCase().replaceAll(' ', '-')` BEFORE uploading images
+      - DB trigger is fallback only (for manual Supabase Studio inserts)
+      - Order: generate slug → upload images → create product record
+  24. **Image role enforcement**
+      - Exactly 1 hero image required
+      - Exactly 1 thumbnail required
+      - Minimum 5 gallery images required
+      - Validated by `api/products.ts` before INSERT
+  25. **Meta Pixel for retargeting + Instagram Shopping attribution**
+      - Base pixel code in `<head>` alongside GA4. Events fire in parallel
+      - Server-side CAPI for Purchase deduplication via webhook
+      - Meta Pixel ID served via `api/config.ts` (public, like GA4 measurement ID)
+  26. **Email capture CTAs for conversion optimization**
+      - Product page interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup
+      - All feed into `subscribers` table with distinct `source` values
+      - Product interest tracked in `product_interests` table for real notification capability
+  27. **Meta Commerce Catalog via data feed**
+      - `api/product-feed.ts` serves CSV of all products
+      - Meta Commerce Manager polls daily — products auto-sync to Instagram Shopping
+      - Same pattern extends to Pinterest Shopping (post-launch)
+  28. **Availability check BEFORE any PII is entered**
+      - `/cart.html` shows items + cost estimate + optional email/name capture
+      - `[CHECKOUT]` button fires `POST /api/checkout/reserve` — runs availability check + creates 15-min soft hold in `cart_holds` table
+      - 409 recovery happens on the cart page, before the user types any address or payment data
+      - Stripe session created only AFTER availability is confirmed (no wasted sessions)
+  29. **Soft cart holds, not hard reservations**
+      - `cart_holds` table: 15-min TTL, per browser session
+      - Availability check = `products.available AND NOT EXISTS (active hold by different session)`
+      - No infinite lock — if the user walks away, the item frees after 15 minutes
+      - Holds are refreshed on any checkout-page interaction
+  30. **Shipping pipeline: Shippo (labels) + Resend (branded tracking email)**
+      - Emy generates USPS/UPS labels in Shippo's free tier UI (~30 labels/mo free)
+      - Admin UI `/admin/orders` shows "Needs shipping" queue with copy-to-clipboard addresses
+      - Emy pastes Shippo tracking number into admin form → `PATCH /api/orders/:id` records tracking + fires branded tracking email via Resend
+      - Resend free tier: 3,000 emails/month, no credit card
+  31. **Coupon = rule, promotion code = single-use delivery**
+      - Stripe coupons (`cart-recovery-10`, `newsletter-welcome-5`) are the discount rules. `Duration: Forever`, `Max redemptions: BLANK`.
+      - We NEVER hand out the coupon ID directly — we generate unique single-use promotion codes via API (`max_redemptions: 1`, `expires_at: now + 30d`) per user event
+      - Every code is emailed to the user and stored in the relevant table (`subscribers.promo_code` or cart-recovery metadata)
+  32. **Placeholder hygiene via `PLACEHOLDER:` tags**
+      - Every piece of hardcoded demo content in Track B is wrapped in a `<!-- PLACEHOLDER: name -->` or `/* PLACEHOLDER: name */` or `// PLACEHOLDER: name` comment
+      - Track C starts with `grep -rn "PLACEHOLDER"` as the to-do list; C4 ends with that grep returning zero results
+      - Zero tooling, works across HTML/CSS/JS, one-command audit
+  33. **Cookie consent via Google Consent Mode v2 + Meta Pixel consent API**
+      - Cookie banner on first visit with Accept / Reject / Customize; choice persisted in localStorage
+      - Default consent state on page load: `ad_storage: 'denied'`, `analytics_storage: 'denied'`, `ad_user_data: 'denied'`, `ad_personalization: 'denied'`. Fires via gtag `consent default` call BEFORE `gtag.js` loads.
+      - On Accept: `gtag('consent', 'update', {...: 'granted'})` + `fbq('consent', 'grant')`
+      - On Reject / no choice: analytics + advertising cookies stay blocked; essential site cookies (Stripe checkout session, cart localStorage) still work since they're necessary for the service
+      - Persistent revoke link in footer → opens the banner again
+      - Privacy policy page enumerates cookie categories (essential / analytics / advertising) + how to revoke
+      - **GA4 setup note**: turn ON Google Signals (default recommendation) so the June 2026 Google change causes no drift; Consent Mode still governs whether `ad_storage` is granted.
+
+---
+
+## Stripe Sync Rules
+
+Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` and `api/products.ts > PUT`.
+
+  - On product **INSERT** → create Stripe Product + Price (via `api/stripe-sync.ts`)
+  - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase
+  - On **title/image/description change** → DO NOTHING in Stripe (Stripe is a payment mirror, not source of truth)
+  - Never UPDATE a Stripe Price (they are immutable). Always archive + create new
+  - Never manually create Stripe Products/Prices in Dashboard. The database webhook handles all creation
 
 ---
 
