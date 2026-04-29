@@ -100,25 +100,25 @@ A1 assumes Phase 0 is complete (all accounts created, env vars loaded) by verify
 
 Vercel Dashboard → Settings → Environment Variables. Each var scoped by environment.
 
-| Variable                   | Production                        | Preview + Development   |
-| -------------------------- | --------------------------------- | ----------------------- |
-| `STRIPE_SECRET_KEY`        | `sk_live_...`                     | `sk_test_...`           |
-| `STRIPE_PUBLISHABLE_KEY`   | `pk_live_...`                     | `pk_test_...`           |
-| `STRIPE_WEBHOOK_SECRET`    | live signing secret               | test signing secret     |
-| `SUPABASE_URL`             | same                              | same                    |
-| `SUPABASE_PUBLISHABLE_KEY` | same                              | same                    |
-| `SUPABASE_SECRET_KEY`      | same                              | same                    |
-| `PRODUCT_API_KEY`          | random 64-char string             | different random string |
-| `R2_ACCOUNT_ID`            | same                              | same                    |
-| `R2_ACCESS_KEY_ID`         | same                              | same                    |
-| `R2_SECRET_ACCESS_KEY`     | same                              | same                    |
-| `R2_BUCKET_NAME`           | same                              | same                    |
-| `R2_PUBLIC_URL`            | same                              | same                    |
-| `CLOUDINARY_URL`           | same                              | same                    |
-| `META_PIXEL_ID`            | same                              | same                    |
-| `META_ACCESS_TOKEN`        | same                              | same                    |
-| `RESEND_API_KEY`           | same                              | same                    |
-| `RESEND_FROM_EMAIL`        | `hello@everlastingsbyemaline.com` | same                    |
+| Variable                   | Production                            | Preview + Development   |
+| -------------------------- | ------------------------------------- | ----------------------- |
+| `STRIPE_SECRET_KEY`        | `sk_live_...`                         | `sk_test_...`           |
+| `STRIPE_PUBLISHABLE_KEY`   | `pk_live_...`                         | `pk_test_...`           |
+| `STRIPE_WEBHOOK_SECRET`    | live signing secret                   | test signing secret     |
+| `SUPABASE_URL`             | same                                  | same                    |
+| `SUPABASE_PUBLISHABLE_KEY` | same                                  | same                    |
+| `SUPABASE_SECRET_KEY`      | same                                  | same                    |
+| `PRODUCT_API_KEY`          | random 64-char string                 | different random string |
+| `R2_ACCOUNT_ID`            | same                                  | same                    |
+| `R2_ACCESS_KEY_ID`         | same                                  | same                    |
+| `R2_SECRET_ACCESS_KEY`     | same                                  | same                    |
+| `R2_BUCKET_NAME`           | same                                  | same                    |
+| `R2_PUBLIC_URL`            | same                                  | same                    |
+| `CLOUDINARY_URL`           | same                                  | same                    |
+| `META_PIXEL_ID`            | same                                  | same                    |
+| `META_ACCESS_TOKEN`        | same                                  | same                    |
+| `RESEND_API_KEY`           | same                                  | same                    |
+| `RESEND_FROM_EMAIL`        | `sunkeeper@everlastingsbyemaline.com` | same                    |
 
 **Frontend Stripe key**: NOT hardcoded. Served via `api/config.ts` — returns correct key per environment.
 **Resend**: single API key for both environments (free tier 3k/mo). Uses same verified domain.
@@ -543,7 +543,7 @@ From AR #30, #31 — Resend handles three email types: shipping tracking, newsle
 
   - [ ] (SEAN) Account created in Phase 0. API key retrieved from Dashboard > API Keys
   - [ ] (SEAN) Domain `everlastingsbyemaline.com` verified for sending (Resend provides DNS records — add to Cloudflare DNS)
-  - [ ] (AGENT) **Set** `RESEND_API_KEY` and `RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com` in Vercel env vars
+  - [ ] (AGENT) **Set** `RESEND_API_KEY` and `RESEND_FROM_EMAIL=sunkeeper@everlastingsbyemaline.com` in Vercel env vars
 
 #### Shippo (Shipping Labels)
 
@@ -664,7 +664,7 @@ META_ACCESS_TOKEN=your-meta-access-token
 
 # Resend (transactional email — tracking, cart recovery coupons, newsletter welcome) — AR #30, #31
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=hello@everlastingsbyemaline.com
+RESEND_FROM_EMAIL=sunkeeper@everlastingsbyemaline.com
 ```
 
 ---

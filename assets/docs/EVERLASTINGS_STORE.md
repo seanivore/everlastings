@@ -780,25 +780,25 @@ git push origin main
 
 Set in Vercel Dashboard → Settings → Environment Variables:
 
-| Variable                   | Purpose                                                 | Required |
-| -------------------------- | ------------------------------------------------------- | -------- |
-| `SUPABASE_URL`             | Supabase project URL                                    | Yes      |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (frontend-safe)                | Yes      |
-| `SUPABASE_SECRET_KEY`      | Supabase secret key (backend only)                      | Yes      |
-| `STRIPE_SECRET_KEY`        | Stripe API secret                                       | Yes      |
-| `STRIPE_PUBLISHABLE_KEY`   | Stripe frontend key                                     | Yes      |
-| `STRIPE_WEBHOOK_SECRET`    | Webhook signature validation                            | Yes      |
-| `R2_ACCOUNT_ID`            | Cloudflare account                                      | Yes      |
-| `R2_ACCESS_KEY_ID`         | R2 access credentials                                   | Yes      |
-| `R2_SECRET_ACCESS_KEY`     | R2 secret credentials                                   | Yes      |
-| `R2_BUCKET_NAME`           | R2 bucket name                                          | Yes      |
-| `R2_PUBLIC_URL`            | CDN public base URL                                     | Yes      |
-| `CLOUDINARY_URL`           | Cloudinary API credentials                              | Yes      |
-| `PRODUCT_API_KEY`          | AI/external API auth key                                | Yes      |
-| `META_PIXEL_ID`            | Meta Pixel ID for tracking                              | Yes      |
-| `META_ACCESS_TOKEN`        | Meta Conversions API token                              | Yes      |
-| `RESEND_API_KEY`           | Resend transactional email API key                      | Yes      |
-| `RESEND_FROM_EMAIL`        | Verified sender, e.g. `hello@everlastingsbyemaline.com` | Yes      |
+| Variable                   | Purpose                                                     | Required |
+| -------------------------- | ----------------------------------------------------------- | -------- |
+| `SUPABASE_URL`             | Supabase project URL                                        | Yes      |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (frontend-safe)                    | Yes      |
+| `SUPABASE_SECRET_KEY`      | Supabase secret key (backend only)                          | Yes      |
+| `STRIPE_SECRET_KEY`        | Stripe API secret                                           | Yes      |
+| `STRIPE_PUBLISHABLE_KEY`   | Stripe frontend key                                         | Yes      |
+| `STRIPE_WEBHOOK_SECRET`    | Webhook signature validation                                | Yes      |
+| `R2_ACCOUNT_ID`            | Cloudflare account                                          | Yes      |
+| `R2_ACCESS_KEY_ID`         | R2 access credentials                                       | Yes      |
+| `R2_SECRET_ACCESS_KEY`     | R2 secret credentials                                       | Yes      |
+| `R2_BUCKET_NAME`           | R2 bucket name                                              | Yes      |
+| `R2_PUBLIC_URL`            | CDN public base URL                                         | Yes      |
+| `CLOUDINARY_URL`           | Cloudinary API credentials                                  | Yes      |
+| `PRODUCT_API_KEY`          | AI/external API auth key                                    | Yes      |
+| `META_PIXEL_ID`            | Meta Pixel ID for tracking                                  | Yes      |
+| `META_ACCESS_TOKEN`        | Meta Conversions API token                                  | Yes      |
+| `RESEND_API_KEY`           | Resend transactional email API key                          | Yes      |
+| `RESEND_FROM_EMAIL`        | Verified sender, e.g. `sunkeeper@everlastingsbyemaline.com` | Yes      |
 
 **Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 

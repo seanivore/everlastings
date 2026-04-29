@@ -391,7 +391,7 @@ When in doubt, ask:
 
 Three transactional emails send from the site via Resend. All three adopt Emaline's voice — warm, attentive, poetic-but-not-purple, small-g gentle.
 
-**Sender**: `Everlastings by Emaline <hello@everlastingsbyemaline.com>`
+**Sender**: `Everlastings by Emaline <sunkeeper@everlastingsbyemaline.com>`
 
 **Visual style**: single-column centered layout, cream (#FAF6F0) background, ink (#2C2521) text, plum (#4A1942) accents. Cormorant Garamond for headlines (Google Fonts link at top of each template). One small logo at top. No heavy hero imagery; let typography do the work.
 
