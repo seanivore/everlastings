@@ -305,7 +305,7 @@ const supabase = createClient(
 
 #### Meta Business Checklist
 
-  - [ ] **Get invite** from Emy to her Meta Business account.
+  - [x] **Get invite** from Emy to her Meta Business account. **Em has no pages yet, I can create myself**
   - [ ] **Create** any missing assets: Business Manager, Commerce Manager catalog (type: E-commerce), Meta Pixel.
   - [ ] **Verify** the domain in Meta (DNS record in Cloudflare).
   - [ ] **Copy** `META_PIXEL_ID` + generate a system-user `META_ACCESS_TOKEN` (scope: `catalog_management`) → `.env.local`.
@@ -332,6 +332,8 @@ const supabase = createClient(
 ## Pass 2: Branch reconciliation + live keys
 
 Only start this after every Pass 1 checklist is complete.
+
+**PLEASE CONFIRM**: I'm fairly sure this was done but please confirm it. 
 
 ### Branch reconciliation
 
