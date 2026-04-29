@@ -4,6 +4,10 @@
 
 Things to discuss or complete for next session. Reminder as to where we left off for quick reference. Etc. other details as needed, this is purely a note keeping, no impact document. 
 
+  - Architecture and tech documentation agent context primer: `assets/docs/EVERLASTINGS_STORE.md`
+  - Finalized implementation guide to read in full for this session: `assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md`
+  - Brand guide: `assets/docs/BRAND.md`, and project README: `README.md`
+
 ---
 
 ## 1. Meta Business
