@@ -12,10 +12,17 @@ const supabase = createClient(
 
 type ImageEntry = { url: string; alt?: string };
 
-function authorize(request: Request): boolean {
+// Accepts either:
+//   - Bearer ${PRODUCT_API_KEY}        (AI agents / curl)
+//   - Bearer <Supabase JWT>            (admin UI authenticated user)
+async function authorize(request: Request): Promise<boolean> {
   const auth = request.headers.get('authorization') ?? request.headers.get('Authorization');
-  if (!auth) return false;
-  return auth === `Bearer ${process.env.PRODUCT_API_KEY}`;
+  if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
+  const token = auth.slice(7).trim();
+  if (!token) return false;
+  if (token === process.env.PRODUCT_API_KEY) return true;
+  const { data, error } = await supabase.auth.getUser(token);
+  return !error && !!data?.user;
 }
 
 function jsonResponse(request: Request, body: unknown, status = 200): Response {
@@ -33,7 +40,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const slug = url.searchParams.get('slug');
   const id = url.searchParams.get('id');
-  const isAuthorized = authorize(request);
+  const isAuthorized = await authorize(request);
 
   if (slug) {
     let query = supabase.from('products').select('*').eq('slug', slug);
@@ -88,7 +95,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!authorize(request)) {
+  if (!(await authorize(request))) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
   }
 
@@ -182,7 +189,7 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  if (!authorize(request)) {
+  if (!(await authorize(request))) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
   }
 

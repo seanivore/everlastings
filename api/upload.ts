@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest } from './_lib/env';
 
@@ -10,6 +11,25 @@ const s3 = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 });
+
+const supabaseAuthClient = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!,
+  { auth: { persistSession: false, autoRefreshToken: false } },
+);
+
+// Accepts either:
+//   - Bearer ${PRODUCT_API_KEY}        (AI agents / curl)
+//   - Bearer <Supabase JWT>            (admin UI authenticated user)
+async function authorize(request: Request): Promise<boolean> {
+  const auth = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
+  const token = auth.slice(7).trim();
+  if (!token) return false;
+  if (token === process.env.PRODUCT_API_KEY) return true;
+  const { data, error } = await supabaseAuthClient.auth.getUser(token);
+  return !error && !!data?.user;
+}
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',
@@ -58,9 +78,7 @@ export async function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authHeader =
-    request.headers.get('authorization') ?? request.headers.get('Authorization');
-  if (authHeader !== `Bearer ${process.env.PRODUCT_API_KEY}`) {
+  if (!(await authorize(request))) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
   }
 
