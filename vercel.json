@@ -1,7 +1,11 @@
 {
   "rewrites": [
     { "source": "/product/:slug", "destination": "/product.html" },
-    { "source": "/admin/:path*", "destination": "/admin/index.html" }
+    { "source": "/admin/:path*", "destination": "/admin/index.html" },
+    { "source": "/api/checkout/reserve", "destination": "/api/checkout?_action=reserve" },
+    { "source": "/api/session-status", "destination": "/api/checkout?_action=session-status" },
+    { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
+    { "source": "/api/cart-activity", "destination": "/api/cart?_action=activity" },
+    { "source": "/api/cart-recovery", "destination": "/api/cart?_action=recovery" }
   ]
 }
-

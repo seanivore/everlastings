@@ -1,3 +1,7 @@
+// Consolidates two cart-event endpoints into one Vercel function.
+// Public URLs preserved via vercel.json rewrites:
+//   POST /api/cart-activity  → ?_action=activity   (interest ping)
+//   POST /api/cart-recovery  → ?_action=recovery   (lost-cart promo + email)
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
@@ -36,7 +40,30 @@ function normalizeLostItems(input: unknown): NormalizedLostItem[] | null {
   return out;
 }
 
-export async function POST(request: Request) {
+async function handleActivity(request: Request): Promise<Response> {
+  try {
+    const { slug } = await request.json();
+    if (!slug || typeof slug !== 'string') {
+      return Response.json({ ok: true }, { headers: corsHeaders(request) });
+    }
+
+    const { data: interests } = await supabase
+      .from('product_interests')
+      .select('email')
+      .eq('product_slug', slug)
+      .eq('notified', false);
+
+    if (interests && interests.length > 0) {
+      console.log(`Cart activity: ${slug} — ${interests.length} interested subscriber(s)`);
+    }
+
+    return Response.json({ ok: true }, { headers: corsHeaders(request) });
+  } catch {
+    return Response.json({ ok: true }, { headers: corsHeaders(request) });
+  }
+}
+
+async function handleRecovery(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const email = typeof body?.email === 'string' ? body.email.trim() : '';
@@ -120,6 +147,16 @@ export async function POST(request: Request) {
       { status: 500, headers: corsHeaders(request) },
     );
   }
+}
+
+export async function POST(request: Request) {
+  const action = new URL(request.url).searchParams.get('_action');
+  if (action === 'activity') return handleActivity(request);
+  if (action === 'recovery') return handleRecovery(request);
+  return Response.json(
+    { error: 'Unknown cart action' },
+    { status: 404, headers: corsHeaders(request) },
+  );
 }
 
 export async function OPTIONS(request: Request) {
