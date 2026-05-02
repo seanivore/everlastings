@@ -41,7 +41,7 @@ JWT="$(admin_jwt)" || { cleanup_test_data orders "$ORDER_ID"; cleanup_test_data 
 log_info "GET /api/orders?status=needs_shipping"
 R="$(curl_status GET "$BASE_URL/api/orders?status=needs_shipping" "" \
   "Authorization: Bearer $JWT")"
-if ! assert_status 200 "$TEST_STATUS" "orders GET"; then
+if ! assert_status 200 "$(test_status)" "orders GET"; then
   log_fail "body: $R"
   cleanup_test_data orders "$ORDER_ID"
   cleanup_test_data customers "$CUST_ID"

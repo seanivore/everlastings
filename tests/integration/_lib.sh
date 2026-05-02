@@ -94,30 +94,44 @@ assert_jq() {
   fi
 }
 
-# curl_status <method> <url> <body|''> <extra-headers...> -> writes body to stdout, status to TEST_STATUS
+# curl_status <method> <url> <body|''> <extra-headers...> -> writes body to stdout, status to status file.
+# Subshells used in command substitution can't propagate variables to parent;
+# the caller reads $(test_status) after the command-substitution-style call.
+TEST_STATUS_FILE="${TMPDIR:-/tmp}/itest_last_status"
+
 curl_status() {
   local method="$1"; shift
   local url="$1"; shift
   local body="$1"; shift
   local tmp; tmp="$(mktemp)"
-  local extra=()
-  while [ "$#" -gt 0 ]; do extra+=("-H" "$1"); shift; done
+  # Build extra-header args inline; macOS ships bash 3.2 which trips set -u on empty arrays.
+  local extra_args=""
+  while [ "$#" -gt 0 ]; do
+    extra_args="$extra_args -H \"$1\""
+    shift
+  done
   local code
   if [ -n "$body" ]; then
-    code="$(curl -sS -o "$tmp" -w '%{http_code}' -X "$method" \
-      -H 'Content-Type: application/json' \
-      -H 'Origin: http://localhost:3000' \
-      "${extra[@]}" \
-      --data "$body" "$url")"
+    code="$(eval curl -sS -o '"$tmp"' -w "'%{http_code}'" -X '"$method"' \
+      -H "'Content-Type: application/json'" \
+      -H "'Origin: http://localhost:3000'" \
+      $extra_args \
+      --data "'$body'" '"$url"')"
   else
-    code="$(curl -sS -o "$tmp" -w '%{http_code}' -X "$method" \
-      -H 'Origin: http://localhost:3000' \
-      "${extra[@]}" \
-      "$url")"
+    code="$(eval curl -sS -o '"$tmp"' -w "'%{http_code}'" -X '"$method"' \
+      -H "'Origin: http://localhost:3000'" \
+      $extra_args \
+      '"$url"')"
   fi
+  printf '%s' "$code" > "$TEST_STATUS_FILE"
   TEST_STATUS="$code"
   cat "$tmp"
   rm -f "$tmp"
+}
+
+# Reads the status from the last curl_status call. Use after `RESP="$(curl_status ...)"`.
+test_status() {
+  cat "$TEST_STATUS_FILE" 2>/dev/null || echo "000"
 }
 
 # Supabase REST helpers ------------------------------------------------------

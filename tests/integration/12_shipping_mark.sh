@@ -51,7 +51,7 @@ log_info "PATCH /api/orders/$ORDER_ID"
 R="$(curl_status PATCH "$BASE_URL/api/orders/$ORDER_ID" "$PATCH_BODY" \
   "Authorization: Bearer $JWT")"
 
-if ! assert_status 200 "$TEST_STATUS" "PATCH order"; then
+if ! assert_status 200 "$(test_status)" "PATCH order"; then
   log_fail "body: $R"
   cleanup_test_data orders "$ORDER_ID"
   cleanup_test_data customers "$CUST_ID"

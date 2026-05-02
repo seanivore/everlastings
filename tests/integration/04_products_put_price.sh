@@ -17,7 +17,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "PUT Price Test")"
 log_info "POST /api/products"
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 STRIPE_PROD="$(printf '%s' "$RESP" | jq -r '.product.stripe_product_id // empty')"
@@ -38,7 +38,7 @@ log_info "PUT /api/products?id=$ID with price=$NEW_PRICE"
 RESP2="$(curl_status PUT "$BASE_URL/api/products?id=$ID" "$PUT_BODY" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
 
-if ! assert_status 200 "$TEST_STATUS" "products PUT"; then
+if ! assert_status 200 "$(test_status)" "products PUT"; then
   cleanup_test_data products "$ID"
   cleanup_stripe_product "$STRIPE_PROD"
   exit 1

@@ -19,7 +19,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "Full Flow Test")"
 log_info "seed product"
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 STRIPE_PROD="$(printf '%s' "$RESP" | jq -r '.product.stripe_product_id // empty')"
 
@@ -46,12 +46,12 @@ TEST_EMAIL="itest-full-$RANDOM@example.test"
 log_info "reserve"
 R1="$(curl_status POST "$BASE_URL/api/checkout/reserve" \
   "$(jq -n --argjson items "$ITEMS" --arg sid "$SESSION_ID" '{items:$items, session_id:$sid}')")"
-assert_status 200 "$TEST_STATUS" "reserve"
+assert_status 200 "$(test_status)" "reserve"
 
 log_info "checkout (clientSecret)"
 R2="$(curl_status POST "$BASE_URL/api/checkout" \
   "$(jq -n --argjson items "$ITEMS" --arg sid "$SESSION_ID" --arg e "$TEST_EMAIL" '{items:$items, session_id:$sid, email:$e}')")"
-assert_status 200 "$TEST_STATUS" "checkout"
+assert_status 200 "$(test_status)" "checkout"
 
 CS="$(printf '%s' "$R2" | jq -r '.clientSecret // empty')"
 [ -n "$CS" ] || { log_fail "no clientSecret"; cleanup_test_data products "$ID"; cleanup_stripe_product "$STRIPE_PROD"; exit 1; }

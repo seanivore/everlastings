@@ -16,7 +16,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "Race Test")"
 
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 STRIPE_PROD="$(printf '%s' "$RESP" | jq -r '.product.stripe_product_id // empty')"
 
@@ -31,7 +31,7 @@ RESERVE_BODY="$(jq -n --argjson items "$ITEMS" --arg sid "$SESSION_ID" '{ items:
 log_info "POST /api/checkout/reserve (expect 409)"
 R="$(curl_status POST "$BASE_URL/api/checkout/reserve" "$RESERVE_BODY")"
 
-if ! assert_status 409 "$TEST_STATUS" "reserve unavailable"; then
+if ! assert_status 409 "$(test_status)" "reserve unavailable"; then
   log_fail "body: $R"
   cleanup_test_data products "$ID"
   cleanup_stripe_product "$STRIPE_PROD"

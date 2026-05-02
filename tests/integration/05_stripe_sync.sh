@@ -17,7 +17,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "Stripe Sync Test")"
 log_info "POST /api/products"
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 

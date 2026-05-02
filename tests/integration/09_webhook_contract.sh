@@ -19,7 +19,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "Webhook Contract Test")"
 log_info "seed product"
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 STRIPE_PROD="$(printf '%s' "$RESP" | jq -r '.product.stripe_product_id // empty')"
 

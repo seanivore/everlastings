@@ -42,7 +42,7 @@ fi
 log_info "anonymous GET /api/products?slug=$SLUG"
 RESP="$(curl_status GET "$BASE_URL/api/products?slug=$SLUG" "")"
 
-if ! assert_status 200 "$TEST_STATUS" "anon products GET"; then
+if ! assert_status 200 "$(test_status)" "anon products GET"; then
   cleanup_test_data products "$ID"
   exit 1
 fi

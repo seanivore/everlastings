@@ -16,7 +16,7 @@ PAYLOAD="$(build_product_payload "$SLUG" "Checkout Test")"
 log_info "seed product via POST /api/products"
 RESP="$(curl_status POST "$BASE_URL/api/products" "$PAYLOAD" \
   "Authorization: Bearer $PRODUCT_API_KEY")"
-assert_status 200 "$TEST_STATUS" "products POST"
+assert_status 200 "$(test_status)" "products POST"
 ID="$(printf '%s' "$RESP" | jq -r '.product.id // empty')"
 STRIPE_PROD="$(printf '%s' "$RESP" | jq -r '.product.stripe_product_id // empty')"
 
@@ -47,7 +47,7 @@ RESERVE_BODY="$(jq -n --argjson items "$ITEMS" --arg sid "$SESSION_ID" '{ items:
 
 log_info "POST /api/checkout/reserve"
 R1="$(curl_status POST "$BASE_URL/api/checkout/reserve" "$RESERVE_BODY")"
-if ! assert_status 200 "$TEST_STATUS" "reserve"; then
+if ! assert_status 200 "$(test_status)" "reserve"; then
   log_fail "reserve body: $R1"
   cleanup_test_data products "$ID"
   cleanup_stripe_product "$STRIPE_PROD"
@@ -57,7 +57,7 @@ fi
 CHECKOUT_BODY="$(jq -n --argjson items "$ITEMS" --arg sid "$SESSION_ID" '{ items:$items, session_id:$sid, email:"itest-checkout@example.test" }')"
 log_info "POST /api/checkout"
 R2="$(curl_status POST "$BASE_URL/api/checkout" "$CHECKOUT_BODY")"
-if ! assert_status 200 "$TEST_STATUS" "checkout"; then
+if ! assert_status 200 "$(test_status)" "checkout"; then
   log_fail "checkout body: $R2"
   cleanup_test_data products "$ID"
   cleanup_stripe_product "$STRIPE_PROD"
