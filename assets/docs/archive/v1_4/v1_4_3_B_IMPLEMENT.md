@@ -259,7 +259,7 @@ No icon library. 5-6 simple SVG icons used in product details:
 
 #### Meta Pixel Script Tag 
 
-These are from AR #25 — see [Architecture Reference](#architecture-reference). 
+These are from AR #25 — see [Architecture Reference](/assets/docs/EVERLASTINGS_STORE.md#architecture-reference). 
 
   - [ ] (AGENT) **Add** Meta Pixel base code to `<head>` of all pages (alongside GA4):
 
@@ -284,7 +284,7 @@ These are from AR #25 — see [Architecture Reference](#architecture-reference).
 
 #### Email Capture CTA Styles 
 
-These are from AR #26 — see [Architecture Reference](#architecture-reference).
+These are from AR #26 — see [Architecture Reference](/assets/docs/EVERLASTINGS_STORE.md#architecture-reference).
 
   - [ ] (AGENT) **Style** contemplation popup (bottom-right peel-up):
 
