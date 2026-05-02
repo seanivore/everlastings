@@ -2,7 +2,7 @@
 
 ## Track Goal
 
-Deliver the complete backend foundation for Everlastings v1.4.3: verify the Phase 0 services bootstrap (Vercel, Supabase, Cloudflare R2, Cloudinary, Stripe, Resend, Shippo, Meta, Analytics), apply the Supabase schema and RLS policies for all 8 tables, ship every one of the 14 server-side API endpoints (config, stripe-sync, checkout/reserve, checkout, session-status, webhook, cart-recovery, products, upload, subscribe, contact, cart-activity, product-feed, orders + orders/[id]), build the admin UI with Products and Orders tabs, finalize the Product Protocol + Custom GPT workflow, and run the full integration test sweep. Track B (frontend design) runs in parallel against placeholder content; Track C (integration) starts after Track A is done and Track B has produced placeholder pages.
+Deliver the complete backend foundation for Everlastings v1.4.3: verify the Phase 0 services bootstrap (Vercel, Supabase, Cloudflare R2, Cloudinary, Stripe, Resend, Shippo, Meta, Analytics), apply the Supabase schema and RLS policies for all 8 tables, ship every one of the 14 server-side API endpoints (config, stripe-sync, checkout/reserve, checkout, session-status, webhook, cart-recovery, products, upload, subscribe, contact, cart-activity, product-feed, orders + orders/{id}), build the admin UI with Products and Orders tabs, finalize the Product Protocol + Custom GPT workflow, and run the full integration test sweep. Track B (frontend design) runs in parallel against placeholder content; Track C (integration) starts after Track A is done and Track B has produced placeholder pages.
 
 ## Required Pre-Reads (Read In Full at Session Start)
 
