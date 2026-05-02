@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const stripeCustomerId = typeof session.customer === 'string'
       ? session.customer
       : session.customer?.id ?? null;
-    const shippingAddress = session.shipping_details?.address ?? null;
+    const shippingAddress = session.collected_information?.shipping_details?.address ?? null;
     const paymentIntentId = typeof session.payment_intent === 'string'
       ? session.payment_intent
       : session.payment_intent?.id ?? null;
