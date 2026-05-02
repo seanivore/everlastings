@@ -48,8 +48,11 @@ target/
 .cargo/
 rusty-tags.vi
 
-# Logistical Files 
+# Logistical Files
 .archive/
+
+# Supabase CLI auto-update cache (transient — version string only)
+supabase/.temp/
 
 # Design Spec Images 
 .agent/apple-ui-design/**.jpeg
