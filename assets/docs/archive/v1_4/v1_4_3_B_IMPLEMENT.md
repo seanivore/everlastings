@@ -3,12 +3,16 @@
 ## Track Goal
 Deliver the frontend design layer: design system (CSS custom properties, typography, base components, lightbox, loading states, GA4/Pixel script tags), header/footer/nav, product page, shop grid, homepage, and remaining pages — all with hardcoded placeholder content marked `<!-- PLACEHOLDER: ... -->`. No live data integration in this track. Track A (backend) runs in parallel; Track C (integration) takes your placeholders and wires them to the live API.
 
-## Pre-loaded Context (Do Not Re-Read)
-- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer
-- `assets/docs/BRAND.md` — visual + voice + email brand reference (LOAD THIS — Track B is brand-heavy)
-- `.agent/DEV_RULES.md` — workflow protocol
+## Required Pre-Reads (Read In Full at Session Start)
+
+Claude Code's `@` imports do NOT recursively auto-load in the current CLI version (verified empirically 2026-05-02 — `/context` shows imports as literal text, not expanded content). Your first action — before reading the rest of this guide — is to Read all four files below in full. BRAND.md especially: Track B is brand-heavy, every visual and copy decision should flow from it.
+
 - `.agent/AGENTS.md` — agent instructions
-- `.claude/CLAUDE.md` — project instructions
+- `.agent/DEV_RULES.md` — workflow protocol
+- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer
+- `assets/docs/BRAND.md` — visual + voice + email brand reference (CRITICAL for Track B)
+
+You can skip `.claude/CLAUDE.md` — its only content is `@.agent/AGENTS.md` (already in your list above).
 
 ## Do Not Explore
 This track is frontend-only and works with hardcoded content. Do NOT read or modify:

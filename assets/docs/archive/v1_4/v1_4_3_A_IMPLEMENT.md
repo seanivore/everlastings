@@ -4,13 +4,15 @@
 
 Deliver the complete backend foundation for Everlastings v1.4.3: verify the Phase 0 services bootstrap (Vercel, Supabase, Cloudflare R2, Cloudinary, Stripe, Resend, Shippo, Meta, Analytics), apply the Supabase schema and RLS policies for all 8 tables, ship every one of the 14 server-side API endpoints (config, stripe-sync, checkout/reserve, checkout, session-status, webhook, cart-recovery, products, upload, subscribe, contact, cart-activity, product-feed, orders + orders/[id]), build the admin UI with Products and Orders tabs, finalize the Product Protocol + Custom GPT workflow, and run the full integration test sweep. Track B (frontend design) runs in parallel against placeholder content; Track C (integration) starts after Track A is done and Track B has produced placeholder pages.
 
-## Pre-loaded Context (Do Not Re-Read)
+## Required Pre-Reads (Read In Full at Session Start)
 
-The orchestrator session already has these files in context. Do not re-read them:
-- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer
-- `.agent/DEV_RULES.md` — workflow protocol
-- `.agent/AGENTS.md` — agent instructions
-- `.claude/CLAUDE.md` — project instructions
+Claude Code's `@` imports do NOT recursively auto-load in the current CLI version (verified empirically 2026-05-02 — `/context` shows imports as literal text, not expanded content). Your first action — before reading the rest of this guide — is to Read all four files below in full. They contain the architectural primer, workflow rules, and project instructions that the rest of this guide assumes you have internalized.
+
+- `.agent/AGENTS.md` — agent instructions (about the human, role, limitations)
+- `.agent/DEV_RULES.md` — workflow protocol (commit standards, branch policy, session document handling)
+- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer (33-item Architecture Reference, Plain-English Glossary, Stripe Sync Rules — cited as "AR #N" throughout this guide)
+
+You can skip `assets/docs/BRAND.md` — Track A is backend-only. You can skip `.claude/CLAUDE.md` — its only content is `@.agent/AGENTS.md` (already in your list above).
 
 ## Do Not Explore
 
@@ -1825,7 +1827,65 @@ Videos and GIFs skip Cloudinary — upload directly to R2.
   ```
 
   - [ ] (AGENT) **Create** `api/subscribe.ts`
-  - [ ] (AGENT) **Create** `api/contact.ts` — similar pattern, stores in Supabase or sends email
+
+#### Contact — `api/contact.ts`
+
+Customer-facing contact + commissions inquiry form on `contact.html`. v1 forwards the inquiry to Emy via Resend and does NOT persist to Supabase (no `contact_submissions` table in v1 schema; storage deferred to v1.1+ if volume warrants).
+
+- **Email destination**: `RESEND_REPLY_TO_EMAIL` (= `hello@everlastingsbyemaline.com`, Emy's MX-receiving Workspace inbox).
+- **Reply-To**: the customer's submitted email — Emy hits Reply in Gmail and the response goes to the customer directly.
+- **From**: `RESEND_FROM_EMAIL` (= `sunkeeper@everlastingsbyemaline.com`, the verified Resend sender).
+
+  ```typescript
+  // api/contact.ts
+  export async function POST(request: Request) {
+    try {
+      const { name, email, message, subject } = await request.json();
+
+      if (!name || !email || !email.includes('@') || !message) {
+        return Response.json({ error: 'Name, valid email, and message required' }, { status: 400 });
+      }
+
+      const cleanSubject = (subject && String(subject).slice(0, 120)) || 'New contact inquiry';
+      const safeName = String(name).slice(0, 120);
+      const safeMessage = String(message).slice(0, 5000);
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL,
+          to: [process.env.RESEND_REPLY_TO_EMAIL],
+          reply_to: email,
+          subject: `[Everlastings contact] ${cleanSubject}`,
+          html: `<p><strong>From:</strong> ${safeName} &lt;${email}&gt;</p><p><strong>Subject:</strong> ${cleanSubject}</p><hr/><p>${safeMessage.replace(/\n/g, '<br/>')}</p>`,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error('Contact send failed:', await res.text());
+        return Response.json({ error: 'Failed to send' }, { status: 500 });
+      }
+
+      return Response.json({ message: 'Sent' });
+    } catch (err) {
+      console.error('Contact error:', err);
+      return Response.json({ error: 'Failed to send' }, { status: 500 });
+    }
+  }
+  ```
+
+- **Request shape**: `{ name: string, email: string, message: string, subject?: string }`
+- **Response shape (200)**: `{ message: 'Sent' }`
+- **Response shape (400)**: `{ error: 'Name, valid email, and message required' }`
+- **Response shape (500)**: `{ error: 'Failed to send' }`
+- **Env vars used**: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO_EMAIL` (all loaded in Phase 0)
+
+  - [ ] (AGENT) **Create** `api/contact.ts`
+  - [ ] (AGENT) **Verify** `RESEND_REPLY_TO_EMAIL` is set in both Production and Development scopes (per Phase 0 commit `2428e40`)
 
 #### Cart Activity — `api/cart-activity.ts`
 

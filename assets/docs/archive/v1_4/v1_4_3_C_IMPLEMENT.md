@@ -3,16 +3,20 @@
 ## Track Goal
 Wire Track B's placeholder pages to Track A's API endpoints, implement the complete cart + checkout flow (including 409 cart-recovery edge case), finalize SEO (sitemap, robots, meta, OG, structured data), and complete launch prep (Stripe live mode, full E2E testing, performance pass, launch sequence). Track C cannot start until Track A's A2 (API endpoints) and Track B's pages with placeholder markers are both complete.
 
-## Pre-loaded Context (Do Not Re-Read)
-- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer
-- `assets/docs/BRAND.md` — voice/tone for any remaining copy work
-- `.agent/DEV_RULES.md` — workflow protocol
+## Required Pre-Reads — Project Context (Read In Full at Session Start)
+
+Claude Code's `@` imports do NOT recursively auto-load in the current CLI version (verified empirically 2026-05-02 — `/context` shows imports as literal text, not expanded content). Your first action is to Read all four files below in full.
+
 - `.agent/AGENTS.md` — agent instructions
-- `.claude/CLAUDE.md` — project instructions
+- `.agent/DEV_RULES.md` — workflow protocol
+- `assets/docs/EVERLASTINGS_STORE.md` — architectural primer (you'll consume API contracts that reference its "AR #N" items)
+- `assets/docs/BRAND.md` — voice/tone for any remaining copy work in C1/C3
 
-## Required Pre-Reads (Before Starting)
+You can skip `.claude/CLAUDE.md` — its only content is `@.agent/AGENTS.md` (already in your list above).
 
-Track C depends on outputs from A and B. Before you begin C1, briefly skim:
+## Required Pre-Reads — Track A & B Outputs (Skim Before Starting C1)
+
+Track C depends on outputs from A and B. After the project-context pre-reads above, briefly skim:
 - `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md` — for the API contracts you will call (paths, request/response shapes). You do not need to re-implement; only know the shape.
 - `assets/docs/archive/v1_4/v1_4_3_B_IMPLEMENT.md` — for the placeholder convention and which DOM hooks exist.
 

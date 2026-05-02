@@ -1,6 +1,6 @@
 # v1.4.3 Track Initiation Prompts
 
-Three orchestrator-agent initiation prompts — one per parallel implementation track. Copy the relevant prompt verbatim into a new orchestrator session. Each prompt is self-contained and assumes the orchestrator has access to this repository and the auto-loaded context (`.claude/CLAUDE.md` → `.agent/AGENTS.md` → `assets/docs/EVERLASTINGS_STORE.md` and `.agent/DEV_RULES.md`).
+Three orchestrator-agent initiation prompts — one per parallel implementation track. Copy the relevant prompt verbatim into a new orchestrator session. Each prompt instructs the orchestrator to read the project context files (listed in its track guide's "Required Pre-Reads" section) as its first action. (Note: Claude Code's `@` import syntax does NOT recursively auto-load files in the current CLI version, so explicit Reads are required.)
 
 **When to launch**:
 - **Track A** and **Track B** can launch in parallel sessions immediately. They are independent.
@@ -17,7 +17,7 @@ You are the Track A orchestrator for the Everlastings by Emaline v1.4.3 release.
 
   `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md`
 
-That file is your only execution playbook. Read it in full before doing anything else. Do NOT read the other track guides (`v1_4_3_B_IMPLEMENT.md`, `v1_4_3_C_IMPLEMENT.md`) — the cross-track summary in your guide's preamble is sufficient. Do NOT re-read `EVERLASTINGS_STORE.md`, `DEV_RULES.md`, `AGENTS.md`, or `CLAUDE.md` — these are already in your auto-loaded context.
+That file is your only execution playbook. Read it in full immediately AFTER completing the "Required Pre-Reads" section at the top of that guide (AGENTS.md, DEV_RULES.md, EVERLASTINGS_STORE.md). Do NOT read the other track guides (`v1_4_3_B_IMPLEMENT.md`, `v1_4_3_C_IMPLEMENT.md`) — the cross-track summary in your guide's preamble is sufficient.
 
 ## Your scope
 
@@ -66,7 +66,7 @@ You are the Track B orchestrator for the Everlastings by Emaline v1.4.3 release.
 
   `assets/docs/archive/v1_4/v1_4_3_B_IMPLEMENT.md`
 
-That file is your only execution playbook. Read it in full before doing anything else. Do NOT read the other track guides — the cross-track summary in your guide's preamble is sufficient. Do NOT re-read `EVERLASTINGS_STORE.md`, `BRAND.md`, `DEV_RULES.md`, `AGENTS.md`, or `CLAUDE.md` — these are in your auto-loaded context. (BRAND.md is critical for Track B — let it inform every visual and copy decision.)
+That file is your only execution playbook. Read it in full immediately AFTER completing the "Required Pre-Reads" section at the top of that guide (AGENTS.md, DEV_RULES.md, EVERLASTINGS_STORE.md, BRAND.md). Do NOT read the other track guides — the cross-track summary in your guide's preamble is sufficient. (BRAND.md is critical for Track B — let it inform every visual and copy decision.)
 
 ## Your scope
 
@@ -96,7 +96,7 @@ All content in this track is HARDCODED placeholder content. No live data, no API
 
 ## Definition of done
 
-The Verification Gate at the top of `v1_4_3_B_IMPLEMENT.md`. Every page renders with placeholder content; design tokens consistent across pages; Lighthouse mobile ≥ 90; `grep -r 'PLACEHOLDER:' .` returns the expected set of markers; BRAND.md visibly applied; all 24 error states from the inlined Error States Reference have UI implementations.
+The Verification Gate at the top of `v1_4_3_B_IMPLEMENT.md`. Every page renders with placeholder content; design tokens consistent across pages; Lighthouse mobile ≥ 90; `grep -r 'PLACEHOLDER:' .` returns the expected set of markers; BRAND.md visibly applied; all 25 error states from the inlined Error States Reference have UI implementations.
 
 ## Escalation
 
@@ -130,7 +130,7 @@ If either is incomplete, stop and ask the user.
 - `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md` — for the API contract shapes you'll consume
 - `assets/docs/archive/v1_4/v1_4_3_B_IMPLEMENT.md` — for the placeholder convention and DOM hooks
 
-Do NOT re-read `EVERLASTINGS_STORE.md`, `BRAND.md`, `DEV_RULES.md`, `AGENTS.md`, or `CLAUDE.md` — auto-loaded.
+Read the project context files listed in your track guide's "Required Pre-Reads" section (AGENTS.md, DEV_RULES.md, EVERLASTINGS_STORE.md, BRAND.md) FIRST, then skim the two sibling track guides above for contract shapes only.
 
 ## Your scope
 

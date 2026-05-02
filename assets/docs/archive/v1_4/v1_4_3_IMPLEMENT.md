@@ -2,6 +2,7 @@
 
 **Version**: v1.4.3
 **Status**: Phase 0 complete; implementation guide split into three track-specific guides for parallel orchestrator-agent execution. This file remains in place as the chronological landmark per `.agent/DEV_RULES.md`'s archive-by-design convention.
+**Pre-split master plan (historical record)**: [`v1_4_3_IMPLEMENT_PRESPLIT.md`](./v1_4_3_IMPLEMENT_PRESPLIT.md) — the full 4,188-line combined guide that existed before the 2026-04-29 split. Recovered from git commit `6d98dfd` for record-keeping.
 **Architecture**: Vercel + Supabase + Cloudflare R2 + Stripe + Cloudinary + Resend + Shippo
 **Architecture Reference**: `assets/docs/EVERLASTINGS_STORE.md`
 **Design Reference**: `assets/docs/BRAND.md`
@@ -10,7 +11,7 @@
 
 ## Document Split Notice (2026-04-29)
 
-The original 4,188-line combined implementation guide was split into three self-sufficient, track-specific guides. Reference material that was previously consolidated in pre-track and post-track sections has been distributed inline into the track guide where it is actually used (e.g., Webhook Contract → Track A's `webhook.ts` section, Error States → Tracks B and C, GA4 events → Track C). Architecture-level reference (33-item Architecture Reference, Plain-English Glossary, Stripe Sync Rules) lives in `EVERLASTINGS_STORE.md`, which is auto-loaded into every orchestrator session via `.claude/CLAUDE.md`.
+The original 4,188-line combined implementation guide was split into three self-sufficient, track-specific guides. Reference material that was previously consolidated in pre-track and post-track sections has been distributed inline into the track guide where it is actually used (e.g., Webhook Contract → Track A's `webhook.ts` section, Error States → Tracks B and C, GA4 events → Track C). Architecture-level reference (33-item Architecture Reference, Plain-English Glossary, Stripe Sync Rules) lives in `EVERLASTINGS_STORE.md`, which every orchestrator session reads explicitly per its track guide's "Required Pre-Reads" section. (Claude Code's `@` import syntax does not recursively auto-load files in the current CLI version, verified empirically 2026-05-02; explicit Reads are required.)
 
 **Track guides:**
 
