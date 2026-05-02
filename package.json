@@ -7,6 +7,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@supabase/supabase-js": "^2.0.0",
+    "resend": "^6.12.2",
     "shippo": "^2.18.0",
     "stripe": "^17.0.0"
   }
