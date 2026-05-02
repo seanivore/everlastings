@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin — Everlastings by Emaline</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; line-height: 1.4; }
+      .hidden { display: none !important; }
+      .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #ddd; }
+      .topbar h1 { margin: 0; font-size: 18px; }
+      .topbar .session { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+      .login-card { max-width: 380px; margin: 80px auto; padding: 32px; border: 1px solid #ddd; border-radius: 8px; }
+      .login-card h2 { margin-top: 0; }
+      .field { display: block; margin-bottom: 12px; }
+      .field label { display: block; font-size: 13px; margin-bottom: 4px; font-weight: 600; }
+      .field input, .field textarea, .field select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font: inherit; }
+      .field textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+      button { padding: 8px 14px; border: 1px solid #888; border-radius: 4px; background: #f5f5f5; cursor: pointer; font: inherit; }
+      button:hover:not(:disabled) { background: #e8e8e8; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      button.primary { background: #222; color: #fff; border-color: #222; }
+      button.primary:hover:not(:disabled) { background: #000; }
+      button.danger { background: #b00; color: #fff; border-color: #800; }
+      button.danger:hover:not(:disabled) { background: #800; }
+      .tabs { display: flex; gap: 4px; border-bottom: 1px solid #ddd; margin: 24px 0 16px; }
+      .tab-btn { background: transparent; border: 1px solid transparent; border-bottom: none; padding: 10px 18px; cursor: pointer; font: inherit; border-radius: 4px 4px 0 0; }
+      .tab-btn.active { background: #fff; border-color: #ddd; font-weight: 600; margin-bottom: -1px; }
+      .subtabs { display: flex; gap: 4px; margin-bottom: 16px; }
+      .subtab-btn { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
+      .subtab-btn.active { background: #222; color: #fff; border-color: #222; }
+      .product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+      .product-card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; cursor: pointer; }
+      .product-card:hover { background: #fafafa; }
+      .product-card img { width: 100%; height: 140px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background: #eee; }
+      .product-card .pc-title { font-weight: 600; font-size: 14px; margin: 0 0 4px; }
+      .product-card .pc-meta { color: #666; font-size: 12px; }
+      .product-form { display: grid; gap: 16px; max-width: 800px; }
+      .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+      .checkbox-row { display: flex; align-items: center; gap: 8px; }
+      .checkbox-row input[type=checkbox] { width: auto; }
+      .form-actions { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid #eee; }
+      .form-actions .spacer { flex: 1; }
+      .order-card { border: 1px solid #ddd; border-radius: 6px; padding: 16px; margin-bottom: 12px; display: grid; grid-template-columns: 120px 1fr; gap: 16px; }
+      .order-card img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #eee; }
+      .order-info p { margin: 4px 0; font-size: 14px; }
+      .order-info .label { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .address-block { font-family: ui-monospace, Menlo, monospace; background: #f7f7f7; padding: 8px; border-radius: 4px; white-space: pre-wrap; font-size: 13px; margin: 4px 0; }
+      .ship-form { display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: end; margin-top: 8px; }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+      .toolbar input[type=search] { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font: inherit; }
+      .status-msg { padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 14px; }
+      .status-msg.error { background: #fee; color: #800; border: 1px solid #fbb; }
+      .status-msg.success { background: #efe; color: #060; border: 1px solid #bdb; }
+      .status-msg.info { background: #eef; color: #006; border: 1px solid #bbd; }
+      .img-url-list { display: grid; gap: 6px; }
+      .img-url-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; }
+      .img-url-row select, .img-url-row input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font: inherit; font-size: 13px; }
+      .upload-row { display: grid; grid-template-columns: 140px 1fr auto; gap: 6px; align-items: center; margin-top: 6px; }
+      .upload-row select, .upload-row input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font: inherit; font-size: 13px; }
+      .empty { color: #888; padding: 32px; text-align: center; }
+      a { color: #06c; }
+      a:hover { color: #03f; }
+      .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #eee; font-size: 11px; }
+      .pill.shipped { background: #cfe; color: #060; }
+      .pill.unsent { background: #fee; color: #800; }
+    </style>
+  </head>
+  <body>
+    <div id="login-view">
+      <div class="login-card">
+        <h2>Admin Sign In</h2>
+        <div id="login-status"></div>
+        <form id="login-form">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" id="login-email" autocomplete="username" required />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input type="password" id="login-password" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="primary" id="login-submit">Sign in</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="admin-view" class="hidden">
+      <div class="topbar">
+        <h1>Everlastings Admin</h1>
+        <div class="session">
+          <span id="session-email"></span>
+          <button id="logout-btn">Sign out</button>
+        </div>
+      </div>
+      <div class="container">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="products">Products</button>
+          <button class="tab-btn" data-tab="orders">Orders</button>
+        </div>
+
+        <section id="tab-products">
+          <div id="products-status"></div>
+          <div class="toolbar">
+            <button id="new-product-btn" class="primary">New Product</button>
+            <button id="refresh-products-btn">Refresh</button>
+          </div>
+          <div id="products-list" class="product-list"></div>
+          <div id="product-editor" class="hidden">
+            <h2 id="editor-heading">New Product</h2>
+            <div id="editor-status"></div>
+            <form id="product-form" class="product-form">
+              <input type="hidden" id="p-id" />
+              <div class="row-2">
+                <label class="field"><span>Title *</span><input id="p-title" required /></label>
+                <label class="field"><span>Slug (immutable after save)</span><input id="p-slug" /></label>
+              </div>
+              <label class="field"><span>Headline</span><input id="p-headline" /></label>
+              <label class="field"><span>Story Card</span><textarea id="p-story" rows="6"></textarea></label>
+              <label class="field"><span>Description *</span><textarea id="p-description" rows="3" required></textarea></label>
+              <label class="field"><span>Features (one per line)</span><textarea id="p-features" rows="3"></textarea></label>
+              <div class="row-3">
+                <label class="field"><span>Price (USD) *</span><input id="p-price" type="number" step="0.01" min="0" required /></label>
+                <label class="field"><span>Quantity</span><input id="p-quantity" type="number" min="0" value="1" /></label>
+                <label class="field">
+                  <span>Product Type *</span>
+                  <select id="p-type" required>
+                    <option value="miniature">miniature</option>
+                    <option value="printable">printable</option>
+                    <option value="storybook">storybook</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row-3">
+                <label class="field"><span>Dimensions</span><input id="p-dimensions" placeholder='8" W x 6" D x 10" H' /></label>
+                <label class="field"><span>Weight</span><input id="p-weight" placeholder="2.5 lbs" /></label>
+                <label class="field"><span>Power Supply</span><input id="p-power" /></label>
+              </div>
+              <label class="field"><span>Materials (one per line)</span><textarea id="p-materials" rows="3"></textarea></label>
+              <label class="field"><span>Care Instructions (one per line)</span><textarea id="p-care" rows="3"></textarea></label>
+              <label class="field"><span>Shipping Details (one per line)</span><textarea id="p-shipping" rows="3"></textarea></label>
+              <div class="row-2">
+                <label class="field"><span>Series</span><input id="p-series" placeholder="Portals to Peace" /></label>
+                <label class="field"><span>Homepage Theme (JSON, optional)</span><input id="p-theme" placeholder='{"accent":"#a8c"}' /></label>
+              </div>
+              <div class="row-3">
+                <label class="checkbox-row"><input type="checkbox" id="p-available" checked /><span>Available</span></label>
+                <label class="checkbox-row"><input type="checkbox" id="p-featured" /><span>Featured</span></label>
+                <span></span>
+              </div>
+              <label class="field"><span>Artist Note</span><textarea id="p-artist-note" rows="2"></textarea></label>
+              <div class="row-2">
+                <label class="field"><span>SEO Title</span><input id="p-seo-title" /></label>
+                <label class="field"><span>SEO Description</span><input id="p-seo-description" /></label>
+              </div>
+
+              <fieldset style="border:1px solid #ddd; border-radius:6px; padding:12px;">
+                <legend>Images</legend>
+                <div class="row-2">
+                  <label class="field"><span>Thumbnail URL *</span><input id="p-thumbnail" /></label>
+                  <label class="field"><span>Thumbnail Alt</span><input id="p-thumbnail-alt" /></label>
+                </div>
+                <div>
+                  <strong style="font-size:13px">Image list</strong>
+                  <p style="font-size:12px;color:#666;margin:4px 0 8px">
+                    Filenames must start with role prefix (hero-, gallery-, thumbnail-, video-, detail-).
+                    At least one hero- and five gallery- entries required.
+                  </p>
+                  <div id="p-images" class="img-url-list"></div>
+                  <button type="button" id="add-image-row" style="margin-top:6px">Add image URL</button>
+                </div>
+                <div style="margin-top:14px">
+                  <strong style="font-size:13px">Upload new image</strong>
+                  <p style="font-size:12px;color:#666;margin:4px 0 8px">
+                    Slug is required (autofills from title field). Choose a role, pick a file, click Upload.
+                    The returned CDN URL is appended to the image list above.
+                  </p>
+                  <div class="upload-row">
+                    <select id="upload-role">
+                      <option value="hero">hero</option>
+                      <option value="thumbnail">thumbnail</option>
+                      <option value="gallery-01">gallery-01</option>
+                      <option value="gallery-02">gallery-02</option>
+                      <option value="gallery-03">gallery-03</option>
+                      <option value="gallery-04">gallery-04</option>
+                      <option value="gallery-05">gallery-05</option>
+                      <option value="gallery-06">gallery-06</option>
+                      <option value="gallery-07">gallery-07</option>
+                      <option value="gallery-08">gallery-08</option>
+                      <option value="gallery-09">gallery-09</option>
+                      <option value="gallery-10">gallery-10</option>
+                      <option value="gallery-11">gallery-11</option>
+                      <option value="gallery-12">gallery-12</option>
+                      <option value="gallery-13">gallery-13</option>
+                      <option value="gallery-14">gallery-14</option>
+                      <option value="gallery-15">gallery-15</option>
+                      <option value="video-01">video-01</option>
+                      <option value="video-02">video-02</option>
+                      <option value="video-03">video-03</option>
+                      <option value="detail-01">detail-01</option>
+                      <option value="detail-02">detail-02</option>
+                    </select>
+                    <input type="file" id="upload-file" accept="image/*,video/mp4,video/webm" />
+                    <button type="button" id="upload-btn">Upload</button>
+                  </div>
+                  <label class="checkbox-row" style="margin-top:6px">
+                    <input type="checkbox" id="upload-skip-transform" />
+                    <span>skip_transform (videos / GIFs)</span>
+                  </label>
+                  <div id="upload-status" style="font-size:13px; margin-top:6px"></div>
+                </div>
+              </fieldset>
+
+              <div class="form-actions">
+                <button type="button" id="cancel-edit">Cancel</button>
+                <span class="spacer"></span>
+                <button type="button" id="delete-product" class="danger hidden">Delete</button>
+                <button type="submit" class="primary" id="save-product">Save</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="tab-orders" class="hidden">
+          <div class="subtabs">
+            <button class="subtab-btn active" data-status="needs_shipping">Needs Shipping</button>
+            <button class="subtab-btn" data-status="shipped">Shipped</button>
+            <button class="subtab-btn" data-status="all">All Orders</button>
+          </div>
+          <div class="toolbar">
+            <input id="orders-search" type="search" placeholder="Search by email, order ID, or tracking number..." />
+            <button id="orders-search-btn">Search</button>
+            <button id="orders-refresh-btn">Refresh</button>
+          </div>
+          <div id="orders-status"></div>
+          <div id="orders-list"></div>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="/assets/js/admin.js"></script>
+  </body>
+</html>
