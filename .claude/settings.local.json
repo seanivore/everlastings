@@ -5,7 +5,8 @@
       "WebSearch",
       "WebFetch(domain:supabase.com)",
       "WebFetch(domain:vercel.com)",
-      "WebFetch(domain:developers.cloudflare.com)"
+      "WebFetch(domain:developers.cloudflare.com)",
+      "mcp__claude_ai_Supabase__apply_migration"
     ]
   }
 }
