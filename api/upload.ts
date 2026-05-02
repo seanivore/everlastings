@@ -1,20 +1,20 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
-import { isTest } from './_lib/env';
+import { isTest, env } from './_lib/env';
 
 const s3 = new S3Client({
   region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    accessKeyId: env('R2_ACCESS_KEY_ID'),
+    secretAccessKey: env('R2_SECRET_ACCESS_KEY'),
   },
 });
 
 const supabaseAuthClient = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!,
+  env('SUPABASE_URL'),
+  env('SUPABASE_SECRET_KEY'),
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
@@ -26,7 +26,7 @@ async function authorize(request: Request): Promise<boolean> {
   if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
   const token = auth.slice(7).trim();
   if (!token) return false;
-  if (token === process.env.PRODUCT_API_KEY) return true;
+  if (token === env('PRODUCT_API_KEY')) return true;
   const { data, error } = await supabaseAuthClient.auth.getUser(token);
   return !error && !!data?.user;
 }
@@ -60,7 +60,7 @@ function jsonResponse(request: Request, body: unknown, status = 200): Response {
 }
 
 function getCloudinaryConfig(): { apiKey: string; apiSecret: string; cloudName: string } {
-  const url = process.env.CLOUDINARY_URL || '';
+  const url = env('CLOUDINARY_URL');
   const match = url.match(/^cloudinary:\/\/(\d+):([^@]+)@(.+)$/);
   if (!match) throw new Error('Invalid CLOUDINARY_URL');
   return { apiKey: match[1], apiSecret: match[2], cloudName: match[3] };
@@ -203,14 +203,14 @@ export async function POST(request: Request) {
 
     await s3.send(
       new PutObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME!,
+        Bucket: env('R2_BUCKET_NAME'),
         Key: key,
         Body: finalBuffer,
         ContentType: contentType,
       }),
     );
 
-    const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
+    const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
     return jsonResponse(request, { url: publicUrl, filename });
   } catch (err) {
     console.error('Upload error:', err);

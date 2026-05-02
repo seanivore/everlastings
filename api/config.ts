@@ -1,12 +1,13 @@
 import { corsHeaders, preflight } from './_lib/cors';
+import { env } from './_lib/env';
 
 export async function GET(req: Request) {
   return Response.json(
     {
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
-      metaPixelId: process.env.META_PIXEL_ID || null,
+      publishableKey: env('STRIPE_PUBLISHABLE_KEY'),
+      supabaseUrl: env('SUPABASE_URL'),
+      supabasePublishableKey: env('SUPABASE_PUBLISHABLE_KEY'),
+      metaPixelId: env('META_PIXEL_ID') || null,
     },
     { headers: corsHeaders(req) },
   );

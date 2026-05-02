@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
-import { isTest } from './_lib/env';
+import { isTest, env } from './_lib/env';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
@@ -20,7 +20,7 @@ async function authorize(request: Request): Promise<boolean> {
   if (!auth || !auth.toLowerCase().startsWith('bearer ')) return false;
   const token = auth.slice(7).trim();
   if (!token) return false;
-  if (token === process.env.PRODUCT_API_KEY) return true;
+  if (token === env('PRODUCT_API_KEY')) return true;
   const { data, error } = await supabase.auth.getUser(token);
   return !error && !!data?.user;
 }
