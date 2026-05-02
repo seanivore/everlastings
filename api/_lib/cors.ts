@@ -11,7 +11,7 @@ export function corsHeaders(req: Request): HeadersInit {
   const allowed = ALLOWED.some((re) => re.test(origin));
   return {
     ...(allowed ? { 'Access-Control-Allow-Origin': origin, 'Vary': 'Origin' } : {}),
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, stripe-signature',
     'Access-Control-Max-Age': '86400',
   };
