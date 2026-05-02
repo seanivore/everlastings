@@ -1,7 +1,8 @@
 # Product Protocol — Everlastings by Emaline
 
 **Created**: 2026-04-12
-**Updated**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Admin Orders Tab).
+**Updated**: 2026-05-02 — v1.4.3: corrected gallery filename pattern to match the upload endpoint output (`gallery-NN-{slug}` not `gallery-{slug}-NN`); added `gif-NN` role; noted that `/api/products` and `/api/upload` accept either `PRODUCT_API_KEY` (curl/AI) **or** a Supabase JWT (admin UI signed-in user) on the `Authorization: Bearer` header.
+**Previous**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Admin Orders Tab).
 
 ---
 
@@ -293,13 +294,16 @@ Verify before calling `POST /api/products`:
 
 #### Image Roles
 
-| Role                          | Filename                 | Purpose                                |
-| ----------------------------- | ------------------------ | -------------------------------------- |
-| hero                          | `hero-{slug}.webp`       | Main product image                     |
-| gallery-01 through gallery-15 | `gallery-{slug}-01.webp` | Gallery images                         |
-| thumbnail                     | `thumbnail-{slug}.webp`  | Shop grid thumbnail (600px)            |
-| video-01                      | `video-{slug}-01.mp4`    | Product video (skip Cloudinary)        |
-| detail-01                     | `detail-{slug}-01.gif`   | Detail animation GIF (skip Cloudinary) |
+The upload endpoint composes the filename as `{role}-{slug}.{ext}` (e.g. role `gallery-01` + slug `the-sunkeeper` becomes `gallery-01-the-sunkeeper.webp`). For test/preview environments the prefix `test_` is added (see Base URL Convention).
+
+| Role                          | Filename                       | Purpose                                |
+| ----------------------------- | ------------------------------ | -------------------------------------- |
+| hero                          | `hero-{slug}.webp`             | Main product image                     |
+| thumbnail                     | `thumbnail-{slug}.webp`        | Shop grid thumbnail (600px)            |
+| gallery-01 through gallery-15 | `gallery-NN-{slug}.webp`       | Gallery images (NN = 01–15)            |
+| video-01 through video-05     | `video-NN-{slug}.mp4`          | Product videos (skip Cloudinary)       |
+| detail-01 through detail-05   | `detail-NN-{slug}.{ext}`       | Detail close-ups                       |
+| gif-01 through gif-05         | `gif-NN-{slug}.gif`            | Detail animation GIFs (skip Cloudinary)|
 
 #### Upload via API (Recommended)
 
@@ -371,8 +375,8 @@ After all images are uploaded and you have CDN URLs:
       "series": "Portals to Peace",
       "images": [
         {"url": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/hero-the-sunkeeper.webp", "alt": "Front view"},
-        {"url": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/gallery-the-sunkeeper-01.webp", "alt": "Side angle"},
-        {"url": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/gallery-the-sunkeeper-02.webp", "alt": "Detail"}
+        {"url": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/gallery-01-the-sunkeeper.webp", "alt": "Side angle"},
+        {"url": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/gallery-02-the-sunkeeper.webp", "alt": "Detail"}
       ],
       "thumbnail": "https://cdn.everlastingsbyemaline.com/products/the-sunkeeper/thumbnail-the-sunkeeper.webp",
       "seo_title": "The Sunkeeper | Everlastings by Emaline",
@@ -441,6 +445,8 @@ This happens automatically on customer purchase. Manual marking only if Emy sell
 | Get product    | GET    | `/api/products?slug=SLUG`               |
 | Upload image   | POST   | `/api/upload`                           |
 | Auth header    | —      | `Authorization: Bearer PRODUCT_API_KEY` |
+
+> **Auth modes** (v1.4.3+): `/api/products` and `/api/upload` accept the `Authorization: Bearer` header in two flavors. Use `PRODUCT_API_KEY` for AI / curl / the Custom GPT (the value differs per environment — test in `.env.local`, live for production). The admin UI at `/admin` instead sends the signed-in user's Supabase JWT (`session.access_token`); the server falls back to `supabase.auth.getUser(jwt)` when the bearer token is not the API key. This means you do not need to (and must not) ship `PRODUCT_API_KEY` to the browser. Other endpoints (`/api/orders`, `/api/orders/:id`) only accept the JWT path.
 
 ---
 
