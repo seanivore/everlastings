@@ -116,18 +116,48 @@ Buffer: 1 below the cap leaves room for at most 1 more endpoint without re-archi
 
 ---
 
-## Verification owed (post-deploy)
+## Verification status
 
-1. Confirm the preview deploy on `dev` after commit `2085c42` shows green ("Ready" not "Error") in `npx vercel ls`. (Done in Track B pre-flight before delegating to subagents.)
-2. Re-run the full Track A integration test suite against the `dev` preview URL:
-   - `tests/integration/06_checkout.sh` — POST `/api/checkout/reserve` → POST `/api/checkout`
-   - `tests/integration/07_race_condition.sh` — POST `/api/checkout/reserve` (expect 409)
-   - `tests/integration/08_hold_expiry.sh` — POST `/api/checkout` (expect 410)
-   - `tests/integration/10_full_purchase_flow.sh` — full reserve → session flow
-   - `tests/integration/12_shipping_mark.sh` — PATCH `/api/orders/:id`
-   - `tests/integration/16_admin_orders_needs_shipping.sh` — GET `/api/orders?status=needs_shipping`
-3. Spot-check the GET `/api/session-status?session_id=...` path (no integration test currently exercises it; complete.html will exercise it once Track C wires it).
-4. Cart endpoints (`/api/cart-activity`, `/api/cart-recovery`) have no current callers in tests; verify by direct curl against the `dev` preview.
+**Deploy build green.** Commit `2085c42` builds and deploys successfully — the function-count cap is no longer tripped. `npx vercel ls` shows `● Ready`.
+
+**Local fix verified.** All 5 consolidated routes return correct shapes via `vercel dev`:
+
+| Route                                  | Local result                                    |
+| -------------------------------------- | ----------------------------------------------- |
+| `POST /api/checkout/reserve`           | 400 `{"error":"Missing items or session_id"}`   |
+| `GET  /api/session-status?session_id=` | 400 `{"error":"Missing session_id"}`            |
+| `POST /api/cart-activity`              | 200 `{"ok":true}`                               |
+| `POST /api/cart-recovery`              | 400 `{"error":"Valid email required"}`          |
+| `PATCH /api/orders/:id`                | 401 `{"error":"Unauthorized"}` (auth middleware) |
+
+Each rewrite reaches the correct consolidated handler with the right behavior.
+
+**Preview-deploy runtime — separate, pre-existing issue.** Calling endpoints against the green preview returns `FUNCTION_INVOCATION_FAILED` even on `/api/config` (a file untouched by this consolidation). This matches Track A SESS_DEV_REPORT Open Thread #1 (Vercel env trailing-newline cleanup, interactive, Sean-owned). Fixing that thread is required before:
+
+- Track A integration tests can re-run against the preview.
+- Track B B0.2 placeholder seeding can run against the preview (Track B is using local `vercel dev` instead).
+- Track C end-to-end testing.
+
+This is **not caused by the consolidation** — `/api/config` was demonstrably broken on preview both before and after `2085c42`. Documented here only so the runtime issue isn't conflated with the function-count issue.
+
+---
+
+## Integration test re-run owed (after env-var cleanup)
+
+Re-run the full Track A integration test suite against the `dev` preview URL after the env trailing-newline cleanup is done:
+
+  - `tests/integration/06_checkout.sh` — POST `/api/checkout/reserve` → POST `/api/checkout`
+  - `tests/integration/07_race_condition.sh` — POST `/api/checkout/reserve` (expect 409)
+  - `tests/integration/08_hold_expiry.sh` — POST `/api/checkout` (expect 410)
+  - `tests/integration/10_full_purchase_flow.sh` — full reserve → session flow
+  - `tests/integration/12_shipping_mark.sh` — PATCH `/api/orders/:id`
+  - `tests/integration/16_admin_orders_needs_shipping.sh` — GET `/api/orders?status=needs_shipping`
+
+Plus spot checks (no integration test currently exercises these):
+
+  - `GET /api/session-status?session_id=cs_test_xxx` — returns expected shape (404/200).
+  - `POST /api/cart-activity` with `{"slug":"the-sunkeeper"}` — returns `{"ok":true}`.
+  - `POST /api/cart-recovery` with `{"email":"x@y.z","lost_items":[{"slug":"x"}]}` — returns `{"code":...}`.
 
 If any test fails, the issue is most likely:
 - A missing case in the `_action` switch in `api/checkout.ts` or `api/cart.ts`.
