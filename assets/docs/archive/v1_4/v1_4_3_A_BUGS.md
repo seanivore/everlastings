@@ -132,19 +132,25 @@ Buffer: 1 below the cap leaves room for at most 1 more endpoint without re-archi
 
 Each rewrite reaches the correct consolidated handler with the right behavior.
 
-**Preview-deploy runtime — separate, pre-existing issue.** Calling endpoints against the green preview returns `FUNCTION_INVOCATION_FAILED` even on `/api/config` (a file untouched by this consolidation). This matches Track A SESS_DEV_REPORT Open Thread #1 (Vercel env trailing-newline cleanup, interactive, Sean-owned). Fixing that thread is required before:
+**Preview-deploy runtime — second separate bug, FIXED in commit `ff27ecc`.** Calling endpoints against the green preview returned `FUNCTION_INVOCATION_FAILED` on every endpoint (including `/api/config`, untouched by the consolidation). Initial diagnosis pointed to Track A SESS_DEV_REPORT Open Thread #1 (Vercel env trailing-newline cleanup) — that diagnosis was **wrong**.
 
-- Track A integration tests can re-run against the preview.
-- Track B B0.2 placeholder seeding can run against the preview (Track B is using local `vercel dev` instead).
-- Track C end-to-end testing.
+**Actual cause:** `tsconfig.json` set `"module": "ES2020"` while `package.json` had no `"type": "module"`. Vercel's deployed Node runtime tried to load the compiled `.js` files as CommonJS and failed with `Cannot use import statement outside a module`. Adding `"type": "module"` introduced a second error (`ERR_MODULE_NOT_FOUND` because Node ESM requires `.js` extensions on imports). The cleanest fix was the opposite direction: change tsconfig to `"module": "CommonJS"` and revert the `package.json` change. Two-line fix; no source-file edits needed.
 
-This is **not caused by the consolidation** — `/api/config` was demonstrably broken on preview both before and after `2085c42`. Documented here only so the runtime issue isn't conflated with the function-count issue.
+**Why this was masked until now:** `vercel dev` (local) bundles TypeScript differently than the deployed runtime — local worked, deployed didn't. Track A's integration tests were run via `vercel dev` and never exercised the deployed preview URL. **This is exactly the localhost-vs-preview-URL testing pitfall** documented in user feedback memory.
+
+**Implication for Track A Open Thread #1:** the trailing-newline cleanup may still be a worthwhile defensive cleanup, but it is **not** the cause of the runtime failures we attributed to it. The defensive `env(key)` helper that trims whitespace was working correctly all along. Open Thread #1 can be re-scoped to "optional defensive hygiene" rather than "blocker."
+
+After commit `ff27ecc`, all sanity-checked endpoints return correct shapes against the preview:
+- `GET /api/config` → 200 with full JSON payload
+- `GET /api/products?slug=does-not-exist` → 404 `{"error":"Product not found"}`
+- `POST /api/cart-activity` → 200 `{"ok":true}`
+- `GET /api/session-status` (no session_id) → 400 `{"error":"Missing session_id"}`
 
 ---
 
-## Integration test re-run owed (after env-var cleanup)
+## Integration test re-run owed
 
-Re-run the full Track A integration test suite against the `dev` preview URL after the env trailing-newline cleanup is done:
+Re-run the full Track A integration test suite against the `dev` preview URL — the runtime is now healthy:
 
   - `tests/integration/06_checkout.sh` — POST `/api/checkout/reserve` → POST `/api/checkout`
   - `tests/integration/07_race_condition.sh` — POST `/api/checkout/reserve` (expect 409)
