@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Components Reference — Everlastings by Emaline</title>
+  <meta name="description" content="Internal design-system reference page. Lists every token, base component, error state, modal, popup, and inline SVG icon. Not linked from public navigation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/logo/720_logo.svg">
+  <style>
+    /* Components-page-only helpers (not part of the design system) */
+    .ref-section { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); border-bottom: 1px dashed var(--color-fog); }
+    .ref-section h2 { font-size: var(--text-3xl); margin-bottom: var(--space-lg); color: var(--accent-primary); }
+    .ref-grid { display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .swatch { aspect-ratio: 1; border-radius: var(--radius-md); position: relative; overflow: hidden; box-shadow: var(--shadow-sm); }
+    .swatch__label { position: absolute; bottom: 0; left: 0; right: 0; padding: var(--space-xs) var(--space-sm); background: rgba(255,255,255,0.92); font-size: var(--text-xs); font-family: ui-monospace, monospace; }
+    .ref-stack > * + * { margin-top: var(--space-md); }
+    .code-block { background: var(--color-ink); color: var(--text-inverse); padding: var(--space-md); border-radius: var(--radius-md); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--text-sm); overflow-x: auto; line-height: var(--leading-snug); }
+    .ref-token-row { display: grid; grid-template-columns: 200px 1fr; gap: var(--space-md); padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-fog); align-items: center; font-family: ui-monospace, monospace; font-size: var(--text-sm); }
+    .ref-token-row:last-child { border-bottom: 0; }
+    .ref-shadow-box, .ref-radius-box { width: 100px; height: 60px; background: var(--bg-primary); border: 1px solid var(--color-fog); display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER START — minimal placeholder header (B2 will write the canonical block) -->
+  <header class="site-header" data-site-header>
+    <div class="container site-header__inner">
+      <a href="/" class="site-header__logo"><img src="/assets/brand/logo/720_logo.svg" alt="Everlastings by Emaline"></a>
+      <span class="badge">_components.html — internal reference (not linked from public nav)</span>
+    </div>
+  </header>
+  <!-- HEADER END -->
+
+  <main class="container">
+
+    <section class="ref-section">
+      <h1>Design System Reference</h1>
+      <p>This page is a permanent, kept-in-repo reference rendering every token, base component, error state, modal, popup, and inline SVG icon defined in <code>assets/css/styles.css</code> and the JS files. Used by Track C and any future agent to verify the design system is intact. <strong>Not linked from public navigation.</strong></p>
+    </section>
+
+    <!-- ===========================================================
+         PLACEHOLDER HYGIENE RULE — read first
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Placeholder Hygiene</h2>
+      <p>Track B's HTML pages contain hardcoded data that Track C will replace with live Supabase fetches. Every block of hardcoded content must be wrapped in a <code>PLACEHOLDER:</code> comment so Track C can grep them. <strong>One wrapper per logical block, not per atom.</strong></p>
+      <p>Use atom-level wrapping ONLY when fields will be replaced independently (e.g., hero image vs. hero copy that come from different data sources).</p>
+      <pre class="code-block">&lt;!-- PLACEHOLDER: product-sticky-card --&gt;
+&lt;aside class="product-sticky-card"&gt;
+  &lt;h2&gt;The Sunkeeper&lt;/h2&gt;
+  &lt;p class="price"&gt;$245.00&lt;/p&gt;
+&lt;/aside&gt;
+&lt;!-- /PLACEHOLDER --&gt;
+
+/* PLACEHOLDER: hero-bg */
+.hero { background: url('/path/to/hero.webp'); }
+/* /PLACEHOLDER */
+
+// PLACEHOLDER: sample-cart-data
+const sampleCart = [{ slug: 'placeholder-haven-i' }];
+// /PLACEHOLDER</pre>
+      <p><strong>Track C:</strong> <code>grep -rn "PLACEHOLDER:" .</code> = your to-do list. End of Track C: same grep returns zero.</p>
+    </section>
+
+    <!-- ===========================================================
+         CSS TOKENS
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Color Tokens</h2>
+      <div class="ref-grid">
+        <div class="swatch" style="background:var(--color-plum)"><span class="swatch__label">--color-plum #4A1942</span></div>
+        <div class="swatch" style="background:var(--color-lavender)"><span class="swatch__label">--color-lavender #B8A5C8</span></div>
+        <div class="swatch" style="background:var(--color-fog)"><span class="swatch__label">--color-fog #D4D4D4</span></div>
+        <div class="swatch" style="background:var(--color-cream); border:1px solid var(--color-fog)"><span class="swatch__label">--color-cream #FFF8E7</span></div>
+        <div class="swatch" style="background:var(--color-gold)"><span class="swatch__label">--color-gold #D4AF7A</span></div>
+        <div class="swatch" style="background:var(--color-ink)"><span class="swatch__label" style="color:var(--text-inverse); background:rgba(0,0,0,0.7)">--color-ink #1A1A1A</span></div>
+        <div class="swatch" style="background:var(--color-star-blue)"><span class="swatch__label" style="color:var(--text-inverse); background:rgba(0,0,0,0.7)">--color-star-blue #1B3A52</span></div>
+        <div class="swatch" style="background:var(--color-amethyst)"><span class="swatch__label" style="color:var(--text-inverse); background:rgba(0,0,0,0.5)">--color-amethyst #9B6B9E</span></div>
+      </div>
+    </section>
+
+    <section class="ref-section">
+      <h2>Typography Scale</h2>
+      <div class="ref-stack">
+        <h1>H1 — Cormorant Garamond, --text-5xl 48px</h1>
+        <h2>H2 — Cormorant Garamond, --text-4xl 40px</h2>
+        <h3>H3 — Cormorant Garamond, --text-3xl 32px</h3>
+        <h4>H4 — Cormorant Garamond, --text-2xl 24px</h4>
+        <h5>H5 — Cormorant Garamond, --text-xl 20px</h5>
+        <h6>H6 — Cormorant Garamond bold, --text-lg 18px</h6>
+        <p style="font-size:var(--text-lg)">Large body — system font, --text-lg 18px, line-height 1.6. Step into Elsewhere. Where memory becomes miniature, and loss transforms into something you can hold.</p>
+        <p>Body — system font, --text-base 16px, line-height 1.6. The Sunkeeper stands watch over a garden where time has learned to be gentle.</p>
+        <p style="font-size:var(--text-sm)">Small label — --text-sm 14px. Used for nav, captions, helper text.</p>
+        <p style="font-size:var(--text-xs)" class="text-muted">Caption — --text-xs 12px, muted. Used for legal fine print, badges.</p>
+        <p class="story-card">Story card class — Cormorant Garamond italic at --text-lg with looser line-height. Used for the poetic narrative section on product pages.</p>
+      </div>
+    </section>
+
+    <section class="ref-section">
+      <h2>Spacing Scale</h2>
+      <div class="ref-token-row"><code>--space-xs</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:0.25rem">&nbsp;</span> 0.25rem (4px)</div>
+      <div class="ref-token-row"><code>--space-sm</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:0.5rem">&nbsp;</span> 0.5rem (8px)</div>
+      <div class="ref-token-row"><code>--space-md</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:1rem">&nbsp;</span> 1rem (16px)</div>
+      <div class="ref-token-row"><code>--space-lg</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:1.5rem">&nbsp;</span> 1.5rem (24px)</div>
+      <div class="ref-token-row"><code>--space-xl</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:2rem">&nbsp;</span> 2rem (32px)</div>
+      <div class="ref-token-row"><code>--space-2xl</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:3rem">&nbsp;</span> 3rem (48px)</div>
+      <div class="ref-token-row"><code>--space-3xl</code><span style="display:inline-block;height:8px;background:var(--color-plum);width:4rem">&nbsp;</span> 4rem (64px)</div>
+    </section>
+
+    <section class="ref-section">
+      <h2>Shadow + Radius Tokens</h2>
+      <div class="ref-grid">
+        <div><span class="ref-shadow-box" style="box-shadow:var(--shadow-sm)"></span><br><code class="text-muted">--shadow-sm</code></div>
+        <div><span class="ref-shadow-box" style="box-shadow:var(--shadow-md)"></span><br><code class="text-muted">--shadow-md</code></div>
+        <div><span class="ref-shadow-box" style="box-shadow:var(--shadow-lg)"></span><br><code class="text-muted">--shadow-lg</code></div>
+        <div><span class="ref-radius-box" style="border-radius:var(--radius-sm)"></span><br><code class="text-muted">--radius-sm 4px</code></div>
+        <div><span class="ref-radius-box" style="border-radius:var(--radius-md)"></span><br><code class="text-muted">--radius-md 8px</code></div>
+        <div><span class="ref-radius-box" style="border-radius:var(--radius-lg)"></span><br><code class="text-muted">--radius-lg 12px</code></div>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         BUTTONS
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Buttons</h2>
+      <div class="ref-stack">
+        <div style="display:flex;gap:var(--space-md);flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary">Bring This Haven Home</button>
+          <button class="btn btn-secondary">Notify Me</button>
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-primary" disabled>Sold</button>
+        </div>
+        <div style="display:flex;gap:var(--space-md);flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary btn-sm">Small</button>
+          <button class="btn btn-primary">Default</button>
+          <button class="btn btn-primary btn-lg">Large</button>
+        </div>
+        <button class="btn btn-primary btn-block">Block (full width)</button>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         CARDS / PRODUCT TILES
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Cards (Product Tiles)</h2>
+      <p class="text-muted">4:5 aspect ratio. Hover scales 1.05 + shadow lift. Lazy-load images. <code>onerror</code> fallback uses inline SVG data URI (no extra HTTP request, no binary file to track).</p>
+      <div class="ref-grid" style="grid-template-columns:repeat(auto-fill, minmax(240px, 1fr))">
+        <article class="card">
+          <div class="card__media">
+            <img loading="lazy" alt="Placeholder"
+                 src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%234A1942'/%3E%3Cstop offset='1' stop-color='%239B6B9E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='4' height='5' fill='url(%23g)'/%3E%3C/svg%3E">
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Available — featured</h3>
+            <p class="card__price">$245.00</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card__media">
+            <span class="badge badge-featured">Featured</span>
+            <img loading="lazy" alt="Placeholder"
+                 src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%231B3A52'/%3E%3C/svg%3E">
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">With Featured badge</h3>
+            <p class="card__price">$320.00</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card__media">
+            <span class="badge badge-sold">Sold</span>
+            <img loading="lazy" alt="Placeholder" style="opacity:0.5"
+                 src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23D4D4D4'/%3E%3C/svg%3E">
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">Sold — found its home</h3>
+            <p class="card__price text-muted">$180.00</p>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card__media">
+            <img loading="lazy" alt="Broken image fallback"
+                 src="this-image-does-not-exist.webp"
+                 onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 5%22%3E%3Crect width=%224%22 height=%225%22 fill=%22%234A1942%22/%3E%3C/svg%3E'">
+          </div>
+          <div class="card__body">
+            <h3 class="card__title">onerror fallback (broken src)</h3>
+            <p class="card__price">$—</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         FORMS
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Forms</h2>
+      <form style="max-width:480px">
+        <div class="form-field">
+          <label class="form-label" for="ref-name">Name</label>
+          <input id="ref-name" type="text" placeholder="Your name">
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="ref-email">Email</label>
+          <input id="ref-email" type="email" placeholder="you@example.com">
+          <span class="form-help">We'll never share your email. Promise.</span>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="ref-message">Message</label>
+          <textarea id="ref-message" placeholder="Tell us about a piece you'd love…"></textarea>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox">
+          I agree to <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>.
+        </label>
+        <button type="button" class="btn btn-primary">Begin a Conversation</button>
+        <span class="inline-error">Inline error example: this field is required.</span>
+      </form>
+    </section>
+
+    <!-- ===========================================================
+         BADGES
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Badges</h2>
+      <div style="display:flex;gap:var(--space-md);flex-wrap:wrap">
+        <span class="badge">Default</span>
+        <span class="badge badge-sold">Sold</span>
+        <span class="badge badge-featured">Featured</span>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         ERROR + EMPTY STATES (sample of B6.5 reference)
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Error + Empty States (BRAND.md voice)</h2>
+      <div class="ref-stack">
+        <div class="empty-state">
+          <h3>Every haven has found its home.</h3>
+          <p>Join the Firelight Council for first look at new arrivals.</p>
+          <form data-email-cta="newsletter-shop-empty" style="max-width:320px;margin:var(--space-md) auto 0">
+            <input type="email" placeholder="Your email" required>
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top:var(--space-sm)">Join the Firelight Council</button>
+          </form>
+        </div>
+        <div class="empty-state">
+          <h3>This haven could not be found.</h3>
+          <p>Return to <a href="/shop.html">the shop</a> to find others.</p>
+        </div>
+        <div class="empty-state">
+          <h3>New havens are being crafted.</h3>
+          <p>Check back soon.</p>
+        </div>
+        <div class="error-state">
+          <h3>Something went awry.</h3>
+          <p>Please try again, or <a href="/contact.html">reach out</a> if it keeps happening.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         SKELETON LOADING
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Skeleton Loading (shimmer)</h2>
+      <p class="text-muted">Used on shop grid + product page during initial fetch. Respects <code>prefers-reduced-motion</code>.</p>
+      <div class="ref-grid" style="grid-template-columns:repeat(auto-fill, minmax(240px, 1fr))">
+        <div class="card skeleton-card">
+          <div class="skeleton skeleton-card__media"></div>
+          <div class="card__body">
+            <div class="skeleton skeleton-card__line" style="width:80%"></div>
+            <div class="skeleton skeleton-card__line skeleton-card__line--short"></div>
+          </div>
+        </div>
+        <div class="card skeleton-card">
+          <div class="skeleton skeleton-card__media"></div>
+          <div class="card__body">
+            <div class="skeleton skeleton-card__line" style="width:70%"></div>
+            <div class="skeleton skeleton-card__line skeleton-card__line--short"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         INLINE SVG ICONS — paste these into product.html
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Inline SVG Icons (20×20, currentColor)</h2>
+      <p class="text-muted">No icon library. Paste these SVGs directly into product.html feature lists. <code>fill="currentColor"</code> means they inherit text color.</p>
+      <div class="ref-grid" style="grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); color:var(--accent-primary)">
+        <!-- dimensions (ruler) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M2 7v6h16V7H2zm1 1h2v3H4V8H3zm3 0h1v2H6V8zm2 0h2v3H9V8H8zm3 0h1v2h-1V8zm2 0h2v3h-1V8h-1zm3 0h1v2h-1V8z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">dimensions</p>
+        </div>
+        <!-- weight (scale) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 2a3 3 0 0 0-2.83 2H4a1 1 0 0 0-.97.76l-2 8A1 1 0 0 0 2 14h6.18A3 3 0 0 0 10 16a3 3 0 0 0 1.82-2H18a1 1 0 0 0 .97-1.24l-2-8A1 1 0 0 0 16 4h-3.17A3 3 0 0 0 10 2zm0 2a1 1 0 0 1 .94.66H9.06A1 1 0 0 1 10 4zm-5 4 1.5 6h-3l1.5-6zm10 0 1.5 6h-3l1.5-6zm-5 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">weight</p>
+        </div>
+        <!-- materials (palette) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 2a8 8 0 0 0-1 15.94 1.5 1.5 0 0 0 1.4-2.06.5.5 0 0 1 .47-.69H13a4 4 0 0 0 4-4c0-4.97-3.13-9-7-9zm-4 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm3-3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm2 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">materials</p>
+        </div>
+        <!-- lighting (sun) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V2a1 1 0 0 1 1-1zm0 14.5a1 1 0 0 1 1 1V18a1 1 0 0 1-2 0v-1.5a1 1 0 0 1 1-1zM2 9a1 1 0 0 1 1 1 1 1 0 0 1-1 1H.5a1 1 0 0 1 0-2H2zm17.5 0a1 1 0 0 1 0 2H18a1 1 0 0 1 0-2h1.5zM4.22 4.22a1 1 0 0 1 1.41 0L6.7 5.29a1 1 0 0 1-1.41 1.41L4.22 5.63a1 1 0 0 1 0-1.41zm10.07 10.07a1 1 0 0 1 1.41 0l1.07 1.07a1 1 0 0 1-1.41 1.41l-1.07-1.07a1 1 0 0 1 0-1.41zM4.22 15.78a1 1 0 0 1 0-1.41l1.07-1.07a1 1 0 0 1 1.41 1.41l-1.07 1.07a1 1 0 0 1-1.41 0zm10.07-10.07a1 1 0 0 1 0-1.41l1.07-1.07a1 1 0 0 1 1.41 1.41L15.7 5.71a1 1 0 0 1-1.41 0z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">lighting</p>
+        </div>
+        <!-- care (shield) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 1.5 3 4v5c0 4.5 3 8.4 7 9.5 4-1.1 7-5 7-9.5V4l-7-2.5zM10 4 15 5.5V9c0 3.4-2.2 6.4-5 7.4C7.2 15.4 5 12.4 5 9V5.5L10 4zm-2 5.5L9 8.5l1.5 1.5 3-3L14 8l-3.5 3.5L9 9.5z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">care</p>
+        </div>
+        <!-- shipping (truck) -->
+        <div class="text-center">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M2 5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v2h2.5l2.5 3v4h-1.5a2 2 0 1 1-4 0H7.5a2 2 0 1 1-4 0H2V5zm11 4h3.07L14.5 7H13v2zM5.5 13a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm9 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z"/>
+          </svg>
+          <p class="text-muted" style="font-size:var(--text-xs); margin:var(--space-xs) 0 0">shipping</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         INTERACTIVE: lightbox, modal, popup, banner
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Interactive Components</h2>
+      <p class="text-muted">Click each to trigger and verify behavior.</p>
+
+      <div class="ref-stack">
+        <div>
+          <h3>Lightbox</h3>
+          <p>Click any thumbnail. ESC closes, ←/→ navigate within the group.</p>
+          <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap">
+            <a href="#" data-lightbox-trigger data-lightbox-group="ref" data-lightbox-caption="Plum gradient"
+               data-lightbox-src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%234A1942'/%3E%3Cstop offset='1' stop-color='%239B6B9E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='4' height='5' fill='url(%23g)'/%3E%3C/svg%3E">
+              <img alt="Lightbox sample 1" style="width:100px;height:125px;object-fit:cover;border-radius:var(--radius-sm)"
+                   src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%234A1942'/%3E%3Cstop offset='1' stop-color='%239B6B9E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='4' height='5' fill='url(%23g)'/%3E%3C/svg%3E">
+            </a>
+            <a href="#" data-lightbox-trigger data-lightbox-group="ref" data-lightbox-caption="Star blue"
+               data-lightbox-src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%231B3A52'/%3E%3C/svg%3E">
+              <img alt="Lightbox sample 2" style="width:100px;height:125px;object-fit:cover;border-radius:var(--radius-sm)"
+                   src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%231B3A52'/%3E%3C/svg%3E">
+            </a>
+            <a href="#" data-lightbox-trigger data-lightbox-group="ref" data-lightbox-caption="Soft gold"
+               data-lightbox-src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23D4AF7A'/%3E%3C/svg%3E">
+              <img alt="Lightbox sample 3" style="width:100px;height:125px;object-fit:cover;border-radius:var(--radius-sm)"
+                   src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23D4AF7A'/%3E%3C/svg%3E">
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h3>Email-CTA forms</h3>
+          <p>All forms with <code>data-email-cta="&lt;source&gt;"</code> dispatch <code>CustomEvent('email-cta-submit')</code>. Track C wires the API call.</p>
+          <button class="btn btn-secondary" type="button" onclick="document.querySelector('[data-exit-modal]').classList.add('is-open')">Open exit-intent modal</button>
+          <button class="btn btn-secondary" type="button" onclick="document.querySelector('[data-contemplation]').classList.add('is-visible')">Open contemplation popup</button>
+          <button class="btn btn-secondary" type="button" onclick="document.querySelector('[data-cookie-banner]').classList.add('is-visible')">Re-open cookie banner</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===========================================================
+         CANONICAL <head> SNIPPET — for B2 to copy verbatim
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Canonical <code>&lt;head&gt;</code> Snippet (B2 copies verbatim into every page)</h2>
+      <p class="text-muted">Order matters: gtag consent default-deny MUST fire BEFORE gtag.js loads.</p>
+      <pre class="code-block">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;title&gt;PAGE_TITLE — Everlastings by Emaline&lt;/title&gt;
+  &lt;meta name="description" content="PAGE_DESCRIPTION"&gt;
+
+  &lt;!-- Cookie consent default-deny (MUST fire before gtag.js) --&gt;
+  &lt;script&gt;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 500
+    });
+  &lt;/script&gt;
+
+  &lt;!-- Fonts --&gt;
+  &lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+  &lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+  &lt;link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"&gt;
+
+  &lt;!-- Stylesheet --&gt;
+  &lt;link rel="stylesheet" href="/assets/css/styles.css"&gt;
+
+  &lt;!-- Favicon (SVG, scales infinitely) --&gt;
+  &lt;link rel="icon" type="image/svg+xml" href="/assets/brand/logo/720_logo.svg"&gt;
+
+  &lt;!-- GA4 (Track C wires Measurement ID via api/config; placeholder for now) --&gt;
+  &lt;script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"&gt;&lt;/script&gt;
+  &lt;script&gt;
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  &lt;/script&gt;
+
+  &lt;!-- Meta Pixel (Track C injects only if consent.advertising === 'granted') --&gt;
+  &lt;!-- PLACEHOLDER: meta-pixel-init --&gt;
+  &lt;script&gt;
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'META_PIXEL_ID_HERE');
+    fbq('track', 'PageView');
+  &lt;/script&gt;
+  &lt;noscript&gt;&lt;img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=META_PIXEL_ID_HERE&amp;ev=PageView&amp;noscript=1"/&gt;&lt;/noscript&gt;
+  &lt;!-- /PLACEHOLDER --&gt;
+&lt;/head&gt;</pre>
+    </section>
+
+    <!-- ===========================================================
+         GLOBAL MODALS / POPUPS / BANNER — for B2 to include on every page
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>Global Modals / Popups / Banner Snippet</h2>
+      <p class="text-muted">B2 includes these markup blocks once before the closing <code>&lt;/body&gt;</code> tag, after the <code>&lt;footer&gt;</code>. They are hidden by default and triggered by JS in <code>ui.js</code>.</p>
+      <pre class="code-block">&lt;!-- GLOBAL MODALS START --&gt;
+
+&lt;!-- Lightbox overlay (used by product.html gallery) --&gt;
+&lt;div class="lightbox" data-lightbox-target&gt;
+  &lt;button class="lightbox-close" data-lightbox-close aria-label="Close"&gt;&amp;times;&lt;/button&gt;
+  &lt;button class="lightbox-nav lightbox-prev" data-lightbox-prev aria-label="Previous"&gt;&amp;larr;&lt;/button&gt;
+  &lt;img data-lightbox-image alt=""&gt;
+  &lt;button class="lightbox-nav lightbox-next" data-lightbox-next aria-label="Next"&gt;&amp;rarr;&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;!-- Cart exit-intent modal (only shows if cart has items) --&gt;
+&lt;div class="exit-modal" data-exit-modal&gt;
+  &lt;div class="exit-modal__overlay" data-exit-modal-overlay&gt;&lt;/div&gt;
+  &lt;div class="exit-modal__content"&gt;
+    &lt;button class="exit-modal__close" data-exit-modal-close aria-label="Close"&gt;&amp;times;&lt;/button&gt;
+    &lt;h3&gt;Don't miss out&lt;/h3&gt;
+    &lt;p&gt;This is one of a kind. Can we email you if someone else adds it to their cart, or if we have a small thank-you?&lt;/p&gt;
+    &lt;form data-email-cta="cart-exit"&gt;
+      &lt;label class="checkbox-label"&gt;
+        &lt;input type="checkbox" required&gt;
+        Please email me. I agree to &lt;a href="/terms.html"&gt;Terms&lt;/a&gt; &amp;amp; &lt;a href="/privacy.html"&gt;Privacy Policy&lt;/a&gt;.
+      &lt;/label&gt;
+      &lt;input type="email" placeholder="Your email" required&gt;
+      &lt;button type="submit" class="btn btn-primary btn-block"&gt;Keep Me Updated&lt;/button&gt;
+    &lt;/form&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- 3-min contemplation popup (product page only — but markup is global) --&gt;
+&lt;div class="contemplation-popup" data-contemplation&gt;
+  &lt;button class="contemplation-popup__close" data-contemplation-close aria-label="Close"&gt;&amp;times;&lt;/button&gt;
+  &lt;p&gt;Love it? Join the Firelight Council for 5% off your first piece.&lt;/p&gt;
+  &lt;form data-email-cta="contemplation-offer"&gt;
+    &lt;label class="checkbox-label"&gt;
+      &lt;input type="checkbox" required&gt;
+      I agree to &lt;a href="/terms.html"&gt;Terms&lt;/a&gt; &amp;amp; &lt;a href="/privacy.html"&gt;Privacy Policy&lt;/a&gt;.
+    &lt;/label&gt;
+    &lt;input type="email" placeholder="Your email" required&gt;
+    &lt;button type="submit" class="btn btn-primary btn-block"&gt;Get 5% Off&lt;/button&gt;
+  &lt;/form&gt;
+&lt;/div&gt;
+
+&lt;!-- Cookie consent banner (B1.5) --&gt;
+&lt;div class="cookie-banner" data-cookie-banner role="region" aria-label="Cookie consent"&gt;
+  &lt;div class="cookie-banner__inner"&gt;
+    &lt;p class="cookie-banner__text"&gt;
+      We use Meta and Google Analytics to find collectors who'd love these havens. Decline if you'd rather not. &lt;a href="/privacy.html"&gt;Read our privacy approach &amp;rarr;&lt;/a&gt;
+    &lt;/p&gt;
+    &lt;div class="cookie-banner__actions"&gt;
+      &lt;button class="btn btn-ghost btn-sm" data-cookie-decline&gt;Decline&lt;/button&gt;
+      &lt;button class="btn btn-primary btn-sm" data-cookie-accept&gt;Accept&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- GLOBAL MODALS END --&gt;
+
+&lt;!-- Scripts (load at end of body) --&gt;
+&lt;script src="/assets/js/lightbox.js" defer&gt;&lt;/script&gt;
+&lt;script src="/assets/js/ui.js" defer&gt;&lt;/script&gt;
+&lt;script src="/assets/js/cart-ui.js" defer&gt;&lt;/script&gt;</pre>
+    </section>
+
+    <!-- ===========================================================
+         CUSTOM EVENT CONTRACTS (Track C reference)
+    =========================================================== -->
+    <section class="ref-section">
+      <h2>CustomEvent Contracts (for Track C)</h2>
+
+      <h3><code>'email-cta-submit'</code></h3>
+      <pre class="code-block">window.addEventListener('email-cta-submit', (e) =&gt; {
+  // e.detail = {
+  //   source: 'product-interest' | 'cart-exit' | 'contemplation-offer'
+  //         | 'newsletter-footer' | 'newsletter-shop-empty',
+  //   email: string,
+  //   productSlug?: string,   // present for 'product-interest' only
+  // }
+  fetch('/api/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(e.detail),
+  });
+});</pre>
+
+      <h3><code>'consent-change'</code></h3>
+      <pre class="code-block">window.addEventListener('consent-change', (e) =&gt; {
+  // e.detail = {
+  //   analytics: 'granted' | 'denied',
+  //   advertising: 'granted' | 'denied',
+  //   timestamp: ISO string,
+  //   version: 1,
+  // }
+  gtag('consent', 'update', {
+    analytics_storage: e.detail.analytics,
+    ad_storage: e.detail.advertising,
+    ad_user_data: e.detail.advertising,
+    ad_personalization: e.detail.advertising,
+  });
+  if (e.detail.advertising === 'granted') {
+    fbq('consent', 'grant');
+    // For California-detected visitors:
+    // fbq('dataProcessingOptions', ['LDU'], 0, 0);
+  } else {
+    fbq('consent', 'revoke');
+  }
+});</pre>
+
+      <h3><code>'cart-updated'</code> (optional, dispatched by Track C after add/remove)</h3>
+      <pre class="code-block">window.dispatchEvent(new CustomEvent('cart-updated'));
+// cart-ui.js listens and re-reads localStorage.cart to refresh badge.</pre>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       Global modal/popup/banner instances (LIVE on this page)
+  ============================================================ -->
+
+  <div class="lightbox" data-lightbox-target>
+    <button class="lightbox-close" data-lightbox-close aria-label="Close">&times;</button>
+    <button class="lightbox-nav lightbox-prev" data-lightbox-prev aria-label="Previous">&larr;</button>
+    <img data-lightbox-image alt="">
+    <button class="lightbox-nav lightbox-next" data-lightbox-next aria-label="Next">&rarr;</button>
+  </div>
+
+  <div class="exit-modal" data-exit-modal>
+    <div class="exit-modal__overlay" data-exit-modal-overlay></div>
+    <div class="exit-modal__content">
+      <button class="exit-modal__close" data-exit-modal-close aria-label="Close">&times;</button>
+      <h3>Don't miss out</h3>
+      <p>This is one of a kind. Can we email you if someone else adds it to their cart, or if we have a small thank-you?</p>
+      <form data-email-cta="cart-exit">
+        <label class="checkbox-label">
+          <input type="checkbox" required>
+          Please email me. I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        </label>
+        <input type="email" placeholder="Your email" required>
+        <button type="submit" class="btn btn-primary btn-block">Keep Me Updated</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="contemplation-popup" data-contemplation>
+    <button class="contemplation-popup__close" data-contemplation-close aria-label="Close">&times;</button>
+    <p>Love it? Join the Firelight Council for 5% off your first piece.</p>
+    <form data-email-cta="contemplation-offer">
+      <label class="checkbox-label">
+        <input type="checkbox" required>
+        I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+      </label>
+      <input type="email" placeholder="Your email" required>
+      <button type="submit" class="btn btn-primary btn-block">Get 5% Off</button>
+    </form>
+  </div>
+
+  <div class="cookie-banner" data-cookie-banner role="region" aria-label="Cookie consent">
+    <div class="cookie-banner__inner">
+      <p class="cookie-banner__text">
+        We use Meta and Google Analytics to find collectors who'd love these havens. Decline if you'd rather not. <a href="/privacy.html">Read our privacy approach &rarr;</a>
+      </p>
+      <div class="cookie-banner__actions">
+        <button class="btn btn-ghost btn-sm" data-cookie-decline>Decline</button>
+        <button class="btn btn-primary btn-sm" data-cookie-accept>Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/lightbox.js" defer></script>
+  <script src="/assets/js/ui.js" defer></script>
+  <script src="/assets/js/cart-ui.js" defer></script>
+
+</body>
+</html>
