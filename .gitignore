@@ -8,9 +8,10 @@
 *.webp
 *.webm
 
-# Environment variables
+# Environment variables (ignore all .env* variants; allow .env.example only)
 .env
-.env.local
+.env.*
+!.env.example
 
 # Virtual environment
 venv/
