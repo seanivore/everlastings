@@ -297,13 +297,82 @@ bug class on future projects.
 
 ---
 
+## Track A pipeline gaps from B0.2
+
+These were uncovered by the B0.2 placeholder seeding subagent on 2026-05-03 while exercising the AI product pipeline (`/api/upload` + `/api/products`) end-to-end against the dev preview. **None blocked the seed**, but each cost a debugging cycle and would block an unfamiliar agent (especially Emy via her Custom GPT). Each is sized as a small Track A backlog ticket.
+
+Full discussion in `v1_4_3_B_PLACEHOLDER_SEED.md` § Pipeline notes; this section is the executable summary for the cross-track update wave.
+
+### Gap A — Cloudinary `unsigned_temp` upload preset is not configured
+
+`/api/upload` calls Cloudinary with `upload_preset=unsigned_temp` for non-`skip_transform` images. The `df0lyrhus` Cloudinary cloud has no upload presets configured (`{"presets":[]}`), so non-test transforms return `502 {"error":"Cloudinary upload failed"}`.
+
+**Workaround used in B0.2**: pre-converted source PNGs to 4:5 WebP locally with ImageMagick + uploaded with `skip_transform=true`. This bypasses Cloudinary entirely. Works for Track B's purposes; will NOT work for Emy's Custom GPT path which expects raw JPGs.
+
+**Fix**: create the `unsigned_temp` preset in the Cloudinary dashboard with parameters matching what `api/upload.ts` expects (4:5 fill, q_auto, g_auto, f_webp). Alternative: switch to a signed upload flow in `api/upload.ts`. **Critical before launch — Emy's Custom GPT cannot create products until this works.**
+
+### Gap B — `/api/products` filename validator does not strip `test_` prefix
+
+`api/products.ts` validates hero/gallery presence by parsing the URL filename and checking `startsWith('hero-')` / `startsWith('gallery-')`. But `api/upload.ts` prepends `test_` to filenames in test mode (e.g. `test_hero-{slug}.webp`). Result: any product created in test mode using URLs returned from `/api/upload` is rejected with `{"error":"At least 1 hero image required"}`.
+
+**Workaround used in B0.2**: after uploading, R2 objects were duplicated server-side (`CopyObjectCommand`) from `test/{slug}/test_{role}-{slug}.webp` to `test/{slug}/{role}-{slug}.webp`, then product POSTs used the non-`test_`-prefixed URL.
+
+**Fix**: in `api/products.ts`, change the filter to `filenameOf(img).replace(/^test_/, '').startsWith('hero-')` (and same for `gallery-`). Then test workflow Just Works on URLs `/api/upload` actually returns. **Required before any future test-mode seeding can run cleanly.**
+
+### Gap C — Supabase products INSERT webhook does not auto-fire on preview deploys
+
+After `POST /api/products` succeeded for all six rows, `stripe_product_id` and `stripe_price_id` remained null after a 45-second wait. Manually firing `/api/stripe-sync` per product succeeded. So `/api/stripe-sync` itself works — the database webhook simply isn't reaching the dev preview.
+
+**Likely causes**: (a) the Supabase Database Webhook is configured to point at the production URL (`https://everlastingsbyemaline.com/api/stripe-sync`), not the per-deployment preview alias, OR (b) it's unscoped and silently failing CORS / 404 against the preview alias.
+
+**Workaround used in B0.2**: manual `/api/stripe-sync` call per product after creation.
+
+**Fix options**: (a) add a Supabase webhook variant pointed at the dev branch alias `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/api/stripe-sync` so test seeding self-syncs; OR (b) document in PRODUCT_PROTOCOL.md that test-mode seeding must follow each `POST /api/products` with an explicit `POST /api/stripe-sync` call carrying the synthesized webhook envelope; OR (c) add a `?sync=true` query param on `POST /api/products` that calls `/api/stripe-sync` inline before responding (cleanest for any agent-driven seeding).
+
+### Gap D — `/api/stripe-sync` is not idempotent on uninitialized rows
+
+While diagnosing Gap C, the manual `/api/stripe-sync` call for `placeholder-haven-i` ran twice. Result: two Stripe Products exist for that slug; the Supabase row references the second; the first (`prod_URor3D0ITLFa2E`) is orphaned. Harmless in test mode but worth noting in protocol error-handling rules: **`/api/stripe-sync` is idempotent on a SECOND call only when `record.stripe_product_id` is already set in the payload.** Calling it twice with the same `record.id` but no existing `stripe_product_id` will create a NEW Stripe Product the second time and overwrite the DB row's reference.
+
+**Fix**: in `api/stripe-sync.ts`, before creating a new Stripe Product, query `products WHERE id = record.id AND stripe_product_id IS NOT NULL` and return early if it exists. **Cheap defensive add; prevents future orphans if any retry path triggers a second call.**
+
+### Gap E — `vercel curl` exits with code 3 on every successful call
+
+Every `npx vercel curl --deployment <url> -- ...` ends with `curl: (3) URL rejected: No host part in the URL` after the JSON body delivers correctly. Exit code is 3 even though the response is valid. Scripts using `set -e` will die on the first call.
+
+**Workaround used in B0.2**: drop `set -e` from seeding scripts (kept `set -uo pipefail`); pipe through `|| true` where exit code is checked.
+
+**Fix**: out of our scope — this is a `vercel curl` CLI bug. Worth a one-liner in PRODUCT_PROTOCOL.md's curl examples noting that scripts authoring against `vercel curl` should expect exit 3 on success.
+
+### Gap F — `materials` field type in PRODUCT_PROTOCOL.md is misleading
+
+The "For Emy" form-field table in PRODUCT_PROTOCOL.md shows `materials` as a single string. The actual Supabase column is `text[]` (array) and rejects strings with `malformed array literal` errors. POST `/api/products` must send `materials: ["wood", "resin", ...]`.
+
+**Fix**: update the AI-protocol section of PRODUCT_PROTOCOL.md to clarify: for the API call, materials is an **array of strings**. (The human-facing form may show comma-separated for ease of use, but the API payload takes an array.)
+
+### Gap G — `GET /api/products?slug=...` filters out `is_test=true` rows when unauthenticated
+
+Without `Authorization: Bearer`, GET filters `is_test=false` and returns 404 for any test product. With the bearer header, GET filters `is_test=isTest` (matches the deployment's environment scope). **This is correct behavior** — production must not surface test products — but worth noting in the Verification step of PRODUCT_PROTOCOL.md so an agent doesn't assume their POST silently failed when their unauthenticated GET 404s.
+
+### Where to track these for resolution
+
+- **Critical before launch**: Gap A (Cloudinary preset) and Gap B (test_ prefix filter). Both block the production AI workflow Emy will use.
+- **Before next test-mode seeding pass**: Gaps C and D (DB webhook routing + stripe-sync idempotency).
+- **Documentation-only fixes**: Gaps E, F, G (PRODUCT_PROTOCOL.md updates).
+
+Recommended: file these as a Track A bug-fix wave (e.g., `v1_4_3_A_BUGS_2.md` or fold into a v1.4.4 patch), with the Critical items addressed before merging `dev` → `main`.
+
+---
+
 ## Pointers
 
-- Full bug detail: `assets/docs/archive/v1_4/v1_4_3_A_BUGS.md`
+- Full bug detail (function-cap + module-system): `assets/docs/archive/v1_4/v1_4_3_A_BUGS.md`
+- Placeholder seed manifest with all gap details: `assets/docs/archive/v1_4/v1_4_3_B_PLACEHOLDER_SEED.md`
+- Track B SESS_DEV_REPORT: `assets/docs/archive/v1_4/v1_4_3_B_SESS_DEV_REPORT.md`
 - Track A's plan: `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md`
 - Track A's report: `assets/docs/archive/v1_4/v1_4_3_A_SESS_DEV_REPORT.md`
-- Track B's plan: `~/.claude/plans/you-are-the-track-jaunty-ullman.md` (will be filed as `v1_4_3_B_SESSION_DEV.md` by Sean)
+- Track B's plan: `~/.claude/plans/you-are-the-track-jaunty-ullman.md` (filed by Sean as `v1_4_3_B_SESSION_DEV.md`)
 - Track C's plan: `assets/docs/archive/v1_4/v1_4_3_C_IMPLEMENT.md`
+- Cookie consent research: `assets/docs/archive/v1_4/v1_4_3_B_RESEARCH_COOKIE_CONSENT.md`
 - Architecture truth: `assets/docs/EVERLASTINGS_STORE.md`
-- Brand voice (relevant for any banner/error copy choices): `assets/docs/BRAND.md`
+- Brand voice: `assets/docs/BRAND.md`
 - Workflow protocol: `.agent/DEV_RULES.md`
