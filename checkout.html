@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  ============================================================================
+  CANONICAL PAGE TEMPLATE — Everlastings by Emaline
+  v1.4.3 Track B (B2)
+  ----------------------------------------------------------------------------
+  HOW TO USE: copy this file to <page-name>.html (e.g. index.html, shop.html),
+  then replace:
+    1. <title> + <meta name="description"> tags
+    2. The <main>...</main> region (between MAIN START / MAIN END markers)
+    3. Set [aria-current="page"] on the matching nav link
+
+  DO NOT modify:
+    - The <head> block (canonical for all pages, includes consent default-deny)
+    - The <header> + nav (B2 owns this; same on every page)
+    - The <footer> + bottom bar
+    - The "GLOBAL MODALS" section before </body>
+    - The script tag block at the end
+
+  Header/footer changes get made HERE in _template.html and then synced into
+  every page (no template engine — vanilla HTML). Track B's verification step
+  diffs the header/footer of every page against this template to catch drift.
+  ============================================================================
+-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Everlastings by Emaline</title>
+  <meta name="description" content="Complete your purchase securely. Payment processed by Stripe.">
+
+  <!-- Cookie consent default-deny (MUST fire before gtag.js loads — v1_4_3_B_RESEARCH_COOKIE_CONSENT.md §6) -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 500
+    });
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/assets/css/styles.css">
+
+  <!-- Favicon (SVG, scales infinitely; only file format tracked in repo) -->
+  <link rel="icon" type="image/svg+xml" href="/assets/brand/logo/720_logo.svg">
+
+  <!-- GA4 — Track C will swap the placeholder Measurement ID for the real one served via /api/config -->
+  <!-- PLACEHOLDER: ga4-init -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  <!-- /PLACEHOLDER -->
+
+  <!-- Meta Pixel — Track C injects only after consent.advertising === 'granted' -->
+  <!-- PLACEHOLDER: meta-pixel-init -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'META_PIXEL_ID_HERE');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=META_PIXEL_ID_HERE&ev=PageView&noscript=1"/></noscript>
+  <!-- /PLACEHOLDER -->
+</head>
+<body>
+
+  <!-- ===============================================================
+       HEADER START — canonical, do not modify per-page
+       Mobile: hamburger (left), logo (center), cart icon (right)
+       Desktop: logo (left), nav (center), cart icon (right)
+       =============================================================== -->
+  <header class="site-header" data-site-header>
+    <div class="container site-header__inner">
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" data-nav-toggle>
+        <span class="nav-toggle__bar"></span>
+      </button>
+      <a href="/" class="site-header__logo" aria-label="Everlastings by Emaline — home">
+        <img src="/assets/brand/logo/720_logo.svg" alt="Everlastings by Emaline" width="40" height="40">
+      </a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/">Home</a>
+        <span class="nav-dropdown">
+          <a href="/shop.html">Shop</a>
+          <span class="nav-dropdown__menu">
+            <a href="/shop.html">All</a>
+            <a href="/shop.html?series=portals-to-peace">Portals to Peace</a>
+            <a href="/shop.html?series=book-nooks">Book Nooks &amp; Story Lofts</a>
+            <a href="/shop.html?series=seasonal">Seasonal &amp; Limited</a>
+            <a href="/shop.html?available=false">Sold Archive</a>
+          </span>
+        </span>
+        <a href="/about.html">About</a>
+        <a href="/contact.html#commissions">Commissions</a>
+        <a href="/contact.html">Contact</a>
+      </nav>
+      <a href="/cart.html" class="cart-link" aria-label="View cart">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="9" cy="21" r="1"/>
+          <circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>
+        </svg>
+        <span class="cart-badge" data-cart-badge data-count="0">0</span>
+      </a>
+    </div>
+  </header>
+
+  <nav class="mobile-nav" data-mobile-nav aria-label="Mobile navigation">
+    <a href="/">Home</a>
+    <a href="/shop.html">Shop — All</a>
+    <a href="/shop.html?series=portals-to-peace">Portals to Peace</a>
+    <a href="/shop.html?series=book-nooks">Book Nooks &amp; Story Lofts</a>
+    <a href="/shop.html?series=seasonal">Seasonal &amp; Limited</a>
+    <a href="/shop.html?available=false">Sold Archive</a>
+    <a href="/about.html">About</a>
+    <a href="/contact.html#commissions">Commissions</a>
+    <a href="/contact.html">Contact</a>
+  </nav>
+  <!-- HEADER END -->
+
+
+  <!-- MAIN START -->
+  <main>
+    <div class="container section" style="max-width: 880px;">
+
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a><span class="breadcrumb-separator">›</span>
+        <a href="/cart.html">Cart</a><span class="breadcrumb-separator">›</span>
+        <span aria-current="page">Checkout</span>
+      </nav>
+
+      <h1>Checkout</h1>
+
+      <!-- Progressive disclosure: Stage A info → Stage B payment.
+           Both stages live in the same DOM. Track C unlocks Stage B
+           when Stage A's address validates via Stripe AddressElement. -->
+
+      <!-- ============================================================
+           STAGE A — Information (email, billing, shipping)
+           ============================================================ -->
+      <section id="checkout-stage-a" data-checkout-stage="a" style="margin-top: var(--space-xl);">
+
+        <h2>1. Your information</h2>
+        <p style="color: var(--text-muted); font-size: var(--text-sm);">All fields required. We use this for shipping and order updates.</p>
+
+        <form id="checkout-info-form" data-checkout-info-form style="margin-top: var(--space-lg);">
+
+          <!-- Contact -->
+          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
+            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Contact</legend>
+            <div class="form-field">
+              <label class="form-label" for="checkout-email">Email</label>
+              <input id="checkout-email" name="email" type="email" required>
+              <span class="form-help">Order confirmation and tracking sent here.</span>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="checkout-phone">Phone (optional)</label>
+              <input id="checkout-phone" name="phone" type="tel">
+              <span class="form-help">For shipping carrier delivery questions only.</span>
+            </div>
+          </fieldset>
+
+          <!-- Shipping address (Stripe AddressElement mounts here in Track C) -->
+          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
+            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Shipping address</legend>
+
+            <!-- PLACEHOLDER: stripe-address-element-shipping — Track C mounts Stripe AddressElement here -->
+            <div id="address-element-shipping" data-stripe-address-shipping style="min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
+              Stripe AddressElement will mount here (allowed_countries: US only)
+            </div>
+            <!-- /PLACEHOLDER -->
+
+            <!-- US-only restriction error — Stripe AddressElement triggers when user picks non-US country -->
+            <div id="restricted-country-error" data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
+              We currently only ship within the United States. <a href="/contact.html">Contact us</a> for international inquiries.
+            </div>
+          </fieldset>
+
+          <!-- Billing -->
+          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
+            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Billing address</legend>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="billing-same-as-shipping" checked>
+              Same as shipping
+            </label>
+
+            <!-- Stripe AddressElement (billing) — hidden when "same as shipping" -->
+            <!-- PLACEHOLDER: stripe-address-element-billing -->
+            <div id="address-element-billing" data-stripe-address-billing class="hidden" style="margin-top: var(--space-md); min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
+              Stripe AddressElement (billing) — shown only when "same as shipping" is unchecked
+            </div>
+            <!-- /PLACEHOLDER -->
+          </fieldset>
+
+          <!-- Address validation errors -->
+          <div id="address-incomplete-error" data-address-incomplete class="hidden inline-error" style="margin-bottom: var(--space-md);">
+            Please complete your shipping address.
+          </div>
+          <div id="address-undeliverable-error" data-address-undeliverable class="hidden inline-error" style="margin-bottom: var(--space-md);">
+            We couldn't verify this address. Please double-check.
+          </div>
+
+          <button type="button" class="btn btn-primary btn-lg" data-checkout-continue>Continue to payment</button>
+        </form>
+      </section>
+
+      <!-- ============================================================
+           STAGE B — Payment (Stripe Payment Element + Confirm & Pay)
+           Hidden until Stage A validates.
+           ============================================================ -->
+      <section id="checkout-stage-b" data-checkout-stage="b" class="hidden" style="margin-top: var(--space-2xl); padding-top: var(--space-xl); border-top: 1px solid var(--color-fog);">
+
+        <h2>2. Payment</h2>
+        <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
+
+        <!-- PLACEHOLDER: stripe-payment-element — Track C mounts Stripe PaymentElement here -->
+        <div id="payment-element" data-stripe-payment style="margin-top: var(--space-lg); min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
+          Stripe PaymentElement will mount here
+        </div>
+        <!-- /PLACEHOLDER -->
+
+        <!-- Order summary -->
+        <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-cream); border-radius: var(--radius-md);">
+          <h3 style="margin-top: 0;">Order summary</h3>
+          <div data-checkout-line-items>
+            <!-- PLACEHOLDER: checkout-line-items — Track C renders one row per cart item -->
+            <div style="display: flex; justify-content: space-between; padding: var(--space-sm) 0;">
+              <span>Placeholder Haven I</span>
+              <span>$245.00</span>
+            </div>
+            <!-- /PLACEHOLDER -->
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
+            <span>Shipping</span>
+            <span data-checkout-shipping>Calculated by Stripe</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
+            <span>Total</span>
+            <span data-checkout-total>$245.00 + shipping</span>
+          </div>
+        </div>
+
+        <!-- Promotion code -->
+        <div class="form-field" style="margin-top: var(--space-lg);">
+          <label class="form-label" for="promo-code">Promotion code (optional)</label>
+          <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--space-sm);">
+            <input id="promo-code" name="promo_code" type="text" placeholder="Enter code">
+            <button type="button" class="btn btn-secondary" data-promo-apply>Apply</button>
+          </div>
+        </div>
+
+        <!-- Confirm & Pay -->
+        <button type="button" class="btn btn-primary btn-lg btn-block" data-checkout-confirm style="margin-top: var(--space-xl);">Confirm &amp; Pay</button>
+
+        <!-- Generic checkout error (Stripe decline, payment intent fail, network) -->
+        <div id="checkout-error" data-checkout-error class="hidden error-state" style="margin-top: var(--space-md);">
+          <p data-checkout-error-message>Something went awry. Please try again.</p>
+        </div>
+
+        <!-- Hold expired (410) — rare; only after 15+ minutes idle on this page -->
+        <div id="hold-expired-error" data-hold-expired class="hidden error-state" style="margin-top: var(--space-md);">
+          <h3>Your reservation timed out.</h3>
+          <p>Please return to your cart to re-check availability.</p>
+          <a href="/cart.html" class="btn btn-primary" style="margin-top: var(--space-sm);">Back to Cart</a>
+        </div>
+
+      </section>
+
+      <p style="margin-top: var(--space-2xl); font-size: var(--text-sm); color: var(--text-muted); text-align: center;">
+        Secure payment processing by Stripe · No cards stored on our servers
+      </p>
+
+    </div>
+  </main>
+  <!-- MAIN END -->
+
+
+  <!-- ===============================================================
+       FOOTER START — canonical, do not modify per-page
+       =============================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__cols">
+        <div class="site-footer__col">
+          <h4>About</h4>
+          <ul>
+            <li><a href="/about.html">Our story</a></li>
+            <li><a href="/about.html#philosophy">Philosophy</a></li>
+            <li><a href="/contact.html#commissions">Commissions</a></li>
+          </ul>
+        </div>
+        <div class="site-footer__col">
+          <h4>Shop</h4>
+          <ul>
+            <li><a href="/shop.html">All havens</a></li>
+            <li><a href="/shop.html?series=portals-to-peace">Portals to Peace</a></li>
+            <li><a href="/shop.html?series=book-nooks">Book Nooks &amp; Story Lofts</a></li>
+            <li><a href="/shop.html?series=seasonal">Seasonal &amp; Limited</a></li>
+            <li><a href="/shop.html?available=false">Sold Archive</a></li>
+          </ul>
+        </div>
+        <div class="site-footer__col">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="/contact.html">Contact</a></li>
+            <li><a href="/faq.html">FAQ</a></li>
+            <li><a href="/shipping.html">Shipping &amp; Returns</a></li>
+            <li><a href="/policies.html">Policies</a></li>
+          </ul>
+        </div>
+        <div class="site-footer__col">
+          <h4>Connect</h4>
+          <p style="font-size: var(--text-sm); color: rgba(255,255,255,0.7); margin-bottom: var(--space-md);">
+            Join the Firelight Council for first look at new havens.
+          </p>
+          <form data-email-cta="newsletter-footer" style="display: flex; gap: var(--space-sm); flex-direction: column;">
+            <input type="email" placeholder="Your email" required style="background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); color: var(--text-inverse);">
+            <button type="submit" class="btn btn-primary btn-sm">Subscribe</button>
+          </form>
+          <p style="margin-top: var(--space-md); display: flex; gap: var(--space-md);">
+            <a href="https://instagram.com/everlastingsbyemaline" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.3-1.46.72-2.13 1.39-.67.67-1.08 1.34-1.39 2.13-.3.76-.5 1.64-.56 2.91C.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.3.79.72 1.46 1.39 2.13.67.67 1.34 1.08 2.13 1.39.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.3 1.46-.72 2.13-1.39.67-.67 1.08-1.34 1.39-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.3-.79-.72-1.46-1.39-2.13-.67-.67-1.34-1.08-2.13-1.39-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32zm0 10.16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.4-11.85a1.44 1.44 0 1 1 0 2.88 1.44 1.44 0 0 1 0-2.88z"/></svg>
+            </a>
+            <a href="https://facebook.com/everlastingsbyemaline" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.69.24 2.69.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+            </a>
+            <a href="https://pinterest.com/everlastingsbyemaline" aria-label="Pinterest" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.08 3.16 9.42 7.62 11.17-.1-.95-.2-2.4.04-3.44.22-.94 1.4-5.97 1.4-5.97s-.36-.72-.36-1.78c0-1.66.97-2.91 2.17-2.91 1.02 0 1.52.77 1.52 1.69 0 1.03-.66 2.57-1 4-.28 1.2.6 2.18 1.78 2.18 2.14 0 3.78-2.26 3.78-5.51 0-2.88-2.07-4.9-5.03-4.9-3.43 0-5.44 2.57-5.44 5.23 0 1.04.4 2.15.9 2.75.1.12.11.22.08.34l-.33 1.36c-.05.22-.17.27-.4.16-1.5-.7-2.43-2.88-2.43-4.64 0-3.78 2.74-7.25 7.92-7.25 4.16 0 7.39 2.96 7.39 6.92 0 4.13-2.6 7.46-6.22 7.46-1.21 0-2.36-.63-2.74-1.38l-.75 2.85c-.27 1.04-1 2.34-1.49 3.13C9.57 23.81 10.76 24 12 24c6.63 0 12-5.37 12-12S18.63 0 12 0z"/></svg>
+            </a>
+            <a href="https://tiktok.com/@everlastingsbyemaline" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.66a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.09z"/></svg>
+            </a>
+          </p>
+        </div>
+      </div>
+      <div class="site-footer__bottom">
+        <p>© <span data-current-year>2026</span> Everlastings by Emaline · Site by Sean August Horvath</p>
+        <p>
+          <a href="/terms.html">Terms</a> &nbsp;·&nbsp;
+          <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
+          <a href="#" data-cookie-revoke>Privacy preferences</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+  <!-- FOOTER END -->
+
+
+  <!-- ===============================================================
+       GLOBAL MODALS START — same on every page, hidden by default,
+       triggered by ui.js / lightbox.js
+       =============================================================== -->
+
+  <div class="lightbox" data-lightbox-target>
+    <button class="lightbox-close" data-lightbox-close aria-label="Close">&times;</button>
+    <button class="lightbox-nav lightbox-prev" data-lightbox-prev aria-label="Previous">&larr;</button>
+    <img data-lightbox-image alt="">
+    <button class="lightbox-nav lightbox-next" data-lightbox-next aria-label="Next">&rarr;</button>
+  </div>
+
+  <div class="exit-modal" data-exit-modal aria-hidden="true">
+    <div class="exit-modal__overlay" data-exit-modal-overlay></div>
+    <div class="exit-modal__content" role="dialog" aria-labelledby="exit-modal-title">
+      <button class="exit-modal__close" data-exit-modal-close aria-label="Close">&times;</button>
+      <h3 id="exit-modal-title">Don't miss out</h3>
+      <p>This is one of a kind. Can we email you if someone else adds it to their cart, or if we have a small thank-you?</p>
+      <form data-email-cta="cart-exit">
+        <label class="checkbox-label">
+          <input type="checkbox" required>
+          Please email me. I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+        </label>
+        <input type="email" placeholder="Your email" required>
+        <button type="submit" class="btn btn-primary btn-block">Keep Me Updated</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="contemplation-popup" data-contemplation aria-hidden="true">
+    <button class="contemplation-popup__close" data-contemplation-close aria-label="Close">&times;</button>
+    <p>Love it? Join the Firelight Council for 5% off your first piece.</p>
+    <form data-email-cta="contemplation-offer">
+      <label class="checkbox-label">
+        <input type="checkbox" required>
+        I agree to <a href="/terms.html">Terms</a> &amp; <a href="/privacy.html">Privacy Policy</a>.
+      </label>
+      <input type="email" placeholder="Your email" required>
+      <button type="submit" class="btn btn-primary btn-block">Get 5% Off</button>
+    </form>
+  </div>
+
+  <div class="cookie-banner" data-cookie-banner role="region" aria-label="Cookie consent">
+    <div class="cookie-banner__inner">
+      <p class="cookie-banner__text">
+        We use Meta and Google Analytics to find collectors who'd love these havens. Decline if you'd rather not. <a href="/privacy.html">Read our privacy approach &rarr;</a>
+      </p>
+      <div class="cookie-banner__actions">
+        <button class="btn btn-ghost btn-sm" data-cookie-decline>Decline</button>
+        <button class="btn btn-primary btn-sm" data-cookie-accept>Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL MODALS END -->
+
+  <script>
+    // Tiny inline: keep the footer copyright year fresh.
+    document.querySelectorAll('[data-current-year]').forEach(el => {
+      el.textContent = String(new Date().getFullYear());
+    });
+  </script>
+  <script src="/assets/js/lightbox.js" defer></script>
+  <script src="/assets/js/ui.js" defer></script>
+  <script src="/assets/js/cart-ui.js" defer></script>
+
+</body>
+</html>
