@@ -4,10 +4,10 @@
 **Audience**: *For Sean* (primary review loop) • *For Emaline* (later, after Sean's iterations) • *For Future-Claude* (the agent executing Track C)
 **Companion to**: `v1_4_4_C_IMPLEMENT.md` (this protocol fires at Checkpoints A/B/C/D defined there)
 
-| If you are… | Read first |
-| --- | --- |
-| **Sean** | §3 (your protocol), §6 (per-page review map), §8 (settled-vs-iterating ledger) |
-| **Emaline** | §4 (zero-Git zero-React review path) — Sean will share this section directly when he's ready for your input |
+| If you are…       | Read first                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Sean**          | §3 (your protocol), §6 (per-page review map), §8 (settled-vs-iterating ledger)                                            |
+| **Emaline**       | §4 (zero-Git zero-React review path) — Sean will share this section directly when he's ready for your input               |
 | **Future-Claude** | §5 (decision boundaries — what's settled, what's iterating, what to escalate) — read before any Track C execution session |
 
 ---
@@ -114,14 +114,14 @@ You will run *several* of your own review rounds before Emaline's review even be
 This is intentional. Your loop runs in parallel with Emaline's real-product loading via
 the Custom GPT (which kicks off the moment Phase 0 ships). The timeline:
 
-| Phase | Sean's loop | Emaline's loop |
-| --- | --- | --- |
-| Phase 0 | (waiting for Cloudinary fix) | (waiting for Cloudinary fix) |
-| C1 → Checkpoint A | First review pass on foundations | Begins loading real products |
-| C2 → Checkpoint B | Major review pass on per-page | Continues loading; some pages now show real products |
-| C3 → Checkpoint C | Cart/checkout pass; real-card test | Catalog mostly real |
-| C4 → Checkpoint D | Final pass | Final products loaded; ready to bring her in for review |
-| C5 launch | (cutover) | (post-launch) |
+| Phase             | Sean's loop                        | Emaline's loop                                          |
+| ----------------- | ---------------------------------- | ------------------------------------------------------- |
+| Phase 0           | (waiting for Cloudinary fix)       | (waiting for Cloudinary fix)                            |
+| C1 → Checkpoint A | First review pass on foundations   | Begins loading real products                            |
+| C2 → Checkpoint B | Major review pass on per-page      | Continues loading; some pages now show real products    |
+| C3 → Checkpoint C | Cart/checkout pass; real-card test | Catalog mostly real                                     |
+| C4 → Checkpoint D | Final pass                         | Final products loaded; ready to bring her in for review |
+| C5 launch         | (cutover)                          | (post-launch)                                           |
 
 Emaline's review of `about.html` (Meet Emy copy + photo) and the cart/checkout overlay
 copy ("These havens have found their homes") happens at Checkpoint C earliest, more
@@ -133,12 +133,12 @@ expressed through the products themselves.
 When Emaline says something feels "off," your job is to bridge into something
 Future-Claude can act on. The bridge is usually one of:
 
-| Emaline says… | Agent-actionable form |
-| --- | --- |
-| "Feels too cold" | "Color tokens need to shift warmer — try `--ink-hover: #X` instead of `#Y` in `assets/css/styles.css`" |
-| "Photos feel cramped" | "Tile aspect ratio change OR padding token adjustment" — name the specific token if you know it |
-| "Voice is off here" | Quote the exact paragraph; reference `assets/docs/BRAND.md` voice rules; suggest a rewrite or ask Emaline for one |
-| "I want it on the left, not the right" | Bucket 2 — describe the layout change in `data-*` terms or page-section terms |
+| Emaline says…                          | Agent-actionable form                                                                                             |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| "Feels too cold"                       | "Color tokens need to shift warmer — try `--ink-hover: #X` instead of `#Y` in `assets/css/styles.css`"            |
+| "Photos feel cramped"                  | "Tile aspect ratio change OR padding token adjustment" — name the specific token if you know it                   |
+| "Voice is off here"                    | Quote the exact paragraph; reference `assets/docs/BRAND.md` voice rules; suggest a rewrite or ask Emaline for one |
+| "I want it on the left, not the right" | Bucket 2 — describe the layout change in `data-*` terms or page-section terms                                     |
 
 Don't ship Emaline's verbatim phrasing to the agent unless it's already concrete. The
 translation is your value-add.
@@ -285,22 +285,22 @@ expensive.
 Per-page focus areas at each checkpoint. "Stakeholder" indicates whose feedback drives
 that page primarily — but either party can flag anything they notice.
 
-| Page | Stakeholder | Look at | Ignore until later |
-| --- | --- | --- | --- |
-| `/index.html` | Both | Hero impact, voice, featured strip | Testimonial copy (Open Thread; replaced when real testimonials land) |
-| `/shop.html` | Both | Grid, filters, sort, sold-state visual | Placeholder products (replaced as Emaline loads real) |
-| `/product.html?slug=…` | Both | Gallery, story copy, CTAs, sticky right card | Placeholder data; the product page is where the catalog "becomes real" first |
-| `/cart.html` | Sean primary | Line items, recovery overlay, CHECKOUT flow | Recovery copy until Checkpoint C |
-| `/checkout.html` | Sean primary | Two-stage progressive disclosure, address element, payment element, error states | Payment until Checkpoint C |
-| `/complete.html` | Sean primary | Success state, line-item summary, newsletter prompt | Order ID display until real-card test |
-| `/about.html` | Emaline primary | "Meet Emy" copy + photo, origin story, mission | Placeholder photo until Emaline supplies real |
-| `/contact.html` | Sean primary | Form, commission section | Email delivery until C5 |
-| `/faq.html` | Sean primary | Accuracy, cross-links to source-of-truth pages | n/a |
-| `/policies.html` | Sean primary | Availability text (verbatim per IMPLEMENT.md), cart-hold mechanics | n/a |
-| `/privacy.html` | Sean primary | Three-cookie-categories alignment with banner, California section | n/a |
-| `/shipping.html` | Sean primary | US-only restriction copy, timeline | n/a |
-| `/terms.html` | Sean primary | Effective-date, plain-language ToS | n/a |
-| `/admin/index.html` | Sean only | Login → create product → see on shop list | NOT for Emaline |
+| Page                   | Stakeholder     | Look at                                                                          | Ignore until later                                                           |
+| ---------------------- | --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `/index.html`          | Both            | Hero impact, voice, featured strip                                               | Testimonial copy (Open Thread; replaced when real testimonials land)         |
+| `/shop.html`           | Both            | Grid, filters, sort, sold-state visual                                           | Placeholder products (replaced as Emaline loads real)                        |
+| `/product.html?slug=…` | Both            | Gallery, story copy, CTAs, sticky right card                                     | Placeholder data; the product page is where the catalog "becomes real" first |
+| `/cart.html`           | Sean primary    | Line items, recovery overlay, CHECKOUT flow                                      | Recovery copy until Checkpoint C                                             |
+| `/checkout.html`       | Sean primary    | Two-stage progressive disclosure, address element, payment element, error states | Payment until Checkpoint C                                                   |
+| `/complete.html`       | Sean primary    | Success state, line-item summary, newsletter prompt                              | Order ID display until real-card test                                        |
+| `/about.html`          | Emaline primary | "Meet Emy" copy + photo, origin story, mission                                   | Placeholder photo until Emaline supplies real                                |
+| `/contact.html`        | Sean primary    | Form, commission section                                                         | Email delivery until C5                                                      |
+| `/faq.html`            | Sean primary    | Accuracy, cross-links to source-of-truth pages                                   | n/a                                                                          |
+| `/policies.html`       | Sean primary    | Availability text (verbatim per IMPLEMENT.md), cart-hold mechanics               | n/a                                                                          |
+| `/privacy.html`        | Sean primary    | Three-cookie-categories alignment with banner, California section                | n/a                                                                          |
+| `/shipping.html`       | Sean primary    | US-only restriction copy, timeline                                               | n/a                                                                          |
+| `/terms.html`          | Sean primary    | Effective-date, plain-language ToS                                               | n/a                                                                          |
+| `/admin/index.html`    | Sean only       | Login → create product → see on shop list                                        | NOT for Emaline                                                              |
 
 ---
 
@@ -337,20 +337,20 @@ without involving the wiring agent.
 
 Update this table as decisions land. Carries forward into v2 planning.
 
-| Decision | Status | Locked in | Notes |
-| --- | --- | --- | --- |
-| Cookie consent strategy (default-deny, deferred state, symmetric buttons) | Settled | Track B (research §6.1, §7.2) | Do not reopen unless legal floor changes (Google Ads roadmap could trigger) |
-| `email-cta-submit` source enum | Settled | Track B SESSION_REPORT line 226 | Single source of truth in Appendix B of `v1_4_4_C_IMPLEMENT.md` |
-| `data-*` attribute names | Settled | Track B (per page placeholder inventory) | Renaming any is Bucket 2; requires Sean approval |
-| 11-endpoint consolidation | Settled | Track A UPDATE_REPORT (commit `2085c42`) | Hobby cap discipline |
-| Image roles 1+1+5 | Settled | Track A | `/api/upload` validates |
-| Cloudinary signed flow | Settled | v1.4.4 alignment session (D1) | Matches 360-design ENTRY_SOP pattern |
-| `?sync=true` on POST products | Settled | v1.4.4 alignment session (D2) | Removes webhook-routing dependency for preview |
-| Emaline feedback channel | Settled | v1.4.4 alignment session (D5) | Shared Google Doc, one section per page |
-| Cookie banner copy (longer vs. shorter) | Iterating | TBD at Checkpoint A | Currently shipped shorter; Sean may swap |
-| Real testimonials | Iterating | TBD at Checkpoint A or B | Open Thread from Track B |
-| "Meet Emy" copy + photo | Iterating | TBD at Checkpoint C or D | Emaline owns |
-| Footer "Privacy preferences" link text | Iterating | TBD post-launch | Currently brand-voiced; swap if CCPA threshold crossed |
+| Decision                                                                  | Status    | Locked in                                | Notes                                                                       |
+| ------------------------------------------------------------------------- | --------- | ---------------------------------------- | --------------------------------------------------------------------------- |
+| Cookie consent strategy (default-deny, deferred state, symmetric buttons) | Settled   | Track B (research §6.1, §7.2)            | Do not reopen unless legal floor changes (Google Ads roadmap could trigger) |
+| `email-cta-submit` source enum                                            | Settled   | Track B SESSION_REPORT line 226          | Single source of truth in Appendix B of `v1_4_4_C_IMPLEMENT.md`             |
+| `data-*` attribute names                                                  | Settled   | Track B (per page placeholder inventory) | Renaming any is Bucket 2; requires Sean approval                            |
+| 11-endpoint consolidation                                                 | Settled   | Track A UPDATE_REPORT (commit `2085c42`) | Hobby cap discipline                                                        |
+| Image roles 1+1+5                                                         | Settled   | Track A                                  | `/api/upload` validates                                                     |
+| Cloudinary signed flow                                                    | Settled   | v1.4.4 alignment session (D1)            | Matches 360-design ENTRY_SOP pattern                                        |
+| `?sync=true` on POST products                                             | Settled   | v1.4.4 alignment session (D2)            | Removes webhook-routing dependency for preview                              |
+| Emaline feedback channel                                                  | Settled   | v1.4.4 alignment session (D5)            | Shared Google Doc, one section per page                                     |
+| Cookie banner copy (longer vs. shorter)                                   | Iterating | TBD at Checkpoint A                      | Currently shipped shorter; Sean may swap                                    |
+| Real testimonials                                                         | Iterating | TBD at Checkpoint A or B                 | Open Thread from Track B                                                    |
+| "Meet Emy" copy + photo                                                   | Iterating | TBD at Checkpoint C or D                 | Emaline owns                                                                |
+| Footer "Privacy preferences" link text                                    | Iterating | TBD post-launch                          | Currently brand-voiced; swap if CCPA threshold crossed                      |
 
 ---
 
@@ -359,25 +359,25 @@ Update this table as decisions land. Carries forward into v2 planning.
 Carried from Track A and Track B closeouts. Each line says which Track C checkpoint
 resolves it.
 
-| Thread | Owner | Resolves at |
-| --- | --- | --- |
-| Cookie banner copy final approval (longer vs. shorter draft) | Sean | Checkpoint A |
-| Real testimonials (homepage strip — placeholder copy) | Sean / Emaline | Checkpoint A or B |
-| Real "Meet Emy" copy + photo (about.html) | Emaline | Checkpoint C or D |
-| Lighthouse mobile audit ≥ 90 across all 13 pages | Agent | C4 |
-| Track A integration tests re-run against preview post-consolidation | Agent | C4 |
-| Stripe test webhook registration | Agent (preview) / Sean (production) | C3.5 (preview) / C5.2 (production) |
-| `env()` helper sweep across remaining endpoints | Agent | C5.2 |
-| Admin UI manual click-path | Sean | C5.2 |
-| Trailing-newline Vercel env cleanup | Sean (optional) | C5.2 (optional) |
-| Cloudinary signed-flow switch (Phase 0 Gap A) | Agent | Phase 0 |
-| `test_` prefix validator (Phase 0 Gap B) | Agent | Phase 0 |
-| `?sync=true` on POST products (Phase 0 Gap C) | Agent | Phase 0 |
-| stripe-sync idempotency (Phase 0 Gap D) | Agent | Phase 0 |
-| `vercel curl` exit-code-3 doc note (Phase 0 Gap E) | Agent | C5.2 |
-| `materials` array type doc fix (Phase 0 Gap F) | Agent | C5.2 |
-| `is_test=true` placeholder cleanup | Agent | C5.1 |
-| Real product load via Custom GPT (≥ 5 products) | Emaline | Parallel with C1–C4; final at C5.3 |
+| Thread                                                              | Owner                               | Resolves at                        |
+| ------------------------------------------------------------------- | ----------------------------------- | ---------------------------------- |
+| Cookie banner copy final approval (longer vs. shorter draft)        | Sean                                | Checkpoint A                       |
+| Real testimonials (homepage strip — placeholder copy)               | Sean / Emaline                      | Checkpoint A or B                  |
+| Real "Meet Emy" copy + photo (about.html)                           | Emaline                             | Checkpoint C or D                  |
+| Lighthouse mobile audit ≥ 90 across all 13 pages                    | Agent                               | C4                                 |
+| Track A integration tests re-run against preview post-consolidation | Agent                               | C4                                 |
+| Stripe test webhook registration                                    | Agent (preview) / Sean (production) | C3.5 (preview) / C5.2 (production) |
+| `env()` helper sweep across remaining endpoints                     | Agent                               | C5.2                               |
+| Admin UI manual click-path                                          | Sean                                | C5.2                               |
+| Trailing-newline Vercel env cleanup                                 | Sean (optional)                     | C5.2 (optional)                    |
+| Cloudinary signed-flow switch (Phase 0 Gap A)                       | Agent                               | Phase 0                            |
+| `test_` prefix validator (Phase 0 Gap B)                            | Agent                               | Phase 0                            |
+| `?sync=true` on POST products (Phase 0 Gap C)                       | Agent                               | Phase 0                            |
+| stripe-sync idempotency (Phase 0 Gap D)                             | Agent                               | Phase 0                            |
+| `vercel curl` exit-code-3 doc note (Phase 0 Gap E)                  | Agent                               | C5.2                               |
+| `materials` array type doc fix (Phase 0 Gap F)                      | Agent                               | C5.2                               |
+| `is_test=true` placeholder cleanup                                  | Agent                               | C5.1                               |
+| Real product load via Custom GPT (≥ 5 products)                     | Emaline                             | Parallel with C1–C4; final at C5.3 |
 
 ---
 
