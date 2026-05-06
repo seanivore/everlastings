@@ -1,7 +1,7 @@
 # Development Protocols
 
-**Version**: 3.2.0
-**Last Updated**: 2026-04-27
+**Version**: v3.3.0
+**Last Updated**: 2026-05-06
 **Purpose**: Inform agents on our standardized project structure, documentation and development workflows.
 **Syncing**: Sync any updates to all `.agent/DEV_RULES.md` files using `frdoc` (see § *Syncing This Document*).
 
@@ -383,6 +383,36 @@ Details from our **development philosophy**.
   - Performance considerations
   - Write what a new instance with no context must know 
   - What might you have changed if you didn't know how development progressed 
+
+#### 5. Confirmed Decisions Only
+
+The `vX_Y_Z_IMPLEMENT.md` the executing agent reads contains **only confirmed decisions**. Nothing is up for re-evaluation during execution.
+
+  - No decision framing, no alternatives, no "we could X or Y", no "Decision Dn" markers, no "TBD".
+  - Everything has been discussed, researched, and locked in earlier `_DEV_PLANNING.md` or `_FEEDBACK.md` sessions.
+  - If something still reads like a decision, it belongs in those planning artifacts — not in IMPLEMENT.md.
+  - If a subagent surfaces a decision-shaped question during execution, that is a real bug in the plan. Stop, surface to the human, fix the plan, then continue. **Never decide on the agent's own.**
+
+This is what makes "exclusively executable" mechanically true: the agent has nothing to decide, so it cannot accidentally decide wrong.
+
+#### 6. No Mixed Truth
+
+Never feed an executing agent both a known-wrong fact and the right one at the same time. LLMs cannot be trusted to consistently pick the right one when both are present in their context. Mixing wrong with right is a setup for the model acting on the wrong one.
+
+  - "Wrong truth" examples that must be removed or fixed *before* the agent sees the plan: stale endpoint paths, superseded decisions, bugs noted but not yet patched, "carry forward from `vX_Y_Z`" redirects, "Phase 0 fixes the following bugs" sections folded into forward spec.
+  - Code-level bug fixes happen in a **prep session** before the executing agent gets the plan. Only the post-fix world enters the next version's IMPLEMENT.md.
+  - Closeout reports, session reports, bug reports, and pre-flight findings are *historical artifacts*. Their content folds into the next IMPLEMENT.md as standing behavior, not as references the agent must reconcile.
+  - The executing agent's required-reads list never includes a closeout, bug report, or earlier-version IMPLEMENT.md. The highest-version IMPLEMENT.md is the current truth; everything else is archive.
+
+The mechanical rule: **fix or remove, then execute.** Do not ask an LLM to debug your own context.
+
+#### 7. Parallel-Workflow Groundwork
+
+IMPLEMENT.md gives the executing orchestrator an explicit starting point for parallel work. Don't make them design the parallel structure cold.
+
+  - Per phase, propose subagent groupings: which deliverables can run in parallel, which dependencies sequence them, what the orchestrator does NOT delegate (gate decisions, branch state, commit cadence, escalation calls).
+  - Treat the groupings as a *starting point*, not a contract — the orchestrator may refine them during execution. The plan's job is to remove the cold-start design problem so the agent can spend its context on orchestration, not architecture.
+  - This is also a quiet form of best-practice modeling: every IMPLEMENT.md that names parallel groupings reinforces the parallel-orchestration habit across future projects.
 
 ### The Gap-Finding Loop
 
