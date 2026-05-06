@@ -1,8 +1,8 @@
 # Product Protocol — Everlastings by Emaline
 
 **Created**: 2026-04-12
-**Updated**: 2026-05-02 — v1.4.3: corrected gallery filename pattern to match the upload endpoint output (`gallery-NN-{slug}` not `gallery-{slug}-NN`); added `gif-NN` role; noted that `/api/products` and `/api/upload` accept either `PRODUCT_API_KEY` (curl/AI) **or** a Supabase JWT (admin UI signed-in user) on the `Authorization: Bearer` header.
-**Previous**: 2026-04-16 — v1.4.0: no schema changes; `shipping_details` remains a free-text array displayed on the product page. Admin UI now includes an Orders tab for shipping fulfillment (see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Admin Orders Tab).
+**Updated**: 2026-05-06 — v1.4.5: added Custom GPT setup walkthrough; agentic creation protocol now uses `POST /api/products?sync=true` so Stripe IDs are returned in the response inline; clarified that `materials`, `features`, `care_instructions`, and `shipping_details` are arrays of strings on the API surface; added note about `vercel curl` exit-code-3-on-success when using preview deployments.
+**Previous**: 2026-05-02 — v1.4.3: corrected gallery filename pattern to match the upload endpoint output (`gallery-NN-{slug}` not `gallery-{slug}-NN`); added `gif-NN` role; noted that `/api/products` and `/api/upload` accept either `PRODUCT_API_KEY` (curl/AI) **or** a Supabase JWT (admin UI signed-in user) on the `Authorization: Bearer` header.
 
 ---
 
@@ -67,7 +67,7 @@ Physical size. Format: W x D x H in inches (e.g. 8" W x 6" D x 10" H).
 For shipping. In pounds, e.g. "2.5 lbs."
 
 #### materials
-What it's made of. List each material.
+What it's made of. List each material as a separate item — the form lets you add one at a time. (Behind the scenes, the API expects an array of strings, e.g. `["wood", "resin", "natural moss"]`. The Custom GPT Assistant handles this conversion automatically.)
 
 #### power_supply
 How it's powered. e.g. "USB-C (adapter included)" or "Battery (included)" or leave empty.
@@ -166,6 +166,193 @@ Upload photos to the shared Google Drive folder or send via the admin UI. We han
 To edit an existing product: find it in the product list, click "Edit", make changes, save.
 
 To mark something sold manually: edit the product, set available to false, save.
+
+### Custom GPT Setup (one-time, by Sean)
+
+This section is the setup walkthrough Sean follows once to create the **Everlastings Product Assistant** GPT in ChatGPT and connect it to the live API. After this is done, Emy gets a direct link to the GPT and never needs to touch the setup again. If the API key rotates or the API base URL changes, Sean revisits this section.
+
+**What a Custom GPT is, in plain terms.** A Custom GPT is a version of ChatGPT that has been pre-configured with a specific personality, set of instructions, and (optionally) the ability to call external APIs. It lives inside your ChatGPT account, looks and feels like a normal ChatGPT conversation, but knows it's specifically helping with Everlastings products. The "calling APIs" part is what lets it actually create real products on the website.
+
+**What you need before starting.** The values below all already exist; this is a checklist of what to have open.
+
+  - A ChatGPT account with **ChatGPT Plus** (or Team / Enterprise). Custom GPTs require a paid plan.
+  - The **production `PRODUCT_API_KEY`** — found in Vercel → Project → Settings → Environment Variables → `PRODUCT_API_KEY` (Production scope). Do not use the preview value, and do not paste it anywhere except step 6 below.
+  - The **production API base URL**: `https://everlastingsbyemaline.com`.
+  - The **OpenAPI schema** for the GPT to import — provided inline in step 5.
+
+**Step-by-step.**
+
+  1. Go to [chat.openai.com/gpts/editor](https://chat.openai.com/gpts/editor) and click **Create**. Choose the **Configure** tab (not the chat-based "Create" wizard) so you can paste structured config directly.
+  2. **Name**: `Everlastings Product Assistant`. **Description**: `Helps Emy add new handcrafted miniature products to everlastingsbyemaline.com — accepts photos and casual descriptions, walks through a preview, and creates the product on confirmation.`
+  3. **Profile picture**: upload the small Everlastings emblem from `assets/favicon/` (or any branded square image). Optional but makes it identifiable in the sidebar.
+  4. **Instructions** (the system prompt). Paste the following:
+
+     ```
+     You are the Everlastings Product Assistant. Your only job is to help Emy add new handcrafted miniature products to everlastingsbyemaline.com.
+
+     Workflow:
+     1. Greet warmly. Ask Emy what she wants to add today.
+     2. Collect the product details conversationally. Required fields: title, headline (5–7 word tagline), story_card (2–8 poetic paragraphs), description (2–3 sentence summary), features (list), price in dollars, product_type (miniature / printable / storybook). Optional: dimensions, weight, materials (list), power_supply, care_instructions (list), shipping_details (list), series (Portals to Peace / Book Nooks / Story Lofts / Seasonal / Limited Edition / new), available, quantity, featured, artist_note.
+     3. Ask for photos. Need at least 7 total: 1 hero, 1 thumbnail, at least 5 gallery. Drag-and-drop into the chat is fine. Upload each one via the `uploadImage` action with the right `role` (`hero`, `thumbnail`, `gallery-01` … `gallery-15`, `video-01`–`05`, `gif-01`–`05`, `detail-01`–`05`). Use `skip_transform=true` for videos and GIFs. Use the slug derived from the title.
+     4. Show Emy a clean preview of the product before creating it: title, price, headline, all photo URLs grouped by role. Ask: "Look right?"
+     5. On confirmation, call `createProduct` with `sync=true` so Stripe IDs come back inline. Convert `materials`, `features`, `care_instructions`, `shipping_details` to arrays of strings before sending.
+     6. After success, give Emy the live product link: `https://everlastingsbyemaline.com/product/{slug}`. Note the new Stripe IDs in passing.
+
+     Rules:
+     - Never create a product without showing the preview first.
+     - Never set a price different from what Emy said. If she says "$245", that's `24500` cents in the API call — show "$245" to her, never the integer.
+     - Never proceed with fewer than 7 photos. Stop and ask.
+     - Never edit existing products — direct her to the admin UI for edits.
+     - Never expose API keys, server URLs, or technical details unless she explicitly asks for them.
+     - On 409 Conflict (slug taken), suggest a new title. On 400, tell her exactly which field is missing in plain language. On 401, stop and tell her "the connection key needs Sean's attention."
+     ```
+
+  5. **Knowledge files**: optional. The brand voice and tone are already encoded in the instructions. If you want the GPT to write more in Emy's voice, upload `assets/docs/BRAND.md` here.
+  6. **Capabilities**: enable **Web Browsing** (off is fine), **DALL·E** (off — Emy provides photos), **Code Interpreter** (on, so it can normalize/inspect uploaded images if needed).
+  7. **Actions**: click **Create new action**. Set the **Authentication** to:
+     - Type: **API Key**
+     - API Key: paste the production `PRODUCT_API_KEY`
+     - Auth Type: **Bearer**
+  8. **Schema**: paste the OpenAPI schema below. This tells the GPT exactly which two endpoints it can call and the shape of each.
+
+     ```yaml
+     openapi: 3.1.0
+     info:
+       title: Everlastings Product API
+       description: Endpoints for creating products and uploading product images on everlastingsbyemaline.com.
+       version: 1.0.0
+     servers:
+       - url: https://everlastingsbyemaline.com
+     paths:
+       /api/upload:
+         post:
+           operationId: uploadImage
+           summary: Upload a product image (or video / GIF). Cloudinary transforms images to 4:5 WebP automatically; videos and GIFs pass through with skip_transform=true.
+           requestBody:
+             required: true
+             content:
+               multipart/form-data:
+                 schema:
+                   type: object
+                   required: [file, slug, role]
+                   properties:
+                     file:
+                       type: string
+                       format: binary
+                     slug:
+                       type: string
+                     role:
+                       type: string
+                       description: One of hero, thumbnail, gallery-01..gallery-15, video-01..video-05, detail-01..detail-05, gif-01..gif-05.
+                     skip_transform:
+                       type: string
+                       description: Set to "true" to skip Cloudinary transforms (videos, GIFs).
+           responses:
+             '200':
+               description: Upload succeeded.
+               content:
+                 application/json:
+                   schema:
+                     type: object
+                     properties:
+                       url:
+                         type: string
+                       filename:
+                         type: string
+       /api/products:
+         post:
+           operationId: createProduct
+           summary: Create a new product. Pass sync=true to receive Stripe product/price IDs in the response.
+           parameters:
+             - in: query
+               name: sync
+               schema:
+                 type: string
+               description: Set to "true" to run Stripe sync inline and include stripe_sync in the response.
+           requestBody:
+             required: true
+             content:
+               application/json:
+                 schema:
+                   type: object
+                   required: [title, headline, story_card, description, price, product_type, slug, images, thumbnail]
+                   properties:
+                     title: { type: string }
+                     slug: { type: string }
+                     headline: { type: string }
+                     story_card: { type: string }
+                     description: { type: string }
+                     features:
+                       type: array
+                       items: { type: string }
+                     price:
+                       type: integer
+                       description: Price in cents.
+                     dimensions: { type: string }
+                     weight: { type: string }
+                     materials:
+                       type: array
+                       items: { type: string }
+                     power_supply: { type: string }
+                     care_instructions:
+                       type: array
+                       items: { type: string }
+                     shipping_details:
+                       type: array
+                       items: { type: string }
+                     product_type:
+                       type: string
+                       enum: [miniature, printable, storybook]
+                     series: { type: string }
+                     available: { type: boolean }
+                     quantity: { type: integer }
+                     featured: { type: boolean }
+                     artist_note: { type: string }
+                     images:
+                       type: array
+                       items:
+                         type: object
+                         required: [url]
+                         properties:
+                           url: { type: string }
+                           alt: { type: string }
+                     thumbnail: { type: string }
+                     seo_title: { type: string }
+                     seo_description: { type: string }
+           responses:
+             '200':
+               description: Product created.
+               content:
+                 application/json:
+                   schema:
+                     type: object
+                     properties:
+                       success: { type: boolean }
+                       product: { type: object }
+                       stripe_sync:
+                         type: object
+                         properties:
+                           success: { type: boolean }
+                           no_op: { type: boolean }
+                           stripe_product_id: { type: string }
+                           stripe_price_id: { type: string }
+     ```
+
+  9. **Privacy policy URL**: link to `https://everlastingsbyemaline.com/privacy.html`.
+  10. **Save** the GPT. Choose **Only me** for the share setting (Emy gets the link from Sean — it must not be public, since it has a live API key behind it).
+  11. **End-to-end test before handing off**:
+      - In a fresh chat with the new GPT, say: *"Add a quick test product. Title: Setup Smoke Test. Price: $1. Headline: setup smoke test. Story: setup smoke test. Description: setup smoke test."*
+      - Drag in 7 throwaway images (any JPGs or PNGs).
+      - Confirm the GPT walks through preview → calls `createProduct` with `sync=true` → returns a `prod_…` Stripe ID inline.
+      - Visit `https://everlastingsbyemaline.com/product/setup-smoke-test` in a private window — page should render.
+      - Archive the test product immediately: in Stripe dashboard archive `prod_…`; in Supabase Studio set the row's `available = false` (or delete it).
+  12. **Hand-off**: send Emy the GPT's share link. Bookmark it for her in her ChatGPT sidebar if you have access. Add a note to her welcome doc (or text her) saying the link goes only into ChatGPT; nowhere else.
+
+**Maintenance.** If `PRODUCT_API_KEY` is rotated (per `EVERLASTINGS_STORE.md` § Post-Launch Operations), Sean repeats step 7 with the new value — nothing else changes. If the API base URL changes, repeat step 8 with the updated `servers:` URL.
+
+**Cost.** Free, beyond Sean's existing ChatGPT Plus subscription. The GPT itself costs nothing to host; each conversation Emy has consumes her ChatGPT Plus quota normally.
+
+---
 
 ### Using Your AI Product Assistant (optional)
 
@@ -269,7 +456,8 @@ Ask the client for all required fields:
   - `product_type` — `miniature`, `printable`, or `storybook`
 
 **Optional**:
-  - `dimensions`, `weight`, `materials`, `power_supply`, `care_instructions`, `shipping_details`
+  - `dimensions` (string), `weight` (string), `materials` (array of strings), `power_supply` (string), `care_instructions` (array of strings), `shipping_details` (array of strings)
+  - `features` is also an array of strings
   - `series` — "Portals to Peace", "Book Nooks", "Story Lofts", "Seasonal", "Limited Edition"
   - `available` (default: true), `quantity` (default: 1), `featured` (default: false)
   - `artist_note` — brief personal note
@@ -357,11 +545,11 @@ For videos and GIFs — skip Cloudinary:
 
 ### Step 3: Create Product
 
-After all images are uploaded and you have CDN URLs:
+After all images are uploaded and you have CDN URLs. Use `?sync=true` so Stripe IDs come back in the create response — this is the recommended path for any agent-driven seeding.
 
   ```bash
-  curl -X POST "$BASE_URL/api/products" \
-    -H "Authorization: Bearer PRODUCT_API_KEY" \
+  curl -X POST "$BASE_URL/api/products?sync=true" \
+    -H "Authorization: Bearer $PRODUCT_API_KEY" \
     -H "Content-Type: application/json" \
     -d '{
       "title": "The Sunkeeper",
@@ -370,6 +558,9 @@ After all images are uploaded and you have CDN URLs:
       "story_card": "The Sunkeeper stands watch...",
       "description": "Handcrafted miniature garden scene with warm LED lighting.",
       "features": ["Warm LED glow with 3 modes", "Hand-placed dried botanicals"],
+      "materials": ["Wood", "resin", "natural moss", "dried flowers"],
+      "care_instructions": ["Dust gently with a soft brush", "Keep away from direct sunlight"],
+      "shipping_details": ["Ships within 3-5 business days", "Insured shipping included"],
       "price": 24500,
       "product_type": "miniature",
       "series": "Portals to Peace",
@@ -384,12 +575,26 @@ After all images are uploaded and you have CDN URLs:
     }'
   ```
 
-**Response**: `{ "success": true, "product": { "id": "...", "slug": "the-sunkeeper", ... } }`
+**Response (with `?sync=true`)**:
 
-The database webhook automatically:
-  1. Fires webhook to `/api/stripe-sync`
-  2. Creates Stripe Product + Price
-  3. Writes `stripe_product_id` + `stripe_price_id` back to the record
+  ```json
+  {
+    "success": true,
+    "product": { "id": "...", "slug": "the-sunkeeper", ... },
+    "stripe_sync": {
+      "success": true,
+      "no_op": false,
+      "stripe_product_id": "prod_...",
+      "stripe_price_id": "price_..."
+    }
+  }
+  ```
+
+The shared sync helper is idempotent: the Supabase database webhook still fires after the inline path completes, but it sees the row already has `stripe_product_id` and returns immediately as a no-op.
+
+If you call `POST /api/products` *without* `?sync=true`, the response omits the `stripe_sync` block and the database webhook handles Stripe creation asynchronously (the standard admin-UI / Studio path).
+
+**Note on test/preview environments**: the Supabase database webhook is configured to point at the production URL, so test-mode seeding against a preview deployment will *not* receive automatic Stripe sync. Always use `?sync=true` when `BASE_URL` is a preview URL.
 
 ### Step 4: Verify
 
@@ -432,7 +637,7 @@ This happens automatically on customer purchase. Manual marking only if Emy sell
      - 409: slug conflict (product with that title already exists)
      - 400: missing required fields or validation failure
      - 401: wrong or missing `PRODUCT_API_KEY`
-  3. **Stripe sync**: Automatic via webhook. If `stripe_product_id` is null after 30 seconds, check Supabase logs.
+  3. **Stripe sync**: Use `?sync=true` for agent-driven creation so the response includes Stripe IDs immediately. If you used the default (non-`?sync=true`) path and `stripe_product_id` is null after 30 seconds, check Supabase logs — the database webhook may not be reaching the target environment (this is expected on preview URLs; production routing is direct).
   4. **Sequential dependency**: Do not skip steps. Do not proceed if current step fails.
   5. **Rollback**: If product created but images incomplete, set `available = false` immediately.
 
@@ -447,6 +652,8 @@ This happens automatically on customer purchase. Manual marking only if Emy sell
 | Auth header    | —      | `Authorization: Bearer PRODUCT_API_KEY` |
 
 > **Auth modes** (v1.4.3+): `/api/products` and `/api/upload` accept the `Authorization: Bearer` header in two flavors. Use `PRODUCT_API_KEY` for AI / curl / the Custom GPT (the value differs per environment — test in `.env.local`, live for production). The admin UI at `/admin` instead sends the signed-in user's Supabase JWT (`session.access_token`); the server falls back to `supabase.auth.getUser(jwt)` when the bearer token is not the API key. This means you do not need to (and must not) ship `PRODUCT_API_KEY` to the browser. Other endpoints (`/api/orders`, `/api/orders/:id`) only accept the JWT path.
+
+> **Note on `vercel curl` and shell scripts**: when targeting a protection-enabled preview deployment via `npx vercel curl --deployment <url> -- ...`, the underlying `curl` exits with code `3` ("URL rejected: No host part in the URL") even on a successful response. The JSON body still delivers correctly. Scripts using `set -e` should drop it (use `set -uo pipefail` instead) or pipe through `|| true` where exit code is checked.
 
 ---
 

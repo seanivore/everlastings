@@ -455,7 +455,7 @@ Fires from `api/subscribe.ts` for all other sources. No coupon generated.
 
 ### Template 4: Cart Recovery Coupon
 
-Fires from `api/cart-recovery.ts` when a user submits email in the 409 recovery overlay. Delivers the generated 10% code (also shown inline in the overlay; this is the record copy).
+Fires from `POST /api/cart-recovery` (handled inside `api/cart.ts` per AR #34) when a user submits email in the 409 recovery overlay. Delivers the generated 10% code (also shown inline in the overlay; this is the record copy).
 
 > **Subject**: A small gift, for your patience
 >

@@ -2,15 +2,13 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-04-29 — v1.4.3: Phase 0 complete. Implementation guide split into three track-specific guides (A: backend, B: frontend, C: integration) for parallel orchestrator-agent execution. Added 33-item Architecture Reference, Plain-English Glossary, and Stripe Sync Rules sections — canonical references for all tracks.
-**Version**: v1.4.3
-**Status**: Phase 0 complete; parallel implementation tracks ready to launch (A, B, C)
-**Build Guides** (track-specific, parallel execution):
-  - `assets/docs/archive/v1_4/v1_4_3_A_IMPLEMENT.md` — Foundation + Backend
-  - `assets/docs/archive/v1_4/v1_4_3_B_IMPLEMENT.md` — Frontend Design
-  - `assets/docs/archive/v1_4/v1_4_3_C_IMPLEMENT.md` — Integration
-  - `assets/docs/archive/v1_4/v1_4_3_INIT_PROMPTS.md` — Track initiation prompts
-  - `assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md` — Original combined guide (chronological archive)
+**Updated**: 2026-05-06 — v1.4.5: Tracks A and B shipped on `dev`. Backend endpoints consolidated to 11 deployable functions for the Vercel Hobby cap (public URLs preserved via `vercel.json` rewrites). AI product-creation pipeline finalized: signed Cloudinary uploads, `?sync=true` inline Stripe sync on `POST /api/products`, idempotent stripe-sync helper. Architecture Reference extended (AR #34–37). Track C build plan lives in `v1_4_5_C_IMPLEMENT.md`.
+**Version**: v1.4.5
+**Status**: Tracks A and B complete on `dev`. Track C (frontend wiring + launch) ready for execution against `v1_4_5_C_IMPLEMENT.md`.
+**Build Guide** (current, exclusively-executable):
+  - `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md` — Track C: integration, per-page wiring, cart/checkout flow, launch checklist
+**History** (archived; not required reading):
+  - `assets/docs/archive/v1_4/v1_4_4_IMPLEMENT_UPDATES.md` — Single consolidated record of every change between v1.4.3 and v1.4.5
 
 ---
 
@@ -51,7 +49,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
 - **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers. Equivalent: run the create-tables SQL once.
 - **Migrations via MCP** — Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same. Default: **Supabase CLI `supabase db push`**.
-- **Supabase DB webhook** — A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL." An HTTP trigger fired by the database, like an IFTTT rule on row insert.
+- **Supabase DB webhook** — A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL." An HTTP trigger fired by the database, like an IFTTT rule on row insert. Used to push new product rows into Stripe via `POST /api/stripe-sync`. Agent-driven callers can bypass the wait by adding `?sync=true` to their `POST /api/products` call (see AR #35); the same helper runs inline and the eventual webhook fire becomes a no-op.
 - **Stripe webhook** — Stripe's outbound notification when a payment completes. Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
 - **Stripe coupon bootstrap** — A one-time script that creates the two base coupons in Stripe via API so dev and prod match. Run once. Alternative: click-create them in the Stripe dashboard.
 - **Preview CORS smoke test** — Push a throwaway branch; open the Vercel preview URL; confirm API calls work. A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.
@@ -92,24 +90,32 @@ Terms used throughout the implementation guides that are easy to misread if you'
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │            VERCEL SERVERLESS FUNCTIONS — TypeScript                 │
+│            (11 deployed functions; public URLs below)               │
 │                                                                     │
-│  /api/checkout/reserve.ts → Availability check + soft cart hold     │
-│  /api/checkout.ts       →  Create Stripe session (requires hold)    │
-│  /api/session-status.ts →  Return page: verify payment status       │
-│  /api/webhook.ts        →  Handle Stripe payment events             │
-│  /api/stripe-sync.ts    →  Create Stripe Product + Price on INSERT  │
-│  /api/upload.ts         →  Cloudinary transform → R2 upload         │
-│  /api/cart-recovery.ts  →  Sold-in-cart: promo code + Resend email  │
-│  /api/products.ts       →  CRUD for AI-assisted product creation    │
-│  /api/orders.ts         →  Admin: list orders by shipping status    │
-│  /api/orders/[id].ts    →  Admin: record tracking + fire email      │
-│  /api/cart-activity.ts  →  Product interest notification            │
-│  /api/product-feed.ts   →  CSV feed for Meta Commerce Catalog       │
-│  /api/config.ts         →  Public config (Stripe key per env)       │
-│  /api/subscribe.ts      →  Newsletter email capture + optional code │
-│  /api/contact.ts        →  Contact form handler                     │
-│  /api/_emails/          →  Resend templates (tracking, welcome,     │
-│                            cart-recovery)                           │
+│  POST   /api/checkout/reserve  → availability + 15-min soft hold    │
+│  POST   /api/checkout          → create Stripe session (post-hold)  │
+│  GET    /api/session-status    → return page payment verification   │
+│  POST   /api/webhook           → handle Stripe payment events       │
+│  POST   /api/stripe-sync       → create Stripe Product+Price (DB    │
+│                                  webhook + inline ?sync=true caller)│
+│  POST   /api/upload            → signed Cloudinary transform → R2   │
+│  POST   /api/cart-recovery     → sold-in-cart promo code + email    │
+│  GET/POST/PUT /api/products    → CRUD for AI-assisted creation      │
+│  GET    /api/orders            → admin: list orders by ship status  │
+│  PATCH  /api/orders/:id        → admin: record tracking + fire email│
+│  POST   /api/cart-activity     → product interest notification      │
+│  GET    /api/product-feed      → CSV feed for Meta Commerce Catalog │
+│  GET    /api/config            → public config (Stripe key per env) │
+│  POST   /api/subscribe         → newsletter email capture           │
+│  POST   /api/contact           → contact form handler               │
+│                                                                     │
+│  Helpers (not deployed):                                            │
+│    api/_lib/         cors, env, adminAuth, stripeSync               │
+│    api/_emails/      Resend templates (tracking, welcome, recovery) │
+│    api/_bootstrap/   one-time scripts (Stripe coupons)              │
+│                                                                     │
+│  Several public URLs route into a single .ts file via vercel.json   │
+│  rewrites + ?_action= dispatch — see Architecture Reference #34.    │
 └──────────┬───────────────────────────────────┬──────────────────────┘
            │                                   │
            ▼                                   ▼
@@ -159,7 +165,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   7. **No git for client** — Emy manages products through admin UI or Supabase Studio. Changes reflect instantly via database, no deploy needed.
 
-  8. **Supabase Database Webhook for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync.ts`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, AI assistant via API).
+  8. **Supabase Database Webhook + inline `?sync=true` for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, AI assistant via API). Agent-driven callers (`POST /api/products?sync=true`) additionally run the sync inline before responding so the Stripe IDs are available in the create response — useful when the database webhook isn't routed to the calling preview deployment, or when the caller needs a deterministic round-trip. Both paths share one idempotent helper at `api/_lib/stripeSync.ts`.
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
@@ -318,17 +324,40 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - Privacy policy page enumerates cookie categories (essential / analytics / advertising) + how to revoke
       - **GA4 setup note**: turn ON Google Signals (default recommendation) so the June 2026 Google change causes no drift; Consent Mode still governs whether `ad_storage` is granted.
 
+  34. **Vercel Hobby tier function-cap drives endpoint consolidation**
+      - Hobby plan caps deployments at 12 serverless functions. Project stays on Hobby (~$0/mo for compute) by routing related actions through a single file via `?_action=...` query param + `vercel.json` rewrites.
+      - Pattern: `api/checkout.ts` handles `session | reserve | session-status`; `api/orders.ts` handles `list | :id` (PATCH); `api/cart.ts` handles `activity | recovery`.
+      - Public URLs are unchanged via rewrites in `vercel.json`. Frontend, integration tests, AI product pipeline (curl protocol in `PRODUCT_PROTOCOL.md`), and the Custom GPT all hit unchanged URLs.
+      - Adding new endpoints: consolidate into existing namespaces (e.g. a new admin endpoint joins `api/orders.ts` or a new `api/admin.ts`) rather than creating standalone files. Buffer is 1 below cap (11/12).
+      - `vercel dev` does NOT enforce the cap — must verify against a real preview deploy before merging.
+
+  35. **Inline Stripe sync via `?sync=true` on `POST /api/products`**
+      - Default behavior of `POST /api/products` is to insert a row and respond. The Supabase database webhook then asynchronously fires `/api/stripe-sync` and writes Stripe IDs back. This works for the admin UI and Supabase Studio entry paths.
+      - Agent-driven callers (Custom GPT, curl protocol, programmatic seeding) opt in with `?sync=true`, which runs the same sync helper inline and returns the new Stripe product/price IDs in the response body. Lets a single agent round-trip a fully-synced product without polling for webhook delivery.
+      - Both paths call the shared idempotent helper at `api/_lib/stripeSync.ts`. If both fire for the same row, the second one is a no-op.
+
+  36. **Signed Cloudinary uploads (no preset dependency)**
+      - `api/upload.ts` authenticates uploads with `api_key` + `timestamp` + `signature` against the Cloudinary account secret. Same signature pattern is used for the post-transform `destroy` call.
+      - No dependency on dashboard-side `upload_preset` configuration; the account-level Cloudinary credentials in `CLOUDINARY_URL` are sufficient for the entire transform flow.
+
+  37. **`is_test=true` filename namespacing for R2 + product image URLs**
+      - In test mode (`VERCEL_ENV !== 'production'`), `/api/upload` writes objects under `test/{slug}/test_{role}-{slug}.{ext}` and returns the corresponding URL. Live mode writes under `products/{slug}/{role}-{slug}.{ext}` with no prefix.
+      - Image-role validation in `api/products.ts` strips the leading `test_` before matching `hero-` / `gallery-` so URLs returned by `/api/upload` validate identically in both modes.
+
 ---
 
 ## Stripe Sync Rules
 
-Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/stripe-sync.ts` and `api/products.ts > PUT`.
+Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/_lib/stripeSync.ts` (the shared idempotent helper) plus `api/stripe-sync.ts` (DB webhook entrypoint), `api/products.ts > POST` (inline `?sync=true`), and `api/products.ts > PUT` (price changes).
 
-  - On product **INSERT** → create Stripe Product + Price (via `api/stripe-sync.ts`)
-  - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase
-  - On **title/image/description change** → DO NOTHING in Stripe (Stripe is a payment mirror, not source of truth)
-  - Never UPDATE a Stripe Price (they are immutable). Always archive + create new
-  - Never manually create Stripe Products/Prices in Dashboard. The database webhook handles all creation
+  - On product **INSERT** → create Stripe Product + Price. Two paths into the helper, identical outcome:
+    + The Supabase database webhook fires `POST /api/stripe-sync` (admin UI, Supabase Studio).
+    + Agent-driven callers add `?sync=true` to their `POST /api/products` call to run the sync inline and receive the Stripe IDs in the response.
+  - The helper at `api/_lib/stripeSync.ts` is idempotent: it short-circuits if either the payload or a fresh DB read shows `stripe_product_id` already set, so a webhook firing after an inline sync is a no-op.
+  - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase (handled in `api/products.ts > PUT`).
+  - On **title/image/description change** → DO NOTHING in Stripe (Stripe is a payment mirror, not source of truth).
+  - Never UPDATE a Stripe Price (they are immutable). Always archive + create new.
+  - Never manually create Stripe Products/Prices in Dashboard. The shared helper handles all creation.
 
 ---
 
@@ -455,17 +484,21 @@ stripe listen --forward-to localhost:3000/api/webhook
   │   ├── favicon/                      # Favicon files
   │   └── fonts/                        # Cormorant Garamond font files
   │
-  ├── api/                              # Vercel serverless functions
-  │   ├── checkout.ts                   # Create Stripe checkout session (cart items)
-  │   ├── session-status.ts             # Return page payment verification
-  │   ├── webhook.ts                    # Handle Stripe webhooks
-  │   ├── stripe-sync.ts                # Create Stripe Product+Price on new product
-  │   ├── upload.ts                     # Cloudinary transform → R2 upload
-  │   ├── cart-recovery.ts              # Sold-in-cart promo code + email
-  │   ├── products.ts                   # CRUD for AI product creation (service key auth)
+  ├── api/                              # Vercel serverless functions (11 deployable)
+  │   ├── cart.ts                       # Cart activity ping + sold-in-cart recovery
+  │   ├── checkout.ts                   # Stripe session create + reserve hold + status
   │   ├── config.ts                     # Public config (Stripe key per environment)
+  │   ├── contact.ts                    # Contact form handler
+  │   ├── orders.ts                     # Admin: list orders + record tracking
+  │   ├── product-feed.ts               # CSV feed for Meta Commerce Catalog
+  │   ├── products.ts                   # CRUD for AI product creation; ?sync=true runs inline Stripe sync
+  │   ├── stripe-sync.ts                # Create Stripe Product+Price (DB webhook entrypoint)
   │   ├── subscribe.ts                  # Newsletter email capture
-  │   └── contact.ts                    # Contact form handler
+  │   ├── upload.ts                     # Signed Cloudinary transform → R2 upload
+  │   ├── webhook.ts                    # Handle Stripe payment webhooks
+  │   ├── _bootstrap/                   # One-time helpers (coupons.ts) — not deployed
+  │   ├── _emails/                      # Resend templates (index.ts) — not deployed
+  │   └── _lib/                         # Shared utilities (cors, env, adminAuth, stripeSync) — not deployed
   │
   ├── vercel.json                       # Vercel config: rewrites, headers
   ├── package.json                      # Dependencies (stripe, @supabase/supabase-js)
@@ -515,13 +548,19 @@ stripe listen --forward-to localhost:3000/api/webhook
 
 ### Key API Functions
 
-  * **`api/checkout.ts`** — Stripe session creation
-    + Checks product availability in Supabase before creating session
-    + Creates checkout session with `ui_mode: 'custom'`
-    + Collects email, phone, and shipping address
-    + Passes metadata: `{ items: [{id, slug}] }` for webhook identification
-    + Enables shipping address collection (US only) and phone number collection
-    + Returns client_secret for frontend Stripe Elements mount
+  * **`api/checkout.ts`** — Cart hold + Stripe session + return-page status
+    + `POST /api/checkout/reserve` (rewritten to `?_action=reserve`): availability check + 15-min soft hold
+    + `POST /api/checkout` (no `_action`): creates Stripe checkout session with `ui_mode: 'custom'`, collects email/phone/shipping (US only), passes `{ items: [{id, slug}] }` metadata, returns `client_secret` for the frontend
+    + `GET /api/session-status` (rewritten to `?_action=session-status`): retrieves session and returns payment status for the completion page
+    + Single deployed file behind path-based dispatch — see AR #34
+
+  * **`api/cart.ts`** — Cart activity + sold-in-cart recovery
+    + `POST /api/cart-activity` (rewritten to `?_action=activity`): product interest ping
+    + `POST /api/cart-recovery` (rewritten to `?_action=recovery`): generates a one-time Stripe promo code + queues a Resend email when an item sells while in someone else's cart
+
+  * **`api/orders.ts`** — Admin order pipeline
+    + `GET /api/orders`: lists orders by shipping status for the admin UI queue
+    + `PATCH /api/orders/:id` (rewritten to `?id=:id`): records tracking number/carrier and fires the branded tracking email via Resend
 
   * **`api/webhook.ts`** — Stripe event handler
     + Reads raw body via `request.text()` for signature verification
@@ -530,22 +569,18 @@ stripe listen --forward-to localhost:3000/api/webhook
     + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records, records event.id
 
   * **`api/products.ts`** — Product CRUD for AI assistants
-    + GET: fetch product by slug (public, no auth)
-    + POST: create product (requires `PRODUCT_API_KEY` auth, validates fields, generates slug, checks conflicts)
-    + PUT: update product (requires `PRODUCT_API_KEY` auth, handles Stripe price archiving if price changes)
+    + GET: fetch product by slug (public for live products; bearer-gated for test mode)
+    + POST: create product (`PRODUCT_API_KEY` or Supabase JWT auth, validates fields, generates slug, checks conflicts). Strips `test_` prefix from image URLs before role validation. Add `?sync=true` to also run Stripe sync inline and include `stripe_sync` in the response.
+    + PUT: update product (same auth; handles Stripe price archiving if price changes)
 
   * **`api/config.ts`** — Public configuration
     + Returns Stripe publishable key and Supabase config per environment
     + Enables automatic test/live switching without hardcoding keys
 
-  * **`api/session-status.ts`** — Checkout return page verification
-    + Retrieves Checkout Session by ID
-    + Returns session status for the completion page UI
-
-  * **`api/stripe-sync.ts`** — Product catalog sync
-    + Called by Supabase database webhook on products INSERT
-    + Creates Stripe Product + Price via API
-    + Writes stripe_product_id + stripe_price_id back to row
+  * **`api/stripe-sync.ts`** — Product catalog sync (DB webhook entrypoint)
+    + Called by the Supabase database webhook on `products` INSERT
+    + Delegates to the shared idempotent helper at `api/_lib/stripeSync.ts`
+    + Same helper is also called inline by `POST /api/products?sync=true`
 
 ---
 
@@ -687,6 +722,24 @@ stripe listen --forward-to localhost:3000/api/webhook
 
   3. **No Stripe Customer created before checkout**
     - Unlike freelance-payments, shoppers are anonymous. Stripe creates the Customer record automatically during checkout.
+
+  4. **`api/` file count is not 1:1 with public URLs**
+    - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.
+
+  5. **Endpoint consolidation is intentional, not lazy**
+    - The 11-deployable-function shape is a design constraint (Vercel Hobby cap of 12). Splitting `checkout.ts`, `orders.ts`, or `cart.ts` back into one-file-per-action would break the deploy. Add new endpoints into the existing namespaces, or check the cap before introducing a new top-level file. See AR #34.
+
+  6. **`POST /api/products?sync=true` returns Stripe IDs but the inserted row's snapshot does not**
+    - The product row is inserted first, then the inline Stripe sync runs and writes IDs back. The returned `product` object is the pre-sync snapshot from the insert; the Stripe IDs land in the `stripe_sync` block alongside it (and in the database row, observable on the next GET). This is intentional — the synthetic alternative would either re-fetch the row or return a fabricated merge. See AR #35.
+
+  7. **Inline `?sync=true` is intentional, not a webhook bypass**
+    - The Supabase database webhook still fires on every INSERT. The inline path exists so agent-driven callers (Custom GPT, curl protocol) get a deterministic round-trip without polling. The shared idempotent helper makes the second firing a safe no-op. Do not "simplify" this back to a webhook-only flow.
+
+  8. **`test_` prefix on test-mode images is real product behavior**
+    - `/api/upload` namespaces test-mode objects under `test/{slug}/test_{role}-{slug}.{ext}` (live mode is `products/{slug}/{role}-{slug}.{ext}`). The `products.ts` validator strips the leading `test_` before checking the role-prefix, so URLs from `/api/upload` validate identically in both modes. Don't try to remove the prefix at upload time. See AR #37.
+
+  9. **Cloudinary uses signed uploads, not a preset**
+    - Every `/api/upload` call to Cloudinary signs `timestamp` against the account secret. There is no dashboard-side `upload_preset` involved; introducing one would only add configuration drift. See AR #36.
 
 ### Common Mistakes to Avoid
 
