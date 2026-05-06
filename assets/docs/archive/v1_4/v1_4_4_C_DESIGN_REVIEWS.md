@@ -133,12 +133,12 @@ expressed through the products themselves.
 When Emaline says something feels "off," your job is to bridge into something
 Future-Claude can act on. The bridge is usually one of:
 
-| Emaline says…                          | Agent-actionable form                                                                                             |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| "Feels too cold"                       | "Color tokens need to shift warmer — try `--ink-hover: #X` instead of `#Y` in `assets/css/styles.css`"            |
-| "Photos feel cramped"                  | "Tile aspect ratio change OR padding token adjustment" — name the specific token if you know it                   |
-| "Voice is off here"                    | Quote the exact paragraph; reference `assets/docs/BRAND.md` voice rules; suggest a rewrite or ask Emaline for one |
-| "I want it on the left, not the right" | Bucket 2 — describe the layout change in `data-*` terms or page-section terms                                     |
+| Emaline says…            | Agent-actionable form                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| "Feels too cold"         | "Shift color tokens warmer — try `--ink-hover: #X` instead of `#Y` in `assets/css/styles.css`" |
+| "Photos feel cramped"    | "Tile aspect ratio change OR padding token adjustment" — name specific token if you know it    |
+| "Voice is off here"      | Quote exact paragraph; reference `assets/docs/BRAND.md` voice rules; suggest/ask for rewrite   |
+| "Put on left, not right" | Bucket 2 — describe layout change in `data-*` terms or page-section terms                      |
 
 Don't ship Emaline's verbatim phrasing to the agent unless it's already concrete. The
 translation is your value-add.
@@ -188,9 +188,9 @@ technical pieces.
 Sean will create a shared Google Doc with one section per page. Add your notes under
 the relevant page using this format:
 
-> **Page**: [name]
-> **What I see**: [describe what's there now]
-> **What I'd like**: [describe the change]
+> **Page**: {name}
+> **What I see**: {describe what's there now}
+> **What I'd like**: {describe the change}
 
 That's the magic format. It separates "here's the thing" from "here's the change I
 want," which makes it easy for Sean to translate into something the build agent can
@@ -285,22 +285,38 @@ expensive.
 Per-page focus areas at each checkpoint. "Stakeholder" indicates whose feedback drives
 that page primarily — but either party can flag anything they notice.
 
-| Page                   | Stakeholder     | Look at                                                                          | Ignore until later                                                           |
-| ---------------------- | --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `/index.html`          | Both            | Hero impact, voice, featured strip                                               | Testimonial copy (Open Thread; replaced when real testimonials land)         |
-| `/shop.html`           | Both            | Grid, filters, sort, sold-state visual                                           | Placeholder products (replaced as Emaline loads real)                        |
-| `/product.html?slug=…` | Both            | Gallery, story copy, CTAs, sticky right card                                     | Placeholder data; the product page is where the catalog "becomes real" first |
-| `/cart.html`           | Sean primary    | Line items, recovery overlay, CHECKOUT flow                                      | Recovery copy until Checkpoint C                                             |
-| `/checkout.html`       | Sean primary    | Two-stage progressive disclosure, address element, payment element, error states | Payment until Checkpoint C                                                   |
-| `/complete.html`       | Sean primary    | Success state, line-item summary, newsletter prompt                              | Order ID display until real-card test                                        |
-| `/about.html`          | Emaline primary | "Meet Emy" copy + photo, origin story, mission                                   | Placeholder photo until Emaline supplies real                                |
-| `/contact.html`        | Sean primary    | Form, commission section                                                         | Email delivery until C5                                                      |
-| `/faq.html`            | Sean primary    | Accuracy, cross-links to source-of-truth pages                                   | n/a                                                                          |
-| `/policies.html`       | Sean primary    | Availability text (verbatim per IMPLEMENT.md), cart-hold mechanics               | n/a                                                                          |
-| `/privacy.html`        | Sean primary    | Three-cookie-categories alignment with banner, California section                | n/a                                                                          |
-| `/shipping.html`       | Sean primary    | US-only restriction copy, timeline                                               | n/a                                                                          |
-| `/terms.html`          | Sean primary    | Effective-date, plain-language ToS                                               | n/a                                                                          |
-| `/admin/index.html`    | Sean only       | Login → create product → see on shop list                                        | NOT for Emaline                                                              |
+| #   | Page                   | Stakeholder     | Look at                                                                          |
+| --- | ---------------------- | --------------- | -------------------------------------------------------------------------------- |
+| 1   | `/index.html`          | Both            | Hero impact, voice, featured strip                                               |
+| 2   | `/shop.html`           | Both            | Grid, filters, sort, sold-state visual                                           |
+| 3   | `/product.html?slug=…` | Both            | Gallery, story copy, CTAs, sticky right card                                     |
+| 4   | `/cart.html`           | Sean primary    | Line items, recovery overlay, CHECKOUT flow                                      |
+| 5   | `/checkout.html`       | Sean primary    | Two-stage progressive disclosure, address element, payment element, error states |
+| 6   | `/complete.html`       | Sean primary    | Success state, line-item summary, newsletter prompt                              |
+| 7   | `/about.html`          | Emaline primary | "Meet Emy" copy + photo, origin story, mission                                   |
+| 8   | `/contact.html`        | Sean primary    | Form, commission section                                                         |
+| 9   | `/faq.html`            | Sean primary    | Accuracy, cross-links to source-of-truth pages                                   |
+| 10  | `/policies.html`       | Sean primary    | Availability text (verbatim per IMPLEMENT.md), cart-hold mechanics               |
+| 11  | `/privacy.html`        | Sean primary    | Three-cookie-categories alignment with banner, California section                |
+| 12  | `/shipping.html`       | Sean primary    | US-only restriction copy, timeline                                               |
+| 13  | `/terms.html`          | Sean primary    | Effective-date, plain-language ToS                                               |
+| 14  | `/admin/index.html`    | Sean only       | Login → create product → see on shop list                                        |
+
+**Ignore until**:
+  1. Testimonial copy (Open Thread; replaced when real testimonials land)
+  2. Placeholder products (replaced as Emaline loads real)
+  3. Placeholder data; the product page is where the catalog "becomes real" first
+  4. Recovery copy until Checkpoint C
+  5. Payment until Checkpoint C
+  6. Order ID display until real-card test
+  7. Placeholder photo until Emaline supplies real
+  8. Email delivery until C5
+  9. N/A 
+  10. N/A 
+  11. N/A 
+  12. N/A 
+  13. N/A 
+  14. NOT for Emaline
 
 ---
 
@@ -337,20 +353,34 @@ without involving the wiring agent.
 
 Update this table as decisions land. Carries forward into v2 planning.
 
-| Decision                                                                  | Status    | Locked in                                | Notes                                                                       |
-| ------------------------------------------------------------------------- | --------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| Cookie consent strategy (default-deny, deferred state, symmetric buttons) | Settled   | Track B (research §6.1, §7.2)            | Do not reopen unless legal floor changes (Google Ads roadmap could trigger) |
-| `email-cta-submit` source enum                                            | Settled   | Track B SESSION_REPORT line 226          | Single source of truth in Appendix B of `v1_4_4_C_IMPLEMENT.md`             |
-| `data-*` attribute names                                                  | Settled   | Track B (per page placeholder inventory) | Renaming any is Bucket 2; requires Sean approval                            |
-| 11-endpoint consolidation                                                 | Settled   | Track A UPDATE_REPORT (commit `2085c42`) | Hobby cap discipline                                                        |
-| Image roles 1+1+5                                                         | Settled   | Track A                                  | `/api/upload` validates                                                     |
-| Cloudinary signed flow                                                    | Settled   | v1.4.4 alignment session (D1)            | Matches 360-design ENTRY_SOP pattern                                        |
-| `?sync=true` on POST products                                             | Settled   | v1.4.4 alignment session (D2)            | Removes webhook-routing dependency for preview                              |
-| Emaline feedback channel                                                  | Settled   | v1.4.4 alignment session (D5)            | Shared Google Doc, one section per page                                     |
-| Cookie banner copy (longer vs. shorter)                                   | Iterating | TBD at Checkpoint A                      | Currently shipped shorter; Sean may swap                                    |
-| Real testimonials                                                         | Iterating | TBD at Checkpoint A or B                 | Open Thread from Track B                                                    |
-| "Meet Emy" copy + photo                                                   | Iterating | TBD at Checkpoint C or D                 | Emaline owns                                                                |
-| Footer "Privacy preferences" link text                                    | Iterating | TBD post-launch                          | Currently brand-voiced; swap if CCPA threshold crossed                      |
+**Notes**: 
+  1. Do not reopen unless legal floor changes (Google Ads roadmap could trigger)
+  2. Single source of truth in Appendix B of `v1_4_4_C_IMPLEMENT.md`
+  3. Renaming any is Bucket 2; requires Sean approval
+  4. Hobby cap discipline
+  5. `/api/upload` validates
+  6. Matches 360-design ENTRY_SOP pattern
+  7. Removes webhook-routing dependency for preview
+  8. Shared Google Doc, one section per page
+  9. Currently shipped shorter; Sean may swap
+  10. Open Thread from Track B
+  11. Emaline owns
+  12. Currently brand-voiced; swap if CCPA threshold crossed
+
+| #   | Decision                                                                  | Status    | Locked in                                |
+| --- | ------------------------------------------------------------------------- | --------- | ---------------------------------------- |
+| 1   | Cookie consent strategy (default-deny, deferred state, symmetric buttons) | Settled   | Track B (research §6.1, §7.2)            |
+| 2   | `email-cta-submit` source enum                                            | Settled   | Track B SESSION_REPORT line 226          |
+| 3   | `data-*` attribute names                                                  | Settled   | Track B (per page placeholder inventory) |
+| 4   | 11-endpoint consolidation                                                 | Settled   | Track A UPDATE_REPORT (commit `2085c42`) |
+| 5   | Image roles 1+1+5                                                         | Settled   | Track A                                  |
+| 6   | Cloudinary signed flow                                                    | Settled   | v1.4.4 alignment session (D1)            |
+| 7   | `?sync=true` on POST products                                             | Settled   | v1.4.4 alignment session (D2)            |
+| 8   | Emaline feedback channel                                                  | Settled   | v1.4.4 alignment session (D5)            |
+| 9   | Cookie banner copy (longer vs. shorter)                                   | Iterating | TBD at Checkpoint A                      |
+| 10  | Real testimonials                                                         | Iterating | TBD at Checkpoint A or B                 |
+| 11  | "Meet Emy" copy + photo                                                   | Iterating | TBD at Checkpoint C or D                 |
+| 12  | Footer "Privacy preferences" link text                                    | Iterating | TBD post-launch                          |
 
 ---
 
@@ -380,6 +410,4 @@ resolves it.
 | Real product load via Custom GPT (≥ 5 products)                     | Emaline                             | Parallel with C1–C4; final at C5.3 |
 
 ---
-
-*This protocol is meant to make iteration cheap and launch reliable. If something here
-isn't working, fix the protocol — it's a tool, not a contract.*
+*This protocol is meant to make iteration cheap and launch reliable. If something here isn't working, fix the protocol — it's a tool, not a contract.*

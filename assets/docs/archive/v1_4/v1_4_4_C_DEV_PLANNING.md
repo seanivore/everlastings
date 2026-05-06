@@ -238,7 +238,7 @@ Zero-Git, zero-React review path.
 - **4.2** — Per-page checklist: 6 items max per page in plain language ("Does the
   homepage feel like Emaline's voice? Are the product photos crisp?")
 - **4.3** — Feedback channel: **shared Google Doc**, one section per page. Magic-phrase
-  format: *"Page: [name]. What I see: [...]. What I'd like: [...]"*
+  format: *"Page: {name}. What I see: {...}. What I'd like: {...}"* 
 - **4.4** — What to ignore: "test" labels, "weird URLs", anything below the fold flagged
   as Sean's territory
 
