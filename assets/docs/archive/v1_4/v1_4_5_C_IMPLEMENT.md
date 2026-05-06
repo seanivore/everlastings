@@ -1,6 +1,7 @@
 # v1.4.5 Track C — Integration Implementation Guide
 
 **Version**: v1.4.5
+**Updated**: 2026-05-06
 **Branch**: `dev`
 **Audience**: Track C orchestrator agent at XHIGH effort posture.
 **Goal**: Wire Track B's 13 placeholder pages to Track A's 11 deployed endpoints; ship cart + checkout end-to-end including 409 cart-recovery and 410 hold-expiry flows; finalize SEO; cut over to launch.
@@ -67,13 +68,20 @@ XHIGH orchestrator. Delegate file-by-file work aggressively to keep the orchestr
 
 Each phase below names which deliverables can run in parallel. The pattern: orchestrator hands a subagent its file path + the canonical code block from this guide + the contract test. Subagent returns the file. Orchestrator runs the contract test on the next preview deploy.
 
-| Phase | Parallel groups | Notes |
-|-------|-----------------|-------|
-| C1 | Group 1: `main.js`. Group 2: cookie-banner verification (read-only, no file write). | C1.1 must land before C1.2 (same file). |
-| C2 | Group 1: `product.js` + `shop.js` (independent). Group 2: `homepage.js` + `newsletter.js` (independent). | All four read from `main.js` foundations; can run together if C1 ships first. |
-| C3 | Group 1: `recovery.js` (helper, no deps). Group 2: `cart.js` (depends on `recovery.js`). Group 3: `checkout.js`. Group 4: `complete.js`. | `recovery.js` must land before `cart.js` since `cart.js` calls it. `checkout.js` and `complete.js` are independent of each other. |
-| C4 | Group 1: per-page meta tags + Open Graph + JSON-LD (one subagent per file class). Group 2: `sitemap.xml` + `robots.txt`. Group 3: integration test re-run (read-only). | Lighthouse audit and OG validators run after Group 1 and 2 land. |
-| C5 | Sequential. Orchestrator runs the placeholder purge and gate verifications; Sean drives the human-only steps (live keys, DNS flip, real-card test). | |
+| Phase | Parallel groups                                                                                                                                                        |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1    | Group 1: `main.js`. Group 2: cookie-banner verification (read-only, no file write).                                                                                    |
+| C2    | Group 1: `product.js` + `shop.js` (independent). Group 2: `homepage.js` + `newsletter.js` (independent).                                                               |
+| C3    | Group 1: `recovery.js` (helper, no deps). Group 2: `cart.js` (depends on `recovery.js`). Group 3: `checkout.js`. Group 4: `complete.js`.                               |
+| C4    | Group 1: per-page meta tags + Open Graph + JSON-LD (one subagent per file class). Group 2: `sitemap.xml` + `robots.txt`. Group 3: integration test re-run (read-only). |
+| C5    | Sequential. Orchestrator runs the placeholder purge and gate verifications; Sean drives the human-only steps (live keys, DNS flip, real-card test).                    |
+
+**Notes**: 
+- **C1** — C1.1 must land before C1.2 (same file).
+- **C2** — All four read from `main.js` foundations; can run together if C1 ships first.
+- **C3** — `recovery.js` must land before `cart.js` since `cart.js` calls it. `checkout.js` and `complete.js` are independent of each other.
+- **C4** — Lighthouse audit and OG validators run after Group 1 and 2 land.
+- **C5** — N/A.
 
 ### Branch + commit policy
 
@@ -1743,16 +1751,16 @@ Sequential. Sean drives most steps. Orchestrator executes the placeholder purge 
 
 The eight test-mode rows + R2 namespace + Stripe products that need to be deleted before launch:
 
-| Slug | Supabase ID | Stripe Product ID |
-| ---- | ----------- | ----------------- |
-| `placeholder-haven-i` | `29ac18a0-b655-40d0-bf26-2c45b172a24c` | `prod_URosENLviu9cvl` |
-| `placeholder-haven-ii` | `ea7d7f19-0244-4280-9b31-48df448e76c2` | `prod_URosFK96ajZXhv` |
-| `placeholder-book-nook` | `3f5556ba-f994-4af6-b5dc-03fb50c1377c` | `prod_URossmI3zF8nRV` |
-| `placeholder-storyloft` | `e64612cf-8121-4114-8e02-14814ce0bc78` | `prod_URosdv1l5IQIgk` |
-| `placeholder-seasonal-piece` | `f6d6b62a-d14f-4914-bfbf-c9e120ba3730` | `prod_URosODYnsDGLnv` |
-| `placeholder-printable-set` | `979d50a3-85ea-4fb8-aa15-75a7929816b2` | `prod_URosuo6PXiQ90q` |
+| Slug                          | Supabase ID                            | Stripe Product ID     |
+| ----------------------------- | -------------------------------------- | --------------------- |
+| `placeholder-haven-i`         | `29ac18a0-b655-40d0-bf26-2c45b172a24c` | `prod_URosENLviu9cvl` |
+| `placeholder-haven-ii`        | `ea7d7f19-0244-4280-9b31-48df448e76c2` | `prod_URosFK96ajZXhv` |
+| `placeholder-book-nook`       | `3f5556ba-f994-4af6-b5dc-03fb50c1377c` | `prod_URossmI3zF8nRV` |
+| `placeholder-storyloft`       | `e64612cf-8121-4114-8e02-14814ce0bc78` | `prod_URosdv1l5IQIgk` |
+| `placeholder-seasonal-piece`  | `f6d6b62a-d14f-4914-bfbf-c9e120ba3730` | `prod_URosODYnsDGLnv` |
+| `placeholder-printable-set`   | `979d50a3-85ea-4fb8-aa15-75a7929816b2` | `prod_URosuo6PXiQ90q` |
 | `v145-prep-verify-1778085657` | `b32bb955-1960-4708-810e-27b8713029d9` | `prod_UT4eVWVpnwZKal` |
-| (orphan, no Supabase row) | — | `prod_URor3D0ITLFa2E` |
+| (orphan, no Supabase row)     | —                                      | `prod_URor3D0ITLFa2E` |
 
 ```bash
 # 1. Supabase rows
@@ -1833,12 +1841,18 @@ Emaline loads real products via the Custom GPT against the preview deployment. E
 
 ## Rollback
 
-| Phase | Reverts cleanly | Notes |
-|-------|-----------------|-------|
-| C1–C4 | Yes — revert the offending commit on `dev`, push. | All changes are additive on the frontend; no schema or env mutations. |
-| C5.1 (placeholder purge) | No. | Once R2 objects + Stripe products are archived, the placeholder catalog is gone. Re-seeding is a fresh pass. |
-| C5.4 (live keys) | Removing the live keys returns the project to test-mode behavior. | Stripe live products created post-flip stay in Stripe; archive them manually if rolling back. |
-| C5.5 (DNS flip) | Point DNS back to a holding page or remove the domain in Vercel. | SSL re-issuance can take ~30 min if removed and re-added later. |
+| #   | Phase                    | Reverts cleanly                                                   |
+| --- | ------------------------ | ----------------------------------------------------------------- |
+| 1   | C1–C4                    | Yes — revert the offending commit on `dev`, push.                 |
+| 2   | C5.1 (placeholder purge) | No.                                                               |
+| 3   | C5.4 (live keys)         | Removing the live keys returns the project to test-mode behavior. |
+| 4   | C5.5 (DNS flip)          | Point DNS back to a holding page or remove the domain in Vercel.  |
+
+**Notes**: 
+1. All changes are additive on the frontend; no schema or env mutations.
+2. Once R2 objects + Stripe products are archived, the placeholder catalog is gone. Re-seeding is a fresh pass.
+3. Stripe live products created post-flip stay in Stripe; archive them manually if rolling back.
+4. SSL re-issuance can take ~30 min if removed and re-added later.
 
 If a contract test fails at any phase gate, do not proceed. Surface to Sean per § Escalation triggers.
 
@@ -1850,73 +1864,73 @@ The contract Track B shipped. Every attribute in this table is wired by the indi
 
 ### Cart page (`cart.html`)
 
-| Attribute                         | Purpose                     | Wired by                  |
-| --------------------------------- | --------------------------- | ------------------------- |
-| `[data-cart-lines]`               | Line items container        | `cart.js`                 |
-| `[data-cart-empty]`               | Empty-state container       | `cart.js`                 |
-| `[data-cart-total]`               | Total slot                  | `cart.js`                 |
-| `[data-cart-email]`               | Email input                 | `cart.js`                 |
-| `[data-cart-name]`                | Name input                  | `cart.js`                 |
-| `[data-cart-checkout]`            | CHECKOUT button             | `cart.js`                 |
-| `[data-cart-error]`               | Error state                 | `cart.js`                 |
-| `[data-sold-recovery]`            | 409 overlay container       | `cart.js` + `recovery.js` |
-| `[data-sold-recovery-list]`       | Unavailable items text      | `recovery.js`             |
-| `[data-sold-recovery-related-grid]` | Related products mini cards | `recovery.js`             |
-| `[data-sold-recovery-form]`       | Email form for promo code   | `recovery.js`             |
-| `[data-sold-recovery-code]`       | Generated promo code reveal | `recovery.js`             |
-| `[data-sold-recovery-code-value]` | Code text node              | `recovery.js`             |
-| `[data-sold-recovery-continue]`   | Continue with remaining items | `recovery.js`           |
+| Attribute                           | Purpose                       | Wired by                  |
+| ----------------------------------- | ----------------------------- | ------------------------- |
+| `[data-cart-lines]`                 | Line items container          | `cart.js`                 |
+| `[data-cart-empty]`                 | Empty-state container         | `cart.js`                 |
+| `[data-cart-total]`                 | Total slot                    | `cart.js`                 |
+| `[data-cart-email]`                 | Email input                   | `cart.js`                 |
+| `[data-cart-name]`                  | Name input                    | `cart.js`                 |
+| `[data-cart-checkout]`              | CHECKOUT button               | `cart.js`                 |
+| `[data-cart-error]`                 | Error state                   | `cart.js`                 |
+| `[data-sold-recovery]`              | 409 overlay container         | `cart.js` + `recovery.js` |
+| `[data-sold-recovery-list]`         | Unavailable items text        | `recovery.js`             |
+| `[data-sold-recovery-related-grid]` | Related products mini cards   | `recovery.js`             |
+| `[data-sold-recovery-form]`         | Email form for promo code     | `recovery.js`             |
+| `[data-sold-recovery-code]`         | Generated promo code reveal   | `recovery.js`             |
+| `[data-sold-recovery-code-value]`   | Code text node                | `recovery.js`             |
+| `[data-sold-recovery-continue]`     | Continue with remaining items | `recovery.js`             |
 
 ### Checkout page (`checkout.html`)
 
-| Attribute                      | Purpose                                               | Wired by      |
-| ------------------------------ | ----------------------------------------------------- | ------------- |
-| `[data-stage-a-info]`          | Stage A container (name + email)                      | `checkout.js` |
-| `[data-stage-b-payment]`       | Stage B container (Stripe Elements)                   | `checkout.js` |
-| `[data-checkout-email]`        | Email input                                           | `checkout.js` |
-| `[data-checkout-name]`         | Name input                                            | `checkout.js` |
-| `[data-checkout-continue]`     | Continue to payment button                            | `checkout.js` |
-| `[data-checkout-billing-toggle]` | "Same as shipping" checkbox                         | `checkout.js` |
-| `[data-stripe-address-shipping]` | AddressElement (shipping) mount                     | `checkout.js` |
-| `[data-stripe-address-billing]` | AddressElement (billing) mount, conditional         | `checkout.js` |
-| `[data-stripe-payment]`        | PaymentElement mount                                  | `checkout.js` |
-| `[data-checkout-confirm]`      | Confirm & Pay button                                  | `checkout.js` |
-| `[data-checkout-form]`         | Form wrapper around Stage B                           | `checkout.js` |
-| `[data-checkout-error]`        | Error surface                                         | `checkout.js` |
-| `[data-checkout-error-message]` | Error text node                                      | `checkout.js` |
-| `[data-hold-expired]`          | 410 redirect surface                                  | `checkout.js` |
-| `[data-checkout-order-summary]` | Order summary mount point                            | `checkout.js` |
+| Attribute                        | Purpose                                     | Wired by      |
+| -------------------------------- | ------------------------------------------- | ------------- |
+| `[data-stage-a-info]`            | Stage A container (name + email)            | `checkout.js` |
+| `[data-stage-b-payment]`         | Stage B container (Stripe Elements)         | `checkout.js` |
+| `[data-checkout-email]`          | Email input                                 | `checkout.js` |
+| `[data-checkout-name]`           | Name input                                  | `checkout.js` |
+| `[data-checkout-continue]`       | Continue to payment button                  | `checkout.js` |
+| `[data-checkout-billing-toggle]` | "Same as shipping" checkbox                 | `checkout.js` |
+| `[data-stripe-address-shipping]` | AddressElement (shipping) mount             | `checkout.js` |
+| `[data-stripe-address-billing]`  | AddressElement (billing) mount, conditional | `checkout.js` |
+| `[data-stripe-payment]`          | PaymentElement mount                        | `checkout.js` |
+| `[data-checkout-confirm]`        | Confirm & Pay button                        | `checkout.js` |
+| `[data-checkout-form]`           | Form wrapper around Stage B                 | `checkout.js` |
+| `[data-checkout-error]`          | Error surface                               | `checkout.js` |
+| `[data-checkout-error-message]`  | Error text node                             | `checkout.js` |
+| `[data-hold-expired]`            | 410 redirect surface                        | `checkout.js` |
+| `[data-checkout-order-summary]`  | Order summary mount point                   | `checkout.js` |
 
 ### Complete page (`complete.html`)
 
-| Attribute                       | Purpose                              | Wired by      |
-| ------------------------------- | ------------------------------------ | ------------- |
-| `[data-complete-loading]`       | Skeleton state                       | `complete.js` |
-| `[data-complete-success]`       | Success container                    | `complete.js` |
-| `[data-complete-customer-name]` | Customer name slot                   | `complete.js` |
-| `[data-complete-email]`         | Customer email slot                  | `complete.js` |
-| `[data-complete-line-items]`    | Order items list                     | `complete.js` |
-| `[data-complete-shipping]`      | Shipping address summary             | `complete.js` |
-| `[data-complete-total]`         | Total price slot                     | `complete.js` |
-| `[data-complete-order-id]`      | Order ID slot                        | `complete.js` |
-| `[data-complete-newsletter]`    | Subscribe prompt for non-subscribers | `complete.js` |
-| `[data-complete-newsletter-success]` | Post-submit success state       | `complete.js` |
-| `[data-complete-error]`         | Error state                          | `complete.js` |
-| `[data-complete-error-message]` | Error text node                      | `complete.js` |
+| Attribute                            | Purpose                              | Wired by      |
+| ------------------------------------ | ------------------------------------ | ------------- |
+| `[data-complete-loading]`            | Skeleton state                       | `complete.js` |
+| `[data-complete-success]`            | Success container                    | `complete.js` |
+| `[data-complete-customer-name]`      | Customer name slot                   | `complete.js` |
+| `[data-complete-email]`              | Customer email slot                  | `complete.js` |
+| `[data-complete-line-items]`         | Order items list                     | `complete.js` |
+| `[data-complete-shipping]`           | Shipping address summary             | `complete.js` |
+| `[data-complete-total]`              | Total price slot                     | `complete.js` |
+| `[data-complete-order-id]`           | Order ID slot                        | `complete.js` |
+| `[data-complete-newsletter]`         | Subscribe prompt for non-subscribers | `complete.js` |
+| `[data-complete-newsletter-success]` | Post-submit success state            | `complete.js` |
+| `[data-complete-error]`              | Error state                          | `complete.js` |
+| `[data-complete-error-message]`      | Error text node                      | `complete.js` |
 
 ### Shop page (`shop.html`)
 
-| Attribute                       | Purpose                                            | Wired by  |
-| ------------------------------- | -------------------------------------------------- | --------- |
-| `[data-shop-grid]`              | Tile container                                     | `shop.js` |
-| `[data-shop-filter]`            | Filter checkboxes (with `value=` per option)       | `shop.js` |
-| `[data-shop-sort]`              | Sort select                                        | `shop.js` |
-| `[data-shop-clear-filters]`     | Clear filters CTA                                  | `shop.js` |
-| `[data-shop-loading]`           | Skeleton tiles                                     | `shop.js` |
-| `[data-shop-no-products]`       | "Crafting new havens" empty state                  | `shop.js` |
-| `[data-shop-all-sold]`          | All-sold + inline newsletter form                  | `shop.js` |
-| `[data-shop-filter-empty]`      | Filter yielded zero matches                        | `shop.js` |
-| `[data-shop-fetch-error]`       | Supabase failure                                   | `shop.js` |
+| Attribute                   | Purpose                                      | Wired by  |
+| --------------------------- | -------------------------------------------- | --------- |
+| `[data-shop-grid]`          | Tile container                               | `shop.js` |
+| `[data-shop-filter]`        | Filter checkboxes (with `value=` per option) | `shop.js` |
+| `[data-shop-sort]`          | Sort select                                  | `shop.js` |
+| `[data-shop-clear-filters]` | Clear filters CTA                            | `shop.js` |
+| `[data-shop-loading]`       | Skeleton tiles                               | `shop.js` |
+| `[data-shop-no-products]`   | "Crafting new havens" empty state            | `shop.js` |
+| `[data-shop-all-sold]`      | All-sold + inline newsletter form            | `shop.js` |
+| `[data-shop-filter-empty]`  | Filter yielded zero matches                  | `shop.js` |
+| `[data-shop-fetch-error]`   | Supabase failure                             | `shop.js` |
 
 ### Product page (`product.html`)
 
@@ -1924,27 +1938,27 @@ The contract Track B shipped. Every attribute in this table is wired by the indi
 
 ### Homepage (`index.html`)
 
-| Attribute                                | Purpose                                | Wired by      |
-| ---------------------------------------- | -------------------------------------- | ------------- |
-| `[data-homepage-featured]`               | Featured carousel mount                | `homepage.js` |
-| `[data-homepage-related-row]`            | "Related havens" row                   | `homepage.js` |
-| `[data-homepage-newsletter-form]`        | Closing newsletter form                | `homepage.js` |
-| `[data-homepage-newsletter-success]`     | Success state                          | `homepage.js` |
+| Attribute                            | Purpose                 | Wired by      |
+| ------------------------------------ | ----------------------- | ------------- |
+| `[data-homepage-featured]`           | Featured carousel mount | `homepage.js` |
+| `[data-homepage-related-row]`        | "Related havens" row    | `homepage.js` |
+| `[data-homepage-newsletter-form]`    | Closing newsletter form | `homepage.js` |
+| `[data-homepage-newsletter-success]` | Success state           | `homepage.js` |
 
 ### Newsletter (cross-page)
 
-| Attribute                              | Purpose                              | Wired by         |
-| -------------------------------------- | ------------------------------------ | ---------------- |
-| `[data-cart-exit-modal]`               | Exit-intent modal container          | `newsletter.js`  |
-| `[data-newsletter-footer-form]`        | Footer newsletter form (every page)  | `newsletter.js`  |
-| `[data-newsletter-footer-success]`     | Footer success state                 | `newsletter.js`  |
+| Attribute                          | Purpose                             | Wired by        |
+| ---------------------------------- | ----------------------------------- | --------------- |
+| `[data-cart-exit-modal]`           | Exit-intent modal container         | `newsletter.js` |
+| `[data-newsletter-footer-form]`    | Footer newsletter form (every page) | `newsletter.js` |
+| `[data-newsletter-footer-success]` | Footer success state                | `newsletter.js` |
 
 ### Global
 
-| Attribute             | Purpose                           | Wired by                       |
-| --------------------- | --------------------------------- | ------------------------------ |
+| Attribute              | Purpose                           | Wired by                       |
+| ---------------------- | --------------------------------- | ------------------------------ |
 | `[data-cookie-revoke]` | Footer "Privacy preferences" link | Track B (`ui.js`); C1 verifies |
-| `#cart-badge`         | Header cart count                 | `main.js`                      |
+| `#cart-badge`          | Header cart count                 | `main.js`                      |
 
 ---
 
@@ -1952,15 +1966,15 @@ The contract Track B shipped. Every attribute in this table is wired by the indi
 
 Single source of truth for which page dispatches which `source` value. `main.js`'s global listener is the only consumer.
 
-| Source                  | Dispatched from                       | Backend behavior                                                   |
-| ----------------------- | ------------------------------------- | ------------------------------------------------------------------ |
-| `product-interest`      | `product.html` sticky right card form | Insert into `product_interests` table; subscribe with this source. |
-| `cart-exit`             | Exit-intent modal (`newsletter.js`)   | Standard subscribe.                                                |
+| Source                  | Dispatched from                       | Backend behavior                                                    |
+| ----------------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| `product-interest`      | `product.html` sticky right card form | Insert into `product_interests` table; subscribe with this source.  |
+| `cart-exit`             | Exit-intent modal (`newsletter.js`)   | Standard subscribe.                                                 |
 | `contemplation-offer`   | Product page 3-min popup              | Subscribe + generate promo code from `newsletter-welcome-5` coupon. |
-| `newsletter-footer`     | Footer form on every page             | Standard subscribe.                                                |
-| `newsletter-shop-empty` | Shop page "all sold" inline form      | Standard subscribe.                                                |
-| `newsletter-homepage`   | Homepage closing newsletter           | Standard subscribe.                                                |
-| `newsletter-customer`   | Complete page subscribe prompt        | Standard subscribe (post-purchase opt-in).                         |
+| `newsletter-footer`     | Footer form on every page             | Standard subscribe.                                                 |
+| `newsletter-shop-empty` | Shop page "all sold" inline form      | Standard subscribe.                                                 |
+| `newsletter-homepage`   | Homepage closing newsletter           | Standard subscribe.                                                 |
+| `newsletter-customer`   | Complete page subscribe prompt        | Standard subscribe (post-purchase opt-in).                          |
 
 ---
 
@@ -1968,29 +1982,95 @@ Single source of truth for which page dispatches which `source` value. `main.js`
 
 Every error state the site can surface, with user-facing copy and the implementation hook.
 
-| Page | Condition | User sees | Implementation hook |
-|------|-----------|-----------|---------------------|
-| Product | Slug not in URL | "This haven could not be found." + link to shop | `[data-product-not-found]` reveals; `[data-product-content]` hides |
-| Product | Supabase fetch fails | "This haven could not be found." | Same hook as not-found |
-| Product | Image fails to load | Broken image hidden, fallback shown | `<img onerror>` adds `image-fallback` class |
-| Product | `available === false` | "Sold" badge, Buy Now disabled | `[data-product-sold]` reveals; `[data-product-buy-button]` disabled |
-| Cart | Cart empty | "Your cart is empty." + link to shop | `[data-cart-empty]` reveals; `[data-cart-lines]` hides |
-| Cart | Items sold before reserve (409) | Recovery overlay with "These havens have found their homes" + email form + related products | `[data-sold-recovery]` reveals via `cart.js` + `recovery.js` |
-| Checkout | Cart empty / no session | Redirect to `/cart.html` | `window.location.href` |
-| Checkout | Hold expired (410) | "Your reservation timed out. Returning to cart…" → redirect after 2s | `[data-hold-expired]` reveals; setTimeout redirect |
-| Checkout | Session creation fails | "Something went awry. Please try again." | `[data-checkout-error]` |
-| Checkout | Payment declined | Stripe error message | `[data-checkout-error]` shows Stripe's message |
-| Checkout | Network error | "Unable to load checkout. Please refresh." | `[data-checkout-error]` |
-| Checkout | Shipping incomplete | "Please complete your shipping address." | `[data-checkout-error]` from AddressElement `change` |
-| Checkout | Restricted country | "We currently only ship within the United States. Contact us for international inquiries." | AddressElement `allowedCountries: ['US']` rejects; `[data-checkout-error]` |
-| Complete | No `session_id` | "Something went awry." | `[data-complete-error]` |
-| Complete | `status !== 'complete'` | "Something went awry. Please try again." | `[data-complete-error]` |
-| Shop | Initial load | Skeleton shimmer | `[data-shop-loading]` |
-| Shop | DB returns 0 products, no filter | "New havens are being crafted. Check back soon." | `[data-shop-no-products]` |
-| Shop | All `available=false`, no filter | "Every haven has found its home. Join the Firelight Council for first look at new arrivals." + inline newsletter | `[data-shop-all-sold]` |
-| Shop | Filter yields 0 matches | "No havens match your search." + Clear filters CTA | `[data-shop-filter-empty]` |
-| Shop | Supabase fetch fails | "Havens are resting. Please refresh." | `[data-shop-fetch-error]` |
-| Newsletter | 23505 duplicate email | "You're already part of the Firelight Council." | `email-cta-already-subscribed` event; per-form UI flip |
-| Newsletter | Invalid email | "Valid email required" | Browser `type="email"` + server validation |
-| Admin | Not authenticated | Redirect to login | Track A's surface, not C |
-| Admin | Upload too large | "File must be under 10MB" (50MB for videos) | Track A's surface, not C |
+### Product
+
+- **Condition:** Slug not in URL
+  - **User sees:** "This haven could not be found." + link to shop
+  - **Implementation hook:** `[data-product-not-found]` reveals; `[data-product-content]` hides
+- **Condition:** Supabase fetch fails
+  - **User sees:** "This haven could not be found."
+  - **Implementation hook:** Same hook as not-found
+- **Condition:** Image fails to load
+  - **User sees:** Broken image hidden, fallback shown
+  - **Implementation hook:** `<img onerror>` adds `image-fallback` class
+- **Condition:** `available === false`
+  - **User sees:** "Sold" badge, Buy Now disabled
+  - **Implementation hook:** `[data-product-sold]` reveals; `[data-product-buy-button]` disabled
+
+### Cart
+
+- **Condition:** Cart empty
+  - **User sees:** "Your cart is empty." + link to shop
+  - **Implementation hook:** `[data-cart-empty]` reveals; `[data-cart-lines]` hides
+- **Condition:** Items sold before reserve (409)
+  - **User sees:** Recovery overlay with "These havens have found their homes" + email form + related products
+  - **Implementation hook:** `[data-sold-recovery]` reveals via `cart.js` + `recovery.js`
+
+### Checkout
+
+- **Condition:** Cart empty / no session
+  - **User sees:** Redirect to `/cart.html`
+  - **Implementation hook:** `window.location.href`
+- **Condition:** Hold expired (410)
+  - **User sees:** "Your reservation timed out. Returning to cart…" → redirect after 2s
+  - **Implementation hook:** `[data-hold-expired]` reveals; setTimeout redirect
+- **Condition:** Session creation fails
+  - **User sees:** "Something went awry. Please try again."
+  - **Implementation hook:** `[data-checkout-error]`
+- **Condition:** Payment declined
+  - **User sees:** Stripe error message
+  - **Implementation hook:** `[data-checkout-error]` shows Stripe's message
+- **Condition:** Network error
+  - **User sees:** "Unable to load checkout. Please refresh."
+  - **Implementation hook:** `[data-checkout-error]`
+- **Condition:** Shipping incomplete
+  - **User sees:** "Please complete your shipping address."
+  - **Implementation hook:** `[data-checkout-error]` from AddressElement `change`
+- **Condition:** Restricted country
+  - **User sees:** "We currently only ship within the United States. Contact us for international inquiries."
+  - **Implementation hook:** AddressElement `allowedCountries: ['US']` rejects; `[data-checkout-error]`
+
+### Complete
+
+- **Condition:** No `session_id`
+  - **User sees:** "Something went awry."
+  - **Implementation hook:** `[data-complete-error]`
+- **Condition:** `status !== 'complete'`
+  - **User sees:** "Something went awry. Please try again."
+  - **Implementation hook:** `[data-complete-error]`
+
+### Shop
+
+- **Condition:** Initial load
+  - **User sees:** Skeleton shimmer
+  - **Implementation hook:** `[data-shop-loading]`
+- **Condition:** DB returns 0 products, no filter
+  - **User sees:** "New havens are being crafted. Check back soon."
+  - **Implementation hook:** `[data-shop-no-products]`
+- **Condition:** All `available=false`, no filter
+  - **User sees:** "Every haven has found its home. Join the Firelight Council for first look at new arrivals." + inline newsletter
+  - **Implementation hook:** `[data-shop-all-sold]`
+- **Condition:** Filter yields 0 matches
+  - **User sees:** "No havens match your search." + Clear filters CTA
+  - **Implementation hook:** `[data-shop-filter-empty]`
+- **Condition:** Supabase fetch fails
+  - **User sees:** "Havens are resting. Please refresh."
+  - **Implementation hook:** `[data-shop-fetch-error]`
+
+### Newsletter
+
+- **Condition:** 23505 duplicate email
+  - **User sees:** "You're already part of the Firelight Council."
+  - **Implementation hook:** `email-cta-already-subscribed` event; per-form UI flip
+- **Condition:** Invalid email
+  - **User sees:** "Valid email required"
+  - **Implementation hook:** Browser `type="email"` + server validation
+
+### Admin
+
+- **Condition:** Not authenticated
+  - **User sees:** Redirect to login
+  - **Implementation hook:** Track A's surface, not C
+- **Condition:** Upload too large
+  - **User sees:** "File must be under 10MB" (50MB for videos)
+  - **Implementation hook:** Track A's surface, not C
