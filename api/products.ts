@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest, env } from './_lib/env';
+import { syncProductToStripe, StripeSyncResult, SyncableProduct } from './_lib/stripeSync';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
@@ -138,8 +139,13 @@ export async function POST(request: Request) {
     const u = typeof img?.url === 'string' ? img.url : '';
     return u.split('/').pop() ?? '';
   };
-  const heroImages = images.filter((img) => filenameOf(img).startsWith('hero-'));
-  const galleryImages = images.filter((img) => filenameOf(img).startsWith('gallery-'));
+  // Strip `test_` prefix before role-matching so URLs returned by /api/upload
+  // in test mode (which prepends `test_` for R2 namespacing) validate identically
+  // to live-mode URLs. Without this, every test-mode product create fails the
+  // hero/gallery presence checks even though the images uploaded fine.
+  const roleName = (img: ImageEntry): string => filenameOf(img).replace(/^test_/, '');
+  const heroImages = images.filter((img) => roleName(img).startsWith('hero-'));
+  const galleryImages = images.filter((img) => roleName(img).startsWith('gallery-'));
 
   if (heroImages.length < 1) {
     return jsonResponse(request, { error: 'At least 1 hero image required' }, 400);
@@ -185,7 +191,25 @@ export async function POST(request: Request) {
     return jsonResponse(request, { error: error.message }, 400);
   }
 
-  return jsonResponse(request, { success: true, product: data });
+  // Inline Stripe sync: callers (Custom GPT, curl protocol, admin UI) opt in
+  // with `?sync=true` to receive Stripe IDs in the create response rather than
+  // wait for the Supabase database webhook. The sync helper is idempotent,
+  // so the database webhook firing afterward is a safe no-op.
+  const url = new URL(request.url);
+  let stripeSync: StripeSyncResult | null = null;
+  if (url.searchParams.get('sync') === 'true' && data) {
+    try {
+      stripeSync = await syncProductToStripe(data as SyncableProduct);
+    } catch (err) {
+      console.error('Inline Stripe sync failed (product row was created):', err);
+    }
+  }
+
+  return jsonResponse(request, {
+    success: true,
+    product: data,
+    ...(stripeSync ? { stripe_sync: stripeSync } : {}),
+  });
 }
 
 export async function PUT(request: Request) {
