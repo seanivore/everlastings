@@ -1,6 +1,8 @@
 # v1.4.3 Track C — Integration Implementation Guide
 
-> **SUPERSEDED 2026-05-06 by `v1_4_4_C_IMPLEMENT.md`.** Track A and Track B closeouts
+> **DEPRECATED 2026-05-06.** Both this draft and `v1_4_4_C_IMPLEMENT.md` are superseded by `v1_4_5_C_IMPLEMENT.md`. Historical context lives in `v1_4_4_IMPLEMENT_UPDATES.md`. This file is retained as a code-block source for the v1.4.5 build (cart/checkout/complete sections); once those are inlined in v1.4.5, this file has no remaining build value.
+
+> **2026-05-06 supersession note** (original): Track A and Track B closeouts
 > surfaced contract gaps and pre-flight bugs that this plan does not account for. The
 > v1.4.4 revision adds Phase 0 (Gaps A–G), corrects the endpoint count from 14 to 11,
 > removes localhost-based verification, pins the consent + email-CTA contracts to

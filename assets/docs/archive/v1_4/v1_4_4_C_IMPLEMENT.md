@@ -1,5 +1,7 @@
 # v1.4.4 Track C — Integration Implementation Guide
 
+> **DEPRECATED 2026-05-06.** Superseded by `v1_4_5_C_IMPLEMENT.md` (current Track C build guide) and `v1_4_4_IMPLEMENT_UPDATES.md` (historical record). This draft mixed forward spec with bug-fix patches and code-spec redirects to v1.4.3, which violated the project's exclusively-executable plan standard. Do not execute against this file. Highest version number is current truth.
+
 **Date filed**: 2026-05-06
 **Supersedes**: `v1_4_3_C_IMPLEMENT.md` (kept for archival; do not act on it)
 **Branch**: `dev`

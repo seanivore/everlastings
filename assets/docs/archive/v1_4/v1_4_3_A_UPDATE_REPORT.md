@@ -1,5 +1,7 @@
 # v1.4.3 Track A — Bug Report: Vercel Hobby Function Cap Tripped
 
+> **DEPRECATED for build context 2026-05-06.** The endpoint-consolidation outcome is the standing architecture, codified as **AR #34** in `EVERLASTINGS_STORE.md` and summarized in `v1_4_4_IMPLEMENT_UPDATES.md` § 1. This file remains as the historical incident record.
+
 **Date filed**: 2026-05-02
 **Filed by**: Track B orchestrator (during pre-flight before B0.2 placeholder seeding)
 **Severity**: Blocker (preview deploys failing since 2026-05-02 09:00 ET)

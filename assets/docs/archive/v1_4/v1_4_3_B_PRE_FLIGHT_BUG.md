@@ -1,5 +1,7 @@
 # v1.4.3 Track B — Pre-Flight Bug & Cross-Track Update Brief
 
+> **DEPRECATED 2026-05-06.** All resolutions (Gaps A–G) are folded into `v1_4_4_IMPLEMENT_UPDATES.md` § 2 and § 3, with corresponding Architecture References (AR #34–37) added to `EVERLASTINGS_STORE.md`. The four code fixes (Gaps A/B/C/D) shipped on `dev` in commits `0736fc9` and `ae1ce38`. This file remains as the historical bug log; it is no longer a build input.
+
 **Date filed**: 2026-05-02
 **Filed by**: Track B orchestrator (during pre-flight before B0.2 placeholder seeding)
 **Bug status**: Patched on `dev` 2026-05-02 — commits `2085c42` (fix) and `8b0c8e3` (incident report).

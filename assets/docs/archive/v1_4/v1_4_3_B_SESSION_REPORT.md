@@ -1,5 +1,7 @@
 # v1.4.3 Track B — Session Dev Report
 
+> **DEPRECATED for build context 2026-05-06.** Track B's deliveries, placeholder inventory, and `data-*` attribute map are folded into `v1_4_4_IMPLEMENT_UPDATES.md` and `v1_4_5_C_IMPLEMENT.md`. This report remains as the historical record of Track B's session.
+
 **Date**: 2026-05-03
 **Branch**: `dev`
 **Track**: B (Frontend Design)

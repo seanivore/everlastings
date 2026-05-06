@@ -1,5 +1,7 @@
 # v1.4.3 Track A — Session Implementation Report
 
+> **DEPRECATED for build context 2026-05-06.** Track A's open threads, deviations, and post-ship updates are folded into `v1_4_4_IMPLEMENT_UPDATES.md` (single consolidated archive). Read that file for current state. This report remains available as a historical record of what shipped and how.
+
 **Date**: 2026-05-02
 **Session role**: Track A orchestrator
 **Branch**: `dev`
