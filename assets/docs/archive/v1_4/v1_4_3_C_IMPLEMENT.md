@@ -1,5 +1,13 @@
 # v1.4.3 Track C — Integration Implementation Guide
 
+> **SUPERSEDED 2026-05-06 by `v1_4_4_C_IMPLEMENT.md`.** Track A and Track B closeouts
+> surfaced contract gaps and pre-flight bugs that this plan does not account for. The
+> v1.4.4 revision adds Phase 0 (Gaps A–G), corrects the endpoint count from 14 to 11,
+> removes localhost-based verification, pins the consent + email-CTA contracts to
+> Track B's actual events, and inserts Design Review Checkpoints A/B/C/D. **Do not act
+> on this file** — read `v1_4_4_C_IMPLEMENT.md` instead. This file is retained for
+> historical record only. Companion: `v1_4_4_PREP_DESIGN_REVIEWS.md`.
+
 ## Track Goal
 Wire Track B's placeholder pages to Track A's API endpoints, implement the complete cart + checkout flow (including 409 cart-recovery edge case), finalize SEO (sitemap, robots, meta, OG, structured data), and complete launch prep (Stripe live mode, full E2E testing, performance pass, launch sequence). Track C cannot start until Track A's A2 (API endpoints) and Track B's pages with placeholder markers are both complete.
 
