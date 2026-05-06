@@ -244,12 +244,12 @@ Sources:
 
 The published numbers cluster roughly as follows. Treat the numbers as directional — most are vendor-published rather than peer-reviewed academic studies, and the best academic study ([CHI 2025 paper](https://dl.acm.org/doi/10.1145/3706598.3713648)) focuses on the EU rather than US contexts.
 
-| Banner pattern              | Bounce-rate impact (vs. no banner) | Conversion impact         | Source                                                                                                                                              |
-| --------------------------- | ---------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full-screen modal blocker   | +15-20%                            | -10 to -25%               | [Analytics-Alternatives — Cookie Consent Banner Hurting Conversions](https://analytics-alternatives.com/cookie-consent-banner-hurting-conversions-heres-what-to-do/) |
-| Bottom-bar with Reject All  | +5-10%                             | -3 to -10%                | [2Point Agency — Can Cookie Banners Affect Bounce Rates](https://www.2pointagency.com/glossary/can-cookie-banners-affect-website-bounce-rates/)     |
-| Soft notice (single button) | +0-5%                              | minimal                   | [Elementor — Reduce Bounce Rate from Cookie Banners](https://elementor.com/blog/ultimate-how-reduce-bounce-rate-from/)                              |
-| Footer-only / no banner     | baseline                           | baseline (CIPA risk)      | (no banner = no banner impact, but plaintiff exposure)                                                                                              |
+| Banner pattern              | Bounce-rate impact (vs. no banner) | Conversion impact    | Source                                                                                                                                                               |
+| --------------------------- | ---------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full-screen modal blocker   | +15-20%                            | -10 to -25%          | [Analytics-Alternatives — Cookie Consent Banner Hurting Conversions](https://analytics-alternatives.com/cookie-consent-banner-hurting-conversions-heres-what-to-do/) |
+| Bottom-bar with Reject All  | +5-10%                             | -3 to -10%           | [2Point Agency — Can Cookie Banners Affect Bounce Rates](https://www.2pointagency.com/glossary/can-cookie-banners-affect-website-bounce-rates/)                      |
+| Soft notice (single button) | +0-5%                              | minimal              | [Elementor — Reduce Bounce Rate from Cookie Banners](https://elementor.com/blog/ultimate-how-reduce-bounce-rate-from/)                                               |
+| Footer-only / no banner     | baseline                           | baseline (CIPA risk) | (no banner = no banner impact, but plaintiff exposure)                                                                                                               |
 
 **Mobile penalty.** The same source ([analytics-alternatives.com](https://analytics-alternatives.com/cookie-consent-banner-hurting-conversions-heres-what-to-do/)) reports the conversion penalty roughly doubles on mobile, where a banner that occupies 30% of desktop viewport occupies 60% of mobile viewport.
 

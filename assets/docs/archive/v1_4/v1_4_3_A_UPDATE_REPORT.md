@@ -63,11 +63,11 @@ Three internal consolidations dropping 15 → 11 deployable functions. **Public 
 
 ### Consolidation 1: `api/checkout.ts` absorbs `reserve` + `session-status`
 
-| Old file                      | New routing                                                |
-| ----------------------------- | ---------------------------------------------------------- |
-| `api/checkout.ts` (POST)      | `api/checkout.ts` POST handler, `_action=null \| 'session'` |
-| `api/checkout/reserve.ts`     | `api/checkout.ts` POST handler, `_action='reserve'`        |
-| `api/session-status.ts`       | `api/checkout.ts` GET handler, `_action='session-status'`  |
+| Old file                  | New routing                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| `api/checkout.ts` (POST)  | `api/checkout.ts` POST handler, `_action=null \| 'session'` |
+| `api/checkout/reserve.ts` | `api/checkout.ts` POST handler, `_action='reserve'`         |
+| `api/session-status.ts`   | `api/checkout.ts` GET handler, `_action='session-status'`   |
 
 Vercel rewrites:
 - `/api/checkout/reserve` → `/api/checkout?_action=reserve`
@@ -75,9 +75,9 @@ Vercel rewrites:
 
 ### Consolidation 2: `api/orders.ts` absorbs `[id]` PATCH
 
-| Old file                  | New routing                                  |
-| ------------------------- | -------------------------------------------- |
-| `api/orders.ts` (GET)     | `api/orders.ts` GET (unchanged)              |
+| Old file                   | New routing                                  |
+| -------------------------- | -------------------------------------------- |
+| `api/orders.ts` (GET)      | `api/orders.ts` GET (unchanged)              |
 | `api/orders/[id].ts` PATCH | `api/orders.ts` PATCH, `id` from query param |
 
 Vercel rewrite:
@@ -85,10 +85,10 @@ Vercel rewrite:
 
 ### Consolidation 3: New `api/cart.ts` absorbs activity + recovery
 
-| Old file                  | New routing                              |
-| ------------------------- | ---------------------------------------- |
-| `api/cart-activity.ts`    | `api/cart.ts` POST, `_action='activity'` |
-| `api/cart-recovery.ts`    | `api/cart.ts` POST, `_action='recovery'` |
+| Old file               | New routing                              |
+| ---------------------- | ---------------------------------------- |
+| `api/cart-activity.ts` | `api/cart.ts` POST, `_action='activity'` |
+| `api/cart-recovery.ts` | `api/cart.ts` POST, `_action='recovery'` |
 
 Vercel rewrites:
 - `/api/cart-activity` → `/api/cart?_action=activity`
@@ -122,12 +122,12 @@ Buffer: 1 below the cap leaves room for at most 1 more endpoint without re-archi
 
 **Local fix verified.** All 5 consolidated routes return correct shapes via `vercel dev`:
 
-| Route                                  | Local result                                    |
-| -------------------------------------- | ----------------------------------------------- |
-| `POST /api/checkout/reserve`           | 400 `{"error":"Missing items or session_id"}`   |
-| `GET  /api/session-status?session_id=` | 400 `{"error":"Missing session_id"}`            |
-| `POST /api/cart-activity`              | 200 `{"ok":true}`                               |
-| `POST /api/cart-recovery`              | 400 `{"error":"Valid email required"}`          |
+| Route                                  | Local result                                     |
+| -------------------------------------- | ------------------------------------------------ |
+| `POST /api/checkout/reserve`           | 400 `{"error":"Missing items or session_id"}`    |
+| `GET  /api/session-status?session_id=` | 400 `{"error":"Missing session_id"}`             |
+| `POST /api/cart-activity`              | 200 `{"ok":true}`                                |
+| `POST /api/cart-recovery`              | 400 `{"error":"Valid email required"}`           |
 | `PATCH /api/orders/:id`                | 401 `{"error":"Unauthorized"}` (auth middleware) |
 
 Each rewrite reaches the correct consolidated handler with the right behavior.
