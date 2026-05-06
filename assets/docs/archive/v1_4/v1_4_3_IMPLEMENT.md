@@ -22,9 +22,9 @@ The original 4,188-line combined implementation guide was split into three self-
 **Companion files:**
 
   - [`v1_4_3_INIT_PROMPTS.md`](./v1_4_3_INIT_PROMPTS.md) — Track-specific orchestrator initiation prompts
-  - [`v1_4_3_META_SETUP.md`](./v1_4_3_META_SETUP.md) — Step-by-step Meta Business Page + Pixel + Conversions API setup
-  - [`v1_4_3_SHIPPO_REPLY.md`](./v1_4_3_SHIPPO_REPLY.md) — Drafted reply to Shippo Trust & Safety verification email
-  - [`v1_4_3_PREP.md`](./v1_4_3_PREP.md) — Pre-implementation prep notes (the document that triggered this split)
+  - [`v1_4_3_META_SETUP.md`](./v1_4_3_PREP_META_SETUP.md) — Step-by-step Meta Business Page + Pixel + Conversions API setup
+  - [`v1_4_3_SHIPPO_REPLY.md`](./v1_4_3_PREP_SHIPPO_REPLY.md) — Drafted reply to Shippo Trust & Safety verification email
+  - [`v1_4_3_PREP.md`](./v1_4_3_01_PREP.md) — Pre-implementation prep notes (the document that triggered this split)
 
 **Cross-track sequencing:**
 
@@ -70,8 +70,8 @@ Verified via bash inspection on 2026-04-29: branches `dev` + `main` both local a
 These items are intentionally not done and are addressed elsewhere or at a later phase. None block the parallel implementation tracks.
 
 - [ ] **Emy Supabase member access** — waiting on Emy to accept Auth invite + create Supabase account; Sean adds via Project Settings > Members. Tracked in `assets/docs/CLIENT_ASK_LIST.md` § 0.
-- [ ] **USPS account + Shippo linking** — deferred to v1.1+ when label volume justifies; v1 uses Shippo's free Starter UI. Reply to Shippo Trust & Safety queued in [`v1_4_3_SHIPPO_REPLY.md`](./v1_4_3_SHIPPO_REPLY.md).
-- [ ] **Meta Business assets + tokens** — `META_ACCESS_TOKEN` + `META_PIXEL_ID` not yet generated. Step-by-step setup guide produced as [`v1_4_3_META_SETUP.md`](./v1_4_3_META_SETUP.md). Sean to execute when convenient; Tracks A/B can proceed without these (placeholder env vars OK during dev).
+- [ ] **USPS account + Shippo linking** — deferred to v1.1+ when label volume justifies; v1 uses Shippo's free Starter UI. Reply to Shippo Trust & Safety queued in [`v1_4_3_SHIPPO_REPLY.md`](./v1_4_3_PREP_SHIPPO_REPLY.md).
+- [ ] **Meta Business assets + tokens** — `META_ACCESS_TOKEN` + `META_PIXEL_ID` not yet generated. Step-by-step setup guide produced as [`v1_4_3_META_SETUP.md`](./v1_4_3_PREP_META_SETUP.md). Sean to execute when convenient; Tracks A/B can proceed without these (placeholder env vars OK during dev).
 - [ ] **Stripe live keys + live webhook (Production scope)** — addressed in Track C C4 launch sequence (live keys go in only at launch). Test keys are sufficient for dev + preview deployments throughout Tracks A, B, C.
 - [ ] **Stripe coupon bootstrap** — `api/_bootstrap/coupons.ts` script does not exist yet; Track A creates it during A1 Stripe section and runs it once. Idempotent.
 - [ ] **Supabase DB webhook configuration** — Studio UI step (Database > Webhooks → POST to `/api/stripe-sync` on `products` INSERT). Track A A1 verifies/creates this.
