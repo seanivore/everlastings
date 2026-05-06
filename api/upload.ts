@@ -139,10 +139,18 @@ export async function POST(request: Request) {
       const cloud = getCloudinaryConfig();
       const imageBuffer = Buffer.from(await file.arrayBuffer());
 
+      // Signed upload: Cloudinary verifies api_key + timestamp + signature
+      // against the account secret. Avoids any dependency on dashboard-side
+      // upload presets (the destroy call below uses the same signature pattern).
+      const uploadTimestamp = Math.floor(Date.now() / 1000);
+      const uploadSigString = `timestamp=${uploadTimestamp}${cloud.apiSecret}`;
+      const uploadSignature = await sha1Hex(uploadSigString);
+
       const uploadForm = new FormData();
       uploadForm.append('file', new Blob([imageBuffer], { type: file.type }));
-      uploadForm.append('upload_preset', 'unsigned_temp');
       uploadForm.append('api_key', cloud.apiKey);
+      uploadForm.append('timestamp', String(uploadTimestamp));
+      uploadForm.append('signature', uploadSignature);
 
       const uploadRes = await fetch(
         `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/upload`,
