@@ -21,19 +21,19 @@
 
 ## Tech Stack at a Glance
 
-| Layer         | What we use                                             | Why                                                                                  |
-| ------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Frontend      | Vanilla HTML + CSS + JS, loaded directly in the browser | No build step, no framework, no React. Proven pattern.                               |
-| Frontend libs | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN  | Script tags only. No npm install for the browser.                                    |
-| Backend       | TypeScript in Vercel Serverless Functions (Node.js)     | Type safety for Stripe + Supabase server-side calls.                                 |
-| Backend libs  | `npm install` only inside `/api/*.ts` world             | `package.json` drives a normal Node/TS toolchain for the API.                        |
-| Runtime       | Vercel (free tier)                                      | Auto-deploy, per-branch env vars, serverless functions.                              |
-| Database      | Supabase Postgres (free tier)                           | REST API + RLS + Auth + Studio UI.                                                   |
-| Product CDN   | Cloudflare R2 at `cdn.everlastingsbyemaline.com`        | Public CDN for product images/video. Cloudinary is stateless transformer, not a host |
-| Payments      | Stripe Custom Checkout (`ui_mode: 'custom'`)            | On-site checkout with full brand control.                                            |
-| Email         | Resend                                                  | Transactional email; free tier 3k/mo.                                                |
-| Shipping      | Shippo Starter (web UI only in v1)                      | 30 free USPS labels/mo.                                                              |
-| Analytics     | GA4 (gtag.js) + Meta Pixel                              | CDN script tags. No GTM.                                                             |
+| Layer         | What we use                                             | Why                                                     |
+| ------------- | ------------------------------------------------------- | ------------------------------------------------------- |
+| Frontend      | Vanilla HTML + CSS + JS, loaded directly in the browser | No build step, no framework, no React. Proven pattern.  |
+| Frontend libs | `@supabase/supabase-js` + `stripe.js` via jsDelivr CDN  | Script tags only. No npm install for the browser.       |
+| Backend       | TypeScript in Vercel Serverless Functions (Node.js)     | Type safety for Stripe + Supabase server-side calls.    |
+| Backend libs  | `npm install` only inside `/api/*.ts` world             | `package.json` drives normal Node/TS toolchain for API  |
+| Runtime       | Vercel (free tier)                                      | Auto-deploy, per-branch env vars, serverless functions. |
+| Database      | Supabase Postgres (free tier)                           | REST API + RLS + Auth + Studio UI.                      |
+| Product CDN   | Cloudflare R2 at `cdn.everlastingsbyemaline.com`        | Public product media CDN. Cloudinary is not a host      |
+| Payments      | Stripe Custom Checkout (`ui_mode: 'custom'`)            | On-site checkout with full brand control.               |
+| Email         | Resend                                                  | Transactional email; free tier 3k/mo.                   |
+| Shipping      | Shippo Starter (web UI only in v1)                      | 30 free USPS labels/mo.                                 |
+| Analytics     | GA4 (gtag.js) + Meta Pixel                              | CDN script tags. No GTM.                                |
 
 **What we are NOT using** (and why some vendor docs might suggest these):
 
@@ -138,15 +138,15 @@ Terms used throughout the implementation guides that are easy to misread if you'
 └──────────────────────────┘   └────────────────────────────────────┘
            │
            ▼
-┌─────────────────────────┐      ┌────────────────────┐    ┌─────────────┐
-│       STRIPE            │      │      RESEND        │    │   SHIPPO    │
-│                         │      │                    │    │             │
-│  Products + Prices      │      │ Transactional      │    │ Free Starter│
-│  Checkout Sessions      │      │  email (tracking,  │    │ Emy's web   │
-│  Payment Intents        │      │  welcome coupons,  │    │ UI only in  │
-│  Webhooks               │      │  cart recovery)    │    │ v1 — no API │
-│  Dynamic promo codes    │      │ Free tier: 3k/mo   │    │ integration │
-└─────────────────────────┘      └────────────────────┘    └─────────────┘
+┌─────────────────────────┐      ┌────────────────────┐    ┌──────────────┐
+│       STRIPE            │      │      RESEND        │    │    SHIPPO    │
+│                         │      │                    │    │              │
+│  Products + Prices      │      │ Transactional      │    │ Free Starter │
+│  Checkout Sessions      │      │  email (tracking,  │    │ Emy's web UI │
+│  Payment Intents        │      │  welcome coupons,  │    │ only in v1 — │
+│  Webhooks               │      │  cart recovery)    │    │ no API       │
+│  Dynamic promo codes    │      │ Free tier: 3k/mo   │    │ integration  │
+└─────────────────────────┘      └────────────────────┘    └──────────────┘
 ```
 
 ### Key Architectural Decisions
@@ -1081,4 +1081,4 @@ Compared to v1.3.1:
   - **v0 Archive Manifest**: `assets/docs/archive/v0/PROCESSED.md`
 
 ---
-*This document is the single source of truth for the Everlastings project architecture. Keep it updated as development progresses.*
+*This document is the single source of truth for the Everlastings project architecture. Keep it updated as development progresses. If there is a more recent version IMPLEMENT.md file, it is likely that this document was neglected and not updated along side of the project implementation, and should be updated. Otherwise, and particularly in the long term, this is the source of truth.*

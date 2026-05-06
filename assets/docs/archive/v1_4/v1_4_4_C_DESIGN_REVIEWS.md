@@ -1,8 +1,9 @@
-# v1.4.4 — Frontend Design Review Protocol
+# v1.4.5 — Frontend Design Review Protocol
 
 **Date filed**: 2026-05-06
+**Version**: Update of Track C pushed v1.4.4 -> 1.4.5
 **Audience**: *For Sean* (primary review loop) • *For Emaline* (later, after Sean's iterations) • *For Future-Claude* (the agent executing Track C)
-**Companion to**: `v1_4_4_C_IMPLEMENT.md` (this protocol fires at Checkpoints A/B/C/D defined there)
+**Companion to**: `v1_4_5_C_IMPLEMENT.md` (this protocol fires at Checkpoints A/B/C/D defined there)
 
 | If you are…       | Read first                                                                                                                |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -40,7 +41,7 @@ domain (brand voice, product presentation) rather than on disposable placeholder
 The core decision framework. Every piece of design feedback gets classified into one of
 three buckets. Default to Bucket 3 if uncertain — protect launch.
 
-### Bucket 1 — v1.4.4 BEFORE wiring (parallel with Phase 0 / C1)
+### Bucket 1 — v1.4.5 BEFORE wiring (parallel with Phase 0 / C1)
 
 Copy fixes, image swaps, color tweaks within existing tokens. **Does NOT touch DOM
 structure or `data-*` hooks.** Lands in parallel with Phase 0 and C1. Cheap to apply.
@@ -52,7 +53,7 @@ Examples:
 - Pre-launch placeholder testimonial copy
 - "Meet Emy" placeholder bio text
 
-### Bucket 2 — v1.4.4 DURING/AFTER wiring (queued, batch-applied at next checkpoint)
+### Bucket 2 — v1.4.5 DURING/AFTER wiring (queued, batch-applied at next checkpoint)
 
 Anything that touches `data-*` attributes, event names, or page templates Track C is
 actively wiring. Queued, never hot-patched. Applied at the next Design Review Checkpoint
@@ -63,7 +64,7 @@ Examples:
 - Reordering checkout stages (changes the wiring contract)
 - Swapping the recovery overlay copy after the contract is wired (Bucket 1 if before C3, Bucket 2 if during/after)
 
-### Bucket 3 — v2 facelift (logged, NOT addressed in v1.4.4)
+### Bucket 3 — v2 facelift (logged, NOT addressed in v1.4.5)
 
 Homepage redesign, anything tagged in `project_v2_homepage_facelift.md` memory. Logged
 in the v2 backlog but does not block launch.
@@ -146,7 +147,7 @@ translation is your value-add.
 ### §3.5 Settled-vs-Iterating ledger
 
 §8 below is the live two-column ledger. Update it as decisions land. It carries forward
-into v2 planning — anything that became settled in v1.4.4 should NOT be reopened in v2
+into v2 planning — anything that became settled in v1.4.5 should NOT be reopened in v2
 without an explicit rationale.
 
 ---
@@ -374,9 +375,9 @@ Update this table as decisions land. Carries forward into v2 planning.
 | 3   | `data-*` attribute names                                                  | Settled   | Track B (per page placeholder inventory) |
 | 4   | 11-endpoint consolidation                                                 | Settled   | Track A UPDATE_REPORT (commit `2085c42`) |
 | 5   | Image roles 1+1+5                                                         | Settled   | Track A                                  |
-| 6   | Cloudinary signed flow                                                    | Settled   | v1.4.4 alignment session (D1)            |
-| 7   | `?sync=true` on POST products                                             | Settled   | v1.4.4 alignment session (D2)            |
-| 8   | Emaline feedback channel                                                  | Settled   | v1.4.4 alignment session (D5)            |
+| 6   | Cloudinary signed flow                                                    | Settled   | v1.4.5 alignment session (D1)            |
+| 7   | `?sync=true` on POST products                                             | Settled   | v1.4.5 alignment session (D2)            |
+| 8   | Emaline feedback channel                                                  | Settled   | v1.4.5 alignment session (D5)            |
 | 9   | Cookie banner copy (longer vs. shorter)                                   | Iterating | TBD at Checkpoint A                      |
 | 10  | Real testimonials                                                         | Iterating | TBD at Checkpoint A or B                 |
 | 11  | "Meet Emy" copy + photo                                                   | Iterating | TBD at Checkpoint C or D                 |

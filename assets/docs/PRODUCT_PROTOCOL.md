@@ -484,14 +484,14 @@ Verify before calling `POST /api/products`:
 
 The upload endpoint composes the filename as `{role}-{slug}.{ext}` (e.g. role `gallery-01` + slug `the-sunkeeper` becomes `gallery-01-the-sunkeeper.webp`). For test/preview environments the prefix `test_` is added (see Base URL Convention).
 
-| Role                          | Filename                       | Purpose                                |
-| ----------------------------- | ------------------------------ | -------------------------------------- |
-| hero                          | `hero-{slug}.webp`             | Main product image                     |
-| thumbnail                     | `thumbnail-{slug}.webp`        | Shop grid thumbnail (600px)            |
-| gallery-01 through gallery-15 | `gallery-NN-{slug}.webp`       | Gallery images (NN = 01–15)            |
-| video-01 through video-05     | `video-NN-{slug}.mp4`          | Product videos (skip Cloudinary)       |
-| detail-01 through detail-05   | `detail-NN-{slug}.{ext}`       | Detail close-ups                       |
-| gif-01 through gif-05         | `gif-NN-{slug}.gif`            | Detail animation GIFs (skip Cloudinary)|
+| Role                          | Filename                 | Purpose                                 |
+| ----------------------------- | ------------------------ | --------------------------------------- |
+| hero                          | `hero-{slug}.webp`       | Main product image                      |
+| thumbnail                     | `thumbnail-{slug}.webp`  | Shop grid thumbnail (600px)             |
+| gallery-01 through gallery-15 | `gallery-NN-{slug}.webp` | Gallery images (NN = 01–15)             |
+| video-01 through video-05     | `video-NN-{slug}.mp4`    | Product videos (skip Cloudinary)        |
+| detail-01 through detail-05   | `detail-NN-{slug}.{ext}` | Detail close-ups                        |
+| gif-01 through gif-05         | `gif-NN-{slug}.gif`      | Detail animation GIFs (skip Cloudinary) |
 
 #### Upload via API (Recommended)
 
