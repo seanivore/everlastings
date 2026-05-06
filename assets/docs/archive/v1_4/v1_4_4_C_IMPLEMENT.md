@@ -9,27 +9,13 @@
 
 ## What changed since v1.4.3
 
-This guide is v1.4.3 Track C, restructured to match the reality that Track A and Track B
-delivered. Five things changed:
+This guide is v1.4.3 Track C, restructured to match the reality that Track A and Track B delivered. Five things changed:
 
-1. **Phase 0 added** — Track A pipeline gaps surfaced by Track B's pre-flight (Gaps A–G)
-   are now an explicit pre-wiring phase. Phase 0's Cloudinary fix is the gate that
-   unlocks parallelism: once it ships, Emaline can begin loading real products via the
-   Custom GPT pipeline at the same time Sean iterates on design with placeholder data.
-2. **Endpoint count corrected to 11** (from 14). `vercel.json` rewrites preserve all
-   public URLs Track C consumes.
-3. **All localhost-based verification removed.** Hard rule per
-   `feedback_no_localhost_testing.md`: verify on Vercel preview URLs only. Stripe
-   webhook testing uses the Stripe Dashboard "Send test webhook" against the dev-branch
-   alias, not `stripe listen`.
-4. **Consent + email-CTA contracts pinned** to the actual events Track B's pages
-   dispatch (`email-cta-submit`, `consent-change`) — single global listener pattern
-   replaces per-form wiring.
-5. **Design Review Checkpoints A/B/C/D inserted** between phases. Sean iterates on
-   placeholder design in parallel with Emaline loading real products via the Custom GPT
-   pipeline; Emaline's design review starts later and works on a partly-real catalog
-   instead of pure placeholders. See `v1_4_4_PREP_DESIGN_REVIEWS.md` for the full
-   review protocol.
+1. **Phase 0 added** — Track A pipeline gaps surfaced by Track B's pre-flight (Gaps A–G) are now an explicit pre-wiring phase. Phase 0's Cloudinary fix is the gate that unlocks parallelism: once it ships, Emaline can begin loading real products via the Custom GPT pipeline at the same time Sean iterates on design with placeholder data.
+2. **Endpoint count corrected to 11** (from 14). `vercel.json` rewrites preserve all public URLs Track C consumes.
+3. **All localhost-based verification removed.** Hard rule per `feedback_no_localhost_testing.md`: verify on Vercel preview URLs only. Stripe webhook testing uses the Stripe Dashboard "Send test webhook" against the dev-branch alias, not `stripe listen`.
+4. **Consent + email-CTA contracts pinned** to the actual events Track B's pages dispatch (`email-cta-submit`, `consent-change`) — single global listener pattern replaces per-form wiring.
+5. **Design Review Checkpoints A/B/C/D inserted** between phases. Sean iterates on placeholder design in parallel with Emaline loading real products via the Custom GPT pipeline; Emaline's design review starts later and works on a partly-real catalog instead of pure placeholders. See `v1_4_4_PREP_DESIGN_REVIEWS.md` for the full review protocol.
 
 ## Decisions locked at v1.4.4 alignment session
 
@@ -45,11 +31,7 @@ delivered. Five things changed:
 
 ## Track Goal
 
-Wire Track B's 13 placeholder pages (63 PLACEHOLDER markers across 16 files) to Track A's
-11 deployed endpoints, ship the cart + checkout flow end-to-end including 409 cart-recovery
-and 410 hold-expiry edge cases, finalize SEO, and launch — with iterative design review
-baked into checkpoints A/B/C/D so Sean's iteration loop runs alongside Emaline's
-real-product loading via the Custom GPT pipeline.
+Wire Track B's 13 placeholder pages (63 PLACEHOLDER markers across 16 files) to Track A's 11 deployed endpoints, ship the cart + checkout flow end-to-end including 409 cart-recovery and 410 hold-expiry edge cases, finalize SEO, and launch — with iterative design review baked into checkpoints A/B/C/D so Sean's iteration loop runs alongside Emaline's real-product loading via the Custom GPT pipeline.
 
 ---
 
@@ -154,8 +136,7 @@ and consolidate via `?_action=` query routing into an existing file**, plus a re
 
 # Phase 0: Pre-Wiring Bug Fixes
 
-Resolves the seven gaps Track B's pre-flight surfaced before any wiring begins. Each
-gap is classified:
+Resolves the seven gaps Track B's pre-flight surfaced before any wiring begins. Each gap is classified:
 
 - **BEFORE** — must merge before C1 starts (blocks the first wiring step or unlocks parallelism)
 - **DURING** — lands inline within a specific C-section that touches the same code
