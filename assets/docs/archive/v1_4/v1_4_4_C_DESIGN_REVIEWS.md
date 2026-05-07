@@ -15,72 +15,57 @@
 
 ## §1 — Why this document exists
 
-Track A (backend) and Track B (frontend placeholders) are complete. Track C wires them.
-Design feedback is inevitable mid-wire — both for Sean reviewing the design layer and
-for Emaline reviewing the brand voice and product presentation. This protocol keeps
-that feedback productive and unblocks launch.
+Track A (backend) and Track B (frontend placeholders) are complete. Track C wires them. Design feedback is inevitable mid-wire — both for Sean reviewing the design layer and for Emaline reviewing the brand voice and product presentation. This protocol keeps that feedback productive and unblocks launch.
 
-**Critical timing point** (drives this whole document): Phase 0's Cloudinary fix unlocks
-Emaline's real-product loading via the Custom GPT pipeline. From that moment, two loops
-run in parallel:
+**Critical timing point** (drives this whole document): Phase 0's Cloudinary fix unlocks Emaline's real-product loading via the Custom GPT pipeline. From that moment, two loops run in parallel:
 
-1. **Sean's design-review loop** — multiple rounds across Checkpoints A/B/C/D, iterating
-   on the placeholder-and-becoming-real frontend.
-2. **Emaline's product-loading loop** — real products replace placeholders one-by-one as
-   she creates them via the Custom GPT.
+  1. **Sean's design-review loop** — multiple rounds across Checkpoints A/B/C/D, iterating on the placeholder-and-becoming-real frontend.
+  2. **Emaline's product-loading loop** — real products replace placeholders one-by-one as she creates them via the Custom GPT.
 
-The intended outcome: by the time Emaline's design review starts (later in the process,
-after Sean has already iterated), the catalog is mostly real. The placeholder-only
-review surface is shrunk dramatically. This makes Emaline's review focused on her
-domain (brand voice, product presentation) rather than on disposable placeholder art.
+The intended outcome: by the time Emaline's design review starts (later in the process, after Sean has already iterated), the catalog is mostly real. The placeholder-only review surface is shrunk dramatically. This makes Emaline's review focused on her domain (brand voice, product presentation) rather than on disposable placeholder art.
 
 ---
 
 ## §2 — The Three Buckets
 
-The core decision framework. Every piece of design feedback gets classified into one of
-three buckets. Default to Bucket 3 if uncertain — protect launch.
+The core decision framework. Every piece of design feedback gets classified into one of three buckets. Default to Bucket 3 if uncertain — protect launch.
 
 ### Bucket 1 — v1.4.5 BEFORE wiring (parallel with Phase 0 / C1)
 
-Copy fixes, image swaps, color tweaks within existing tokens. **Does NOT touch DOM
-structure or `data-*` hooks.** Lands in parallel with Phase 0 and C1. Cheap to apply.
+Copy fixes, image swaps, color tweaks within existing tokens. **Does NOT touch DOM structure or `data-*` hooks.** Lands in parallel with Phase 0 and C1. Cheap to apply.
 
 Examples:
-- Cookie banner copy (longer/warmer vs. shorter — currently the shorter draft is shipped)
-- Button label phrasing
-- Tagline iteration in the homepage hero
-- Pre-launch placeholder testimonial copy
-- "Meet Emy" placeholder bio text
+  - Cookie banner copy (longer/warmer vs. shorter — currently the shorter draft is shipped)
+  - Button label phrasing
+  - Tagline iteration in the homepage hero
+  - Pre-launch placeholder testimonial copy
+  - "Meet Emy" placeholder bio text
 
 ### Bucket 2 — v1.4.5 DURING/AFTER wiring (queued, batch-applied at next checkpoint)
 
-Anything that touches `data-*` attributes, event names, or page templates Track C is
-actively wiring. Queued, never hot-patched. Applied at the next Design Review Checkpoint
-boundary (A → B → C → D), so the wiring agent isn't fighting moving DOM.
+Anything that touches `data-*` attributes, event names, or page templates Track C is actively wiring. Queued, never hot-patched. Applied at the next Design Review Checkpoint boundary (A → B → C → D), so the wiring agent isn't fighting moving DOM.
 
 Examples:
-- Adding a new CTA on the product page (changes DOM structure)
-- Reordering checkout stages (changes the wiring contract)
-- Swapping the recovery overlay copy after the contract is wired (Bucket 1 if before C3, Bucket 2 if during/after)
+  - Adding a new CTA on the product page (changes DOM structure)
+  - Reordering checkout stages (changes the wiring contract)
+  - Swapping the recovery overlay copy after the contract is wired (Bucket 1 if before C3, Bucket 2 if during/after)
 
 ### Bucket 3 — v2 facelift (logged, NOT addressed in v1.4.5)
 
-Homepage redesign, anything tagged in `project_v2_homepage_facelift.md` memory. Logged
-in the v2 backlog but does not block launch.
+Homepage redesign, anything tagged in `project_v2_homepage_facelift.md` memory. Logged in the v2 backlog but does not block launch.
 
 Examples:
-- Homepage hero replaced with Claude Design animated work
-- Animation polish using the `heygen-com/hyperframes` Claude Code skill
-- A "real" carousel library replacing CSS scroll-snap
-- Image-optimization sweep (after real product photography lands)
+  - Homepage hero replaced with Claude Design animated work
+  - Animation polish using the `heygen-com/hyperframes` Claude Code skill
+  - A "real" carousel library replacing CSS scroll-snap
+  - Image-optimization sweep (after real product photography lands)
 
 ### Decision tree (one-line for fast classification)
 
-> *Does this feedback require touching `data-*`, event names, or page templates?*
-> - No → Bucket 1
-> - Yes, but it's ready-now small → Bucket 2
-> - Yes AND it's a structural rethink → Bucket 3
+  > *Does this feedback require touching `data-*`, event names, or page templates?*
+  > - No → Bucket 1
+  > - Yes, but it's ready-now small → Bucket 2
+  > - Yes AND it's a structural rethink → Bucket 3
 
 ---
 
@@ -88,32 +73,24 @@ Examples:
 
 ### §3.1 Per-page review pass (after each Track C checkpoint)
 
-After C1 ships → Checkpoint A. After C2 → Checkpoint B. After C3 → Checkpoint C. After
-C4 → Checkpoint D. Each checkpoint is a triggered review window, not a calendar window.
+After C1 ships → Checkpoint A. After C2 → Checkpoint B. After C3 → Checkpoint C. After C4 → Checkpoint D. Each checkpoint is a triggered review window, not a calendar window.
 
 For each page:
-- Open the preview URL Vercel auto-deploys from `dev`
-- Visit the page; spend ~15 minutes max — first-impression honesty matters more than thoroughness here
-- Capture observations as they arrive; classify on the fly per §2
+  - Open the preview URL Vercel auto-deploys from `dev`
+  - Visit the page; spend ~15 minutes max — first-impression honesty matters more than thoroughness here
+  - Capture observations as they arrive; classify on the fly per §2
 
-Per-page focus areas live in §6 — that table tells you what's worth scrutinizing at this
-checkpoint vs. what to ignore as not-yet-wired or not-yet-real.
+Per-page focus areas live in §6 — that table tells you what's worth scrutinizing at this checkpoint vs. what to ignore as not-yet-wired or not-yet-real.
 
 ### §3.2 Decision matrix — classifying feedback
 
-Use the §2 decision tree. Default to Bucket 3 if uncertain (protects launch). The
-Settled-vs-Iterating ledger in §8 keeps the trail.
+Use the §2 decision tree. Default to Bucket 3 if uncertain (protects launch). The Settled-vs-Iterating ledger in §8 keeps the trail.
 
-The bias to protect: **don't open a Bucket 2 item unless the alternative is shipping
-something you'll regret in the first month**. Bucket 1 items batch nicely; Bucket 3
-items get done properly later. Bucket 2 items are the most expensive — they interrupt
-wiring.
+The bias to protect: **don't open a Bucket 2 item unless the alternative is shipping something you'll regret in the first month**. Bucket 1 items batch nicely; Bucket 3 items get done properly later. Bucket 2 items are the most expensive — they interrupt wiring.
 
 ### §3.3 The two-loop expectation
 
-You will run *several* of your own review rounds before Emaline's review even begins.
-This is intentional. Your loop runs in parallel with Emaline's real-product loading via
-the Custom GPT (which kicks off the moment Phase 0 ships). The timeline:
+You will run *several* of your own review rounds before Emaline's review even begins. This is intentional. Your loop runs in parallel with Emaline's real-product loading via the Custom GPT (which kicks off the moment Phase 0 ships). The timeline:
 
 | Phase             | Sean's loop                        | Emaline's loop                                          |
 | ----------------- | ---------------------------------- | ------------------------------------------------------- |
@@ -124,15 +101,12 @@ the Custom GPT (which kicks off the moment Phase 0 ships). The timeline:
 | C4 → Checkpoint D | Final pass                         | Final products loaded; ready to bring her in for review |
 | C5 launch         | (cutover)                          | (post-launch)                                           |
 
-Emaline's review of `about.html` (Meet Emy copy + photo) and the cart/checkout overlay
-copy ("These havens have found their homes") happens at Checkpoint C earliest, more
-likely D — after she has the real-product pipeline working and her own voice has been
+Emaline's review of `about.html` (Meet Emy copy + photo) and the cart/checkout overlay copy ("These havens have found their homes") happens at Checkpoint C earliest, more likely D — after she has the real-product pipeline working and her own voice has been
 expressed through the products themselves.
 
 ### §3.4 Translating Emaline's feedback into agent-actionable language
 
-When Emaline says something feels "off," your job is to bridge into something
-Future-Claude can act on. The bridge is usually one of:
+When Emaline says something feels "off," your job is to bridge into something Future-Claude can act on. The bridge is usually one of:
 
 | Emaline says…            | Agent-actionable form                                                                          |
 | ------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -141,75 +115,60 @@ Future-Claude can act on. The bridge is usually one of:
 | "Voice is off here"      | Quote exact paragraph; reference `assets/docs/BRAND.md` voice rules; suggest/ask for rewrite   |
 | "Put on left, not right" | Bucket 2 — describe layout change in `data-*` terms or page-section terms                      |
 
-Don't ship Emaline's verbatim phrasing to the agent unless it's already concrete. The
-translation is your value-add.
+Don't ship Emaline's verbatim phrasing to the agent unless it's already concrete. The translation is your value-add.
 
 ### §3.5 Settled-vs-Iterating ledger
 
-§8 below is the live two-column ledger. Update it as decisions land. It carries forward
-into v2 planning — anything that became settled in v1.4.5 should NOT be reopened in v2
-without an explicit rationale.
+§8 below is the live two-column ledger. Update it as decisions land. It carries forward into v2 planning — anything that became settled in v1.4.5 should NOT be reopened in v2 without an explicit rationale.
 
 ---
 
 ## §4 — For Emaline — How to Review
 
-> Sean will share this section with you when the design is ready for your eyes —
-> typically at Track C Checkpoint C or D, after he has run several rounds of his own
-> review and after you have loaded real products via the Custom GPT.
+  > Sean will share this section with you when the design is ready for your eyes —
+  > typically at Track C Checkpoint C or D, after he has run several rounds of his own
+  > review and after you have loaded real products via the Custom GPT.
 
 ### §4.1 How to open the preview link
 
-Sean will share a link that looks like
-`https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/<page>`. Click it.
-That's the working version of the site, not the live one — it's safe to click around
-and even walk through the cart and checkout (don't actually pay; Sean will tell you
-which test card to use if you want to try the full flow).
+Sean will share a link that looks like `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/<page>`. Click it. That's the working version of the site, not the live one — it's safe to click around and even walk through the cart and checkout (don't actually pay; Sean will tell you which test card to use if you want to try the full flow).
 
-The site has placeholder content in some places. You'll know it's a placeholder if it
-says `placeholder-` somewhere in a URL or a product slug, or if a testimonial reads
-like generic poetry rather than a real quote. Ignore those — they're scaffolding.
+The site has placeholder content in some places. You'll know it's a placeholder if it says `placeholder-` somewhere in a URL or a product slug, or if a testimonial reads like generic poetry rather than a real quote. Ignore those — they're scaffolding.
 
 ### §4.2 Per-page checklist (plain-language)
 
 For each page Sean asks you to look at, scan for these six things — in order:
 
-1. **Does it sound like me?** Voice, tone, word choice. If anything reads "off-brand," flag it.
-2. **Are the photos representing the work well?** Cropping, color, mood.
-3. **Is what I'd want a customer to see, prominent?** Hero space, calls-to-action.
-4. **Does anything feel slow or hard to find?** Confusing nav, buried links, broken expectations.
-5. **Does the brand feel like Everlastings throughout?** Or does any page feel like it's from a different site?
-6. **Anything that makes you wince?** First-impression honesty matters most.
+  1. **Does it sound like me?** Voice, tone, word choice. If anything reads "off-brand," flag it.
+  2. **Are the photos representing the work well?** Cropping, color, mood.
+  3. **Is what I'd want a customer to see, prominent?** Hero space, calls-to-action.
+  4. **Does anything feel slow or hard to find?** Confusing nav, buried links, broken expectations.
+  5. **Does the brand feel like Everlastings throughout?** Or does any page feel like it's from a different site?
+  6. **Anything that makes you wince?** First-impression honesty matters most.
 
-That's it. Don't worry about anything that's not on this list — Sean is watching the
-technical pieces.
+That's it. Don't worry about anything that's not on this list — Sean is watching the technical pieces.
 
 ### §4.3 How to give feedback — shared Google Doc
 
-Sean will create a shared Google Doc with one section per page. Add your notes under
-the relevant page using this format:
+Sean will create a shared Google Doc with one section per page. Add your notes under the relevant page using this format:
 
-> **Page**: {name}
-> **What I see**: {describe what's there now}
-> **What I'd like**: {describe the change}
+  > **Page**: {name}
+  > **What I see**: {describe what's there now}
+  > **What I'd like**: {describe the change}
 
-That's the magic format. It separates "here's the thing" from "here's the change I
-want," which makes it easy for Sean to translate into something the build agent can
-act on.
+That's the magic format. It separates "here's the thing" from "here's the change I want," which makes it easy for Sean to translate into something the build agent can act on.
 
-You don't need to suggest the implementation. "I'd like the photos warmer" is enough —
-Sean will figure out whether that's a color-token change, a Cloudinary preset change,
-or a re-shoot.
+You don't need to suggest the implementation. "I'd like the photos warmer" is enough — Sean will figure out whether that's a color-token change, a Cloudinary preset change, or a re-shoot.
 
 ### §4.4 What to ignore
 
 If you see any of these, ignore them — they're not your domain at this stage:
 
-- URLs with "test" or "preview" in them
-- Anything labeled `placeholder-` (placeholder products)
-- Anything in the `/admin/` URL — that's Sean's only
-- "Weird URLs" in general (Vercel preview URLs are long and ugly; that's normal)
-- Below-the-fold content on pages Sean has marked as "still wiring"
+  - URLs with "test" or "preview" in them
+  - Anything labeled `placeholder-` (placeholder products)
+  - Anything in the `/admin/` URL — that's Sean's only
+  - "Weird URLs" in general (Vercel preview URLs are long and ugly; that's normal)
+  - Below-the-fold content on pages Sean has marked as "still wiring"
 
 When in doubt, ask Sean before noting something — he'll tell you if it's in your
 review surface or his.
@@ -218,73 +177,57 @@ review surface or his.
 
 ## §5 — For Future-Claude — Decision Boundaries
 
-> Read this section before any Track C execution session. The point is to keep the
-> agent from redesigning what's settled and from acting on feedback in ways that would
-> break the architecture.
+  > Read this section before any Track C execution session. The point is to keep the
+  > agent from redesigning what's settled and from acting on feedback in ways that would
+  > break the architecture.
 
 ### §5.1 Settled — do NOT reopen
 
 These are architectural decisions. Treat them as fixed:
 
-1. **Cookie consent strategy** — deferred-state default-deny, localStorage shape
-   `{ analytics, advertising, timestamp, version }`, symmetric Accept/Decline (CIPA
-   defense), `consent-change` CustomEvent contract. See `v1_4_3_B_RESEARCH_COOKIE_CONSENT.md`.
-2. **`email-cta-submit` event contract** — single `CustomEvent` dispatched by every form,
-   single global listener in `main.js`, source enum frozen (see Appendix B of
-   `v1_4_4_C_IMPLEMENT.md`).
-3. **`data-*` attribute names** — every attribute Track B shipped is part of the wiring
-   contract. Renaming any of them is Bucket 2 work and requires Sean's explicit approval.
-4. **Source-of-truth hierarchy** — Supabase > Stripe > R2 > frontend. Frontend is a
-   read-only consumer. See `EVERLASTINGS_STORE.md`.
-5. **Image roles 1+1+5** — `/api/upload` validates 1 hero + 1 cover + 5 detail. Any
-   change to this needs `/api/products` and `/api/upload` to move together.
-6. **11-endpoint consolidation pattern** — Vercel Hobby cap is 12; we sit at 11.
-   New endpoints consolidate into existing files via `?_action=` + `vercel.json` rewrites.
-7. **Stripe coupon strategy** — `Duration: Forever` + blank `max_redemptions` on the
-   parent coupon, single-use limit on per-event generated promotion codes. Reversing this
-   destroys the cart-recovery and contemplation-offer flows.
-8. **Cloudinary signed flow** (per Decision D1) — matches `/Users/seanivore/Development/360-design/assets/docs/ENTRY_SOP.md` pattern. Do not introduce upload presets.
+  1. **Cookie consent strategy** — deferred-state default-deny, localStorage shape `{ analytics, advertising, timestamp, version }`, symmetric Accept/Decline (CIPA defense), `consent-change` CustomEvent contract. See `v1_4_3_B_RESEARCH_COOKIE_CONSENT.md`.
+  2. **`email-cta-submit` event contract** — single `CustomEvent` dispatched by every form, single global listener in `main.js`, source enum frozen (see Appendix B of `v1_4_4_C_IMPLEMENT.md`).
+  3. **`data-*` attribute names** — every attribute Track B shipped is part of the wiring contract. Renaming any of them is Bucket 2 work and requires Sean's explicit approval.
+  4. **Source-of-truth hierarchy** — Supabase > Stripe > R2 > frontend. Frontend is a read-only consumer. See `EVERLASTINGS_STORE.md`.
+  5. **Image roles 1+1+5** — `/api/upload` validates 1 hero + 1 cover + 5 detail. Any change to this needs `/api/products` and `/api/upload` to move together.
+  6. **11-endpoint consolidation pattern** — Vercel Hobby cap is 12; we sit at 11. New endpoints consolidate into existing files via `?_action=` + `vercel.json` rewrites.
+  7. **Stripe coupon strategy** — `Duration: Forever` + blank `max_redemptions` on the parent coupon, single-use limit on per-event generated promotion codes. Reversing this destroys the cart-recovery and contemplation-offer flows.
+  8. **Cloudinary signed flow** (per Decision D1) — matches `/Users/seanivore/Development/360-design/assets/docs/ENTRY_SOP.md` pattern. Do not introduce upload presets.
 
 ### §5.2 Iterating — act on feedback when received
 
-These are intentionally fluid. When feedback arrives, classify per §2 and apply at the
-next checkpoint:
+These are intentionally fluid. When feedback arrives, classify per §2 and apply at the next checkpoint:
 
-- Cookie banner copy
-- Testimonial copy and arrangement
-- "Meet Emy" content (about.html)
-- Product photography (replaced as Emaline loads real products)
-- Micro-copy on CTAs and form labels
-- Color and typography polish within existing tokens
-- Per-page meta titles + descriptions
-- Newsletter form prompts and post-submit confirmations
+  - Cookie banner copy
+  - Testimonial copy and arrangement
+  - "Meet Emy" content (about.html)
+  - Product photography (replaced as Emaline loads real products)
+  - Micro-copy on CTAs and form labels
+  - Color and typography polish within existing tokens
+  - Per-page meta titles + descriptions
+  - Newsletter form prompts and post-submit confirmations
 
 ### §5.3 Escalate — do NOT decide alone
 
 If feedback would require any of these, stop and surface to Sean before acting:
 
-- Adding a new endpoint (force a re-evaluation against the Hobby cap and
-  consolidation rule)
-- Changing an event name a page already dispatches (would break the wiring contract)
-- Changing the placeholder convention or `data-*` naming
-- Changing the consent default state, the localStorage shape, or the gtag/fbq call shape
-- Adding a runtime dependency
-- Changing the Cloudinary or R2 path conventions
-- Anything that would require backwards-incompatible Track A changes
+  - Adding a new endpoint (force a re-evaluation against the Hobby cap and consolidation rule)
+  - Changing an event name a page already dispatches (would break the wiring contract)
+  - Changing the placeholder convention or `data-*` naming
+  - Changing the consent default state, the localStorage shape, or the gtag/fbq call shape
+  - Adding a runtime dependency
+  - Changing the Cloudinary or R2 path conventions
+  - Anything that would require backwards-incompatible Track A changes
 
 ### §5.4 Operating rule
 
-When feedback arrives mid-Track-C: log it in §8's ledger, **keep wiring**, batch-apply
-at the next Design Review Checkpoint. Never hot-patch architecture in response to
-in-flight feedback. The protocol exists to keep iteration cheap; hot-patching makes it
-expensive.
+When feedback arrives mid-Track-C: log it in §8's ledger, **keep wiring**, batch-apply at the next Design Review Checkpoint. Never hot-patch architecture in response to in-flight feedback. The protocol exists to keep iteration cheap; hot-patching makes it expensive.
 
 ---
 
 ## §6 — Per-Page Review Map
 
-Per-page focus areas at each checkpoint. "Stakeholder" indicates whose feedback drives
-that page primarily — but either party can flag anything they notice.
+Per-page focus areas at each checkpoint. "Stakeholder" indicates whose feedback drives that page primarily — but either party can flag anything they notice.
 
 | #   | Page                   | Stakeholder     | Look at                                                                          |
 | --- | ---------------------- | --------------- | -------------------------------------------------------------------------------- |
@@ -340,13 +283,11 @@ Phase 0 ─→ C1 ─→ Checkpoint A ─→ C2 ─→ Checkpoint B ─→ C3 �
 ```
 
 After each checkpoint:
-- Bucket 1 items: agent applies in parallel with the next Track C section
-- Bucket 2 items: agent applies at the boundary between sections (small batch commit)
-- Bucket 3 items: logged in §8, deferred to v2
+  - Bucket 1 items: agent applies in parallel with the next Track C section
+  - Bucket 2 items: agent applies at the boundary between sections (small batch commit)
+  - Bucket 3 items: logged in §8, deferred to v2
 
-Real-product loading via the Custom GPT runs on its own track, kicked off after Phase 0
-ships. Real products land in `/shop.html` and `/product.html` continuously through C1–C4
-without involving the wiring agent.
+Real-product loading via the Custom GPT runs on its own track, kicked off after Phase 0 ships. Real products land in `/shop.html` and `/product.html` continuously through C1–C4 without involving the wiring agent.
 
 ---
 
@@ -387,8 +328,7 @@ Update this table as decisions land. Carries forward into v2 planning.
 
 ## §9 — Open Threads Snapshot
 
-Carried from Track A and Track B closeouts. Each line says which Track C checkpoint
-resolves it.
+Carried from Track A and Track B closeouts. Each line says which Track C checkpoint resolves it.
 
 | Thread                                                              | Owner                               | Resolves at                        |
 | ------------------------------------------------------------------- | ----------------------------------- | ---------------------------------- |
