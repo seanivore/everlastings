@@ -241,7 +241,7 @@ This keeps the chain of evidence walkable. A reader of `BUSINESS_PLAN.md` should
 
 Phase 1 buckets are typically independent enough that they can be researched in parallel. Spawn one subagent per bucket with a tight prompt:
 
-> Research <bucket-name> for project <X>. Specific questions: [list]. Return: a markdown summary with sources cited, open questions flagged, and a short recommendation. Save findings to `docs/research/1_DEEP/<bucket-name>/<topic>.md`.
+> Research <bucket-name> for project <X>. Specific questions: {list}. Return: a markdown summary with sources cited, open questions flagged, and a short recommendation. Save findings to `docs/research/1_DEEP/<bucket-name>/<topic>.md`.
 
 Use Explore-style or general-purpose subagents — the work is bounded enough that they don't need full project context.
 
