@@ -15,7 +15,12 @@
 
 ## §1 — Why this document exists
 
-Track A (backend) and Track B (frontend placeholders) are complete. Track C wires them. Design feedback is inevitable mid-wire — both for Sean reviewing the design layer and for Emaline reviewing the brand voice and product presentation. This protocol keeps that feedback productive and unblocks launch.
+  - Track A (backend) and Track B (frontend placeholders) are complete. 
+  - Track C wires (connects) them together. 
+  - This protocol keeps that feedback productive and unblocks launch.
+    - Design feedback is inevitable mid-wire that will always take some back-and-forth.
+    - First for Sean reviewing the design layer 
+    - Then for Emaline reviewing the brand voice and product presentation
 
 **Critical timing point** (drives this whole document): Phase 0's Cloudinary fix unlocks Emaline's real-product loading via the Custom GPT pipeline. From that moment, two loops run in parallel:
 
@@ -28,7 +33,7 @@ The intended outcome: by the time Emaline's design review starts (later in the p
 
 ## §2 — The Three Buckets
 
-The core decision framework. Every piece of design feedback gets classified into one of three buckets. Default to Bucket 3 if uncertain — protect launch.
+The core decision framework. Every piece of design feedback gets classified into one of three buckets. Default to Bucket 3 if uncertain, as it protects launch timing. 
 
 ### Bucket 1 — v1.4.5 BEFORE wiring (parallel with Phase 0 / C1)
 
@@ -67,6 +72,14 @@ Examples:
   > - Yes, but it's ready-now small → Bucket 2
   > - Yes AND it's a structural rethink → Bucket 3
 
+### Worked example — when "just copy" crosses into structure
+
+  > "Move the testimonial section above the hero" *reads* like a copy/layout call but isn't Bucket 1. Reordering page sections moves DOM nodes, which is part of the wiring contract → Bucket 2. Queue it for the next checkpoint boundary.
+  >
+  > "Change the testimonial heading from *What people say* to *Why these miniatures matter*" *is* Bucket 1. The heading text changes, the `<h2>` element doesn't move. Apply with the next checkpoint.
+  >
+  > Same instinct ("just rephrase / reposition the testimonials"), two different buckets. The line is "did the DOM nodes move," not "is the change small."
+
 ---
 
 ## §3 — For Sean — Review Protocol
@@ -103,6 +116,8 @@ You will run *several* of your own review rounds before Emaline's review even be
 
 Emaline's review of `about.html` (Meet Emy copy + photo) and the cart/checkout overlay copy ("These havens have found their homes") happens at Checkpoint C earliest, more likely D — after she has the real-product pipeline working and her own voice has been
 expressed through the products themselves.
+
+**Real-product floor.** By Checkpoint B, at least three non-placeholder products must be live on `/shop.html`. If they are not, your review pauses and Emaline's product-loading loop is prioritized — not because the parallel-loop assumption is broken in principle, but because reviews against placeholder data tend to "settle" decisions that get reopened the moment real products land. Replan rather than push through.
 
 ### §3.4 Translating Emaline's feedback into agent-actionable language
 
@@ -162,7 +177,9 @@ You don't need to suggest the implementation. "I'd like the photos warmer" is en
 
 ### §4.4 What to ignore
 
-If you see any of these, ignore them — they're not your domain at this stage:
+**Placeholders first.** Some content on the site right now is scaffolding for products that haven't been loaded yet. You'll know it's a placeholder if the URL or product name contains the word `placeholder-`, if the photo is a generic stock image rather than one of yours, or if a testimonial reads like generic poetry rather than a quote with a real name attached. Skip those — Sean replaces them as the catalog loads. Flagging "this looks generic" on a placeholder doesn't help; it'll be gone in the next pass.
+
+**Beyond placeholders**, also ignore — these aren't your domain at this stage:
 
   - URLs with "test" or "preview" in them
   - Anything labeled `placeholder-` (placeholder products)
@@ -186,13 +203,21 @@ review surface or his.
 These are architectural decisions. Treat them as fixed:
 
   1. **Cookie consent strategy** — deferred-state default-deny, localStorage shape `{ analytics, advertising, timestamp, version }`, symmetric Accept/Decline (CIPA defense), `consent-change` CustomEvent contract. See `v1_4_3_B_RESEARCH_COOKIE_CONSENT.md`.
+     *Breach trigger: legal floor changes (Google Ads roadmap, CIPA amendments, or a new state regulation that makes default-deny non-compliant).*
   2. **`email-cta-submit` event contract** — single `CustomEvent` dispatched by every form, single global listener in `main.js`, source enum frozen (see Appendix B of `v1_4_4_C_IMPLEMENT.md`).
+     *Breach trigger: a new email surface (e.g. recovery overlay, contemplation gate) genuinely cannot dispatch the existing event shape; document why before changing.*
   3. **`data-*` attribute names** — every attribute Track B shipped is part of the wiring contract. Renaming any of them is Bucket 2 work and requires Sean's explicit approval.
+     *Breach trigger: a renamed attribute is the only way to disambiguate two new behaviors on the same page; raise with Sean before any rename lands.*
   4. **Source-of-truth hierarchy** — Supabase > Stripe > R2 > frontend. Frontend is a read-only consumer. See `EVERLASTINGS_STORE.md`.
+     *Breach trigger: a real-world data conflict between Supabase and Stripe that the current hierarchy cannot resolve cleanly; surface, do not guess.*
   5. **Image roles 1+1+5** — `/api/upload` validates 1 hero + 1 cover + 5 detail. Any change to this needs `/api/products` and `/api/upload` to move together.
+     *Breach trigger: a single product genuinely needs a sixth detail image and the catalog UX cannot accommodate fewer-than-five for one product; raise rather than degrade the role validation.*
   6. **11-endpoint consolidation pattern** — Vercel Hobby cap is 12; we sit at 11. New endpoints consolidate into existing files via `?_action=` + `vercel.json` rewrites.
+     *Breach trigger: a feature genuinely cannot be expressed via `?_action=` consolidation without breaking the existing handler; document the why before adding endpoint #12.*
   7. **Stripe coupon strategy** — `Duration: Forever` + blank `max_redemptions` on the parent coupon, single-use limit on per-event generated promotion codes. Reversing this destroys the cart-recovery and contemplation-offer flows.
+     *Breach trigger: Stripe deprecates `Duration: Forever`, or a new flow requires limited-redemption parent coupons.*
   8. **Cloudinary signed flow** (per Decision D1) — matches `/Users/seanivore/Development/360-design/assets/docs/ENTRY_SOP.md` pattern. Do not introduce upload presets.
+     *Breach trigger: Cloudinary changes their auth model, or the 360-design ENTRY_SOP pattern is itself revised upstream.*
 
 ### §5.2 Iterating — act on feedback when received
 
@@ -222,6 +247,8 @@ If feedback would require any of these, stop and surface to Sean before acting:
 ### §5.4 Operating rule
 
 When feedback arrives mid-Track-C: log it in §8's ledger, **keep wiring**, batch-apply at the next Design Review Checkpoint. Never hot-patch architecture in response to in-flight feedback. The protocol exists to keep iteration cheap; hot-patching makes it expensive.
+
+**Escalation response.** When Future-Claude escalates a question per §5.3, surface it with full context (file path, section, what work is blocked) and continue work on parts of Track C that don't depend on the answer. Do not improvise the architecture under launch pressure to keep moving. If the escalated question genuinely blocks all forward progress, mark the wiring stream paused in the commit/PR description and stop.
 
 ---
 
@@ -286,6 +313,7 @@ After each checkpoint:
   - Bucket 1 items: agent applies in parallel with the next Track C section
   - Bucket 2 items: agent applies at the boundary between sections (small batch commit)
   - Bucket 3 items: logged in §8, deferred to v2
+  - §8 ledger: updated for any decisions that landed at this checkpoint, or a one-line "no ledger changes this checkpoint" note in the commit message. Explicit zero is healthier than silent decay.
 
 Real-product loading via the Custom GPT runs on its own track, kicked off after Phase 0 ships. Real products land in `/shop.html` and `/product.html` continuously through C1–C4 without involving the wiring agent.
 
