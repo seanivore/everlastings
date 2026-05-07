@@ -3,7 +3,7 @@
 **Version**: v3.3.0
 **Last Updated**: 2026-05-06
 **Purpose**: Inform agents on our standardized project structure, documentation and development workflows.
-**Syncing**: Sync any updates to all `.agent/DEV_RULES.md` files using `frdoc` (see § *Syncing This Document*).
+**Syncing**: Sync any updates to all `.agent/DEV_RULES.md` files using `filemgmt` (see § *Syncing This Document*).
 
 ---
 
@@ -66,6 +66,12 @@ Agents can "go down the wrong path" when producing output. This means that whole
 Eliminating bugs by hunting-and-patching things together can result in a functioning application, but it creates a codebase that wasn't explicitly planned and now will be difficult to document. Agents work best from specifics where accuracy regarding the smallest details matters. 
 
 Most significantly, agents have to work inside a context window, which doesn't bode well for trying to sort through patches and code adjustments. 
+
+### The Agentic Orchestration Paradox
+
+The larger and more complex a task becomes, the more an AI naturally tries to shrink its scope to stay within its comfort zone (managing context windows, rate limits, and the fear of losing the thread). **This is a critical paradox:** the only way to actually execute massive, complex projects is to force the AI to act as a high-level *orchestrator* that aggressively delegates to *subagents*.
+
+If you do not explicitly enforce this hierarchy, an agent will attempt to complete an entire massive plan in one breath—inevitably dropping context, writing buggy code, or getting rate-limited. Therefore, complex plans must be decoupled into independent tracks, and execution must rely on Orchestrator Agents assigning deterministic, tightly scoped tasks to fresh subagents.
 
 **Modern tools require modern workflows.**
 
@@ -406,13 +412,15 @@ Never feed an executing agent both a known-wrong fact and the right one at the s
 
 The mechanical rule: **fix or remove, then execute.** Do not ask an LLM to debug your own context.
 
-#### 7. Parallel-Workflow Groundwork
+#### 7. Parallel-Workflow Groundwork (The Orchestrator's Blueprint)
 
-IMPLEMENT.md gives the executing orchestrator an explicit starting point for parallel work. Don't make them design the parallel structure cold.
+IMPLEMENT.md gives the executing orchestrator an explicit starting point for parallel work. Don't make them design the parallel structure cold. This is the operational layer of combating the Agentic Orchestration Paradox.
 
-  - Per phase, propose subagent groupings: which deliverables can run in parallel, which dependencies sequence them, what the orchestrator does NOT delegate (gate decisions, branch state, commit cadence, escalation calls).
+  - **Subagent Groupings:** Per phase, propose explicit subagent groupings. Define which deliverables can run in parallel, which dependencies sequence them, and what context specifically needs to be passed to each subagent. 
+  - **Boundaries of Delegation:** Explicitly state what the orchestrator does NOT delegate (e.g., gate decisions, branch state, commit cadence, escalation calls, verification reads). The orchestrator manages the pipeline; the subagents do the typing.
+  - **Placeholders as Decouplers:** Use strict placeholder conventions (`<!-- PLACEHOLDER: ... -->`) to sever dependencies between teams (e.g., allowing frontend UI subagents to build in parallel with backend API subagents).
   - Treat the groupings as a *starting point*, not a contract — the orchestrator may refine them during execution. The plan's job is to remove the cold-start design problem so the agent can spend its context on orchestration, not architecture.
-  - This is also a quiet form of best-practice modeling: every IMPLEMENT.md that names parallel groupings reinforces the parallel-orchestration habit across future projects.
+  - This is also a quiet form of best-practice modeling: every IMPLEMENT.md that mandates subagent delegation reinforces the orchestration habit across future projects.
 
 ### The Gap-Finding Loop
 
@@ -780,12 +788,10 @@ Fixes #38
 This file is intended to be the same across projects. To propagate updates from one canonical copy out to every other project:
 
 ```bash
-frdoc -n /path/to/canonical/.agent/DEV_RULES.md \
-      -s ~/Development \
-      -r .agent/DEV_RULES.md
+filemgmt -f ~/Development -r /path/to/canonical/.agent/DEV_RULES.md
 ```
 
-`frdoc` (find-replace-doc) lives at `~/Development/scripts/frdoc`. Run `frdoc -h` for full help. The same script can be used to sync any canonical doc across projects (for example, a master `BRAND.md`).
+`filemgmt` (Bulk Directory File Management) is globally available as a custom command. Run `filemgmt -h` for full help. The same script can be used to explicitly add files to all project `.agent` folders via the `-a` flag (e.g. `filemgmt -f ~/Development/*/.agent -a /path/to/canonical/.agent/RESEARCH_PROTOCOL.md`).
 
 **Note**: Project-specific learnings live in `.agent/PROJECT_LESSONS.md`, which is **not** synced — every project keeps its own incident history.
 
