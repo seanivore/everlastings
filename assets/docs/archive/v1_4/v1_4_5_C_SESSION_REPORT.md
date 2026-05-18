@@ -144,7 +144,69 @@ Authoritative source: **the shipped HTML in `cart.html`, `checkout.html`, `compl
 
 ---
 
-## C2 — Per-page wiring (in progress)
+## C2 — Per-page wiring
 
-(Each module's contract test result + selector audit lands here as it ships.)
+**Status**: green for module load + selector contract; awaits Sean's Checkpoint B (browser walkthrough on the dev alias).
+
+**Files written**:
+- `assets/js/shop.js` — selectors all align with Track B; URL state handles `series`, `product_type`, `available` (single-value when one box checked). Renders Track B's `.card.product-tile` markup with `badge-featured` / `badge-sold` from product flags.
+- `assets/js/homepage.js` — populates `[data-featured-carousel]` (NOT Appendix A's `[data-homepage-featured]`); applies `homepage_theme` CSS-custom-properties from first featured product that carries one; fires `view_item_list`; per-page success UI for `newsletter-homepage`.
+- `assets/js/product.js` — slug from `/product/<slug>` URL pattern (matches `vercel.json` rewrite). Populates `data-product-*` hooks Track B shipped plus the ones added in this commit (`data-product-hero`, `-gallery-thumbs`, `-story`). Uses Track B's lightbox markup convention on rendered gallery thumbs (`data-lightbox-trigger` + `data-lightbox-src`) so `lightbox.js` handles fullscreen automatically — no custom lightbox wiring. Updates `form[data-email-cta="product-interest"]`'s `data-product-slug` to the real slug so `ui.js` dispatches with correct productSlug. Wires `data-product-add-to-cart` and `data-product-buy-now` separately (Track B split the action; buy-now adds-to-cart + redirects `/cart.html`). Listens for `email-cta-success` on `contemplation-offer` to render the promo code inside `[data-contemplation]`. Fires `view_item`, `ViewContent`, `video_play`. Related havens: same series first, `product_type` fallback.
+- `assets/js/complete.js` — reads `?session_id=`, GET `/api/session-status`, populates `data-complete-customer-name`, `data-complete-customer-email` (NOT Appendix A's `data-complete-email`), `data-complete-line-items`, `data-complete-total`, `data-complete-order-id`, `data-complete-shipping` (cost). Fires `purchase` + Meta `Purchase` (deduped via `stripe_event_id`). Clears cart. Conditionally reveals `[data-complete-newsletter]` based on `already_subscribed` flag. Form success → inline replacement with welcome line. Skipped shipping-address rendering because Track B didn't ship a hook for it and Stripe sends it in the confirmation email.
+- `main.js` updates: global `email-cta-success` + `email-cta-already-subscribed` listeners for cross-page sources (`newsletter-footer`, `newsletter-shop-empty`). Already-subscribed treated as soft-success with a different copy line.
+
+**HTML changes**:
+- `index.html` — stripped `hero-image`, `featured-carousel`, `testimonial` PLACEHOLDERs; loaded `homepage.js`. Testimonial copy left in place pending Sean/Emaline real customer quote.
+- `shop.html` — stripped `shop-tile-list` PLACEHOLDER; loaded `shop.js`.
+- `product.html` — stripped 7 PLACEHOLDERs (`product-meta`, `product-hero`, `product-gallery-thumbs`, `product-media`, `product-story-card`, `product-sticky-card-content`, `product-features-list`, `related-havens-grid`). Added 3 hooks: `data-product-hero` on the gallery main image anchor, `data-product-gallery-thumbs` on the thumbs container, `data-product-story` on the story-card section.
+- `complete.html` — stripped `complete-line-items` PLACEHOLDER; line-items now reads "Loading your order…" as the brief loading state.
+
+**Contract test (against `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`)**:
+- All 8 JS files reachable (200, sane sizes) ✓
+- Each of the 6 wired pages loads its per-page JS + main.js + Supabase CDN in `<head>` ✓
+- Stripe.js loaded on `/checkout.html` ✓
+- Browser-side flow needs Sean's Checkpoint B walkthrough.
+
+---
+
+## C3 — Cart + checkout E2E
+
+**Status**: JS modules shipped + selectors contract-bound; awaits Stripe webhook registration + Sean's real-card-then-refund test (Checkpoint C).
+
+**Files written**:
+- `assets/js/recovery.js` — populates Track B's existing `[data-sold-recovery]` overlay (unavailable list, related grid). No HTML factory needed (Track B already built the markup). Wires the email form to POST `/api/cart-recovery`, reveals the promo code in `[data-sold-recovery-code-value]` on success, surfaces a per-form error on failure. Pre-fills email from sessionStorage.
+- `assets/js/cart.js` — renders line items inside `[data-cart-with-items]` (insertBefore to preserve Track B's subtotal/prefill/checkout sections below). Updates `[data-cart-subtotal]` + `[data-cart-estimate]` from `getCartTotal()`. Pre-fills `[data-cart-prefill] input[name=email/name]` from sessionStorage. Wires per-item Remove buttons. `[CHECKOUT]` click → POST `/api/checkout/reserve`. 200 → fire `begin_checkout` + `InitiateCheckout`, redirect `/checkout.html`. 409 → strip sold slugs from localStorage, re-render remaining items, hand off to `showSoldRecovery({ unavailable, related })`. Cross-tab sync via `storage` event.
+- `assets/js/checkout.js` — Stage A: validate email, POST `/api/checkout` → `{ clientSecret }`. 410 → reveal `[data-hold-expired]` + 2.2s delayed redirect to `/cart.html`. Stage B: Stripe Custom Checkout (`stripe.initCheckout`). Mounts AddressElement (shipping, `allowedCountries: ['US']`), conditional AddressElement (billing, hidden by default, revealed when "Same as shipping" unchecked), PaymentElement. `checkout.on('change')` updates `[data-checkout-total]` + `[data-checkout-shipping]` live and toggles `[data-checkout-confirm]` `disabled` based on `session.canConfirm`. `data-restricted-country` reveals when AddressElement reports non-US country. `data-address-incomplete` reveals when shipping form incomplete. Promo-code Apply button bound to `checkout.applyPromotionCode`. `actions.confirm()` either errors (surfaces in `[data-checkout-error-message]`) or hands control to Stripe which redirects to `/complete.html`.
+- `checkout.html` — added Stripe.js `<script src="https://js.stripe.com/v3/">` to `<head>` (Track B hadn't included it).
+
+**HTML changes**:
+- `cart.html` — stripped `cart-line-items`, `sold-recovery-list-item`, `sold-recovery-related-card` PLACEHOLDERs. Loaded `recovery.js` before `cart.js` (script order matters; verified line 86 < line 87 in served HTML).
+- `checkout.html` — stripped `stripe-address-element-shipping`, `-billing`, `stripe-payment-element`, `checkout-line-items` PLACEHOLDERs. Stripped the "Stripe will mount here" placeholder copy from the mount divs (they're now bare-min slots since `checkout.js` paints them on Stage A continue).
+
+**Open before Sean does Checkpoint C** (orchestrator does NOT advance C3 to "done" until these land):
+1. **Stripe webhook registration on dev alias** (C3.5). Sean's hands needed. Register `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/api/webhook` in Stripe Dashboard → Developers → Webhooks (TEST mode) for events `checkout.session.completed`, `payment_intent.succeeded`, `charge.refunded`. Confirm Vercel preview `STRIPE_WEBHOOK_SECRET` matches the webhook secret Stripe issues. Without this, the test-card round-trip doesn't write orders to Supabase + doesn't fire CAPI.
+2. **Real-card-then-refund smoke test** by Sean (per Checkpoint C). Walk: `/shop.html` → `/product/<slug>` → Add to Cart → `/cart.html` → [CHECKOUT] → `/checkout.html` → enter email → Continue → Stripe test card `4242 4242 4242 4242` + US address → Confirm → `/complete.html`. Verify GA4 DebugView shows `view_item` / `add_to_cart` / `begin_checkout` / `purchase`. Verify Vercel logs show `/api/webhook` 200 for the three Stripe events. Verify order written to Supabase `orders` table, product flipped to `available=false`, cart cleared in browser.
+3. **409 simulation**: in Supabase Studio, set `available=false` on `placeholder-haven-i`, then come back to `/cart.html` with `placeholder-haven-i` in cart and click [CHECKOUT]. Recovery overlay must reveal with related cards; submit the form to confirm `/api/cart-recovery` returns a real promo code. **Restore `available=true` after the test.**
+4. **410 simulation**: open `/checkout.html` with items in cart, then leave the tab idle 16+ minutes (or manually expire the hold via Supabase `holds` row), come back and click Continue. `[data-hold-expired]` must reveal and the page must redirect to `/cart.html` after ~2s.
+5. **Emaline copy review** on the `[data-sold-recovery]` overlay (brand-sensitive — Track B's copy may need a brand pass before launch).
+
+---
+
+## Open Threads (for next session / Sean to act on)
+
+1. **Sean — refresh `.env.local` `PRODUCT_API_KEY`** (post-rotation, commit `e54ce87`). Non-blocking for Track C but needed for local curl + Custom GPT tests.
+2. **Sean — Stripe webhook registration on dev alias** (C3.5). See § C3 Open above. Blocks Checkpoint C.
+3. **Sean — Emaline copy pass** on `[data-sold-recovery]` overlay + closing `index.html` testimonial blockquote.
+4. **Sean — content placeholders Track C cannot fill** (Sean / Emaline owns the copy):
+   - `about.html`: `about-origin-story`, `about-philosophy`, `about-mission`, `about-emy`
+   - `contact.html`: `commission-pricing`, `commission-availability`
+   - `terms.html`: `terms-effective-date`
+   - `privacy.html`: `privacy-effective-date`
+   These PLACEHOLDER markers count against the C4 hygiene gate (`grep -rn 'PLACEHOLDER:' .` must return zero). Sean fills the copy + I strip the markers as part of C4.
+5. **Analytics ID injection** (`ga4-init` + `meta-pixel-init` on every page). Two options, surfacing for Sean:
+   a. Provide real `GA4_MEASUREMENT_ID` + `META_PIXEL_ID` Vercel env vars, I replace `G-XXXXXXXXXX` / `META_PIXEL_ID_HERE` literals across all 13 HTML pages (and `_template.html`) with the real values. Static, simple, no extra request.
+   b. Wire dynamic injection: extend `/api/config` to expose `ga4MeasurementId`, gut the inline `<script>` snippets out of every `<head>`, have `main.js` load `gtag.js` + init Meta Pixel only after `/api/config` responds. More flexible (works for prod + preview independently) but adds an async dependency and a small flash-of-no-analytics window.
+   Recommend (a) for v1.4.5 since it ships faster; (b) is a v1.5 polish if Sean wants per-env Pixel IDs.
+6. **`_components.html` reference doc** mentions the literal text "PLACEHOLDER:" inside `<pre>` code examples. Those count against the hygiene grep. Three resolutions: exclude `_components.html` from the C4 grep (cleanest); rewrite the examples to use `PLACEHOLDER--` or `(PLACEHOLDER)` (preserves intent without false-positive); or move the reference doc out of the deploy root (it isn't user-facing). Recommend exclusion.
+7. **Lightbox markup convention** (resolved): `product.js`'s generated gallery thumbs use `data-lightbox-trigger` + `data-lightbox-src` + `data-lightbox-group="product-gallery"` matching Track B's `lightbox.js` contract. Confirmed Track B's `lightbox.js` uses event delegation (`document.addEventListener('click', ...)` + `closest('[data-lightbox-trigger]')`) — no rebinding needed for JS-rendered thumbs.
 
