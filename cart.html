@@ -83,6 +83,8 @@
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/recovery.js" defer></script>
+  <script src="/assets/js/cart.js" defer></script>
 </head>
 <body>
 
@@ -156,24 +158,7 @@
            ============================================================ -->
       <div id="cart-with-items" data-cart-with-items>
 
-        <!-- PLACEHOLDER: cart-line-items — Track C renders one .cart-line per item -->
-        <div class="cart-line" style="display: grid; grid-template-columns: 100px 1fr auto; gap: var(--space-md); align-items: center; padding: var(--space-md) 0; border-bottom: 1px solid var(--color-fog);">
-          <a href="/product/placeholder-haven-i" style="display: block;">
-            <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%234A1942'/%3E%3Cstop offset='1' stop-color='%239B6B9E'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='4' height='5' fill='url(%23g)'/%3E%3C/svg%3E"
-                 alt="Placeholder Haven I"
-                 style="width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: var(--radius-sm);">
-          </a>
-          <div>
-            <h3 style="font-family: var(--font-display); font-size: var(--text-xl); margin: 0 0 var(--space-xs);"><a href="/product/placeholder-haven-i" style="color: var(--text-primary); text-decoration: none;">Placeholder Haven I</a></h3>
-            <p style="margin: 0; color: var(--text-muted); font-size: var(--text-sm);">Portals to Peace</p>
-            <p style="margin: var(--space-xs) 0 0; font-style: italic; font-size: var(--text-sm); color: var(--text-secondary);">One-of-a-kind. Availability confirmed at checkout.</p>
-          </div>
-          <div style="text-align: right;">
-            <p style="margin: 0 0 var(--space-sm); font-family: var(--font-display); font-size: var(--text-xl); color: var(--accent-primary);">$245.00</p>
-            <button type="button" class="btn btn-ghost btn-sm" data-cart-remove data-product-id="PLACEHOLDER_ID">Remove</button>
-          </div>
-        </div>
-        <!-- /PLACEHOLDER -->
+        <!-- cart.js renders one .cart-line per item from localStorage.cart; nothing static here pre-paint. -->
 
         <!-- Cost estimate -->
         <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-fog); border-radius: var(--radius-md);">
@@ -238,12 +223,7 @@
 
         <!-- Track C populates: list of unavailable items -->
         <ul id="sold-recovery-list" data-sold-recovery-list style="list-style: none; padding: 0; margin: var(--space-lg) 0;">
-          <!-- PLACEHOLDER: sold-recovery-list-item — Track C renders one li per unavailable -->
-          <li style="display: flex; gap: var(--space-md); align-items: center; padding: var(--space-sm) 0;">
-            <div style="width: 60px; height: 75px; background: var(--color-fog); border-radius: var(--radius-sm);"></div>
-            <span>Placeholder Haven Title — has found its home</span>
-          </li>
-          <!-- /PLACEHOLDER -->
+          <!-- recovery.js populates one li per unavailable item from the 409 response. -->
         </ul>
 
         <!-- Email + 10% discount offer (Track C: POST /api/cart-recovery) -->
@@ -271,17 +251,7 @@
         <div id="sold-recovery-related" data-sold-recovery-related class="hidden" style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-gold);">
           <h3>You might love these instead</h3>
           <div data-sold-recovery-related-grid style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-md); margin-top: var(--space-md);">
-            <!-- PLACEHOLDER: sold-recovery-related-card — Track C renders one .card per related product -->
-            <article class="card">
-              <div class="card__media">
-                <img loading="lazy" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%231B3A52'/%3E%3C/svg%3E" alt="Related haven">
-              </div>
-              <div class="card__body">
-                <h4 class="card__title" style="font-size: var(--text-lg);">Related Haven Title</h4>
-                <p class="card__price">$220.00</p>
-              </div>
-            </article>
-            <!-- /PLACEHOLDER -->
+            <!-- recovery.js renders one .card per related product from the 409 response. -->
           </div>
         </div>
       </section>

@@ -82,7 +82,9 @@
 
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://js.stripe.com/v3/"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/checkout.js" defer></script>
 </head>
 <body>
 
@@ -185,11 +187,8 @@
           <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
             <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Shipping address</legend>
 
-            <!-- PLACEHOLDER: stripe-address-element-shipping — Track C mounts Stripe AddressElement here -->
-            <div id="address-element-shipping" data-stripe-address-shipping style="min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
-              Stripe AddressElement will mount here (allowed_countries: US only)
-            </div>
-            <!-- /PLACEHOLDER -->
+            <!-- checkout.js mounts Stripe AddressElement (shipping, US only) into this slot after Stage A continues. -->
+            <div id="address-element-shipping" data-stripe-address-shipping class="hidden" style="min-height: 200px;"></div>
 
             <!-- US-only restriction error — Stripe AddressElement triggers when user picks non-US country -->
             <div id="restricted-country-error" data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
@@ -206,12 +205,8 @@
               Same as shipping
             </label>
 
-            <!-- Stripe AddressElement (billing) — hidden when "same as shipping" -->
-            <!-- PLACEHOLDER: stripe-address-element-billing -->
-            <div id="address-element-billing" data-stripe-address-billing class="hidden" style="margin-top: var(--space-md); min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
-              Stripe AddressElement (billing) — shown only when "same as shipping" is unchecked
-            </div>
-            <!-- /PLACEHOLDER -->
+            <!-- Stripe AddressElement (billing) — hidden by default; revealed when "same as shipping" unchecked. -->
+            <div id="address-element-billing" data-stripe-address-billing class="hidden" style="margin-top: var(--space-md); min-height: 200px;"></div>
           </fieldset>
 
           <!-- Address validation errors -->
@@ -235,22 +230,14 @@
         <h2>2. Payment</h2>
         <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
 
-        <!-- PLACEHOLDER: stripe-payment-element — Track C mounts Stripe PaymentElement here -->
-        <div id="payment-element" data-stripe-payment style="margin-top: var(--space-lg); min-height: 200px; padding: var(--space-md); background: var(--color-fog); border-radius: var(--radius-md); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-style: italic;">
-          Stripe PaymentElement will mount here
-        </div>
-        <!-- /PLACEHOLDER -->
+        <!-- checkout.js mounts Stripe PaymentElement into this slot after Stage A continues. -->
+        <div id="payment-element" data-stripe-payment style="margin-top: var(--space-lg); min-height: 200px;"></div>
 
         <!-- Order summary -->
         <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-cream); border-radius: var(--radius-md);">
           <h3 style="margin-top: 0;">Order summary</h3>
           <div data-checkout-line-items>
-            <!-- PLACEHOLDER: checkout-line-items — Track C renders one row per cart item -->
-            <div style="display: flex; justify-content: space-between; padding: var(--space-sm) 0;">
-              <span>Placeholder Haven I</span>
-              <span>$245.00</span>
-            </div>
-            <!-- /PLACEHOLDER -->
+            <!-- checkout.js renders one row per cart item from localStorage.cart on load. -->
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
             <span>Shipping</span>
