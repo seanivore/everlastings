@@ -371,6 +371,8 @@ Carried from Track A and Track B closeouts. Each line says which Track C checkpo
 | Trailing-newline Vercel env cleanup                                 | Sean (optional)                     | C5.2 (optional)                    |
 | Cloudinary signed-flow switch (Phase 0 Gap A)                       | Agent                               | Phase 0                            |
 | `test_` prefix validator (Phase 0 Gap B)                            | Agent                               | Phase 0                            |
+| Header nav: `SHOP` (active state) sits higher than siblings — fix baseline alignment so all 5 nav items share a baseline. **Bucket 1** (pure CSS, no DOM / `data-*` change). | Agent | Checkpoint A |
+| Shop filters: convert each filter group (Series, Type, Availability) from flat expanded checkbox lists to collapsible dropdown groups — especially needed on desktop where the expanded form occupies the full viewport. Group containers + toggle JS are additive; individual checkbox `data-*` hooks (per Appendix A) remain untouched. **Bucket 2** (wraps shop.html DOM + new toggle behavior in `shop.js`). | Agent | Checkpoint B |
 | `?sync=true` on POST products (Phase 0 Gap C)                       | Agent                               | Phase 0                            |
 | stripe-sync idempotency (Phase 0 Gap D)                             | Agent                               | Phase 0                            |
 | `vercel curl` exit-code-3 doc note (Phase 0 Gap E)                  | Agent                               | C5.2                               |

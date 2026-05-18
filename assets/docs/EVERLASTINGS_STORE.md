@@ -426,9 +426,17 @@ R2_PUBLIC_URL=https://cdn.everlastingsbyemaline.com
 
 # Cloudinary (stateless image transforms)
 CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+
+# External API bearer (AI agents / curl) — generate with: openssl rand -hex 32
+# This must be the **Development**-scope value, never the Production value.
+PRODUCT_API_KEY=...
 ```
 
+`.env.local` is gitignored and should be populated from Vercel via `vercel env pull` (defaults to the Development scope), not hand-typed. If you ever hand-edit it, only paste the Development-scope value of `PRODUCT_API_KEY` here.
+
 **Environment Strategy**: Vercel env vars are scoped per environment. `main` branch → Production (live Stripe keys, served at `everlastingsbyemaline.com`). `dev`/`feat/*` branches → Preview (test Stripe keys, served at auto-generated `*.vercel.app` URLs — these are the dev environment). The shared Supabase project and R2 bucket are kept clean via an `is_test` row flag and a `test/` R2 path prefix. Full conventions: see `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > [Environment Strategy](archive/v1_4/v1_4_3_IMPLEMENT.md#environment-strategy-reference) and [Dev/Test Data Hygiene](archive/v1_4/v1_4_3_IMPLEMENT.md#devtest-data-hygiene-reference).
+
+**`PRODUCT_API_KEY` scope separation**: This key is set independently in all three Vercel scopes (Production, Preview-dev, Development) with **distinct values** — a leaked Preview or Development key must not unlock Production. Production and Preview values are marked **Sensitive** in Vercel (dashboard hides them, `vercel env pull` returns `""` for them — verify Production by exercising the live endpoint, not by reading a pulled file). Development scope cannot be marked Sensitive (Vercel rejects `--sensitive` there). Em's Custom GPT uses the Production value only; it lives in the GPT's Action auth panel and nowhere else on disk.
 
 ### Local Development
 
@@ -893,7 +901,7 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
   8. Check catalog health in Meta Commerce Manager monthly
   9. Update Vercel Production scope after rotation
   10. Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed
-  11. `PRODUCT_API_KEY` created via `openssl rand -hex 32`; update Prod, Preview in Vercel; update CustomGPT's Bearer token to match 
+  11. `PRODUCT_API_KEY` rotation: generate **three distinct** values with `openssl rand -hex 32` (one per scope — leaked Preview/Dev key must not unlock Production). For each scope: `vercel env rm PRODUCT_API_KEY <scope> --yes` then `printf 'NEWVAL' | vercel env add PRODUCT_API_KEY <scope> --sensitive` — but **omit `--sensitive` on the Development scope** (Vercel rejects it with `sensitive_not_allowed_on_development`). For Preview-dev, pass the branch: `vercel env add PRODUCT_API_KEY preview dev --sensitive`. After rotation: update `.env.local` to the new Development value, redeploy Production (empty commit on `main` or "Redeploy" in dashboard), verify Production with a runtime curl (`HTTP/2 400` from `POST /api/products` with empty body = auth passed), then update Em's Custom GPT Action with the new Production value.
   12. Upgrade TXT record to `p=quarantine` or `p=reject` to tighten email delivery 
 
 **First-month warm-up checklist** (2026-05-ish):

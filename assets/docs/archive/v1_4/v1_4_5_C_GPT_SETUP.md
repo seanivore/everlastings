@@ -8,49 +8,32 @@ The GPT lives in **Em's** ChatGPT account (she has Plus). She's the owner. You'r
 
 ---
 
-## Pre-flight (before you sit down with Em)
+## Pre-flight 
 
-Have these tabs ready in your browser:
-
-1. **Vercel dashboard** → Project: `everlastings-website` → Settings → Environment Variables. You'll need to copy `PRODUCT_API_KEY` from the **Production** scope. (Not the preview value. Not staging. Production.) -- **THIS IS VERCEL 'SENSITIVE' VALUE MEANING YOU CANNOT COPY IT; I used what we have
-2. **This walkthrough** — open in a tab Em can see, or on a second screen.
-3. **A throwaway folder of 7 placeholder images** for the smoke test. Any 7 JPGs or PNGs. Family pet photos, screenshots, whatever — they get deleted at the end.
-
-When sitting down with Em, have her:
-
-4. Sign into ChatGPT in her browser, confirm she's on **ChatGPT Plus** (sidebar avatar → "My plan" → should say Plus, Team, or Enterprise).
-5. Confirm she has access to the GPTs editor by visiting [chat.openai.com/gpts/editor](https://chat.openai.com/gpts/editor) — if it loads, she's good.
+- [x] Production `PRODUCT_API_KEY`
+- [x] 7 throwaway placeholder images 
+- [x] Sean logged into Em's PRO GPT account
 
 ---
 
-## Step 1 — Open the GPT editor
+## Steps 1-10
+- [x] Created new GPT in editor.
+- [x] **NAME**: The Sunkeeper
+- [x] **DESCRIPTION**: Everlastings Product Assistant adds new products to everlastingsbyemaline.com by accepting photos and casual descriptions, then walking the user through a preview before creating the product on confirmation.
+- [x] **PROFILE PICTURE**
+- [x] **INSTRUCTIONS**: System prompt added.
+- [x] **KNOWLEDGE FILES**: Add in v2 if needed `assets/docs/BRAND.md`
+- [x] **CAPABILITIES** Web Browsing → off, DALL·E Image Generation → off, Code Interpreter → on (lets the GPT inspect uploaded images if it needs to)
+- [x] **ACTIONS**: Added API key and Schema; confirmed two actions available
+- [x] **ADD PRIVACY URL**: https://everlastingsbyemaline.com/privacy (I removed `.html` from the URL)
+- [x] **SAVE AS ONLY ME**: Now available here `https://chatgpt.com/g/g-6a0b26ce97608191b62b0626bfe1506b-the-sunkeeper`
 
-Em clicks **Create** in the GPTs editor. She'll see a chat-based "Create" wizard on the left and a **Configure** tab at the top. Have her click **Configure**. Everything below goes into the Configure tab.
+---
 
-## Step 2 — Name + Description
-
-Have Em paste these one at a time:
-
-**Name** field:
-```
-Everlastings Product Assistant
-```
-
-**Description** field:
-```
-Helps Em add new handcrafted miniature products to everlastingsbyemaline.com — accepts photos and casual descriptions, walks through a preview, and creates the product on confirmation.
-```
-
-## Step 3 — Profile picture (optional)
-
-If you want it identifiable in Em's sidebar, upload the small Everlastings emblem from the project's `assets/favicon/` folder. Skip if you'd rather move on; doesn't affect functionality.
-
-## Step 4 — Instructions
-
-This is the system prompt — the most important text in the setup. Paste verbatim into the **Instructions** field:
+### This is the system prompt — the most important text in the setup. Paste verbatim into the **Instructions** field:
 
 ```
-You are the Everlastings Product Assistant. Your only job is to help Em add new handcrafted miniature products to everlastingsbyemaline.com.
+You are "The Sunkeeper", our Everlastings Product Assistant. Your only job is to help Em add new handcrafted miniature products to everlastingsbyemaline.com.
 
 Workflow:
 1. Greet warmly. Ask Em what she wants to add today.
@@ -69,32 +52,7 @@ Rules:
 - On 409 Conflict (slug taken), suggest a new title. On 400, tell her exactly which field is missing in plain language. On 401, stop and tell her "the connection key needs Sean's attention."
 ```
 
-## Step 5 — Knowledge files
-
-Skip this. The voice and tone are already encoded in Step 4's instructions. (If Em later wants the GPT to write more in her voice, she can upload `assets/docs/BRAND.md` here — but defer that to v2.)
-
-## Step 6 — Capabilities
-
-Three checkboxes:
-
-- **Web Browsing** → off
-- **DALL·E Image Generation** → off (Em provides her own photos)
-- **Code Interpreter** → on (lets the GPT inspect uploaded images if it needs to)
-
-## Step 7 — Actions (this is where the API connection happens)
-
-Click **Create new action**.
-
-In the **Authentication** panel:
-- Type → **API Key**
-- API Key → paste the production `PRODUCT_API_KEY` you have ready from Vercel
-- Auth Type → **Bearer**
-
-Click **Save** in the auth panel.
-
-## Step 8 — OpenAPI Schema
-
-In the **Schema** field of the Action, paste this whole block. Verbatim.
+### In the **Schema** field of the Action, paste this whole block. Verbatim.
 
 ```yaml
 openapi: 3.1.0
@@ -219,41 +177,24 @@ paths:
                       stripe_price_id: { type: string }
 ```
 
-After paste, the editor should detect two operations: `uploadImage` and `createProduct`. If it shows fewer or throws a syntax error, double-check the paste — likely a leading space got dropped on one line.
-
-## Step 9 — Privacy policy URL
-
-In the field that says **Privacy policy** (near the bottom of Configure), paste:
-
-```
-https://everlastingsbyemaline.com/privacy.html
-```
-
-## Step 10 — Save
-
-Click **Save** at the top right.
-
-When the share modal appears, choose **Only me**. Em is the owner and the user — no public link is needed because nobody else uses this GPT. It lives in her sidebar.
-
-The GPT now appears in Em's left sidebar under "GPTs" or "My GPTs," depending on her ChatGPT version.
-
 ---
 
 ## Step 11 — Smoke test (do this with Em watching)
 
-Have Em start a fresh chat with the new GPT. She types this message verbatim:
+- [x] Send first message: 
 
 ```
 Add a quick test product. Title: Setup Smoke Test. Price: $1. Headline: setup smoke test. Story: setup smoke test. Description: setup smoke test.
 ```
 
-The GPT should respond conversationally and ask for photos.
-
-She drags 7 throwaway images into the chat one at a time (or all at once — both work).
+- [x] The GPT should respond conversationally and ask for photos.
+- [x] I added 7 random photos 
 
 The GPT will call `uploadImage` 7 times. Watch the chat — each call should resolve with a URL.
 
-After the photos are uploaded, the GPT shows a preview. Em types:
+**ERROR**: "The image upload connection didn’t complete: “The page could not be found / NOT_FOUND.” I can’t create the product until the photos successfully upload and I can show you the preview with their URLs."
+
+- [ ] After the photos are uploaded, the GPT shows a preview. Reply:
 
 ```
 Looks good, go ahead.
