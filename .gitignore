@@ -8,6 +8,10 @@
 *.webp
 *.webm
 
+# Media For CDN Upload
+/assets/.cdn-media/
+/assets/.cdn-media/**
+
 # Environment variables (ignore all .env* variants; allow .env.example only)
 .env
 .env.*
