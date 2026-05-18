@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Preview deployments are auto-noindexed by Vercel (X-Robots-Tag: noindex on *.vercel.app).
+# Production: index everything except the admin surface + raw API routes.
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://everlastingsbyemaline.com/sitemap.xml

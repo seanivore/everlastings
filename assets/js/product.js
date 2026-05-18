@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   populateMeta(product);
+  populateOpenGraph(product);
+  injectProductJsonLd(product);
   populateStickyCard(product);
   populateHero(product);
   populateGallery(product);
@@ -60,6 +62,57 @@ function populateMeta(p) {
 function setText(sel, val) {
   const el = document.querySelector(sel);
   if (el && val !== undefined && val !== null && val !== '') el.textContent = val;
+}
+
+function setMeta(selector, attribute, value) {
+  const el = document.querySelector(selector);
+  if (el && value) el.setAttribute(attribute, value);
+}
+
+function populateOpenGraph(p) {
+  const canonicalUrl = `https://everlastingsbyemaline.com/product/${p.slug}`;
+  const ogTitle = p.seo_title || p.title;
+  const ogDesc = p.seo_description || p.headline || '';
+  const heroImg = pickHero(p);
+  const heroUrl = heroImg ? heroImg.url : 'https://everlastingsbyemaline.com/assets/brand/favicon/logo_circle_purple_red_2400.png';
+
+  setMeta('meta[property="og:title"]', 'content', ogTitle);
+  setMeta('meta[property="og:description"]', 'content', ogDesc);
+  setMeta('meta[property="og:url"]', 'content', canonicalUrl);
+  setMeta('meta[property="og:image"]', 'content', heroUrl);
+  setMeta('meta[property="og:image:alt"]', 'content', (heroImg && heroImg.alt) || p.title || '');
+  setMeta('meta[property="og:type"]', 'content', 'product');
+  setMeta('meta[name="twitter:title"]', 'content', ogTitle);
+  setMeta('meta[name="twitter:description"]', 'content', ogDesc);
+  setMeta('meta[name="twitter:image"]', 'content', heroUrl);
+  setMeta('link[rel="canonical"]', 'href', canonicalUrl);
+}
+
+function injectProductJsonLd(p) {
+  const heroImg = pickHero(p);
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.title,
+    description: p.seo_description || p.headline || '',
+    image: heroImg ? heroImg.url : undefined,
+    sku: p.sku || p.slug,
+    brand: { '@type': 'Brand', name: 'Everlastings by Emaline' },
+    offers: {
+      '@type': 'Offer',
+      url: `https://everlastingsbyemaline.com/product/${p.slug}`,
+      priceCurrency: 'USD',
+      price: ((p.price || 0) / 100).toFixed(2),
+      availability: p.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  };
+  // Strip undefined keys so the JSON is clean.
+  Object.keys(ld).forEach((k) => { if (ld[k] === undefined) delete ld[k]; });
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(ld);
+  document.head.appendChild(script);
 }
 
 function populateStickyCard(p) {
