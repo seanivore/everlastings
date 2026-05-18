@@ -9,6 +9,166 @@ This is the live build log for Track C. Footers (`## Session Notes`, `## Picked 
 
 ---
 
+## SEAN MUST DO (read this first)
+
+Below is the punch list of everything that can't ship without you. Each item links to where it lives in the rest of the report for context, but the step-by-step is here so you can sit down and do them without bouncing back to context. The orchestrator (me) finished everything in Phases 0 → C4 on the JS + HTML side. After you do these, ping me and I'll execute C5 (the merge + tag + monitoring; mostly tooling commands you don't want to type yourself).
+
+Three buckets: **Checkpoint C testing** (verify the wiring works), **launch-prep content** (only you/Emaline can write this), **C5 cutover** (live keys + DNS).
+
+### Bucket 1 — Checkpoint C testing (do these first, on the dev preview)
+
+Preview URL: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`
+
+#### 1.1 — Register the Stripe TEST-mode webhook on the dev preview
+
+Without this, the test-card flow won't write orders to Supabase + won't fire the post-purchase webhook events. **This is the only blocker for items 1.2 / 1.3 / 1.4 below.**
+
+1. Open Stripe Dashboard at https://dashboard.stripe.com — **make sure you're in TEST mode** (toggle top-right, dot should be orange/yellow, not green).
+2. Left sidebar → Developers → Webhooks → "Add endpoint" (top-right).
+3. Endpoint URL: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/api/webhook`
+4. "Select events to send" → click "Select events" → check exactly these three:
+   - `checkout.session.completed`
+   - `payment_intent.succeeded`
+   - `charge.refunded`
+5. Click "Add endpoint".
+6. On the resulting page, Stripe shows a **Signing secret** (`whsec_...`). Click "Reveal" and copy it.
+7. Verify that the secret matches Vercel preview env: `vercel env ls preview | grep STRIPE_WEBHOOK_SECRET`. If the value differs (or if it's encrypted-display, you'll need to update it):
+   ```bash
+   vercel env rm STRIPE_WEBHOOK_SECRET preview
+   vercel env add STRIPE_WEBHOOK_SECRET preview
+   # paste the whsec_... value when prompted; pick "Preview" environment scope
+   ```
+   Then push a trivial commit to dev to force a redeploy so the function picks up the new env var. (Or run `vercel --prod=false` to redeploy preview.)
+8. Back in Stripe Dashboard → Webhooks → click the new endpoint → "Send test webhook" → pick `checkout.session.completed` → "Send test webhook". You should see a 200 in the Stripe UI within ~2 seconds. If you don't, the webhook secret mismatch is the most likely cause.
+
+#### 1.2 — Real test-card walkthrough (the big one)
+
+This proves the full purchase flow works end-to-end on preview. Use a **Stripe test card** — no real money moves.
+
+1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
+2. Open DevTools (Cmd-Option-I) → Console tab. Keep it visible — you'll watch GA4 events fire as you click.
+3. Click any product tile → land on `/product/placeholder-haven-i` (or whatever you picked).
+4. Click "Add to Cart" — cart badge in the header should increment from 0 to 1. Console should NOT show any errors.
+5. Click the cart icon → land on `/cart`. The product you added should be visible in a `.cart-line` with the right title + price.
+6. (Optional) Type an email into the "Almost there" form so the prefill carries forward.
+7. Click `[CHECKOUT]` — button label changes to "Checking availability…" briefly, then the page navigates to `/checkout`.
+8. Stage A: enter the same email + click "Continue to payment". The page loads Stripe Elements into Stage B (you'll see a Stripe-styled card form + an address form appear).
+9. Stage B — use Stripe test card values:
+   - Card number: `4242 4242 4242 4242`
+   - Expiry: any future date, e.g. `12/30`
+   - CVC: any 3 digits, e.g. `123`
+   - Shipping address: pick any US address (Stripe enforces US-only)
+10. Click "Confirm & Pay" — button changes to "Processing…", then Stripe redirects you to `/complete?session_id=cs_test_...`.
+11. The complete page should populate with: your name, your email, the line item + price, the order ID (cs_test_...). Cart badge should drop back to 0.
+12. **Verify in 3 places after the walkthrough:**
+    - **GA4 DebugView** at https://analytics.google.com → Admin → DebugView (left sidebar, under Property) → look for events fired in the last minute: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`. (DebugView only shows events from devices in debug mode — install the Google Analytics Debugger Chrome extension and enable it before the walkthrough, or use the GA4 Tag Assistant.)
+    - **Vercel logs** at https://vercel.com/everlastingsbyemaline/everlastings-website/logs → filter by `/api/webhook` → should see 200 responses for the three Stripe events.
+    - **Supabase Studio** at https://supabase.com/dashboard/project/rvnxftbfeaxymhzxxhjm → Table editor → `orders` → newest row should be your test order. Then look at `products` → the slug you bought should now have `available=false`.
+
+#### 1.3 — 409 simulation (cart recovery flow)
+
+Forces the "sold while you browsed" recovery overlay. Confirms the email-capture + promo-code path works.
+
+1. Make sure your cart still has at least one item (re-add `placeholder-haven-i` if you cleared it). Or use a different placeholder product so 1.2's "now sold" item isn't in the way.
+2. Open Supabase Studio in another tab. Table editor → `products` → find the slug that's in your cart → edit row → set `available` from `true` to `false` → save.
+3. **Restore note in advance**: you'll need to flip it back to `true` after this test. Don't forget.
+4. Go back to `/cart` in the original tab. Don't refresh — your localStorage still has the item. Click `[CHECKOUT]`.
+5. Expected: the page does NOT navigate to `/checkout`. Instead the gold-bordered "These havens have found their homes" overlay appears, listing the unavailable item + a 10% promo code form.
+6. Enter an email (any real one you have access to) + click "Send 10% Code". Within a few seconds the form should be replaced with a `HAVEN-XXXXXX`-style code reveal.
+7. Check the inbox of the email you entered — Resend should have delivered the code via email too. (If Sean's RESEND_API_KEY is in preview env, this works. If not, the code reveal in the overlay still works.)
+8. **Restore `available=true` in Supabase Studio.**
+
+#### 1.4 — 410 simulation (hold expiry redirect)
+
+Confirms that if the user idles on /checkout too long, they bounce back to /cart instead of hitting a confusing Stripe error.
+
+Two ways to trigger:
+
+**Slow way** (more realistic but takes 16 min):
+1. Add a product to cart, click [CHECKOUT], land on /checkout, leave the tab open and IDLE for 16+ minutes (don't click anything, don't refresh).
+2. Come back, click "Continue to payment".
+3. Expected: red banner "Your reservation timed out. Please return to your cart to re-check availability." reveals, page redirects to /cart after ~2 seconds.
+
+**Fast way**:
+1. Add a product to cart, click [CHECKOUT].
+2. Open Supabase Studio → table editor → `holds` → find the row matching your session_id → delete it.
+3. Back to /checkout, click "Continue to payment".
+4. Same expected behavior as the slow way.
+
+#### 1.5 — Emaline copy pass (brand-sensitive content)
+
+The two pieces I cannot write because they're brand voice:
+
+- **Sold-recovery overlay copy** on `/cart` (currently: "These havens have found their homes." + the 10% gift line). Look at it visually during the 409 simulation in 1.3 and have Emaline read it.
+- **Homepage testimonial** at `/` near the bottom (currently a generic placeholder quote starting "I keep the piece on my bedside table…"). Replace with a real customer quote or Emaline's curated copy. Edit lives in `index.html` around line ~310.
+
+### Bucket 2 — launch-prep content (Sean/Emaline owns the copy)
+
+Eight `<!-- PLACEHOLDER: -->` markers remain in HTML, all content-only. These will all need to be filled (and the markers stripped) before the `grep -rn 'PLACEHOLDER:' .` returns zero — which is a hard gate before launch.
+
+Each one is just an HTML edit: replace the placeholder content between `<!-- PLACEHOLDER: foo -->` and `<!-- /PLACEHOLDER -->` with real copy, then delete the two PLACEHOLDER comment lines.
+
+| File | Line | Marker | What's needed |
+| ---- | ---- | ------ | ------------- |
+| `about.html` | 146 | `about-origin-story` | The narrative for how Everlastings began |
+| `about.html` | 159 | `about-philosophy` | The "why miniatures" / "why havens" philosophy block |
+| `about.html` | 170 | `about-mission` | One-paragraph mission statement |
+| `about.html` | 179 | `about-emy` | Bio for Emaline ("Em") — voice, training, what makes her havens different |
+| `contact.html` | 190 | `commission-pricing` | Commission price range + what's included |
+| `contact.html` | 196 | `commission-availability` | How commissions queue/wait works |
+| `terms.html` | 137 | `terms-effective-date` | The launch date in the format the surrounding sentence expects (e.g. "May 18, 2026") |
+| `privacy.html` | 137 | `privacy-effective-date` | Same — launch date |
+
+The two effective-date placeholders only become correct after you set the launch date, so do those last. Easiest path: open each file in VS Code or your editor of choice, find the PLACEHOLDER marker, paste in copy.
+
+### Bucket 3 — C5 cutover (do these in order, then tell me you're ready for the merge)
+
+#### 3.1 — Stripe LIVE-mode webhook + env vars
+
+1. In Stripe Dashboard, toggle to **LIVE mode** (top-right, dot should turn green).
+2. Developers → Webhooks → Add endpoint at `https://everlastingsbyemaline.com/api/webhook` for the same 3 events as Bucket 1.1. Copy the LIVE signing secret.
+3. Vercel → Settings → Environment Variables → add to **Production scope only** (preview + dev keep test-mode values):
+   - `STRIPE_SECRET_KEY` = your `sk_live_...` from Stripe Dashboard → Developers → API keys (Live mode)
+   - `STRIPE_PUBLISHABLE_KEY` = your `pk_live_...` (same place)
+   - `STRIPE_WEBHOOK_SECRET` = the `whsec_...` you just copied from the live webhook
+4. Run the coupon bootstrap once against live mode (from this repo, after the live STRIPE_SECRET_KEY is exported in your shell):
+   ```bash
+   export STRIPE_SECRET_KEY=sk_live_xxxxx
+   npx tsx api/_bootstrap/coupons.ts
+   ```
+   This creates the two coupons (`cart-recovery-10`, `newsletter-welcome-5`) in the Stripe LIVE dashboard.
+5. Verify: Stripe Live → Products → Coupons should show the two entries with the correct names + percent-off values.
+
+#### 3.2 — Real-product load (Emaline)
+
+Have Emaline use the Custom GPT to load at least 5 real products against the dev preview. Each needs all 7 image roles + real Stripe Product+Price IDs. Verify they render correctly on `/shop` and `/product/<slug>`.
+
+#### 3.3 — DNS flip
+
+1. Vercel project → Settings → Domains → "Add Domain" → `everlastingsbyemaline.com` and `www.everlastingsbyemaline.com`.
+2. Vercel will show DNS records to add at your registrar. Add the A records for the apex + the CNAME for www.
+3. Wait for propagation (usually < 30 min; check via `dig everlastingsbyemaline.com` or https://www.whatsmydns.net).
+4. Confirm `https://everlastingsbyemaline.com` returns 200 with a valid SSL cert (Vercel auto-issues via Let's Encrypt).
+
+#### 3.4 — Final admin smoke test on production
+
+After DNS, log into `https://everlastingsbyemaline.com/admin`, create a tiny test product through the form, upload images, save, check that it shows on `/shop`. Then archive the test product immediately.
+
+#### 3.5 — Tell me you're ready for the merge
+
+When 3.1 → 3.4 are all done, ping me. I'll execute the placeholder data purge (the 8 test-mode Supabase rows + R2 `test/` namespace), do the `dev → main` fast-forward merge, tag `v1.4.5`, and push. I'll also start the 24h Vercel-logs + Stripe-webhook-health monitoring loop.
+
+### Quick reference: the things only I (orchestrator) can do (don't try these yourself unless you want to)
+
+For your awareness — these are mine to handle once 3.5 lands:
+- `DELETE FROM products WHERE is_test = true;` in Supabase (placeholder purge)
+- R2 `test/` namespace delete via Wrangler
+- Stripe test-product archive (8 IDs in C5.1 of the playbook)
+- `git checkout main && git merge --ff-only dev && git push origin main && git tag v1.4.5 && git push origin v1.4.5`
+- 24h monitoring (Vercel logs grep for 5xx; Stripe webhook health; Resend deliveries)
+
+---
+
 ## Context
 
 Track A and Track B closeouts surfaced gaps and bugs that were folded into a corrected `v1_4_5_C_IMPLEMENT.md` after the planning loop ran a clean revision. The intent: an exclusively executable playbook with no mixed truth.
@@ -221,6 +381,13 @@ Authoritative source: **the shipped HTML in `cart.html`, `checkout.html`, `compl
      tests/integration/run-all.sh
    ```
    Requires `tests/integration/.env` with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `PRODUCT_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Pre-flight thread #1 (refreshing `.env.local` PRODUCT_API_KEY) also applies here.
+
+**cleanUrls retrofit** (post-Sean-question 2026-05-18): Track B shipped all internal links as `.html`-suffixed (e.g. `/shop.html`, `/cart.html`) and no `cleanUrls: true` was set in `vercel.json`, so `/shop` returned 404 on preview. Sean flagged this — modern SEO + UX norm is extensionless. Three coordinated changes landed:
+1. `vercel.json` gained `"cleanUrls": true` + `"trailingSlash": false`. Vercel now serves `/shop` from `shop.html` AND 308-redirects `/shop.html` → `/shop` automatically.
+2. `sitemap.xml` rewritten to use extensionless URLs (9 entries; `<loc>https://everlastingsbyemaline.com/shop</loc>` etc.).
+3. Canonical + OG URLs across all 12 non-index pages (skipping index since `/` was already extensionless; `product.html` is rewrite-driven and `product.js` overrides at runtime with `/product/<slug>` which is also already extensionless). Plus 561 internal `href="/foo.html"` → `href="/foo"` substitutions across all 15 HTML files (including `_template.html` + `_components.html`).
+
+Result: every page declares a single canonical URL form, sitemap entries match canonical declarations, and crawlers don't see duplicate-content noise from `.html`/extensionless pairs.
 
 **Track A hygiene observation** (not blocking; surfaced for Sean's awareness): C5.2 env-helper sweep finds widespread `process.env.X!` non-null assertion usage across `api/` files — not the two singleton exceptions the playbook expected. The pattern is consistent (top-of-file singleton init for Stripe/Supabase/Resend across `api/checkout.ts`, `api/products.ts`, `api/webhook.ts`, `api/subscribe.ts`, `api/cart.ts`, `api/contact.ts`, `api/product-feed.ts`, `api/_lib/adminAuth.ts`, `api/_bootstrap/coupons.ts`, `api/_emails/index.ts`). This is Track A scope, not Track C. The pattern works (it just throws if the env var is missing at module-load time), so it's a refactor target, not a launch blocker. Centralizing into the `env()` helper at `api/_lib/env.ts` is a v1.5+ cleanup.
 
