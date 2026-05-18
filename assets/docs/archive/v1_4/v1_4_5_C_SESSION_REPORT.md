@@ -192,6 +192,40 @@ Authoritative source: **the shipped HTML in `cart.html`, `checkout.html`, `compl
 
 ---
 
+## C4 — SEO + launch sprint
+
+**Status**: orchestrator-side work complete. Lighthouse audit + integration test re-run + OG validator passes deferred to post-DNS-flip (Vercel SSO blocks direct browser/lighthouse access to preview without a bypass token).
+
+**Files written**:
+- `sitemap.xml` — 9 static page entries with priorities + changefreq. Per-product entries get appended at C5 launch from real (`is_test=false`) Supabase rows.
+- `robots.txt` — production allow-all, `/admin` + `/api` disallowed, sitemap reference. Preview deploys auto-noindex via Vercel.
+- (HTML) GA4 measurement ID `G-R2QYZ0RY29` substituted across all 14 HTML files (including `_template.html`). Meta Pixel block stripped entirely from every page; replaced with a deferral comment pointing at thread #5 below. `main.js`'s `trackMeta()` no-ops when `window.fbq` is undefined, so deferral is safe.
+- (HTML) Open Graph + Twitter Card + canonical `<link rel="canonical">` block inserted into every public page (13 files). Defaults use `https://everlastingsbyemaline.com/assets/brand/favicon/logo_circle_purple_red_2400.png` (2400×2400 brand logo) as the OG image and the production domain for canonical URLs. Each page now carries 9 OG meta tags, 4 Twitter tags, and 1 canonical link — uniform shape so social-graph crawlers see a clean preview from any entry point.
+- (`product.js`) extended with `populateOpenGraph(p)` + `injectProductJsonLd(p)`. Both run after the product fetch. OG/Twitter/canonical tags get overwritten with product-specific values (title, headline, hero image, `/product/<slug>` canonical). JSON-LD is a `schema.org/Product` block with `sku`, `priceCurrency`, `price`, `availability` (`InStock` vs `OutOfStock`), `brand`, `itemCondition`.
+
+**Contract test on `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`**:
+- `/sitemap.xml` 200, 1319 bytes, 9 `<url>` entries ✓
+- `/robots.txt` 200, 280 bytes ✓
+- All 7 sampled pages serve 9 OG + 4 Twitter + 1 canonical + 2 `G-R2QYZ0RY29` references ✓
+- JSON-LD product schema verifiable in DOM after `product.js` runs (open `/product/placeholder-haven-i` in browser → `document.querySelector('script[type="application/ld+json"]')`). Not bash-verifiable since it's JS-injected.
+
+**Deferred to post-DNS-flip (production)** — block list for Sean post-launch:
+1. **Lighthouse mobile ≥ 90 audit** per page (use `npx lighthouse https://everlastingsbyemaline.com/<page> --view --form-factor=mobile`). Stripe.js + Google Fonts will pull the score down on `/checkout.html` specifically; that's expected. Address only pages that score < 90.
+2. **OG validators** on a real product page after the catalog flips to live:
+   - Facebook Sharing Debugger: https://developers.facebook.com/tools/debug/
+   - Twitter Card Validator: https://cards-dev.twitter.com/validator
+   - LinkedIn Post Inspector: https://www.linkedin.com/post-inspector/
+3. **Track A integration test re-run** against `https://everlastingsbyemaline.com` (post-DNS-flip; needs no Vercel SSO bypass). From this repo:
+   ```bash
+   BASE_URL=https://everlastingsbyemaline.com \
+     tests/integration/run-all.sh
+   ```
+   Requires `tests/integration/.env` with `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `PRODUCT_API_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Pre-flight thread #1 (refreshing `.env.local` PRODUCT_API_KEY) also applies here.
+
+**Track A hygiene observation** (not blocking; surfaced for Sean's awareness): C5.2 env-helper sweep finds widespread `process.env.X!` non-null assertion usage across `api/` files — not the two singleton exceptions the playbook expected. The pattern is consistent (top-of-file singleton init for Stripe/Supabase/Resend across `api/checkout.ts`, `api/products.ts`, `api/webhook.ts`, `api/subscribe.ts`, `api/cart.ts`, `api/contact.ts`, `api/product-feed.ts`, `api/_lib/adminAuth.ts`, `api/_bootstrap/coupons.ts`, `api/_emails/index.ts`). This is Track A scope, not Track C. The pattern works (it just throws if the env var is missing at module-load time), so it's a refactor target, not a launch blocker. Centralizing into the `env()` helper at `api/_lib/env.ts` is a v1.5+ cleanup.
+
+---
+
 ## Open Threads (for next session / Sean to act on)
 
 1. **Sean — refresh `.env.local` `PRODUCT_API_KEY`** (post-rotation, commit `e54ce87`). Non-blocking for Track C but needed for local curl + Custom GPT tests.
@@ -203,10 +237,23 @@ Authoritative source: **the shipped HTML in `cart.html`, `checkout.html`, `compl
    - `terms.html`: `terms-effective-date`
    - `privacy.html`: `privacy-effective-date`
    These PLACEHOLDER markers count against the C4 hygiene gate (`grep -rn 'PLACEHOLDER:' .` must return zero). Sean fills the copy + I strip the markers as part of C4.
-5. **Analytics ID injection** (`ga4-init` + `meta-pixel-init` on every page). Two options, surfacing for Sean:
-   a. Provide real `GA4_MEASUREMENT_ID` + `META_PIXEL_ID` Vercel env vars, I replace `G-XXXXXXXXXX` / `META_PIXEL_ID_HERE` literals across all 13 HTML pages (and `_template.html`) with the real values. Static, simple, no extra request.
-   b. Wire dynamic injection: extend `/api/config` to expose `ga4MeasurementId`, gut the inline `<script>` snippets out of every `<head>`, have `main.js` load `gtag.js` + init Meta Pixel only after `/api/config` responds. More flexible (works for prod + preview independently) but adds an async dependency and a small flash-of-no-analytics window.
-   Recommend (a) for v1.4.5 since it ships faster; (b) is a v1.5 polish if Sean wants per-env Pixel IDs.
+5. **Meta Pixel — deferred to v1.5** (Sean's call 2026-05-18). GA4 substituted in v1.4.5 (resolved). The Meta Pixel init `<script>` blocks were stripped from every page; `main.js`'s `trackMeta()` is already guarded with `typeof fbq === 'function'` so all Pixel calls become no-ops without `fbq` defined — site ships without analytics regression.
+
+   **Path to add Meta Pixel back in v1.5** (Sean: this is what's needed when you're ready):
+
+   a. **Get the Pixel ID itself**. Meta Business Suite → Events Manager → pick the Everlastings Pixel → top-left shows the numeric Pixel ID (e.g. `1234567890123456`). If the Pixel doesn't exist yet, create one in Events Manager (Connect Data Sources → Web → Meta Pixel). The Pixel ID is the numeric value, NOT the integration code snippet Meta shows you. Sean said "I've seen code but not an ID" — the ID is in the top-left of the Pixel detail page, not in the snippet block.
+
+   b. **Decide injection strategy**:
+      - **Static, fast**: paste the same fragment into every page's `<head>` substituting the real ID. Same shape as the GA4 substitution that landed in v1.4.5.
+      - **Dynamic, per-env**: extend `/api/config` to expose `metaPixelId` (already partially scaffolded — `/api/config` returns `metaPixelId: null` today; if Sean sets `META_PIXEL_ID` env var in Vercel, it flows through). Then `main.js`'s `initConfig()` already reads `config.metaPixelId` into `META_PIXEL_ID` — add 8 lines to `main.js` that, when `META_PIXEL_ID` is set, dynamically inject the standard `fbq` bootstrap snippet + `fbq('init', META_PIXEL_ID); fbq('track', 'PageView')`. No HTML edits needed; per-env Pixel IDs work automatically.
+
+      Recommend **dynamic** for v1.5 since the env-var plumbing is already half-built (`/api/config` exposes the field; the JS just needs to act on it). One commit to `main.js`.
+
+   c. **Conversions API (server-side)** is independent: that's already coded in `api/webhook.ts` (lines 188+ — `process.env.META_PIXEL_ID && process.env.META_ACCESS_TOKEN`). Setting `META_PIXEL_ID` + `META_ACCESS_TOKEN` env vars in Vercel turns it on. No code changes needed once env vars are set.
+
+   d. **Consent**: `main.js`'s `applyConsent()` already wires the Meta consent flow (`fbq('consent', state.advertising ? 'grant' : 'revoke')`). Once Pixel loads, consent state propagates automatically.
+
+   e. **Verification after launch**: Meta Pixel Helper Chrome extension → load a product page → should see `PageView` + `ViewContent` events fire. Events Manager → Test Events panel → confirm CAPI events arrive too (deduped by `event_id`).
 6. **`_components.html` reference doc** mentions the literal text "PLACEHOLDER:" inside `<pre>` code examples. Those count against the hygiene grep. Three resolutions: exclude `_components.html` from the C4 grep (cleanest); rewrite the examples to use `PLACEHOLDER--` or `(PLACEHOLDER)` (preserves intent without false-positive); or move the reference doc out of the deploy root (it isn't user-facing). Recommend exclusion.
 7. **Lightbox markup convention** (resolved): `product.js`'s generated gallery thumbs use `data-lightbox-trigger` + `data-lightbox-src` + `data-lightbox-group="product-gallery"` matching Track B's `lightbox.js` contract. Confirmed Track B's `lightbox.js` uses event delegation (`document.addEventListener('click', ...)` + `closest('[data-lightbox-trigger]')`) — no rebinding needed for JS-rendered thumbs.
 
