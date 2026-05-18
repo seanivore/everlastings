@@ -114,7 +114,7 @@ Begin with B1 — design system tokens in CSS, then base components. Verify toke
 ```
 You are the Track C orchestrator for the Everlastings by Emaline v1.4.3 release. Your goal is the integration layer per:
 
-  `assets/docs/archive/v1_4/v1_4_3_C_IMPLEMENT.md`
+  `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md`
 
 That file is your only execution playbook. Read it in full before doing anything else.
 
