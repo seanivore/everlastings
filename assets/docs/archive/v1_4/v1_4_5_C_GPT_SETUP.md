@@ -12,7 +12,7 @@ The GPT lives in **Em's** ChatGPT account (she has Plus). She's the owner. You'r
 
 Have these tabs ready in your browser:
 
-1. **Vercel dashboard** → Project: `everlastings-website` → Settings → Environment Variables. You'll need to copy `PRODUCT_API_KEY` from the **Production** scope. (Not the preview value. Not staging. Production.)
+1. **Vercel dashboard** → Project: `everlastings-website` → Settings → Environment Variables. You'll need to copy `PRODUCT_API_KEY` from the **Production** scope. (Not the preview value. Not staging. Production.) -- **THIS IS VERCEL 'SENSITIVE' VALUE MEANING YOU CANNOT COPY IT; I used what we have
 2. **This walkthrough** — open in a tab Em can see, or on a second screen.
 3. **A throwaway folder of 7 placeholder images** for the smoke test. Any 7 JPGs or PNGs. Family pet photos, screenshots, whatever — they get deleted at the end.
 

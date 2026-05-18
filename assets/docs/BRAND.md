@@ -10,6 +10,11 @@
 
 Everlastings by Emaline creates miniature sanctuaries — handcrafted havens where loss transforms into something you can hold, where memory becomes miniature magic, and where tiny worlds offer quiet beauty, soft wonder, and the feeling of being home. Born from a personal ritual of processing grief through art, each piece carries the intention of transformation, healing, and hope.
 
+**100-Characters**: 
+  - Handcrafted miniature worlds of quiet beauty, transforming loss into healing & hope.
+  - Healing through art, on miniature world at a time.
+  - Get lost in a tiny world filled with soft magic that feels like holding home in your hands.
+
 ---
 
 ## Tagline + Secondary Lines

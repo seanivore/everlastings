@@ -126,6 +126,143 @@
    - Vercel project → Settings → Environment Variables → add for **Development**, **Preview**, **Production** scopes.
 10. **Skip** the "Install code yourself / Use a partner integration" wizard for now — the code lives in the website repo and gets injected in the layout.
 
+---
+
+This was a wizard and did not allow me to skip any steps like it says "Skip the install code yourself" or "Use a partner integration wizard for now" — the first step is to set up a DATA SOURCE and doing so forces you through these steps. Further, The step 10 above actually doesn't seem to make much sense to me considering it states the obvious "the code lives in the website repo and gets injected in the layout" — that is clear, but what isn't clear is why I would skip the step if we needed the code to be able to put the code in the website repo to get injected into the layout in the first place. Regardless, I'll paste details from each step below. Thus far there is not a PIXEL ID. 
+
+**STEP 1: Copy Base Code**
+1. "Copy Meta Pixel Base Code Below" were the instructions. 
+
+```
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1476232423996802');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1476232423996802&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+```
+
+**STEP 2: Paste base code to website and save changes**
+2. Paste base code to website
+Paste the Meta Pixel code between the <head> and </head> tags of your web page. You may already have other existing code between the head tags, so just place the pixel code underneath that, but above </head>.
+
+3. Refresh your website to save code changes
+To save and confirm the changes you made to your website's code, refresh your website.
+
+**STEP 3: Reach more potential customers for better ad outcomes**
+Automatic Advanced Matching uses customer data provided to your business, like email address or phone number, to match visitors to Meta users. This attributes more conversions to your ads to reach more people with re-marketing campaigns. [Learn more](https://www.facebook.com/business/help/611774685654668)
+- [ ] Turn on Automatic Advanced Matching *I turned this off because I wasn't sure if the finer detailed and didn't want poorly matched details to be neglected completely*
+  + Verify the customer information you want to send
+    - City, State, ZIP/Postal Code
+    - Country
+    - Date of birth
+    - Email
+    - External id
+    - Gender
+    - First and last name
+    - Phone number
+  + This information will be hashed to better protect user privacy before it is sent to Facebook. Sensitive information, such as financial, health and government ID data will not be sent.
+
+After creating that dataset, it left me with options to finish setting up the pixel, which seems to require the code to be added and then verified by Facebook that it can read the code. The next option was to set up the Conversations API which I know we want also so I proceeded there and was presented with the following options. 
+
+Recommended setup
+Based on your business details, we recommend the following setup method for your Conversions API. You can review your information and update if needed.
+
+  1. Set up Conversions API Gateway with Madgicx (Recommended)
+     Madgicx is a partner platform that allows businesses and agencies to manage and optimize their ads 
+     - 17.8% lower cost per result
+  2. Set up with Meta
+     One of the fastest ways to connect your marketing data with Meta to help improve your ad performance. 
+     See terms: By proceeding, you hereby authorize and instruct Meta to set up a Meta-enabled Conversions API integration on your behalf, and you agree that your use of the integration will be subject to Meta's Platform Terms and Business Tools Terms. 
+     - One-click setup 
+     - For web events only
+     - Free
+  3. Set up with partner integration
+     - Code Free
+     - Low Cost 
+     - Low Maintenance 
+  4. Set up manually
+     Set up the Conversions API and Meta Pixel by direct integration. Some coding is required.
+     - Coding required
+     - Low cost
+     - 2-4 weeks
+
+[Compare cost and setup details](https://www.facebook.com/business/help/433493041367251?id=818859032317965)
+
+I scanned those setup details and, as with most of Facebook's help information, it was rich with empty information. I did notice that "Google Tags Manager" was one of the "Partner Integrations". 
+
+[Integrate Conversions API with server-side Google Tag Manager in Events Manager](https://www.facebook.com/business/help/702509907046774) - The steps do not make it clear if this is the right option. I feel like I would have remembered if we were using "Tag Manager" because if I recall, it used to hurt Lighthouse Scores a lot in the past. 
+
+So I selected "Set up manually" to see what the flow as like. It took me to what seemed possibly accurate in that it wants to set up Conversion API and PIXEL (just confusing because it's like, okay, again? we just got code). 
+
+**Connect activity with Conversions API**
+
+Manual Implementation Overview
+Preview the steps involved in manually implementing the Conversions API
+Step 1: Create your personalized instructions
+Select the events and event details you want to send through the Conversions API and we'll create personalized, step-by-step instructions for completing the implementation process.
+Step 2: Implement the Conversions API
+To begin sending your selected events through the Conversions API, follow the steps in your personalized instructions, or send them to a developer who will complete the steps for you. You can monitor the progress of your implementation in Events Manager.
+Step 3: Don't forget to monitor your event metrics
+Once you've sent enough data through the Conversions API, you'll be able to monitor 3 metrics that indicate the health of your events. Monitoring each metric lets you see how it's performing and how you can help improve its results with best practices, which can lead to better ad performance and help lower your cost per result.
+Event match quality
+This metric shows how effective your customer information may be at matching event instances to a Facebook account.
+Rate of deduplication
+This metric shows the percentage of events from the pixel and the Conversions API that were deduplicated to achieve accurate counting.
+Data freshness
+This metric shows the delay between the time the event occurred and when we received it to evaluate how likely a person is to take your desired action after seeing your ad.
+Conversions API event coverage
+Sending the same events from both browser and server gives you more accurate data, so you can improve audience targeting and help lower your cost per result.
+Visit the Help Center to learn more about each metric and its best practices. To see each metric, go to its tab in an event details page.
+
+Select Events
+Events measure customer actions that are important to your business. Select the events you want to send through the Conversions API.
+
+Ecommerce and retail (this is one of many dropdown menus)
+- View Content
+- Search
+- Add to Wishlist
+- Add to Cart
+- Initiate Checkout
+- Add Payment Info
+- Purchase
+- Subscribe
+- Start Trial
+- Complete Registration
+- Contact
+- Find Location
+- Schedule
+
+The next page gives "Event Detail Parameters" for each of the above that you check. 
+
+Given the INSANE amount of detail for those events, and that we're already setting them up for Google, I'm now wondering if it is Tag Manager. 
+
+I went to see what the "Set up with partner integration" options were and I see: 
+- Google Tag Manager 
+- Stripe 
+- Make, Zapier, Etc. 
+
+---
+
+Pixel ID: 1476232423996802
+
+
+BETTER DETAILS MAYBE: assets/docs/archive/v1_4/META_PIXEL_DEV_GUIDE.md
+
+---
+
+
 **If you see Y instead of X:**
 - If the screen shows **Datasets** instead of **Pixels**, you're on the right page. Meta renamed Pixels → Datasets in 2024; the Dataset ID is the same number used in `fbq('init', '<id>')`.
 - If you don't see **Connect data** because the left nav is collapsed, click the hamburger or look for a green **+** button. Or jump straight to `https://business.facebook.com/events_manager2/list/dataset` and click **Add new data source**.
