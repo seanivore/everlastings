@@ -220,6 +220,43 @@ window.addEventListener('consent-change', (e) => {
   applyConsent(persisted);
 });
 
+// Cross-page newsletter success-state UI (footer on every page; shop-empty inline form on /shop.html).
+// Per-page modules handle their own page-specific newsletter flips (homepage.js, complete.js, product.js).
+window.addEventListener('email-cta-success', (e) => {
+  const source = e.detail?.source;
+  if (source === 'newsletter-footer') {
+    document.querySelectorAll('form[data-email-cta="newsletter-footer"]').forEach((form) => {
+      const msg = document.createElement('p');
+      msg.textContent = 'Welcome to the Firelight Council.';
+      msg.style.cssText = 'margin: 0; color: rgba(255,255,255,0.7); font-style: italic; font-size: var(--text-sm);';
+      form.replaceWith(msg);
+    });
+  } else if (source === 'newsletter-shop-empty') {
+    document.querySelectorAll('form[data-email-cta="newsletter-shop-empty"]').forEach((form) => {
+      const msg = document.createElement('p');
+      msg.textContent = 'Welcome to the Firelight Council.';
+      msg.style.cssText = 'margin: var(--space-md) auto 0; color: var(--text-secondary); font-style: italic; max-width: 400px; text-align: center;';
+      form.replaceWith(msg);
+    });
+  }
+});
+
+// Already-subscribed friendly toast (rare case — surfaces from /api/subscribe 409).
+window.addEventListener('email-cta-already-subscribed', (e) => {
+  const source = e.detail?.source;
+  // For now, treat already-subscribed the same as success on the cross-page forms.
+  if (source === 'newsletter-footer' || source === 'newsletter-shop-empty') {
+    document.querySelectorAll(`form[data-email-cta="${source}"]`).forEach((form) => {
+      const msg = document.createElement('p');
+      msg.textContent = "You're already part of the Firelight Council.";
+      msg.style.cssText = source === 'newsletter-footer'
+        ? 'margin: 0; color: rgba(255,255,255,0.7); font-style: italic; font-size: var(--text-sm);'
+        : 'margin: var(--space-md) auto 0; color: var(--text-secondary); font-style: italic; max-width: 400px; text-align: center;';
+      form.replaceWith(msg);
+    });
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   initConfig();
   // cart-ui.js paints [data-cart-badge] on its own load; no badge call needed here.

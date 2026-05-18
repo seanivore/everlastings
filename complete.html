@@ -83,6 +83,7 @@
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/complete.js" defer></script>
 </head>
 <body>
 
@@ -172,12 +173,11 @@
         <div style="background: var(--color-cream); padding: var(--space-lg); border-radius: var(--radius-md); text-align: left; margin: var(--space-xl) 0;">
           <h3 style="margin-top: 0;">Order summary</h3>
           <div data-complete-line-items>
-            <!-- PLACEHOLDER: complete-line-items — Track C renders one row per item -->
+            <!-- complete.js renders one row per item from /api/session-status; row below is a loading fallback. -->
             <div style="display: flex; justify-content: space-between; padding: var(--space-sm) 0;">
-              <span>Placeholder Haven I</span>
-              <span>$245.00</span>
+              <span>Loading your order…</span>
+              <span>—</span>
             </div>
-            <!-- /PLACEHOLDER -->
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
             <span>Shipping</span>
