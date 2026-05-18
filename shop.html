@@ -83,6 +83,7 @@
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/shop.js" defer></script>
 </head>
 <body>
 
@@ -225,7 +226,7 @@
                  ============================================================ -->
             <div id="shop-grid" data-shop-grid class="product-grid" style="display: grid; gap: var(--space-lg); grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
 
-              <!-- PLACEHOLDER: shop-tile-list — Track C renders one .product-tile per Supabase row -->
+              <!-- shop.js renders tiles into [data-shop-grid] from Supabase; the markup below is a fallback that gets overwritten on first paint. -->
 
               <article class="card product-tile" data-product-slug="placeholder-haven-i" data-series="portals-to-peace" data-product-type="miniature" data-available="true">
                 <a href="/product/placeholder-haven-i" style="display: block; color: inherit; text-decoration: none;">
@@ -314,7 +315,6 @@
                 </a>
               </article>
 
-              <!-- /PLACEHOLDER -->
             </div>
 
             <!-- ============================================================

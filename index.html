@@ -83,6 +83,7 @@
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/homepage.js" defer></script>
 </head>
 <body>
 
@@ -151,13 +152,12 @@
          ============================================================ -->
     <section class="hero" data-hero>
 
-      <!-- PLACEHOLDER: hero-image — Track C may swap to a curated hero asset -->
+      <!-- Hero artwork (Track B-curated; replace via Sean's CDN drop) -->
       <div class="hero__media" data-hero-media>
         <img src="https://cdn.everlastingsbyemaline.com/test/placeholder-haven-i/hero-placeholder-haven-i.webp"
              alt=""
              onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 9%22%3E%3Cdefs%3E%3CradialGradient id=%22r%22 cx=%2250%25%22 cy=%2250%25%22 r=%2270%25%22%3E%3Cstop offset=%220%22 stop-color=%22%239B6B9E%22/%3E%3Cstop offset=%221%22 stop-color=%22%234A1942%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width=%2216%22 height=%229%22 fill=%22url(%23r)%22/%3E%3C/svg%3E'">
       </div>
-      <!-- /PLACEHOLDER -->
 
       <div class="hero__overlay" aria-hidden="true"></div>
       <div class="hero__spotlight" aria-hidden="true"></div>
@@ -194,7 +194,7 @@
           <p style="color: var(--text-secondary);">A few pieces currently asking for the right collector.</p>
         </header>
 
-        <!-- PLACEHOLDER: featured-carousel — Track C populates from products.featured = true -->
+        <!-- homepage.js renders into [data-featured-carousel] from products.featured = true; markup below is a fallback. -->
         <div class="featured-carousel" data-featured-carousel>
 
           <article class="card product-tile" data-product-slug="placeholder-haven-i">
@@ -245,7 +245,6 @@
           </article>
 
         </div>
-        <!-- /PLACEHOLDER -->
 
         <p style="text-align: center; margin-top: var(--space-xl);">
           <a href="/shop.html" class="btn btn-secondary">See all havens</a>
@@ -307,14 +306,13 @@
     <section class="section" style="background: var(--color-ink); color: var(--text-inverse);">
       <div class="container" style="max-width: 720px; text-align: center;">
 
-        <!-- PLACEHOLDER: testimonial -->
+        <!-- Testimonial copy (Sean / Emaline-curated; swap to real customer quote at launch) -->
         <blockquote style="margin: 0; font-family: var(--font-display); font-size: var(--text-2xl); font-style: italic; line-height: var(--leading-snug); color: var(--text-inverse);">
           "I keep the piece on my bedside table. Some nights it's the first thing I see. Some nights it's the last. Either way, it has become the small reminder that beauty can still be built — by hand, on purpose, from quiet hours."
         </blockquote>
         <cite style="display: block; margin-top: var(--space-lg); font-style: normal; font-size: var(--text-sm); color: var(--color-gold); letter-spacing: 0.1em; text-transform: uppercase;">
           — A collector
         </cite>
-        <!-- /PLACEHOLDER -->
 
       </div>
     </section>

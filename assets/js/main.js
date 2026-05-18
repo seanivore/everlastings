@@ -88,16 +88,31 @@ function getOrCreateBrowserSessionId() {
   return id;
 }
 
+// Track B's cart-ui.js owns the badge ([data-cart-badge] selector, 'cart' key).
+// Storage key + post-mutation 'cart-updated' dispatch must match cart-ui.js exactly.
+const CART_STORAGE_KEY = 'cart';
+
 function getCart() {
-  return JSON.parse(localStorage.getItem('everlastings_cart') || '[]');
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function persistCart(cart) {
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  // cart-ui.js listens for this to repaint [data-cart-badge].
+  window.dispatchEvent(new Event('cart-updated'));
 }
 
 function addToCart(item) {
   const cart = getCart();
   if (cart.find((i) => i.product_id === item.product_id)) return;
-  cart.push(item);
-  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
-  updateCartBadge();
+  // Normalize: ensure quantity exists (Track B shape) plus full item metadata C2/C3 need.
+  cart.push({ quantity: 1, ...item });
+  persistCart(cart);
 
   if (typeof gtag === 'function') {
     gtag('event', 'add_to_cart', {
@@ -125,8 +140,7 @@ function addToCart(item) {
 function removeFromCart(productId) {
   const item = getCart().find((i) => i.product_id === productId);
   const cart = getCart().filter((i) => i.product_id !== productId);
-  localStorage.setItem('everlastings_cart', JSON.stringify(cart));
-  updateCartBadge();
+  persistCart(cart);
   if (item && typeof gtag === 'function') {
     gtag('event', 'remove_from_cart', {
       currency: 'USD',
@@ -137,20 +151,12 @@ function removeFromCart(productId) {
 }
 
 function clearCart() {
-  localStorage.removeItem('everlastings_cart');
-  updateCartBadge();
+  localStorage.removeItem(CART_STORAGE_KEY);
+  window.dispatchEvent(new Event('cart-updated'));
 }
 
 function getCartTotal() {
-  return getCart().reduce((sum, item) => sum + item.price, 0);
-}
-
-function updateCartBadge() {
-  const badge = document.getElementById('cart-badge');
-  if (!badge) return;
-  const count = getCart().length;
-  badge.textContent = count;
-  badge.classList.toggle('hidden', count === 0);
+  return getCart().reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
 }
 
 // --- Global email-cta-submit listener ---
@@ -216,7 +222,7 @@ window.addEventListener('consent-change', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   initConfig();
-  updateCartBadge();
+  // cart-ui.js paints [data-cart-badge] on its own load; no badge call needed here.
   // Re-apply persisted consent on every page load so settings carry across navigation.
   const stored = localStorage.getItem(CONSENT_STORAGE_KEY);
   if (stored) {
