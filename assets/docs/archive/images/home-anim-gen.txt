@@ -1,0 +1,11 @@
+# Media Generation  
+
+## Initial Image 
+**Model**: Nano Banana 3 
+
+Create a miniature toy scene: a hand-painted European street corner diorama with narrow red brick buildings, a cozy corner, flower ship, vintage bookstore, etc. Cinematic scene with shallow depth of field, tilt-shift effect; short telephoto lens. Shot from above, angled 30-40º. No wide angle distortion, perspective is slightly flattened. Warm evening atmosphere, no people. Hard, directional key light from one side combined with warm interior window light, creating deep, crisp shadows and pockets of golden glow. Color palette is rich and saturated, like hand‑painted miniatures: vivid reds and yellows for shop signs and window frames, bright blue and red scooters, lush green vines and potted plants, and warm amber light spilling onto the tiled sidewalk. High contrast but with soft bloom around bright highlights. Scene extends beyond image framing, nicely composed to show focus of corner shops. Rendering is hyper‑realistic product photography of a premium collector diorama, ultra‑sharp where in focus, creamy bokeh elsewhere. 8K resolution, high dynamic range, studio‑quality lighting, clean and uncluttered presentation. Emphasize the tangible, toy‑like scale and physical craftsmanship of the miniature city scene.
+
+## Image To Video  
+**Model**: SeedDance 2.0 1080p
+
+Magical, realism sun setting, hard shadows lengthen as the sun sets from left of screen. Reflections in windows change with the shifting sunlight. Dreamlike. No camera movement or extra elements should be added. No zooming in or out. Indoor lights here and there turn off, flicker, pulse, or dim. Streetlights get brighter creating another strong light source by the time the sun is set. Detail and careful care taken to adjust all foliate and smaller shadows and shifting reflective glints on the shiny scooter and other reflective surfaces. Soft halo that comes and goes. No big distortions, no melting buildings, no characters appearing. Keep the architecture, signage, and composition exactly the same. 
