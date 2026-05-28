@@ -40,7 +40,7 @@ Without this, the test-card flow won't write orders to Supabase + won't fire the
    vercel env add STRIPE_WEBHOOK_SECRET preview
    # paste the whsec_... value when prompted; pick "Preview" environment scope
    ```
-   Then push a trivial commit to dev to force a redeploy so the function picks up the new env var. (Or run `vercel --prod=false` to redeploy preview.)
+   Then push a trivial commit to dev to force a redeploy so the function picks up the new env var. (Or **DO NOT** run `vercel --prod=false` to redeploy preview.)
 8. Back in Stripe Dashboard → Webhooks → click the new endpoint → "Send test webhook" → pick `checkout.session.completed` → "Send test webhook". You should see a 200 in the Stripe UI within ~2 seconds. If you don't, the webhook secret mismatch is the most likely cause.
 
 - [x] ERROR THAT HAS BEEN MANAGED, IMPORTANT DETAILS FOR THE FUTURE: 
@@ -71,6 +71,16 @@ After whichever path: confirm with `vercel inspect https://everlastings-website-
 #### 1.2 — Real test-card walkthrough (the big one)
 
 This proves the full purchase flow works end-to-end on preview. Use a **Stripe test card** — no real money moves.
+
+**SEAN TESTING NOTES** 
+
+- [x] PRODUCT AND CART -- adding **product to cart** and navigating to cart to start checkout 
+- [x] GOOGLE ANALYTICS EVENTS -- I'm not sure if these are firing correctly or not, they all say **"FAILED" next to the GA4 number**
+- [x] BILLING SHIPPING ADDRESS -- **missing both shipping and billing form field text fields**, with same address checked or unchecked 
+- [x] STRIPE CHECKOUT -- The **checkout session loading failed** because we are using the wrong API release and need to upgrade to 'basil'
+ 
+**MUST SEE IMAGE**: `assets/docs/archive/images/checkout-shipping-billing-form-console-log.jpg`
+**MUST SEE CONSOLE LOG**: `assets/docs/archive/v1_4/v1_4_5_C_TESTING_1_2_CONSOLE_LOG.md`
 
 1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
 2. Open DevTools (Cmd-Option-I) → Console tab. Keep it visible — you'll watch GA4 events fire as you click.
