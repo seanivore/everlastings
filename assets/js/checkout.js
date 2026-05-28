@@ -152,7 +152,7 @@ async function mountStageB(stripe, data) {
   if (shippingMount) {
     shippingMount.classList.remove('hidden');
     shippingMount.innerHTML = '';
-    const shippingElement = checkout.createAddressElement('shipping', { allowedCountries: ['US'] });
+    const shippingElement = checkout.createShippingAddressElement({ allowedCountries: ['US'] });
     shippingElement.mount('[data-stripe-address-shipping]');
     shippingElement.on('change', (ev) => {
       const country = ev.value?.address?.country;
@@ -172,7 +172,7 @@ async function mountStageB(stripe, data) {
   const billingMount = document.querySelector('[data-stripe-address-billing]');
   if (billingMount && billingToggle && !billingToggle.checked) {
     billingMount.innerHTML = '';
-    const billingElement = checkout.createAddressElement('billing');
+    const billingElement = checkout.createBillingAddressElement();
     billingElement.mount('[data-stripe-address-billing]');
   }
 
