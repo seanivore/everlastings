@@ -86,6 +86,8 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 
 Two of the three were the same bug. One is a false alarm. All real fixes are landed; details below.
 
+**Round 2 follow-up (2026-05-28):** After Round 1 deployed, retest surfaced a second client-side bug — `stripe.initCheckout()` is a different Basil method that doesn't accept `clientSecret`. The correct vanilla-JS method for Custom Checkout is `stripe.initCheckoutElementsSdk()`. The companion `loadActions()` return also needed `{ actions }` destructuring, and `actions.confirm()` returns an error object directly (not `{ type, error }`). All three are fixed at `assets/js/checkout.js:136, 207-213`. Server architecture (Checkout Sessions API + `ui_mode: 'custom'`) was already correct — confirmed against Sean's saved wizard walkthrough at `freelance-payments-dev/assets/docs/v5/v5_1_16/QUICKSTART_CHECKOUT_SESSIONS/`.
+
 **1. Stripe checkout (real bug — root cause for #1 and #2 below) — FIXED**
 - `checkout.html:88` was loading `https://js.stripe.com/v3/` (standard release).
 - `assets/js/checkout.js:136` calls `stripe.initCheckout(...)`, which only exists in Stripe.js's **Basil** release channel.
@@ -105,6 +107,8 @@ Two of the three were the same bug. One is a false alarm. All real fixes are lan
 - The `Fetch failed loading: POST "https://www.google-analytics.com/g/collect?..."` lines are a known Chrome DevTools artifact. GA4's `gtag` sends hits via `navigator.sendBeacon` / `fetch({ keepalive: true })` so they survive page navigation, and Chrome's network panel labels those "failed" whenever the page doesn't read the response — which analytics never does. The hits still reach Google.
 - Evidence: in the captured console log, the `add_to_cart` and `view_item` beacons carry full ecommerce payloads (`pr1=...~pr245~qt1`) — exactly what GA4 expects.
 - **Verification path is unchanged:** the GA4 DebugView check in step 12 below is the only authoritative confirmation. Install the Google Analytics Debugger Chrome extension before re-running 1.2, then watch Admin → DebugView for `view_item`, `add_to_cart`, `begin_checkout`, `purchase`. Ignore the DevTools "failed" labels.
+
+
 
 1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
 2. Open DevTools (Cmd-Option-I) → Console tab. Keep it visible — you'll watch GA4 events fire as you click.
