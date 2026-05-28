@@ -133,8 +133,8 @@ function wireStageA(stripe, cart, sessionId) {
 }
 
 async function mountStageB(stripe, data) {
-  const checkout = await stripe.initCheckoutElementsSdk({
-    clientSecret: data.clientSecret,
+  const checkout = await stripe.initCheckout({
+    fetchClientSecret: async () => data.clientSecret,
     elementsOptions: {
       appearance: {
         theme: 'stripe',
@@ -204,8 +204,14 @@ async function mountStageB(stripe, data) {
     confirmBtn.textContent = 'Processing…';
     hideError();
     try {
-      const { actions } = await checkout.loadActions();
-      const error = await actions.confirm();
+      const loadActionsResult = await checkout.loadActions();
+      if (loadActionsResult.type !== 'success') {
+        showError(loadActionsResult.error?.message || 'Payment could not be loaded.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalLabel;
+        return;
+      }
+      const { error } = await loadActionsResult.actions.confirm();
       if (error) {
         showError(error.message || 'Payment could not be processed.');
         confirmBtn.disabled = false;
