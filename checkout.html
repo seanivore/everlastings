@@ -176,49 +176,20 @@
             <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Contact</legend>
             <div class="form-field">
               <label class="form-label" for="checkout-email">Email</label>
-              <input id="checkout-email" name="email" type="email" required>
+              <input id="checkout-email" name="email" type="email" autocomplete="email" required>
               <span class="form-help">Order confirmation and tracking sent here.</span>
             </div>
             <div class="form-field">
+              <label class="form-label" for="checkout-name">Full name</label>
+              <input id="checkout-name" name="name" type="text" autocomplete="name" required>
+              <span class="form-help">For your order confirmation and shipping label.</span>
+            </div>
+            <div class="form-field">
               <label class="form-label" for="checkout-phone">Phone (optional)</label>
-              <input id="checkout-phone" name="phone" type="tel">
+              <input id="checkout-phone" name="phone" type="tel" autocomplete="tel">
               <span class="form-help">For shipping carrier delivery questions only.</span>
             </div>
           </fieldset>
-
-          <!-- Shipping address (Stripe AddressElement mounts here in Track C) -->
-          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
-            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Shipping address</legend>
-
-            <!-- checkout.js mounts Stripe AddressElement (shipping, US only) into this slot after Stage A continues. -->
-            <div id="address-element-shipping" data-stripe-address-shipping class="hidden" style="min-height: 200px;"></div>
-
-            <!-- US-only restriction error — Stripe AddressElement triggers when user picks non-US country -->
-            <div id="restricted-country-error" data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
-              We currently only ship within the United States. <a href="/contact">Contact us</a> for international inquiries.
-            </div>
-          </fieldset>
-
-          <!-- Billing -->
-          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
-            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Billing address</legend>
-
-            <label class="checkbox-label">
-              <input type="checkbox" id="billing-same-as-shipping" checked>
-              Same as shipping
-            </label>
-
-            <!-- Stripe AddressElement (billing) — hidden by default; revealed when "same as shipping" unchecked. -->
-            <div id="address-element-billing" data-stripe-address-billing class="hidden" style="margin-top: var(--space-md); min-height: 200px;"></div>
-          </fieldset>
-
-          <!-- Address validation errors -->
-          <div id="address-incomplete-error" data-address-incomplete class="hidden inline-error" style="margin-bottom: var(--space-md);">
-            Please complete your shipping address.
-          </div>
-          <div id="address-undeliverable-error" data-address-undeliverable class="hidden inline-error" style="margin-bottom: var(--space-md);">
-            We couldn't verify this address. Please double-check.
-          </div>
 
           <button type="button" class="btn btn-primary btn-lg" data-checkout-continue>Continue to payment</button>
         </form>
@@ -233,6 +204,40 @@
         <h2>2. Payment</h2>
         <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
 
+        <!-- Shipping address (Stripe AddressElement mounts here after Stage A continues) -->
+        <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 var(--space-xl);">
+          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Shipping address</legend>
+
+          <!-- checkout.js mounts Stripe AddressElement (shipping, US only) into this slot after Stage A continues. -->
+          <div id="address-element-shipping" data-stripe-address-shipping class="hidden" style="min-height: 200px;"></div>
+
+          <!-- US-only restriction error — Stripe AddressElement triggers when user picks non-US country -->
+          <div id="restricted-country-error" data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
+            We currently only ship within the United States. <a href="/contact">Contact us</a> for international inquiries.
+          </div>
+        </fieldset>
+
+        <!-- Billing address -->
+        <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
+          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Billing address</legend>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="billing-same-as-shipping" checked>
+            Same as shipping
+          </label>
+
+          <!-- Stripe AddressElement (billing) — hidden by default; revealed when "same as shipping" unchecked. -->
+          <div id="address-element-billing" data-stripe-address-billing class="hidden" style="margin-top: var(--space-md); min-height: 200px;"></div>
+        </fieldset>
+
+        <!-- Address validation errors -->
+        <div id="address-incomplete-error" data-address-incomplete class="hidden inline-error" style="margin-bottom: var(--space-md);">
+          Please complete your shipping address.
+        </div>
+        <div id="address-undeliverable-error" data-address-undeliverable class="hidden inline-error" style="margin-bottom: var(--space-md);">
+          We couldn't verify this address. Please double-check.
+        </div>
+
         <!-- checkout.js mounts Stripe PaymentElement into this slot after Stage A continues. -->
         <div id="payment-element" data-stripe-payment style="margin-top: var(--space-lg); min-height: 200px;"></div>
 
@@ -244,11 +249,11 @@
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
             <span>Shipping</span>
-            <span data-checkout-shipping>Calculated by Stripe</span>
+            <span data-checkout-shipping>Free</span>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
             <span>Total</span>
-            <span data-checkout-total>$245.00 + shipping</span>
+            <span data-checkout-total>—</span>
           </div>
         </div>
 

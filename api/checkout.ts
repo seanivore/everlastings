@@ -106,6 +106,21 @@ async function handleSession(request: Request): Promise<Response> {
       line_items,
       allow_promotion_codes: true,
       shipping_address_collection: { allowed_countries: ['US'] },
+      // v1: static $0 "Free shipping" — Emy factors shipping into product price.
+      // v1.1: replace with Shippo per-product rate using sum of line_items[].shipping_cents.
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 0, currency: 'usd' },
+            display_name: 'Free shipping',
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: 5 },
+              maximum: { unit: 'business_day', value: 10 },
+            },
+          },
+        },
+      ],
       phone_number_collection: { enabled: true },
       customer_creation: 'always',
       ...(email && typeof email === 'string' && email.includes('@') ? { customer_email: email } : {}),

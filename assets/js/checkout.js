@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderOrderSummary(cart);
   prefillEmail();
+  prefillName();
 
   // Wait for /api/config → Stripe publishable key in main.js's initConfig.
   for (let i = 0; i < 80 && !window._stripePublishableKey; i++) {
@@ -44,13 +45,20 @@ function renderOrderSummary(cart) {
     `).join('');
   }
   const totalEl = document.querySelector('[data-checkout-total]');
-  if (totalEl) totalEl.textContent = `${formatPrice(getCartTotal())} + shipping`;
+  if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
 }
 
 function prefillEmail() {
   const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
   if (emailInput && !emailInput.value) {
     emailInput.value = sessionStorage.getItem('checkout_email') || '';
+  }
+}
+
+function prefillName() {
+  const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
+  if (nameInput && !nameInput.value) {
+    nameInput.value = sessionStorage.getItem('checkout_name') || '';
   }
 }
 
@@ -71,13 +79,21 @@ function wireStageA(stripe, cart, sessionId) {
   continueBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
+    const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
     const email = (emailInput?.value || '').trim();
+    const name = (nameInput?.value || '').trim();
     if (!email || !email.includes('@')) {
       showError('Please enter a valid email.');
       emailInput?.focus();
       return;
     }
+    if (!name) {
+      showError('Please enter your full name.');
+      nameInput?.focus();
+      return;
+    }
     sessionStorage.setItem('checkout_email', email);
+    sessionStorage.setItem('checkout_name', name);
     hideError();
     continueBtn.disabled = true;
     continueBtn.textContent = 'Loading payment…';
@@ -122,17 +138,20 @@ function wireStageA(stripe, cart, sessionId) {
       return;
     }
 
-    await mountStageB(stripe, data);
+    await mountStageB(stripe, data, { name });
     revealStageB();
-    // Collapse Stage A and disable inputs so user can't edit while paying.
-    document.querySelectorAll('[data-checkout-stage="a"] input, [data-checkout-stage="a"] button').forEach((el) => {
-      el.disabled = true;
+    // Lock only filled inputs so the user can still add an empty optional field later
+    // (e.g., type a phone number in Stage A after seeing the order summary).
+    document.querySelectorAll('[data-checkout-stage="a"] input').forEach((el) => {
+      if (el.value && el.type !== 'checkbox') el.disabled = true;
     });
+    const continueBtnEl = document.querySelector('[data-checkout-stage="a"] [data-checkout-continue]');
+    if (continueBtnEl) continueBtnEl.disabled = true;
     document.querySelector('[data-checkout-stage="a"]')?.classList.add('collapsed');
   });
 }
 
-async function mountStageB(stripe, data) {
+async function mountStageB(stripe, data, opts = {}) {
   const checkout = await stripe.initCheckout({
     fetchClientSecret: async () => data.clientSecret,
     elementsOptions: {
@@ -152,7 +171,16 @@ async function mountStageB(stripe, data) {
   if (shippingMount) {
     shippingMount.classList.remove('hidden');
     shippingMount.innerHTML = '';
-    const shippingElement = checkout.createShippingAddressElement();
+    // Pass the name captured in Stage A as a default so Stripe pre-fills the "Full name" field.
+    // If Basil rejects defaultValues here, the user just retypes the name — not a blocker.
+    let shippingElement;
+    try {
+      shippingElement = opts.name
+        ? checkout.createShippingAddressElement({ defaultValues: { name: opts.name } })
+        : checkout.createShippingAddressElement();
+    } catch (err) {
+      shippingElement = checkout.createShippingAddressElement();
+    }
     shippingElement.mount('[data-stripe-address-shipping]');
     shippingElement.on('change', (ev) => {
       const country = ev.value?.address?.country;
@@ -186,13 +214,15 @@ async function mountStageB(stripe, data) {
   const confirmBtn = document.querySelector('[data-checkout-confirm]');
   checkout.on('change', (session) => {
     if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
-    if (session.total?.total?.amount != null) {
+    const totalAmount = session.total?.total?.amount;
+    if (Number.isFinite(totalAmount)) {
       const totalEl = document.querySelector('[data-checkout-total]');
-      if (totalEl) totalEl.textContent = formatPrice(session.total.total.amount);
+      if (totalEl) totalEl.textContent = formatPrice(totalAmount);
     }
-    if (session.shippingOption?.total?.amount != null) {
+    const shipAmount = session.shippingOption?.total?.amount;
+    if (Number.isFinite(shipAmount)) {
       const shipEl = document.querySelector('[data-checkout-shipping]');
-      if (shipEl) shipEl.textContent = formatPrice(session.shippingOption.total.amount);
+      if (shipEl) shipEl.textContent = shipAmount === 0 ? 'Free' : formatPrice(shipAmount);
     }
   });
 
