@@ -86,7 +86,14 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 
 Two of the three were the same bug. One is a false alarm. All real fixes are landed; details below.
 
-**Round 2 follow-up (2026-05-28):** After Round 1 deployed, retest surfaced a second client-side bug — `stripe.initCheckout()` is a different Basil method that doesn't accept `clientSecret`. The correct vanilla-JS method for Custom Checkout is `stripe.initCheckoutElementsSdk()`. The companion `loadActions()` return also needed `{ actions }` destructuring, and `actions.confirm()` returns an error object directly (not `{ type, error }`). All three are fixed at `assets/js/checkout.js:136, 207-213`. Server architecture (Checkout Sessions API + `ui_mode: 'custom'`) was already correct — confirmed against Sean's saved wizard walkthrough at `freelance-payments-dev/assets/docs/v5/v5_1_16/QUICKSTART_CHECKOUT_SESSIONS/`.
+**Round 2 (2026-05-28) — four cascading client-side bugs:** After Round 1 deployed, retest surfaced a chain of vanilla-JS API-shape errors that the doc-fetch tool got wrong on first pass. All resolved by live-probing the actual Stripe.js Basil bundle in Chrome:
+
+1. **Wrong init param name**: `stripe.initCheckout({ clientSecret })` is rejected. Correct shape is `stripe.initCheckout({ fetchClientSecret: async () => secret })` — a callback returning a Promise<string>, not the secret itself. The wizard sample in `freelance-payments-dev/assets/docs/RESOURCES/stripe-sample-code/public/checkout.js` shows the old `clientSecret: promise` pattern which is now stale; the React `<CheckoutProvider>` wrapper internally converts it to `fetchClientSecret`.
+2. **Wrong loadActions shape**: `await checkout.loadActions()` returns `{ type: 'success' | 'error', actions }`, not a plain `{ actions }` object. Must check `type === 'success'` before using `.actions`.
+3. **Wrong element-create method names**: there is no `checkout.createAddressElement(kind, ...)` — the Custom Checkout object exposes per-type methods: `createShippingAddressElement()`, `createBillingAddressElement()`, `createPaymentElement()`, plus `createContactDetailsElement`, `createCurrencySelectorElement`, `createExpressCheckoutElement` for future use.
+4. **Wrong shipping element option**: `createShippingAddressElement({ allowedCountries: ['US'] })` is rejected. Server's `shipping_address_collection: { allowed_countries: ['US'] }` already enforces US-only, so the client option is redundant — just call with no args.
+
+All four fixed in `assets/js/checkout.js` (`initCheckout`, `loadActions`, `createShippingAddressElement`, `createBillingAddressElement`). Server architecture (`stripe.checkout.sessions.create` with `ui_mode: 'custom'` + `customer_email`) was already correct end-to-end. Live verification in Chrome confirmed Stage B mounts both Stripe Elements (shipping AddressElement + PaymentElement) with no console errors.
 
 **1. Stripe checkout (real bug — root cause for #1 and #2 below) — FIXED**
 - `checkout.html:88` was loading `https://js.stripe.com/v3/` (standard release).
