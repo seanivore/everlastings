@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stripe = Stripe(window._stripePublishableKey);
 
   wireStageA(stripe, cart, sessionId);
-  wireBillingToggle();
 });
 
 function renderOrderSummary(cart) {
@@ -68,15 +67,6 @@ function prefillPhone() {
   if (phoneInput && !phoneInput.value) {
     phoneInput.value = sessionStorage.getItem('checkout_phone') || '';
   }
-}
-
-function wireBillingToggle() {
-  const toggle = document.getElementById('billing-same-as-shipping');
-  const billingMount = document.querySelector('[data-stripe-address-billing]');
-  if (!toggle || !billingMount) return;
-  toggle.addEventListener('change', () => {
-    billingMount.classList.toggle('hidden', toggle.checked);
-  });
 }
 
 function wireStageA(stripe, cart, sessionId) {
@@ -199,12 +189,27 @@ async function mountStageB(stripe, data) {
     });
   }
 
+  // Billing element: lazy-mount on demand so unchecking "Same as shipping"
+  // after mount still produces a working element.
   const billingToggle = document.getElementById('billing-same-as-shipping');
   const billingMount = document.querySelector('[data-stripe-address-billing]');
-  if (billingMount && billingToggle && !billingToggle.checked) {
+  let billingElement = null;
+  const ensureBillingMounted = () => {
+    if (billingElement || !billingMount) return;
     billingMount.innerHTML = '';
-    const billingElement = checkout.createBillingAddressElement();
+    billingElement = checkout.createBillingAddressElement();
     billingElement.mount('[data-stripe-address-billing]');
+  };
+  if (billingToggle && billingMount) {
+    if (!billingToggle.checked) {
+      billingMount.classList.remove('hidden');
+      ensureBillingMounted();
+    }
+    billingToggle.addEventListener('change', () => {
+      const sameAsShipping = billingToggle.checked;
+      billingMount.classList.toggle('hidden', sameAsShipping);
+      if (!sameAsShipping) ensureBillingMounted();
+    });
   }
 
   const paymentMount = document.querySelector('[data-stripe-payment]');
@@ -212,6 +217,14 @@ async function mountStageB(stripe, data) {
     paymentMount.innerHTML = '';
     const paymentElement = checkout.createPaymentElement();
     paymentElement.mount('[data-stripe-payment]');
+  }
+
+  // Pre-fill shipping + billing names from the Stage A "Your name" capture.
+  // Users can still edit (shipping to gift recipient, billing to cardholder, etc.).
+  const customerName = sessionStorage.getItem('checkout_name');
+  if (customerName) {
+    try { await checkout.updateShippingAddress({ name: customerName }); } catch (err) { console.warn('updateShippingAddress(name) failed:', err); }
+    try { await checkout.updateBillingAddress({ name: customerName }); } catch (err) { console.warn('updateBillingAddress(name) failed:', err); }
   }
 
   const confirmBtn = document.querySelector('[data-checkout-confirm]');

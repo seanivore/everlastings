@@ -180,9 +180,9 @@
               <span class="form-help">Order confirmation and tracking sent here.</span>
             </div>
             <div class="form-field">
-              <label class="form-label" for="checkout-name">Full name</label>
+              <label class="form-label" for="checkout-name">Your name</label>
               <input id="checkout-name" name="name" type="text" autocomplete="name" required>
-              <span class="form-help">Used on your order and shipping label.</span>
+              <span class="form-help">For your order confirmation. We'll pre-fill it for shipping and billing too — you can change either if needed.</span>
             </div>
             <div class="form-field">
               <label class="form-label" for="checkout-phone">Phone (optional)</label>
@@ -204,9 +204,9 @@
         <h2>2. Payment</h2>
         <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
 
-        <!-- Shipping address (Stripe AddressElement mounts here after Stage A continues) -->
+        <!-- Ship to (Stripe AddressElement mounts here after Stage A continues) -->
         <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 var(--space-xl);">
-          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Shipping address</legend>
+          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Ship to</legend>
 
           <!-- checkout.js mounts Stripe AddressElement (shipping, US only) into this slot after Stage A continues. -->
           <div id="address-element-shipping" data-stripe-address-shipping class="hidden" style="min-height: 200px;"></div>
@@ -217,9 +217,9 @@
           </div>
         </fieldset>
 
-        <!-- Billing address -->
+        <!-- Bill to -->
         <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
-          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Billing address</legend>
+          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Bill to</legend>
 
           <label class="checkbox-label">
             <input type="checkbox" id="billing-same-as-shipping" checked>
