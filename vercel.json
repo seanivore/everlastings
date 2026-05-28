@@ -2,8 +2,8 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/product/:slug", "destination": "/product.html" },
-    { "source": "/admin/:path*", "destination": "/admin/index.html" },
+    { "source": "/product/:slug", "destination": "/product" },
+    { "source": "/admin/:path*", "destination": "/admin" },
     { "source": "/api/checkout/reserve", "destination": "/api/checkout?_action=reserve" },
     { "source": "/api/session-status", "destination": "/api/checkout?_action=session-status" },
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
