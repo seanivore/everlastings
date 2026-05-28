@@ -32,8 +32,9 @@ async function handleSession(request: Request): Promise<Response> {
       session_id?: string;
       email?: string;
       name?: string;
+      phone?: string;
     };
-    const { items, session_id, email } = body;
+    const { items, session_id, email, name, phone } = body;
 
     if (!Array.isArray(items) || items.length === 0 || !session_id || typeof session_id !== 'string') {
       return Response.json(
@@ -100,6 +101,22 @@ async function handleSession(request: Request): Promise<Response> {
 
     const itemsMeta = items.map((i) => ({ id: i.product_id, slug: i.slug }));
 
+    // Pre-create a Stripe Customer with the contact data captured in Stage A.
+    // Binding the session to a customer (vs customer_email) lets Stripe's
+    // AddressElement pre-fill "Full name" from customer.name — no duplicate
+    // typing for the buyer. Same pattern as the freelance-payments project.
+    const emailValid = email && typeof email === 'string' && email.includes('@');
+    let customerId: string | undefined;
+    if (emailValid) {
+      const customer = await stripe.customers.create({
+        email: email!,
+        ...(name && typeof name === 'string' && name.trim() ? { name: name.trim() } : {}),
+        ...(phone && typeof phone === 'string' && phone.trim() ? { phone: phone.trim() } : {}),
+        metadata: { session_id },
+      });
+      customerId = customer.id;
+    }
+
     const stripeSession = await stripe.checkout.sessions.create({
       ui_mode: 'custom',
       mode: 'payment',
@@ -122,8 +139,11 @@ async function handleSession(request: Request): Promise<Response> {
         },
       ],
       phone_number_collection: { enabled: true },
-      customer_creation: 'always',
-      ...(email && typeof email === 'string' && email.includes('@') ? { customer_email: email } : {}),
+      ...(customerId
+        ? { customer: customerId }
+        : emailValid
+          ? { customer_email: email!, customer_creation: 'always' }
+          : { customer_creation: 'always' }),
       metadata: {
         items: JSON.stringify(itemsMeta),
         session_id,

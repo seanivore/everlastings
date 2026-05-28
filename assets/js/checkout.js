@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderOrderSummary(cart);
   prefillEmail();
+  prefillName();
+  prefillPhone();
 
   // Wait for /api/config → Stripe publishable key in main.js's initConfig.
   for (let i = 0; i < 80 && !window._stripePublishableKey; i++) {
@@ -54,6 +56,20 @@ function prefillEmail() {
   }
 }
 
+function prefillName() {
+  const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
+  if (nameInput && !nameInput.value) {
+    nameInput.value = sessionStorage.getItem('checkout_name') || '';
+  }
+}
+
+function prefillPhone() {
+  const phoneInput = document.querySelector('[data-checkout-info-form] input[name="phone"]');
+  if (phoneInput && !phoneInput.value) {
+    phoneInput.value = sessionStorage.getItem('checkout_phone') || '';
+  }
+}
+
 function wireBillingToggle() {
   const toggle = document.getElementById('billing-same-as-shipping');
   const billingMount = document.querySelector('[data-stripe-address-billing]');
@@ -71,13 +87,24 @@ function wireStageA(stripe, cart, sessionId) {
   continueBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
+    const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
+    const phoneInput = document.querySelector('[data-checkout-info-form] input[name="phone"]');
     const email = (emailInput?.value || '').trim();
+    const name = (nameInput?.value || '').trim();
+    const phone = (phoneInput?.value || '').trim();
     if (!email || !email.includes('@')) {
       showError('Please enter a valid email.');
       emailInput?.focus();
       return;
     }
+    if (!name) {
+      showError('Please enter your full name.');
+      nameInput?.focus();
+      return;
+    }
     sessionStorage.setItem('checkout_email', email);
+    sessionStorage.setItem('checkout_name', name);
+    if (phone) sessionStorage.setItem('checkout_phone', phone);
     hideError();
     continueBtn.disabled = true;
     continueBtn.textContent = 'Loading payment…';
@@ -95,7 +122,8 @@ function wireStageA(stripe, cart, sessionId) {
           })),
           session_id: sessionId,
           email,
-          name: sessionStorage.getItem('checkout_name') || undefined,
+          name,
+          phone: phone || undefined,
         }),
       });
       if (res.status === 410) {
