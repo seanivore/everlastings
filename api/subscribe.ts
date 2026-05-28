@@ -1,15 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
 import { Resend } from 'resend';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest } from './_lib/env';
+import { stripe } from './_lib/stripe';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,
 );
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
 function generateCode(prefix: string): string {

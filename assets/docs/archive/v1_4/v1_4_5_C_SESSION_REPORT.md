@@ -82,6 +82,30 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 **MUST SEE IMAGE**: `assets/docs/archive/images/checkout-shipping-billing-form-console-log.jpg`
 **MUST SEE CONSOLE LOG**: `assets/docs/archive/v1_4/v1_4_5_C_TESTING_1_2_CONSOLE_LOG.md`
 
+##### Claude's read on these three findings (2026-05-28)
+
+Two of the three were the same bug. One is a false alarm. All real fixes are landed; details below.
+
+**1. Stripe checkout (real bug — root cause for #1 and #2 below) — FIXED**
+- `checkout.html:88` was loading `https://js.stripe.com/v3/` (standard release).
+- `assets/js/checkout.js:136` calls `stripe.initCheckout(...)`, which only exists in Stripe.js's **Basil** release channel.
+- Server side (`api/checkout.ts`) already speaks the Custom Checkout contract (`ui_mode: 'custom'`) and the Node SDK (`stripe ^18.5.0`) defaults to Basil internally, so only the client tag was broken.
+- **What shipped:**
+  1. Swapped the script tag in `checkout.html:88` to `<script src="https://js.stripe.com/basil/stripe.js"></script>`.
+  2. Created `api/_lib/stripe.ts` — single shared client with `apiVersion: '2025-08-27.basil'` pinned, exported alongside a `STRIPE_API_VERSION` constant.
+  3. Refactored all seven server files that previously did `new Stripe(...)` individually to import the shared client: `api/checkout.ts`, `api/webhook.ts`, `api/cart.ts`, `api/products.ts`, `api/subscribe.ts`, `api/_lib/stripeSync.ts`, `api/_bootstrap/coupons.ts`.
+- **Why the refactor was bundled in:** without it, a future `stripe` SDK bump could silently shift the API version on six unpinned files. Centralizing means future Basil → next-codename migration is a one-line change in `api/_lib/stripe.ts` (plus the matching client script-tag swap), not nine files.
+
+**2. Shipping / billing fields missing (cascade from the Stripe bug — no separate fix needed) — FIXED**
+- The `<div id="address-element-shipping">` and `<div id="address-element-billing">` slots in `checkout.html:194, 212` are empty `hidden` mount targets.
+- `assets/js/checkout.js:152-177` mounts the Stripe AddressElement into them — but only **inside `mountStageB()`, after `stripe.initCheckout()` returns**. When initCheckout threw (the Basil bug), mounting never ran, and the user saw the section labels with nothing below.
+- Fixed automatically by the script-tag swap above. No HTML or JS edits required.
+
+**3. GA4 "FAILED" labels (false alarm — no code change)**
+- The `Fetch failed loading: POST "https://www.google-analytics.com/g/collect?..."` lines are a known Chrome DevTools artifact. GA4's `gtag` sends hits via `navigator.sendBeacon` / `fetch({ keepalive: true })` so they survive page navigation, and Chrome's network panel labels those "failed" whenever the page doesn't read the response — which analytics never does. The hits still reach Google.
+- Evidence: in the captured console log, the `add_to_cart` and `view_item` beacons carry full ecommerce payloads (`pr1=...~pr245~qt1`) — exactly what GA4 expects.
+- **Verification path is unchanged:** the GA4 DebugView check in step 12 below is the only authoritative confirmation. Install the Google Analytics Debugger Chrome extension before re-running 1.2, then watch Admin → DebugView for `view_item`, `add_to_cart`, `begin_checkout`, `purchase`. Ignore the DevTools "failed" labels.
+
 1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
 2. Open DevTools (Cmd-Option-I) → Console tab. Keep it visible — you'll watch GA4 events fire as you click.
 3. Click any product tile → land on `/product/placeholder-haven-i` (or whatever you picked).

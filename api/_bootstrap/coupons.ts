@@ -1,6 +1,5 @@
 // Creates the two base coupons. Safe to run multiple times (409 on duplicate is caught).
-import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { stripe } from '../_lib/stripe';
 
 const COUPONS = [
   { id: 'cart-recovery-10',     name: 'Haven Finder Apology',             percent_off: 10 },

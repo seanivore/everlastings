@@ -1,10 +1,8 @@
-import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest, env } from './_lib/env';
+import { stripe } from './_lib/stripe';
 import { syncProductToStripe, StripeSyncResult, SyncableProduct } from './_lib/stripeSync';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,

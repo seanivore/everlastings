@@ -2,13 +2,11 @@
 // Public URLs preserved via vercel.json rewrites:
 //   POST /api/cart-activity  → ?_action=activity   (interest ping)
 //   POST /api/cart-recovery  → ?_action=recovery   (lost-cart promo + email)
-import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest } from './_lib/env';
+import { stripe } from './_lib/stripe';
 import { cartRecoveryCouponEmailHtml, sendEmail } from './_emails/index';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,

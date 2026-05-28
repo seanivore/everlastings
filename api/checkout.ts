@@ -3,12 +3,10 @@
 //   POST /api/checkout                  → ?_action=session         (Stripe session create)
 //   POST /api/checkout/reserve          → ?_action=reserve         (cart hold + availability)
 //   GET  /api/session-status?session_id → ?_action=session-status  (return-page status)
-import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest } from './_lib/env';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { stripe } from './_lib/stripe';
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,
