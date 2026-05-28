@@ -43,7 +43,7 @@ Without this, the test-card flow won't write orders to Supabase + won't fire the
    Then push a trivial commit to dev to force a redeploy so the function picks up the new env var. (Or run `vercel --prod=false` to redeploy preview.)
 8. Back in Stripe Dashboard → Webhooks → click the new endpoint → "Send test webhook" → pick `checkout.session.completed` → "Send test webhook". You should see a 200 in the Stripe UI within ~2 seconds. If you don't, the webhook secret mismatch is the most likely cause.
 
-- [x] ERROR THAT HAS BEEN MANAGED: 
+- [x] ERROR THAT HAS BEEN MANAGED, IMPORTANT DETAILS FOR THE FUTURE: 
 
 **Important — how to redeploy preview after an env var change** (replaces the misleading `vercel --prod=false` suggestion; that flag silently deploys to **production** because the CLI ignores `=false` and treats the flag's presence as true):
 
@@ -75,28 +75,19 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
 2. Open DevTools (Cmd-Option-I) → Console tab. Keep it visible — you'll watch GA4 events fire as you click.
 3. Click any product tile → land on `/product/placeholder-haven-i` (or whatever you picked).
-
-- [ ] INCOMPLETE: **Tested up to this point and all products load to a blank page with the following error, matching the error in the console. None of these products seem to exist, Re: "placeholder-haven-i" is displayed in the URL but not found. The Supabase account is not paused, it is active, thogh I am not sure what else to check regarding that tool.**
-
-```plaintext 
-404: NOT_FOUND
-Code: NOT_FOUND
-ID: iad1:iad1::f5226-1779962506800-343c47812ac4
-```
-
-1. Click "Add to Cart" — cart badge in the header should increment from 0 to 1. Console should NOT show any errors.
-2. Click the cart icon → land on `/cart`. The product you added should be visible in a `.cart-line` with the right title + price.
-3. (Optional) Type an email into the "Almost there" form so the prefill carries forward.
-4. Click `[CHECKOUT]` — button label changes to "Checking availability…" briefly, then the page navigates to `/checkout`.
-5. Stage A: enter the same email + click "Continue to payment". The page loads Stripe Elements into Stage B (you'll see a Stripe-styled card form + an address form appear).
-6.  Stage B — use Stripe test card values:
+4. Click "Add to Cart" — cart badge in the header should increment from 0 to 1. Console should NOT show any errors.
+5. Click the cart icon → land on `/cart`. The product you added should be visible in a `.cart-line` with the right title + price.
+6. (Optional) Type an email into the "Almost there" form so the prefill carries forward.
+7. Click `[CHECKOUT]` — button label changes to "Checking availability…" briefly, then the page navigates to `/checkout`.
+8. Stage A: enter the same email + click "Continue to payment". The page loads Stripe Elements into Stage B (you'll see a Stripe-styled card form + an address form appear).
+9.  Stage B — use Stripe test card values:
    - Card number: `4242 4242 4242 4242`
    - Expiry: any future date, e.g. `12/30`
    - CVC: any 3 digits, e.g. `123`
    - Shipping address: pick any US address (Stripe enforces US-only)
-7.  Click "Confirm & Pay" — button changes to "Processing…", then Stripe redirects you to `/complete?session_id=cs_test_...`.
-8.  The complete page should populate with: your name, your email, the line item + price, the order ID (cs_test_...). Cart badge should drop back to 0.
-9.  **Verify in 3 places after the walkthrough:**
+10. Click "Confirm & Pay" — button changes to "Processing…", then Stripe redirects you to `/complete?session_id=cs_test_...`.
+11. The complete page should populate with: your name, your email, the line item + price, the order ID (cs_test_...). Cart badge should drop back to 0.
+12. **Verify in 3 places after the walkthrough:**
     - **GA4 DebugView** at https://analytics.google.com → Admin → DebugView (left sidebar, under Property) → look for events fired in the last minute: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`. (DebugView only shows events from devices in debug mode — install the Google Analytics Debugger Chrome extension and enable it before the walkthrough, or use the GA4 Tag Assistant.)
     - **Vercel logs** at https://vercel.com/everlastingsbyemaline/everlastings-website/logs → filter by `/api/webhook` → should see 200 responses for the three Stripe events.
     - **Supabase Studio** at https://supabase.com/dashboard/project/rvnxftbfeaxymhzxxhjm → Table editor → `orders` → newest row should be your test order. Then look at `products` → the slug you bought should now have `available=false`.
