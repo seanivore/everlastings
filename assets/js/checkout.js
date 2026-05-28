@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderOrderSummary(cart);
   prefillEmail();
-  prefillName();
 
   // Wait for /api/config → Stripe publishable key in main.js's initConfig.
   for (let i = 0; i < 80 && !window._stripePublishableKey; i++) {
@@ -55,13 +54,6 @@ function prefillEmail() {
   }
 }
 
-function prefillName() {
-  const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
-  if (nameInput && !nameInput.value) {
-    nameInput.value = sessionStorage.getItem('checkout_name') || '';
-  }
-}
-
 function wireBillingToggle() {
   const toggle = document.getElementById('billing-same-as-shipping');
   const billingMount = document.querySelector('[data-stripe-address-billing]');
@@ -79,21 +71,13 @@ function wireStageA(stripe, cart, sessionId) {
   continueBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
-    const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
     const email = (emailInput?.value || '').trim();
-    const name = (nameInput?.value || '').trim();
     if (!email || !email.includes('@')) {
       showError('Please enter a valid email.');
       emailInput?.focus();
       return;
     }
-    if (!name) {
-      showError('Please enter your full name.');
-      nameInput?.focus();
-      return;
-    }
     sessionStorage.setItem('checkout_email', email);
-    sessionStorage.setItem('checkout_name', name);
     hideError();
     continueBtn.disabled = true;
     continueBtn.textContent = 'Loading payment…';
@@ -138,7 +122,7 @@ function wireStageA(stripe, cart, sessionId) {
       return;
     }
 
-    await mountStageB(stripe, data, { name });
+    await mountStageB(stripe, data);
     revealStageB();
     // Lock only filled inputs so the user can still add an empty optional field later
     // (e.g., type a phone number in Stage A after seeing the order summary).
@@ -151,7 +135,7 @@ function wireStageA(stripe, cart, sessionId) {
   });
 }
 
-async function mountStageB(stripe, data, opts = {}) {
+async function mountStageB(stripe, data) {
   const checkout = await stripe.initCheckout({
     fetchClientSecret: async () => data.clientSecret,
     elementsOptions: {
@@ -171,16 +155,7 @@ async function mountStageB(stripe, data, opts = {}) {
   if (shippingMount) {
     shippingMount.classList.remove('hidden');
     shippingMount.innerHTML = '';
-    // Pass the name captured in Stage A as a default so Stripe pre-fills the "Full name" field.
-    // If Basil rejects defaultValues here, the user just retypes the name — not a blocker.
-    let shippingElement;
-    try {
-      shippingElement = opts.name
-        ? checkout.createShippingAddressElement({ defaultValues: { name: opts.name } })
-        : checkout.createShippingAddressElement();
-    } catch (err) {
-      shippingElement = checkout.createShippingAddressElement();
-    }
+    const shippingElement = checkout.createShippingAddressElement();
     shippingElement.mount('[data-stripe-address-shipping]');
     shippingElement.on('change', (ev) => {
       const country = ev.value?.address?.country;
