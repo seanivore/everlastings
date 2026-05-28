@@ -140,7 +140,19 @@ async function handleSession(request: Request): Promise<Response> {
       ],
       phone_number_collection: { enabled: true },
       ...(customerId
-        ? { customer: customerId }
+        ? {
+            customer: customerId,
+            // Write the shipping address (and any name change) the buyer
+            // enters in Stripe's AddressElement back to the Customer record,
+            // so the customer object ends up complete for fulfillment and
+            // future receipts. Required when binding a session to a customer
+            // while collecting shipping/billing info.
+            customer_update: {
+              shipping: 'auto',
+              address: 'auto',
+              name: 'auto',
+            },
+          }
         : emailValid
           ? { customer_email: email!, customer_creation: 'always' }
           : { customer_creation: 'always' }),
