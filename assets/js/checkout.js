@@ -220,11 +220,22 @@ async function mountStageB(stripe, data) {
   }
 
   // Pre-fill shipping + billing names from the Stage A "Your name" capture.
-  // Users can still edit (shipping to gift recipient, billing to cardholder, etc.).
+  // Stripe requires a full address skeleton (empty strings + country are fine);
+  // calling with just { name } is rejected. Users can still edit either field
+  // (shipping to gift recipient, billing to cardholder, etc.).
   const customerName = sessionStorage.getItem('checkout_name');
   if (customerName) {
-    try { await checkout.updateShippingAddress({ name: customerName }); } catch (err) { console.warn('updateShippingAddress(name) failed:', err); }
-    try { await checkout.updateBillingAddress({ name: customerName }); } catch (err) { console.warn('updateBillingAddress(name) failed:', err); }
+    const addrSkeleton = { line1: '', city: '', state: '', postal_code: '', country: 'US' };
+    try {
+      await checkout.updateShippingAddress({ name: customerName, address: addrSkeleton });
+    } catch (err) {
+      console.warn('updateShippingAddress(name) failed:', err);
+    }
+    try {
+      await checkout.updateBillingAddress({ name: customerName, address: addrSkeleton });
+    } catch (err) {
+      console.warn('updateBillingAddress(name) failed:', err);
+    }
   }
 
   const confirmBtn = document.querySelector('[data-checkout-confirm]');
