@@ -218,16 +218,26 @@ async function mountStageB(stripe, data) {
     paymentMount.innerHTML = '';
     const paymentElement = checkout.createPaymentElement();
     paymentElement.mount('[data-stripe-payment]');
-    paymentElement.on('change', (ev) => {
-      // Diagnostic: see what PaymentElement is reporting so we can decide
-      // if it needs a bridge to the session like the ShippingAddressElement.
+    paymentElement.on('change', async (ev) => {
       console.log('[checkout] paymentElement change:', {
         complete: ev.complete,
-        empty: ev.empty,
-        collapsed: ev.collapsed,
         valueType: ev.value?.type,
         hasBilling: !!ev.value?.billingDetails,
       });
+      // Same pattern as shipping: PaymentElement values don't auto-sync to
+      // session. When complete with billing details, push them to the
+      // session via updateBillingAddress so canConfirm can resolve.
+      if (ev.complete && ev.value?.billingDetails?.address?.line1) {
+        try {
+          await checkout.updateBillingAddress({
+            name: ev.value.billingDetails.name,
+            address: ev.value.billingDetails.address,
+            ...(ev.value.billingDetails.phone ? { phone: ev.value.billingDetails.phone } : {}),
+          });
+        } catch (err) {
+          console.error('[checkout] updateBillingAddress sync failed:', err);
+        }
+      }
     });
   }
 
