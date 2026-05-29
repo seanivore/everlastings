@@ -86,6 +86,57 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 
 Two of the three were the same bug. One is a false alarm. All real fixes are landed; details below.
 
+**Round 5 (2026-05-28) — Payment confirm IntegrationError + handoff brief for fresh agent:**
+
+After Round 4, follow-on testing revealed the Confirm & Pay button stayed permanently disabled. Diagnostic logging traced through:
+1. Stripe's `createShippingAddressElement` does NOT auto-sync form values to the session. Bridged via `element.on('change')` → `checkout.updateShippingAddress(ev.value)`. ✅ Fixed `shippingAddressComplete`.
+2. Stripe's `createPaymentElement` collects billing internally but doesn't auto-sync that to `session.billingAddress` either. Bridged similarly: `paymentElement.on('change')` → `checkout.updateBillingAddress(ev.value.billingDetails || copy-from-shipping)`. ✅ Fixed `billingAddressComplete`.
+3. **But `canConfirm` STILL stayed false.** Calling `window.__checkout.confirm()` directly via DevTools surfaced the real reason:
+   > `IntegrationError: You previously passed billingAddress.name to updateBillingAddress(), but Payment Element may also be collecting this field. To avoid double collecting billing details, pass fields.billingDetails.name=never when creating the Payment Element.`
+
+**Root cause (architectural):** Stripe Custom Checkout (Basil) treats the PaymentElement as a self-contained widget that ALREADY collects billing.name/email/address. Our `updateBillingAddress` bridge writes to the same fields. Two writers → Stripe blocks confirm to avoid ambiguity. Per Sean's instinct: we've been layering modifications onto a session that's supposed to be more like "create once, let elements own collection, confirm at end."
+
+The wizard sample at `freelance-payments-dev/assets/docs/v5/v5_1_16/QUICKSTART_CHECKOUT_SESSIONS/` (vanilla JS version at `assets/docs/RESOURCES/stripe-sample-code/public/checkout.js`) uses a different element composition:
+- `createBillingAddressElement` mounted separately (owns billing — no conflict with PaymentElement).
+- `createPaymentElement` mounted with NO billing collection.
+- `createShippingAddressElement` NOT used — shipping address collection comes from a different mechanism in that sample.
+- NO bridges. The elements handle their own session sync.
+
+**Handoff brief for next agent (recommended):**
+
+We've sunk meaningful agent context into iterative bridges that fight Stripe's design. A fresh start with the wizard's element-composition pattern is likely cleaner than chasing fixes for the conflict. The next agent should:
+
+1. **Read this entire session report first** — especially Rounds 1-4 above for context on what's been resolved.
+2. **Re-derive the architecture from the wizard sample** at `freelance-payments-dev/assets/docs/v5/v5_1_16/QUICKSTART_CHECKOUT_SESSIONS/`:
+    - `server.js` + `POST_API_CHECKOUT_SESSION_CREATE.md` — server contract (matches ours).
+    - `App.jsx` — React `<CheckoutProvider>` pattern (we use vanilla, but same shape).
+    - `checkoutForm.jsx` — the actual confirm flow.
+    - `assets/docs/RESOURCES/stripe-sample-code/public/checkout.js` — vanilla JS PaymentElement + BillingAddressElement pattern with no bridges.
+3. **What to PRESERVE** (these were correct UI/UX wins from this session; don't redo):
+    - Stage A captures Email + Your name + Phone (optional), all flowing from cart form via sessionStorage to `/api/checkout` POST body.
+    - `api/checkout.ts` pre-creates a Stripe Customer with `name + email + phone`, binds session via `customer: cus_xxx`.
+    - Free-shipping `shipping_options: [{ fixed_amount: { amount: 0 } }]` on the session (Sean's call for v1; v1.1 adds Shippo per-product via `products.shipping_cents` column which is in place).
+    - `is_test` filtering at the public read level — switched to `.not('stripe_price_id', 'is', null)` in `getProducts`/`getProductBySlug` to hide `itest-*` cruft while keeping `placeholder-*` visible.
+    - Cart form has Email + Name + Phone (optional); cart.js plumbs all 3 to sessionStorage on Checkout click.
+    - HTML labels: Stage A "Your name", Stage B "Ship to" / "Bill to" (per Sean's UX clarification that these are three distinct names by Stripe's design).
+    - `checkout.html`: Shipping + Billing fieldsets are in Stage B (not Stage A); Stage A is only Contact + Continue.
+    - Phase A "disable filled inputs only" logic in `checkout.js` (leaves empty optional phone editable).
+    - Stripe.js Basil script tag in `checkout.html` (NOT `/v3/`); centralized server SDK pin in `api/_lib/stripe.ts` with `apiVersion: '2025-08-27.basil'`.
+4. **What to RECONSIDER** (these are where the architectural conflict lives):
+    - The `updateShippingAddress` and `updateBillingAddress` bridges in `assets/js/checkout.js mountStageB` — likely should be REMOVED and replaced with a proper element composition. Either:
+        - **(a)** Add `createBillingAddressElement` back AND configure PaymentElement with `fields: { billingDetails: 'never' }` so PaymentElement doesn't collide. Restore the "Same as shipping" toggle UI (was working) — accept that Sean's earlier duplicate-UI concern was actually a symptom of our wiring, not a real product issue.
+        - **(b)** Remove our `createShippingAddressElement` and let Stripe collect shipping inline via session config + PaymentElement (if that's even a supported pattern in Basil).
+    - Verify whether `customer_update: { shipping: 'auto', address: 'auto', name: 'auto' }` is the right writeback config or interferes with the element flow.
+    - The name pre-fill problem documented in Round 4 may resolve naturally if pattern (a) is adopted — `BillingAddressElement` accepts `defaultValues` in some Stripe SDK versions even when `createShippingAddressElement` doesn't.
+5. **Open testing checklist** (carried from Round 4 still applicable):
+    - End-to-end purchase with real test card → /complete redirect.
+    - Admin orders page rendering at `/admin` → Orders tab.
+    - **Email-to-Emy on order completion** is NOT YET IMPLEMENTED — `api/webhook.ts` handles `checkout.session.completed` but never calls `sendEmail()`. This is a launch blocker that Round 5 didn't get to. Wire a Resend send to a configurable admin email when the order row is written.
+
+**Current commit at handoff**: latest dev should reflect the bridges that produced the IntegrationError. Either revert those before handing off or leave them as forensic evidence — recommend leaving so the next agent can see the exact error path.
+
+---
+
 **Round 4 (2026-05-28) — Stripe pre-fill gap (open issue, document + work around):**
 
 After Round 3, the flow itself works correctly end-to-end — the three contact values (email + name + phone) captured at the cart's "Almost there" form copy correctly into Stage A, are editable there, and on Continue are POSTed to `/api/checkout` which creates a Stripe Customer object with all three values and binds the session to it. **What does NOT happen:** the user's name does NOT visually pre-fill into Stripe's Ship to and Bill to "Full name" fields in Stage B.
