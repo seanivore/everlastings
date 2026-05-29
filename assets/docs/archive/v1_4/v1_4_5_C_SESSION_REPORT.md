@@ -86,6 +86,26 @@ This proves the full purchase flow works end-to-end on preview. Use a **Stripe t
 
 Two of the three were the same bug. One is a false alarm. All real fixes are landed; details below.
 
+**Round 4 (2026-05-28) — Stripe pre-fill gap (open issue, document + work around):**
+
+After Round 3, the flow itself works correctly end-to-end — the three contact values (email + name + phone) captured at the cart's "Almost there" form copy correctly into Stage A, are editable there, and on Continue are POSTed to `/api/checkout` which creates a Stripe Customer object with all three values and binds the session to it. **What does NOT happen:** the user's name does NOT visually pre-fill into Stripe's Ship to and Bill to "Full name" fields in Stage B.
+
+What we tried and what we learned (via live SDK probing in Claude in Chrome):
+- `createShippingAddressElement({ defaultValues: { name } })` → rejected by Stripe ("options.defaultValues is not an accepted parameter").
+- `checkout.updateShippingAddress({ name, address: {...skeleton} })` → call **succeeds** and the **session's** `shippingAddress.name` does update to the customer's name. **But the AddressElement form input visually stays empty** — Stripe's AddressElement iframe renders its own UI and doesn't mirror programmatic session updates back into the visible form. The data IS in the session; the form just doesn't show it.
+- This matches a known pattern with Stripe Custom Checkout: the AddressElement is "user input-only" for shipping/billing names; pre-fill requires `defaultValues` at element creation, which Stripe rejects on this code path.
+
+**Implication for v1 launch:** The user types their name once at the cart "Almost there" form (or Stage A — same field), and types it again in Stripe's Ship to form (and Bill to if different from shipping). Slightly redundant but not broken. The customer record IS complete (name + email + phone come from Stage A → /api/checkout → `stripe.customers.create`), and the shipping address the user enters in Stripe's form writes back to the customer record on session completion via `customer_update: 'auto'`. So the post-purchase customer object in Stripe has everything.
+
+**What changed in code beyond Round 3** (between Sean's earlier walkthrough and this point):
+- `assets/js/checkout.js`: `mountStageB` now calls `checkout.updateShippingAddress` + `checkout.updateBillingAddress` with the customer's name (best-effort pre-fill — visible field stays empty but session is hydrated).
+- `assets/js/checkout.js`: `wireBillingToggle` refactored into a lazy-mount inside `mountStageB` so unchecking "Same as shipping" AFTER mount now correctly mounts the Bill to AddressElement on demand.
+- `checkout.html`: Stage B section labels relabeled to "Ship to" / "Bill to" to signal these are recipient addresses that can differ from the customer's account name.
+- `checkout.html`: Stage A's required Full name input labeled "Your name" with helper text noting it pre-fills shipping/billing (user can change either).
+- `cart.html`: "Almost there" form now collects email + name + **phone (optional)** — all three flow forward to Stage A pre-fill via `sessionStorage`.
+- `api/checkout.ts`: now creates a real `stripe.customers.create({ email, name, phone, metadata })` and binds the session via `customer: customerId` + `customer_update: { shipping: 'auto', address: 'auto', name: 'auto' }`. Replaces the prior `customer_email`-only flow.
+- `assets/js/main.js`: `getProducts()` + `getProductBySlug()` now filter `.not('stripe_price_id', 'is', null)` so integration-test products (no Stripe price → would 500 on `/api/checkout`) are hidden from `/shop` and `/product/<slug>` while live placeholders remain visible for testing.
+
 **Round 3 (2026-05-28) — checkout session never finalizes + Stage A/B UI bugs:** Formal walkthrough revealed one server-side root cause cascading into three functional symptoms, plus three independent UI/UX bugs. Root cause: the session was created without `shipping_options`, so Stripe Custom Checkout couldn't resolve a final total → "Calculates by Stripe" never updated, total displayed as `$NaN`, and `canConfirm` stayed false (Confirm button permanently disabled). Fix: added a v1 static "Free shipping" ($0) option to `api/checkout.ts:108`; per Sean's call, Emy factors shipping into product price for launch, and a new `products.shipping_cents` column is in place (migration `20260528000001`) for v1.1 Shippo per-product rates. UI/UX fixes: moved Shipping + Billing fieldsets out of Stage A into Stage B (empty section headings were confusing users); added a Full Name input to Stage A (fills out the now-shorter Stage A and pre-populates Stripe's shipping address); refined the disable-after-Continue loop in `checkout.js:144-149` so empty optional fields stay editable; added `Number.isFinite` guard around amount rendering as belt-and-suspenders. All changes verified via Claude in Chrome end-to-end.
 
 **Round 2 (2026-05-28) — four cascading client-side bugs:** After Round 1 deployed, retest surfaced a chain of vanilla-JS API-shape errors that the doc-fetch tool got wrong on first pass. All resolved by live-probing the actual Stripe.js Basil bundle in Chrome:
@@ -120,6 +140,35 @@ All four fixed in `assets/js/checkout.js` (`initCheckout`, `loadActions`, `creat
 **SEAN TESTING NOTES AFTER BUG FIXES** 
 
 - [x] PRODUCT ADDED, GOT TO CHECK OUT: **Still large number of issues; see images and their numbered annotated details.**
+
+---
+
+**🧪 ROUND 4 TESTING — your turn (2026-05-28, post Round-3+4 fixes)**
+
+The known open issue: Ship to + Bill to "Full name" fields render empty even though name was typed in Stage A. Documented above — Stripe Custom Checkout AddressElement doesn't visually accept pre-fill. Type the name manually in Stripe's form for now.
+
+**Goal**: confirm the rest of the flow works end-to-end. If purchase completes and the order lands in Stripe + Supabase + `/admin`, we've isolated the only remaining issue to the cosmetic pre-fill gap.
+
+**Steps to verify**:
+
+1. From `/shop`, pick any placeholder product → click into product page → **Buy Now** or **Add to Cart**.
+2. On `/cart`: confirm Email + Name + Phone (optional) fields are present in the "Almost there" form. Fill them in (use a real email you can check). Click **Checkout**.
+3. On `/checkout` Phase A: confirm Email, Your name, Phone (optional) fields appear pre-filled with the exact values from cart. Edit if you want. Click **Continue to payment**.
+4. Stage B should reveal with these elements:
+    - "Ship to" section with empty Full name + Address (type these manually — Stripe owns this form).
+    - "Bill to" section with "Same as shipping" checkbox **toggleable** (uncheck it and a Bill to address form should appear; check it again and the form should hide).
+    - Stripe Payment Element below.
+    - Order Summary: real total (no `$NaN`), Shipping shown as "Free".
+    - CONFIRM & PAY button starts disabled, enables once you fill valid shipping + card.
+5. Enter Stripe test card `4242 4242 4242 4242`, any future expiry (e.g. `12/30`), any 3-digit CVC, any valid US address. Click **Confirm & Pay**.
+6. Should redirect to `/complete?session_id=cs_test_...` with order details.
+7. **Three downstream verifications** (same as the original Bucket 1.2 playbook):
+    - **Stripe Dashboard** → Customers → newest customer should have name + email + phone + the shipping address you entered (auto-written back via `customer_update`).
+    - **Vercel logs** → filter by `/api/webhook` → should see `200` for `checkout.session.completed`.
+    - **Supabase Studio** → `orders` table → newest row is your test order. Product's `available` flipped to `false`.
+8. **Admin page check (Sean has not validated this yet)**: open `/admin` → Orders tab → confirm the new order shows up with customer email, shipping name + address. There is currently NO email-to-Emy notification on order completion (separate launch-blocker gap — would need Resend send wired into `api/webhook.ts`).
+
+**If any step fails**, paste the screenshot + console + URL into the chat and I'll triage. If all steps pass, the only remaining item before launch is deciding whether/how to address the AddressElement pre-fill cosmetic issue and wiring the Resend email-to-Emy on order completion.
 
 **MUST VIEW IMAGES**: 
   - `assets/docs/archive/images/checkout-issues-bug-round-three-1.jpg`
