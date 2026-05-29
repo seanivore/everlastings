@@ -218,6 +218,17 @@ async function mountStageB(stripe, data) {
     paymentMount.innerHTML = '';
     const paymentElement = checkout.createPaymentElement();
     paymentElement.mount('[data-stripe-payment]');
+    paymentElement.on('change', (ev) => {
+      // Diagnostic: see what PaymentElement is reporting so we can decide
+      // if it needs a bridge to the session like the ShippingAddressElement.
+      console.log('[checkout] paymentElement change:', {
+        complete: ev.complete,
+        empty: ev.empty,
+        collapsed: ev.collapsed,
+        valueType: ev.value?.type,
+        hasBilling: !!ev.value?.billingDetails,
+      });
+    });
   }
 
   // NOTE: previously tried checkout.updateShippingAddress(...) here to
