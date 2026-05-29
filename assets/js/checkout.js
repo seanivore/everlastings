@@ -189,28 +189,10 @@ async function mountStageB(stripe, data) {
     });
   }
 
-  // Billing element: lazy-mount on demand so unchecking "Same as shipping"
-  // after mount still produces a working element.
-  const billingToggle = document.getElementById('billing-same-as-shipping');
-  const billingMount = document.querySelector('[data-stripe-address-billing]');
-  let billingElement = null;
-  const ensureBillingMounted = () => {
-    if (billingElement || !billingMount) return;
-    billingMount.innerHTML = '';
-    billingElement = checkout.createBillingAddressElement();
-    billingElement.mount('[data-stripe-address-billing]');
-  };
-  if (billingToggle && billingMount) {
-    if (!billingToggle.checked) {
-      billingMount.classList.remove('hidden');
-      ensureBillingMounted();
-    }
-    billingToggle.addEventListener('change', () => {
-      const sameAsShipping = billingToggle.checked;
-      billingMount.classList.toggle('hidden', sameAsShipping);
-      if (!sameAsShipping) ensureBillingMounted();
-    });
-  }
+  // Billing is collected inside Stripe's PaymentElement (Custom Checkout
+  // default). We no longer mount a separate BillingAddressElement — having
+  // both created a duplicate "billing is same as shipping" UI and blocked
+  // canConfirm because Stripe couldn't reconcile two billing sources.
 
   const paymentMount = document.querySelector('[data-stripe-payment]');
   if (paymentMount) {
@@ -219,22 +201,22 @@ async function mountStageB(stripe, data) {
     paymentElement.mount('[data-stripe-payment]');
   }
 
-  // Pre-fill shipping + billing names from the Stage A "Your name" capture.
-  // Stripe requires a full address skeleton (empty strings + country are fine);
-  // calling with just { name } is rejected. Users can still edit either field
-  // (shipping to gift recipient, billing to cardholder, etc.).
+  // Pre-fill the session's shipping name from the Stage A "Your name"
+  // capture. Note: Stripe's AddressElement form does NOT visually reflect
+  // this update (per Round 4 investigation in v1_4_5_C_SESSION_REPORT.md);
+  // the data lands on the session but the form input stays empty. Kept
+  // because it sets the session's shipping.name in case Stripe ever ships
+  // a SDK update that mirrors session state into the form, and because
+  // it's a no-cost server-side hint.
   const customerName = sessionStorage.getItem('checkout_name');
   if (customerName) {
-    const addrSkeleton = { line1: '', city: '', state: '', postal_code: '', country: 'US' };
     try {
-      await checkout.updateShippingAddress({ name: customerName, address: addrSkeleton });
+      await checkout.updateShippingAddress({
+        name: customerName,
+        address: { line1: '', city: '', state: '', postal_code: '', country: 'US' },
+      });
     } catch (err) {
       console.warn('updateShippingAddress(name) failed:', err);
-    }
-    try {
-      await checkout.updateBillingAddress({ name: customerName, address: addrSkeleton });
-    } catch (err) {
-      console.warn('updateBillingAddress(name) failed:', err);
     }
   }
 
