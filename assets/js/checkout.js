@@ -219,24 +219,45 @@ async function mountStageB(stripe, data) {
     const paymentElement = checkout.createPaymentElement();
     paymentElement.mount('[data-stripe-payment]');
     paymentElement.on('change', async (ev) => {
+      console.log('[checkout] paymentElement change FULL:', JSON.stringify(ev.value || {}, null, 2));
       console.log('[checkout] paymentElement change:', {
         complete: ev.complete,
         valueType: ev.value?.type,
-        hasBilling: !!ev.value?.billingDetails,
       });
-      // Same pattern as shipping: PaymentElement values don't auto-sync to
-      // session. When complete with billing details, push them to the
-      // session via updateBillingAddress so canConfirm can resolve.
-      if (ev.complete && ev.value?.billingDetails?.address?.line1) {
+      if (!ev.complete) return;
+
+      // When "billing same as shipping" is checked, ev.value.billingDetails
+      // may not carry the full address — Stripe just flags the choice. In
+      // that case, copy the session's shipping address into billing
+      // ourselves so canConfirm can resolve.
+      let billingPayload = null;
+      if (ev.value?.billingDetails?.address?.line1) {
+        billingPayload = {
+          name: ev.value.billingDetails.name,
+          address: ev.value.billingDetails.address,
+          ...(ev.value.billingDetails.phone ? { phone: ev.value.billingDetails.phone } : {}),
+        };
+      } else {
+        const session = checkout.session();
+        const ship = session?.shippingAddress;
+        if (ship?.address?.line1) {
+          billingPayload = {
+            name: ship.name,
+            address: ship.address,
+            ...(ship.phone ? { phone: ship.phone } : {}),
+          };
+        }
+      }
+
+      if (billingPayload) {
         try {
-          await checkout.updateBillingAddress({
-            name: ev.value.billingDetails.name,
-            address: ev.value.billingDetails.address,
-            ...(ev.value.billingDetails.phone ? { phone: ev.value.billingDetails.phone } : {}),
-          });
+          await checkout.updateBillingAddress(billingPayload);
+          console.log('[checkout] billing pushed to session');
         } catch (err) {
           console.error('[checkout] updateBillingAddress sync failed:', err);
         }
+      } else {
+        console.warn('[checkout] payment complete but no billing payload available (shipping not in session yet?)');
       }
     });
   }
