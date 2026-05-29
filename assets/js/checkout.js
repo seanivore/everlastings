@@ -243,22 +243,15 @@ async function mountStageB(stripe, data) {
     confirmBtn.textContent = 'Processing…';
     hideError();
     try {
-      const loadActionsResult = await checkout.loadActions();
-      console.log('[checkout] loadActions result:', loadActionsResult);
-      if (loadActionsResult.type !== 'success') {
-        const msg = loadActionsResult.error?.message || 'Payment could not be loaded.';
-        console.error('[checkout] loadActions failed:', loadActionsResult);
-        showError(msg);
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = originalLabel;
-        return;
-      }
-      const confirmResult = await loadActionsResult.actions.confirm();
+      // Stripe Custom Checkout (Basil): confirm() lives directly on the
+      // checkout object. The older loadActions() → actions.confirm() pattern
+      // was removed; the React <CheckoutProvider> wrapper has always called
+      // checkout.confirm() directly and the vanilla SDK now matches.
+      const confirmResult = await checkout.confirm();
       console.log('[checkout] confirm result:', confirmResult);
-      const { error } = confirmResult || {};
-      if (error) {
-        console.error('[checkout] confirm error:', error);
-        showError(error.message || 'Payment could not be processed.');
+      if (confirmResult && confirmResult.type === 'error') {
+        console.error('[checkout] confirm error:', confirmResult.error);
+        showError(confirmResult.error?.message || 'Payment could not be processed.');
         confirmBtn.disabled = false;
         confirmBtn.textContent = originalLabel;
       }
