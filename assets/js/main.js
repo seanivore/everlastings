@@ -51,9 +51,10 @@ function trackMeta(eventName, params) {
 async function getProductBySlug(slug) {
   const supabase = getSupabase();
   if (!supabase) return null;
-  // Public reads exclude integration-test rows (is_test=true). Admin paths
-  // use /api/products with auth and see everything.
-  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).eq('is_test', false).maybeSingle();
+  // Public reads exclude rows that aren't checkout-ready (no stripe_price_id).
+  // This naturally hides integration-test cruft (itest-*) without blocking
+  // placeholder products that intentionally have is_test=true during launch prep.
+  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).not('stripe_price_id', 'is', null).maybeSingle();
   if (error) {
     console.error('Failed to fetch product:', error.message);
     return null;
@@ -64,8 +65,8 @@ async function getProductBySlug(slug) {
 async function getProducts(options = {}) {
   const supabase = getSupabase();
   if (!supabase) return [];
-  // Public reads exclude integration-test rows.
-  let query = supabase.from('products').select('*').eq('is_test', false);
+  // Public reads exclude rows that aren't checkout-ready (no stripe_price_id).
+  let query = supabase.from('products').select('*').not('stripe_price_id', 'is', null);
   if (options.available !== undefined) query = query.eq('available', options.available);
   if (options.featured) query = query.eq('featured', true);
   if (options.series) query = query.eq('series', options.series);
