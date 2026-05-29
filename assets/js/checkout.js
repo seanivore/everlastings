@@ -201,24 +201,14 @@ async function mountStageB(stripe, data) {
     paymentElement.mount('[data-stripe-payment]');
   }
 
-  // Pre-fill the session's shipping name from the Stage A "Your name"
-  // capture. Note: Stripe's AddressElement form does NOT visually reflect
-  // this update (per Round 4 investigation in v1_4_5_C_SESSION_REPORT.md);
-  // the data lands on the session but the form input stays empty. Kept
-  // because it sets the session's shipping.name in case Stripe ever ships
-  // a SDK update that mirrors session state into the form, and because
-  // it's a no-cost server-side hint.
-  const customerName = sessionStorage.getItem('checkout_name');
-  if (customerName) {
-    try {
-      await checkout.updateShippingAddress({
-        name: customerName,
-        address: { line1: '', city: '', state: '', postal_code: '', country: 'US' },
-      });
-    } catch (err) {
-      console.warn('updateShippingAddress(name) failed:', err);
-    }
-  }
+  // NOTE: previously tried checkout.updateShippingAddress(...) here to
+  // pre-fill the customer's name into the Ship to form. It didn't show
+  // in the form (Stripe AddressElement doesn't reflect session updates
+  // visually) AND it appears to put the session into a "shipping touched
+  // but invalid" state that broke the form-to-session sync entirely —
+  // canConfirm stayed false because Stripe stopped accepting user-typed
+  // input as "complete". Removed; pre-fill remains an open issue
+  // documented in v1_4_5_C_SESSION_REPORT.md Round 4.
 
   // Expose for live debugging in DevTools: window.__checkout.session()
   if (typeof window !== 'undefined') window.__checkout = checkout;
