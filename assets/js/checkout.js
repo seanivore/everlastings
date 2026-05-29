@@ -244,21 +244,28 @@ async function mountStageB(stripe, data) {
     hideError();
     try {
       const loadActionsResult = await checkout.loadActions();
+      console.log('[checkout] loadActions result:', loadActionsResult);
       if (loadActionsResult.type !== 'success') {
-        showError(loadActionsResult.error?.message || 'Payment could not be loaded.');
+        const msg = loadActionsResult.error?.message || 'Payment could not be loaded.';
+        console.error('[checkout] loadActions failed:', loadActionsResult);
+        showError(msg);
         confirmBtn.disabled = false;
         confirmBtn.textContent = originalLabel;
         return;
       }
-      const { error } = await loadActionsResult.actions.confirm();
+      const confirmResult = await loadActionsResult.actions.confirm();
+      console.log('[checkout] confirm result:', confirmResult);
+      const { error } = confirmResult || {};
       if (error) {
+        console.error('[checkout] confirm error:', error);
         showError(error.message || 'Payment could not be processed.');
         confirmBtn.disabled = false;
         confirmBtn.textContent = originalLabel;
       }
       // On success, Stripe redirects via the session's return_url (/complete.html?session_id=…).
     } catch (err) {
-      showError('Payment could not be processed. Please try again.');
+      console.error('[checkout] confirm threw exception:', err);
+      showError(`Payment could not be processed: ${err?.message || 'unknown error'}`);
       confirmBtn.disabled = false;
       confirmBtn.textContent = originalLabel;
     }
