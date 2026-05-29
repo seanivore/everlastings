@@ -51,7 +51,9 @@ function trackMeta(eventName, params) {
 async function getProductBySlug(slug) {
   const supabase = getSupabase();
   if (!supabase) return null;
-  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).maybeSingle();
+  // Public reads exclude integration-test rows (is_test=true). Admin paths
+  // use /api/products with auth and see everything.
+  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).eq('is_test', false).maybeSingle();
   if (error) {
     console.error('Failed to fetch product:', error.message);
     return null;
@@ -62,7 +64,8 @@ async function getProductBySlug(slug) {
 async function getProducts(options = {}) {
   const supabase = getSupabase();
   if (!supabase) return [];
-  let query = supabase.from('products').select('*');
+  // Public reads exclude integration-test rows.
+  let query = supabase.from('products').select('*').eq('is_test', false);
   if (options.available !== undefined) query = query.eq('available', options.available);
   if (options.featured) query = query.eq('featured', true);
   if (options.series) query = query.eq('series', options.series);

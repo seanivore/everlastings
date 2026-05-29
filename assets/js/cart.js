@@ -82,8 +82,10 @@ function updateTotals() {
 function prefillEmailName() {
   const emailInput = document.querySelector('[data-cart-prefill] input[name="email"]');
   const nameInput = document.querySelector('[data-cart-prefill] input[name="name"]');
+  const phoneInput = document.querySelector('[data-cart-prefill] input[name="phone"]');
   if (emailInput) emailInput.value = sessionStorage.getItem('checkout_email') || '';
   if (nameInput) nameInput.value = sessionStorage.getItem('checkout_name') || '';
+  if (phoneInput) phoneInput.value = sessionStorage.getItem('checkout_phone') || '';
 }
 
 function wireRemoveButtons() {
@@ -127,8 +129,10 @@ async function onCheckoutClick(e) {
 
   const email = (document.querySelector('[data-cart-prefill] input[name="email"]')?.value || '').trim();
   const name = (document.querySelector('[data-cart-prefill] input[name="name"]')?.value || '').trim();
+  const phone = (document.querySelector('[data-cart-prefill] input[name="phone"]')?.value || '').trim();
   if (email) sessionStorage.setItem('checkout_email', email);
   if (name) sessionStorage.setItem('checkout_name', name);
+  if (phone) sessionStorage.setItem('checkout_phone', phone);
 
   const session_id = getOrCreateBrowserSessionId();
 
