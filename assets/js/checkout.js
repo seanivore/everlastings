@@ -175,7 +175,7 @@ async function mountStageB(stripe, data) {
     shippingMount.innerHTML = '';
     const shippingElement = checkout.createShippingAddressElement();
     shippingElement.mount('[data-stripe-address-shipping]');
-    shippingElement.on('change', (ev) => {
+    shippingElement.on('change', async (ev) => {
       const country = ev.value?.address?.country;
       const restricted = document.querySelector('[data-restricted-country]');
       const incomplete = document.querySelector('[data-address-incomplete]');
@@ -183,8 +183,27 @@ async function mountStageB(stripe, data) {
       incomplete?.classList.add('hidden');
       if (country && country !== 'US') {
         restricted?.classList.remove('hidden');
-      } else if (ev.complete === false) {
+        return;
+      }
+      if (ev.complete === false) {
         incomplete?.classList.remove('hidden');
+        return;
+      }
+      // Bridge: Stripe's createShippingAddressElement does NOT auto-sync form
+      // values to the session. We have to push ev.value into the session via
+      // checkout.updateShippingAddress when the user's input is complete.
+      // Without this bridge session.shippingAddress stays null forever and
+      // canConfirm never becomes true.
+      if (ev.complete && ev.value?.address) {
+        try {
+          await checkout.updateShippingAddress({
+            name: ev.value.name,
+            address: ev.value.address,
+            ...(ev.value.phone ? { phone: ev.value.phone } : {}),
+          });
+        } catch (err) {
+          console.error('[checkout] updateShippingAddress sync failed:', err);
+        }
       }
     });
   }
