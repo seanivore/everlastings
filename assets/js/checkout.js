@@ -220,8 +220,22 @@ async function mountStageB(stripe, data) {
     }
   }
 
+  // Expose for live debugging in DevTools: window.__checkout.session()
+  if (typeof window !== 'undefined') window.__checkout = checkout;
+
   const confirmBtn = document.querySelector('[data-checkout-confirm]');
   checkout.on('change', (session) => {
+    // Log canConfirm + key field completeness so we can see what's missing
+    // when the Confirm button stays disabled. Trim to avoid PII spam.
+    console.log('[checkout] session change:', {
+      canConfirm: session.canConfirm,
+      status: session.status,
+      shippingAddressComplete: !!session.shippingAddress?.address?.line1,
+      billingAddressComplete: !!session.billingAddress?.address?.line1,
+      paymentMethodType: session.paymentMethodPreview?.type || null,
+      totalAmount: session.total?.total?.amount,
+      shippingOptionId: session.shippingOption?.id || null,
+    });
     if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
     const totalAmount = session.total?.total?.amount;
     if (Number.isFinite(totalAmount)) {
