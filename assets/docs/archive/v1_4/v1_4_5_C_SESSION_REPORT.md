@@ -237,14 +237,6 @@ The known open issue: Ship to + Bill to "Full name" fields render empty even tho
     #8 — Evidence of this is here, where it says the price as $NaN. Whatever is holding this up, possibly the shipping calculation or something holding up that calculation and this number, is preventing the checkout session from completely loading and allowing the user to make a payment. This $NaN bug did happen once before when building the Payments Platform as well. I think if you search for '$NaN' in that directory here `/Users/seanivore/Development/freelance-payments-dev/assets/docs` you might find out what our solution at that time was. 
     #9 — Lastly, you can see, the ability to make the payment was never given to the user because of the issues defined above. 
 
-
-
-
-
-
-
-
-
 ---
 
 1. Open `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app/shop` in a normal (non-incognito) browser tab so you can open DevTools console.
