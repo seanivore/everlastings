@@ -924,16 +924,16 @@ Preview: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`
 
 Inherited from `v1_4_5_C_IMPLEMENT.md` Appendix C, mapped to the single-phase build:
 
-| State | Trigger | Where it surfaces | Handled by |
-|---|---|---|---|
-| Cart empty | `getCart()` empty on load | redirect to `/cart` | Phase 3 load guard |
-| Session create fails (non-410) | `POST /api/checkout` not ok | `[data-checkout-error]` | `showError(...)` |
-| Hold expired (410) | server hold re-check fails | `[data-hold-expired]` → `/cart` | Phase 3 410 branch |
-| Network error reaching server | fetch throws | `[data-checkout-error]` | catch → `showError` |
-| Shipping incomplete | element reports incomplete | `[data-address-incomplete]` (or element's own inline) | element + `canConfirm` false |
-| Address not deliverable / restricted | `session.shippingAddress.address.country !== 'US'` | `[data-restricted-country]` | `checkout.on('change')` toggle |
-| Payment declined / intent fail | `confirm()` → `{ type:'error' }` | `[data-checkout-error]` | confirm handler |
-| Billing/shipping mismatch | n/a in v1 | — | `syncAddressCheckbox` owns billing; no manual reconcile |
+| State                                | Trigger                                            | Where it surfaces                                     | Handled by                                              |
+| ------------------------------------ | -------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
+| Cart empty                           | `getCart()` empty on load                          | redirect to `/cart`                                   | Phase 3 load guard                                      |
+| Session create fails (non-410)       | `POST /api/checkout` not ok                        | `[data-checkout-error]`                               | `showError(...)`                                        |
+| Hold expired (410)                   | server hold re-check fails                         | `[data-hold-expired]` → `/cart`                       | Phase 3 410 branch                                      |
+| Network error reaching server        | fetch throws                                       | `[data-checkout-error]`                               | catch → `showError`                                     |
+| Shipping incomplete                  | element reports incomplete                         | `[data-address-incomplete]` (or element's own inline) | element + `canConfirm` false                            |
+| Address not deliverable / restricted | `session.shippingAddress.address.country !== 'US'` | `[data-restricted-country]`                           | `checkout.on('change')` toggle                          |
+| Payment declined / intent fail       | `confirm()` → `{ type:'error' }`                   | `[data-checkout-error]`                               | confirm handler                                         |
+| Billing/shipping mismatch            | n/a in v1                                          | —                                                     | `syncAddressCheckbox` owns billing; no manual reconcile |
 
 `[data-address-undeliverable]` from the old markup is dropped (the Stripe element surfaces deliverability inline); if the probe shows a session-level signal for it, re-add the slot and toggle it in `checkout.on('change')`.
 
@@ -945,19 +945,19 @@ Inherited from `v1_4_5_C_IMPLEMENT.md` Appendix C, mapped to the single-phase bu
 
 The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are untouched here. This packet covers the C3 (cart/checkout/complete/webhook) + orders surface that the five rounds left broken:
 
-| IMPLEMENT item | Status in v1.4.6 |
-|---|---|
-| C3.2 `cart.js` (reserve, 409 recovery) | Phase 4 — email-only + **409 objects-vs-strings fix** |
-| C3.3 `checkout.js` (Stripe mount + confirm) | Phase 3 — full rewrite, single-phase, no bridges |
-| C3.4 `complete.js` (success page) | Phase 1b — server now returns the fields it reads |
-| C3.5 Stripe webhook E2E | Phase 7.4 (already registered) |
-| `api/checkout.ts` session create | Phase 1 — drop pre-created customer, keep `customer_creation` |
-| `api/orders.ts` + admin Orders tab | Phase 6 — Bearer auth for GPT + polish (exists otherwise) |
-| Merchant new-order email | Phase 5 — **the missing launch blocker, now built** |
-| Appendix A data-map | Re-derived from the session report's Contract Drift Catalog + the actual current HTML (Phase 2/3/4 selectors) |
-| Appendix C error states | Error-states reference table above |
-| Buyer order confirmation | Stripe receipt (SEAN MUST DO) — IMPLEMENT AR #19 |
-| Cart-recovery / welcome emails | Exist (`api/_emails`, `api/cart.ts`) — unchanged |
+| IMPLEMENT item                              | Status in v1.4.6                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| C3.2 `cart.js` (reserve, 409 recovery)      | Phase 4 — email-only + **409 objects-vs-strings fix**                                                         |
+| C3.3 `checkout.js` (Stripe mount + confirm) | Phase 3 — full rewrite, single-phase, no bridges                                                              |
+| C3.4 `complete.js` (success page)           | Phase 1b — server now returns the fields it reads                                                             |
+| C3.5 Stripe webhook E2E                     | Phase 7.4 (already registered)                                                                                |
+| `api/checkout.ts` session create            | Phase 1 — drop pre-created customer, keep `customer_creation`                                                 |
+| `api/orders.ts` + admin Orders tab          | Phase 6 — Bearer auth for GPT + polish (exists otherwise)                                                     |
+| Merchant new-order email                    | Phase 5 — **the missing launch blocker, now built**                                                           |
+| Appendix A data-map                         | Re-derived from the session report's Contract Drift Catalog + the actual current HTML (Phase 2/3/4 selectors) |
+| Appendix C error states                     | Error-states reference table above                                                                            |
+| Buyer order confirmation                    | Stripe receipt (SEAN MUST DO) — IMPLEMENT AR #19                                                              |
+| Cart-recovery / welcome emails              | Exist (`api/_emails`, `api/cart.ts`) — unchanged                                                              |
 
 ---
 

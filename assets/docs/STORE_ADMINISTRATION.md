@@ -8,11 +8,11 @@ A plain, step-by-step guide for the everyday things: adding pieces, taking them 
 
 You have three tools. They all change the same store — pick whichever is easiest in the moment.
 
-| Tool | What it is | Best for | When you'd reach for it |
-| --- | --- | --- | --- |
-| **The Sunkeeper** (your Custom GPT) | A ChatGPT that talks to your store | Everything, hands-free | Your default. Just chat. |
-| **Admin panel** | A web page at `everlastingsbyemaline.com/admin` | Forms + buttons, no chat | When you'd rather click than type; if a helper is doing it for you; if ChatGPT is down or you're on a device without it |
-| **Supabase Studio** | The raw database behind the store | Quick fixes (mark a piece sold) | Last resort / power user — least guardrails, so go slow |
+| Tool                                | What it is                                      | Best for                        | When you'd reach for it                                                                                                 |
+| ----------------------------------- | ----------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **The Sunkeeper** (your Custom GPT) | A ChatGPT that talks to your store              | Everything, hands-free          | Your default. Just chat.                                                                                                |
+| **Admin panel**                     | A web page at `everlastingsbyemaline.com/admin` | Forms + buttons, no chat        | When you'd rather click than type; if a helper is doing it for you; if ChatGPT is down or you're on a device without it |
+| **Supabase Studio**                 | The raw database behind the store               | Quick fixes (mark a piece sold) | Last resort / power user — least guardrails, so go slow                                                                 |
 
 **The short version:** chat with **The Sunkeeper** for almost everything. The **Admin panel** does the exact same jobs with forms — it's your backup, and the place to send a contractor. **Supabase Studio** is the database itself; lovely for a quick flip, but easy to fumble, so only when you need it.
 

@@ -42,23 +42,23 @@ Every product is a row in Supabase; saving it auto-creates the Stripe product so
 
 ### 1B. Worked example — The Sunkeeper
 
-| Field | Value |
-| --- | --- |
-| title | The Sunkeeper |
-| headline | A garden where time stands still |
-| story_card | *The Sunkeeper stands watch …* (2–8 paragraphs) |
-| description | Handcrafted miniature garden scene with warm LED lighting and hand-placed botanicals. |
-| features | Warm LED glow with 3 modes; Hand-placed dried botanicals; USB-C powered (adapter included) |
-| price | $245.00 (stored as 24500) |
-| dimensions | 8" W x 6" D x 10" H |
-| weight | 2.5 lbs |
-| materials | Wood, resin, LED lights, natural moss, dried flowers |
-| power_supply | USB-C (adapter included) |
-| care_instructions | Dust gently with soft brush; Keep away from direct sunlight |
-| shipping_details | Ships within 3–5 business days; Insured shipping included |
-| product_type | miniature |
-| series | Portals to Peace |
-| available / quantity / featured | true / 1 / true |
+| Field                           | Value                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| title                           | The Sunkeeper                                                                              |
+| headline                        | A garden where time stands still                                                           |
+| story_card                      | *The Sunkeeper stands watch …* (2–8 paragraphs)                                            |
+| description                     | Handcrafted miniature garden scene with warm LED lighting and hand-placed botanicals.      |
+| features                        | Warm LED glow with 3 modes; Hand-placed dried botanicals; USB-C powered (adapter included) |
+| price                           | $245.00 (stored as 24500)                                                                  |
+| dimensions                      | 8" W x 6" D x 10" H                                                                        |
+| weight                          | 2.5 lbs                                                                                    |
+| materials                       | Wood, resin, LED lights, natural moss, dried flowers                                       |
+| power_supply                    | USB-C (adapter included)                                                                   |
+| care_instructions               | Dust gently with soft brush; Keep away from direct sunlight                                |
+| shipping_details                | Ships within 3–5 business days; Insured shipping included                                  |
+| product_type                    | miniature                                                                                  |
+| series                          | Portals to Peace                                                                           |
+| available / quantity / featured | true / 1 / true                                                                            |
 
 ### 1C. Photos
 
@@ -310,11 +310,11 @@ The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). Sean drives; 
 
 ### Base URL
 
-| Use case | `BASE_URL` |
-| --- | --- |
-| Real product creation (default) | `https://everlastingsbyemaline.com` |
+| Use case                          | `BASE_URL`                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Real product creation (default)   | `https://everlastingsbyemaline.com`                                                                  |
 | Test/dev seeding (preview deploy) | `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app` (any `*.vercel.app` preview) |
-| Local (`vercel dev`) | `http://localhost:3000` |
+| Local (`vercel dev`)              | `http://localhost:3000`                                                                              |
 
 ```bash
 export BASE_URL="https://everlastingsbyemaline.com"        # production
@@ -398,14 +398,14 @@ curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" -H "Authorization: Bearer $
 - **Rollback:** if the product was created but images are incomplete, set `available = false` immediately.
 
 ### API quick reference
-| Action | Method | Endpoint |
-| --- | --- | --- |
-| Create product | POST | `/api/products` (add `?sync=true`) |
-| Update product | PUT | `/api/products?id=UUID` |
-| Get product | GET | `/api/products?slug=SLUG` |
-| Upload image | POST | `/api/upload` |
-| List orders | GET | `/api/orders` (`?status=`, `?q=`) |
-| Mark shipped | PATCH | `/api/orders/{id}` |
+| Action         | Method | Endpoint                           |
+| -------------- | ------ | ---------------------------------- |
+| Create product | POST   | `/api/products` (add `?sync=true`) |
+| Update product | PUT    | `/api/products?id=UUID`            |
+| Get product    | GET    | `/api/products?slug=SLUG`          |
+| Upload image   | POST   | `/api/upload`                      |
+| List orders    | GET    | `/api/orders` (`?status=`, `?q=`)  |
+| Mark shipped   | PATCH  | `/api/orders/{id}`                 |
 
 > **Auth modes.** `/api/products` and `/api/upload` accept `Authorization: Bearer` as either `PRODUCT_API_KEY` (AI/curl/Custom GPT) **or** a Supabase JWT (admin UI signed-in user). As of v1.4.6, **`/api/orders` and `/api/orders/{id}` also accept `PRODUCT_API_KEY`** (the Bearer path added in `v1_4_6_FINISH_TRACK_C.md` Phase 6) in addition to the admin JWT — that's what lets the Custom GPT fulfill orders. `PRODUCT_API_KEY` is per-environment (test in `.env.local`, live in Production); never ship it to the browser.
 
