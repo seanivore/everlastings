@@ -2,13 +2,17 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-05-06 — v1.4.5: Tracks A and B shipped on `dev`. Backend endpoints consolidated to 11 deployable functions for the Vercel Hobby cap (public URLs preserved via `vercel.json` rewrites). AI product-creation pipeline finalized: signed Cloudinary uploads, `?sync=true` inline Stripe sync on `POST /api/products`, idempotent stripe-sync helper. Architecture Reference extended (AR #34–37). Track C build plan lives in `v1_4_5_C_IMPLEMENT.md`.
-**Version**: v1.4.5
-**Status**: Tracks A and B complete on `dev`. Track C (frontend wiring + launch) ready for execution against `v1_4_5_C_IMPLEMENT.md`.
+**Updated**: 2026-06-02 — v1.4.6: Track C frontend wiring shipped (C1–C4); the checkout repair + order/fulfillment loop is planned to "exclusively executable" in `v1_4_6_FINISH_TRACK_C.md` (single-phase Stripe Custom Checkout, merchant new-order email, GPT-driven fulfillment). Operating docs reorganized: `PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` (AI pipeline) + `STORE_ADMINISTRATION.md` (the client's how-to). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
+**Version**: v1.4.6
+**Status**: Tracks A/B complete and Track C wired on `dev`. Checkout + fulfillment finalization in execution against `v1_4_6_FINISH_TRACK_C.md` (preview-only; not yet launched).
 **Build Guide** (current, exclusively-executable):
-  - `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md` — Track C: integration, per-page wiring, cart/checkout flow, launch checklist
+  - `assets/docs/archive/v1_4/v1_4_6_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, end-to-end verification
+**Operating docs** (living; how the store is run day-to-day):
+  - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
+  - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
 **History** (archived; not required reading):
-  - `assets/docs/archive/v1_4/v1_4_4_IMPLEMENT_UPDATES.md` — Single consolidated record of every change between v1.4.3 and v1.4.5
+  - `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md` — Track C wiring (C1–C5); `v1_4_5_C_SESSION_REPORT.md` — the 5-round checkout saga + Sean's launch punch list
+  - `assets/docs/archive/v1_4/v1_4_4_IMPLEMENT_UPDATES.md` — consolidated changes v1.4.3 → v1.4.5
 
 ---
 
@@ -169,7 +173,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
-  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `PRODUCT_PROTOCOL.md`.
+  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `GPT_SETUP.md`.
 
   11. **Environment-based Stripe keys** — Vercel env vars scoped by environment. Preview deployments use test keys, production uses live keys. Frontend Stripe key served via `api/config.ts` (not hardcoded).
 
@@ -255,9 +259,9 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
   18. **AI product creation via API endpoints**
       - `POST /api/products` + `POST /api/upload`
       - Enable any AI assistant to create products programmatically
-  19. **Order confirmation via Stripe Dashboard emails**
-      - No custom email system for v1.
-      - Stripe sends receipts natively (enable in Dashboard → Settings → Emails)
+  19. **Order confirmation via Stripe Dashboard emails + one merchant notification**
+      - Buyer's receipt = Stripe's native branded email (enable in Dashboard → Settings → Emails; brand under Settings → Branding). No custom buyer-confirmation email in v1.
+      - The one custom transactional email built in v1.4.6 is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking.
   20. **Custom `PRODUCT_API_KEY` for external API auth**
       - Random 64-char string, stored as env var
       - API endpoints validate this key, then use `SUPABASE_SECRET_KEY` internally
@@ -327,7 +331,7 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
   34. **Vercel Hobby tier function-cap drives endpoint consolidation**
       - Hobby plan caps deployments at 12 serverless functions. Project stays on Hobby (~$0/mo for compute) by routing related actions through a single file via `?_action=...` query param + `vercel.json` rewrites.
       - Pattern: `api/checkout.ts` handles `session | reserve | session-status`; `api/orders.ts` handles `list | :id` (PATCH); `api/cart.ts` handles `activity | recovery`.
-      - Public URLs are unchanged via rewrites in `vercel.json`. Frontend, integration tests, AI product pipeline (curl protocol in `PRODUCT_PROTOCOL.md`), and the Custom GPT all hit unchanged URLs.
+      - Public URLs are unchanged via rewrites in `vercel.json`. Frontend, integration tests, AI product pipeline (curl protocol in `GPT_SETUP.md`), and the Custom GPT all hit unchanged URLs.
       - Adding new endpoints: consolidate into existing namespaces (e.g. a new admin endpoint joins `api/orders.ts` or a new `api/admin.ts`) rather than creating standalone files. Buffer is 1 below cap (11/12).
       - `vercel dev` does NOT enforce the cap — must verify against a real preview deploy before merging.
 
@@ -487,7 +491,8 @@ stripe listen --forward-to localhost:3000/api/webhook
   │   │   └── newsletter.js             # Newsletter signup handler
   │   ├── docs/                         # Project documentation
   │   │   ├── EVERLASTINGS_STORE.md     # This file
-  │   │   ├── PRODUCT_PROTOCOL.md       # Client guide + AI creation protocol
+  │   │   ├── GPT_SETUP.md              # Custom GPT brain + AI/curl product protocol
+  │   │   ├── STORE_ADMINISTRATION.md   # Client how-to (products + orders, all mediums)
   │   │   └── archive/                  # v0 and v1 planning docs
   │   ├── favicon/                      # Favicon files
   │   └── fonts/                        # Cormorant Garamond font files
@@ -597,7 +602,7 @@ stripe listen --forward-to localhost:3000/api/webhook
 ### Product Creation (Any Entry Method)
 
   ```
-  Emy adds product via Admin UI / Supabase Studio / GPT Skill
+  Emy adds product via Admin UI / Supabase Studio / the Sunkeeper Custom GPT
     ↓
   (01) Row inserted into Supabase `products` table
     ↓
@@ -630,11 +635,13 @@ stripe listen --forward-to localhost:3000/api/webhook
     ↓
   (05) Returns client_secret to frontend
     ↓
-  (06) Frontend calls stripe.initCheckout({clientSecret}), mounts PaymentElement
+  (06) Frontend calls stripe.initCheckout({ fetchClientSecret }) on page load (single-phase),
+       mounts Stripe's Contact + ShippingAddress + Payment + BillingAddress elements
     ↓
-  (07) Customer enters email + shipping + payment, clicks pay
+  (07) Customer fills the Stripe elements (email prefilled from cart, still editable);
+       the elements auto-sync to the session — no manual update* calls
     ↓
-  (08) Frontend calls actions.confirm() → Stripe processes payment
+  (08) Frontend calls checkout.confirm() → Stripe processes payment
     ↓
   (09) Stripe redirects to complete.html?session_id=...
     ↓
@@ -729,7 +736,7 @@ stripe listen --forward-to localhost:3000/api/webhook
     - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
 
   3. **No Stripe Customer created before checkout**
-    - Unlike freelance-payments, shoppers are anonymous. Stripe creates the Customer record automatically during checkout.
+    - Shoppers are anonymous. The session uses `customer_creation: 'always'`, so Stripe creates the Customer at confirm time (no pre-created customer object). v1.4.6 removed an earlier pre-creation experiment that broke the element flow — see `v1_4_6_FINISH_TRACK_C.md`.
 
   4. **`api/` file count is not 1:1 with public URLs**
     - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.
@@ -932,7 +939,7 @@ All outbound transactional email routes through Resend (sending) and all reply/i
   + **Email/marketing AI pipeline**: `EMAIL_MARKETING.md`, `RESEND_LLMS_FULL.md`, `GIVE_AGENT_INBOX.md`, plus integration refs (`RESEND_CLI.md`, `VERCEL_RESEND.md`, `SUPABASE_RESEND.md`, `RESEND_VERCEL_CHAT_SDK.md`, `CHAT_SDK_CARD_EMAILS.md`, `CLOUDFLARE_WORKERS_RESEND.md`, `PYTHON_RESEND_SDK.md`)
   + **Shipping automation (Shippo API integration)**: `SHIPPO_API.md` (includes pricing snapshot), `SHIPPO_LLMS_FULL.md`. v1 ships with the manual "copy address from admin panel → paste into Shippo web UI" flow. v2 integrates the **free** Shippo API Starter tier (also 30 labels/month, plus no carrier-connection fee) so orders push directly, labels print from the admin panel, and tracking numbers auto-populate the tracking email. The v2 case is pure UX + AI automation (e.g., AI-authored personal notes printed alongside labels), not cost savings.
 
-The theme ("replace manual rituals with AI-managed workflows") carries through from PRODUCT_PROTOCOL's AI-assisted authoring into v2's shipping + email automation. Each piece is reusable template material for the SMB-AI-ops portfolio angle.
+The theme ("replace manual rituals with AI-managed workflows") carries through from the AI-assisted authoring pipeline (now in `GPT_SETUP.md`) into v2's shipping + email automation. Each piece is reusable template material for the SMB-AI-ops portfolio angle.
 
 ---
 
@@ -1079,9 +1086,10 @@ Compared to v1.3.1:
 ## Related Documentation
 
   - **Brand Guide**: `assets/docs/BRAND.md`
-  - **Implementation Guide (current)**: `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md`
+  - **Store Administration (client how-to)**: `assets/docs/STORE_ADMINISTRATION.md`
+  - **AI pipeline + Custom GPT**: `assets/docs/GPT_SETUP.md`
+  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_6_FINISH_TRACK_C.md`
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
-  - **Product Protocol**: `assets/docs/PRODUCT_PROTOCOL.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`
   - **Dev Rules**: `.agent/AGENTS.md`
