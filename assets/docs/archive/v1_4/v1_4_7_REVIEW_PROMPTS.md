@@ -16,13 +16,13 @@ The build doc is a surgical patch: it embeds the "before" and "after" for each e
 
 ### How to run it
 
-1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window with ONLY the build doc pasted in. Bring its list back here; I fold valid items.
-2. **Angles B and C** in fresh Claude Code instances in the repo, effort **max**. Bring each list back.
+1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window (Claude.ai / ChatGPT) with ONLY the build doc pasted in. It has no filesystem, so it prints its review in the chat — paste that back here (or just tell me; I can file it for you).
+2. **Angles B and C** in fresh Claude Code instances in the repo, effort **max**. Each one **writes its findings to a file** — `v1_4_7_GAP_REVIEW_B.md` / `v1_4_7_GAP_REVIEW_C.md` in `assets/docs/archive/v1_4/`. So you don't have to copy anything: just tell me they're done and I'll read the files and fold the valid items.
 3. **Repeat until each angle returns nothing load-bearing.** When a fresh pass of each finds nothing that would derail the build, the doc is as ready as it needs to be (a residual gap is expected and accepted).
 
 ### Folding feedback back
 
-Bring each list here. Triage: load-bearing gaps fold into `v1_4_7_FINISH_TRACK_C.md` immediately; anything that's actually a **Phase-0-probe question** (live Stripe bundle specifics) gets marked as such — the probe resolves it, not the doc; anything out of scope is recorded in the doc's "Out of scope" so it's a decision, not an omission.
+For A, paste its chat output (or tell me and I'll save it); for B and C, the findings are already in their files — just point me at them. Triage: load-bearing gaps fold into `v1_4_7_FINISH_TRACK_C.md` immediately; anything a reviewer flags that the **Phase 0 probe already settled** (it's done — the VERIFIED CONTRACT is filled) is noted as resolved; anything out of scope is recorded in the doc's "Out of scope" so it's a decision, not an omission.
 
 ---
 
@@ -54,7 +54,7 @@ Be concrete: "Phase 5.2 inserts a block that reads `orderRows` but never shows w
 ## PROMPT B — fidelity (tests the doc against the real repo) — run a fresh Claude Code instance IN the repo
 
 ```
-You are a senior engineer doing a pre-build fidelity review. Effort: maximum. Do NOT write or change any code — your only output is a review.
+You are a senior engineer doing a pre-build fidelity review. Effort: maximum. Do NOT change any code or existing docs — the ONLY file you create is your findings file (see OUTPUT).
 
 CONTEXT
 - `assets/docs/archive/v1_4/v1_4_7_FINISH_TRACK_C.md` is a build packet a FRESH agent will execute against THIS repo, then test on a Vercel preview. It embeds "current code" before-blocks and exact "after" replacements.
@@ -72,11 +72,11 @@ HUNT FOR
 - A selector/field/env var the doc references that doesn't actually exist in the file.
 - Any line that drifts back toward the Stripe doc-trap (`initCheckoutElementsSdk`, a mandatory `update*` over a mounted element, `clientSecret:` instead of `fetchClientSecret`).
 
-OUTPUT
+OUTPUT — write your full review to a NEW file `assets/docs/archive/v1_4/v1_4_7_GAP_REVIEW_B.md` (create it; don't touch anything else). Structure it as:
 - A gap list RANKED by likelihood of derailing the build: location in the doc, what's wrong vs. the repo, concrete fix.
 - The single most important insight.
 - One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
-Be specific and concrete.
+Be specific and concrete. After writing the file, print just the one-line verdict in the chat so the human knows you're done.
 ```
 
 ---
@@ -84,7 +84,7 @@ Be specific and concrete.
 ## PROMPT C — integration (tests system fit) — run a fresh Claude Code instance + the architecture doc
 
 ```
-You are a senior engineer doing a pre-build integration review. Effort: maximum. Do NOT write or change any code — your only output is a review.
+You are a senior engineer doing a pre-build integration review. Effort: maximum. Do NOT change any code or existing docs — the ONLY file you create is your findings file (see OUTPUT).
 
 CONTEXT
 - Read `assets/docs/EVERLASTINGS_STORE.md` first for whole-system context (stack, data flow, schema, conventions, Architecture References AR #N), then review the build packet `assets/docs/archive/v1_4/v1_4_7_FINISH_TRACK_C.md`. A FRESH agent will execute the packet against this repo and test on a Vercel preview.
@@ -99,9 +99,9 @@ HUNT FOR
 - Does anything contradict a Key Architectural Decision or AR #N? Flag the conflict.
 - Does the doc reorganization (PRODUCT_PROTOCOL retired into GPT_SETUP + STORE_ADMINISTRATION; curated GPT knowledge now in `assets/docs/gpt/`) leave any stale pointer or behavioral gap?
 
-OUTPUT
+OUTPUT — write your full review to a NEW file `assets/docs/archive/v1_4/v1_4_7_GAP_REVIEW_C.md` (create it; don't touch anything else). Structure it as:
 - A gap list RANKED by likelihood of derailing the build: location, what's wrong, concrete fix.
 - The single most important insight.
 - One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
-Be concrete and specific.
+Be concrete and specific. After writing the file, print just the one-line verdict in the chat so the human knows you're done.
 ```
