@@ -16,13 +16,13 @@ The build doc is a surgical patch: it embeds the "before" and "after" for each e
 
 ### How to run it
 
-1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window (Claude.ai / ChatGPT) with ONLY the build doc pasted in. It has no filesystem, so it prints its review in the chat — paste that back here (or just tell me; I can file it for you).
+1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window (Claude.ai / ChatGPT) with ONLY the build doc pasted in. It has no filesystem, so it outputs its review as a complete `v1_4_7_GAP_REVIEW_A.md` document in the chat — drop that into `assets/docs/archive/v1_4/` yourself (or paste it to me and I'll file it).
 2. **Angles B and C** in fresh Claude Code instances in the repo, effort **max**. Each one **writes its findings to a file** — `v1_4_7_GAP_REVIEW_B.md` / `v1_4_7_GAP_REVIEW_C.md` in `assets/docs/archive/v1_4/`. So you don't have to copy anything: just tell me they're done and I'll read the files and fold the valid items.
 3. **Repeat until each angle returns nothing load-bearing.** When a fresh pass of each finds nothing that would derail the build, the doc is as ready as it needs to be (a residual gap is expected and accepted).
 
 ### Folding feedback back
 
-For A, paste its chat output (or tell me and I'll save it); for B and C, the findings are already in their files — just point me at them. Triage: load-bearing gaps fold into `v1_4_7_FINISH_TRACK_C.md` immediately; anything a reviewer flags that the **Phase 0 probe already settled** (it's done — the VERIFIED CONTRACT is filled) is noted as resolved; anything out of scope is recorded in the doc's "Out of scope" so it's a decision, not an omission.
+Once the `v1_4_7_GAP_REVIEW_{A,B,C}.md` files are in the repo (A you save from the chat; B and C write themselves), just point me at them. Triage: load-bearing gaps fold into `v1_4_7_FINISH_TRACK_C.md` immediately; anything a reviewer flags that the **Phase 0 probe already settled** (it's done — the VERIFIED CONTRACT is filled) is noted as resolved; anything out of scope is recorded in the doc's "Out of scope" so it's a decision, not an omission.
 
 ---
 
@@ -42,7 +42,7 @@ HUNT FOR
 - Any value presented as settled fact that actually depends on live behavior the packet hasn't verified (note whether that's clearly marked as a probe item or silently assumed).
 - Any cross-phase handoff you couldn't verify from the doc alone (a page consumes a field a server step must return; a payload must match its reader; a selector mounted in one phase must be defined in another).
 
-OUTPUT
+OUTPUT — produce your full review as a complete markdown document the human will save as `assets/docs/archive/v1_4/v1_4_7_GAP_REVIEW_A.md`. You have no filesystem, so print the whole file's contents in the chat. Structure it as:
 - A list of self-containment defects, RANKED by how likely each is to make the build agent guess wrong. For each: where in the doc, what you'd have to look up or decide, and the concrete fix (what to inline).
 - The single most important "if you fix one thing" item.
 - One-line verdict: SELF-CONTAINED ENOUGH TO BUILD, or NEEDS MORE INLINING.
