@@ -737,7 +737,7 @@ stripe listen --forward-to localhost:3000/api/webhook
     - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
 
   3. **No Stripe Customer created before checkout**
-    - Shoppers are anonymous — no Stripe Customer is created before checkout (an earlier pre-creation experiment broke the element flow and is being removed). Whether the session sets `customer_creation: 'always'` is finalized by the Phase 0 live-probe; the webhook tolerates a null `stripe_customer_id` either way. See `v1_4_7_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
+    - Shoppers are anonymous — no Stripe Customer is created before checkout. The Phase 0 probe (2026-06-04) resolved the open question: the session **omits `customer_creation`** (it wasn't verified to populate `session.customer` under `ui_mode:'custom'`, and forcing it risked a 500). The webhook null-guards `stripe_customer_id` and keys customers by email. See `v1_4_7_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
 
   4. **`api/` file count is not 1:1 with public URLs**
     - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.

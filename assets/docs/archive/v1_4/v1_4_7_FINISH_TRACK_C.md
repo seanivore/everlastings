@@ -2,7 +2,7 @@
 
 **Initiative:** Repair checkout, simplify it to a single page, finish the order/fulfillment loop, validate end-to-end on the Vercel preview — so the store can launch and the Custom-GPT pipeline can be finalized.
 **Revision driven by:** Five failed checkout rounds (`v1_4_5_C_SESSION_REPORT.md` Rounds 1–5 + `v1_4_5_C_TESTING_BUG_LOG.md`). Root cause isolated; planning loop run to "exclusively executable" before any code.
-**Status:** ready for execution after the Phase 0 probe fills the VERIFIED CONTRACT.
+**Status:** Phase 0 probe COMPLETE (2026-06-04, dev preview) — VERIFIED CONTRACT filled with observed values below. Ready for execution of Phases 1–8.
 **Branch:** `dev`. Test only on the Vercel preview, never localhost.
 
 > ⚠️ This packet is self-contained. Every file edit below shows the **current** code and the **exact replacement**. Do NOT re-read past IMPLEMENTs/BUGS — their content is folded in here. The one historical file worth opening is the Stripe sample named in Phase 0.
@@ -90,19 +90,21 @@ Do this before writing any checkout code. Use Claude-in-Chrome against the dev p
 
 **Record results in the VERIFIED CONTRACT** (replace bracketed expectations with observed truth). The Phase 1–3 code uses these exact tokens.
 
-### VERIFIED CONTRACT (fill from probe; brackets are the lead hypotheses)
-- Init: `[stripe.initCheckout({ fetchClientSecret, elementsOptions, defaultValues })]` — repo-proven; `initCheckoutElementsSdk` MUST NOT appear in the final code
-- Confirm: `[await checkout.confirm()]` → `[{ type:'error', error } on error; redirect on success]`
-- Elements auto-sync, no `update*`: `[CONFIRMED]`
-- Contact element: `[createContactDetailsElement()]`
-- Payment billing off: `[createPaymentElement({ fields:{ billingDetails:'never' } })]`
-- Same-as-shipping: `[elementsOptions.syncAddressCheckbox:'billing'; default-checked; hides fields]`
-- Email prefill: `[top-level defaultValues:{ email }, editable]`
-- Name split: `[createShippingAddressElement({ display:{ name:'split' } })]`
-- Promo method: `[checkout.applyPromotionCode — fallback applyDiscount]`
-- Server customer: `[no customers.create / customer / customer_update / customer_email; customer_creation:'always' ONLY if the probe shows session.customer populates under ui_mode:'custom' — ELSE omit it (webhook null-guards stripe_customer_id)]`
-- Phone: `[shipping fields:{ phone:'always' } collects it → remove server phone_number_collection]`
-- Billing server flag: `[omit billing_address_collection unless confirm() needs 'required']`
+### VERIFIED CONTRACT (probed live on the dev preview, 2026-06-04)
+
+**Observed** values from the live `https://js.stripe.com/basil/stripe.js` bundle (`pk_test_…`) — not hypotheses. Phases 1–3 use these exact tokens. ✅ = confirmed in-browser; "(Phase 8)" = deferred to the filled-form verification with a test card.
+- Init: `stripe.initCheckout({ fetchClientSecret, elementsOptions })` ✅ works. **`initCheckoutElementsSdk` also exists on the bundle but is the WRONG surface — it MUST NOT appear in the final code.**
+- Confirm: `await checkout.confirm()` — `confirm` present; success redirects to `return_url`, errors return `{ type:'error', error }`. (Full round-trip: Phase 8.)
+- Elements auto-sync, no `update*`: all four elements mount together with **NO `IntegrationError`** ✅. (Typed-address→`session.shippingAddress` sync with no `update*`: Phase 8.)
+- Contact element: `createContactDetailsElement()` ✅ (a `createEmailElement()` also exists; not needed).
+- Payment billing off: `createPaymentElement({ fields:{ billingDetails:'never' } })` ✅ accepted + mounts.
+- Same-as-shipping: `elementsOptions.syncAddressCheckbox:'billing'` ✅ accepted; renders the default-checked **"Billing is same as shipping information"** checkbox on the billing element.
+- Email prefill: ❌ **`defaultValues` is REJECTED** — `initCheckout({ defaultValues })` throws `IntegrationError: options.defaultValues is not an accepted parameter`. **Do NOT pass `defaultValues`.** Email prefill is dropped (optional); never inject via `update*` (double-writer bug).
+- Name split: `createShippingAddressElement({ display:{ name:'split' } })` ✅ renders First/Last. **`fields` is REJECTED** on this element (`options.fields is not an accepted parameter`) — do NOT pass `fields:{ phone:'always' }`.
+- Promo method: `checkout.applyPromotionCode(code)` ✅ present. **`applyDiscount` does NOT exist** — drop that fallback.
+- Phone: shipping element rejects `fields`, so phone is collected **server-side** — **KEEP `phone_number_collection: { enabled: true }`**.
+- Server customer: **OMIT `customer_creation`** — not verified to populate `session.customer` under `ui_mode:'custom'` without a deploy, and forcing it risked the 500 from past rounds. The webhook null-guards `stripe_customer_id`, so omitting is safe. (Re-add + verify in v1.1 if a Stripe Customer link is wanted.)
+- Billing server flag: omit `billing_address_collection` (the separate billing element + `syncAddressCheckbox` supplies billing; confirm() reachability: Phase 8 — add `'required'` only if it's blocked).
 
 **Acceptance:** the VERIFIED CONTRACT is filled with observed values; no remaining brackets. If a token differs, use the observed value and adjust Phases 1–3.
 
@@ -140,7 +142,7 @@ Do this before writing any checkout code. Use Claude-in-Chrome against the dev p
 
 **DELETE entirely (current lines 104–118):** the comment + the `const emailValid …` + `let customerId …` + `if (emailValid) { await stripe.customers.create(...) }`. We no longer create a customer up front.
 
-### 1.3 — Simplify the session create (keep `customer_creation:'always'`)
+### 1.3 — Simplify the session create (omit `customer_creation`; keep `phone_number_collection`)
 
 **CURRENT (lines 120–164):** the `stripe.checkout.sessions.create({...})` call with `phone_number_collection`, the `...(customerId ? { customer, customer_update } : emailValid ? { customer_email, customer_creation } : { customer_creation })` branch, and the `.html` return_url.
 
@@ -166,14 +168,12 @@ Do this before writing any checkout code. Use Claude-in-Chrome against the dev p
           },
         },
       ],
-      // customer_creation: KEEP this line ONLY if the Phase 0 probe confirms that a
-      // ui_mode:'custom' session with no pre-made customer actually populates
-      // session.customer when this option is set. If the probe shows the option is
-      // rejected, or session.customer stays null anyway, OMIT this line — do NOT let
-      // it 500 the create (that was the failure mode of the past rounds). It is safe
-      // to omit: the webhook null-guards stripe_customer_id and derives its own
-      // customer_id from the email-keyed customers upsert.
-      customer_creation: 'always',
+      // Phone: the shipping element rejects `fields` (Phase 0), so collect phone server-side.
+      phone_number_collection: { enabled: true },
+      // customer_creation: OMITTED (Phase 0). Not verified to populate session.customer under
+      // ui_mode:'custom' without a pre-made customer, and forcing it risked the 500 that burned
+      // past rounds. Safe to omit: the webhook null-guards stripe_customer_id and derives
+      // customer_id from the email-keyed customers upsert. (Re-add + verify in v1.1 if wanted.)
       metadata: {
         items: JSON.stringify(itemsMeta),
         session_id,
@@ -183,7 +183,7 @@ Do this before writing any checkout code. Use Claude-in-Chrome against the dev p
 ```
 
 **Conditional on Phase 0:**
-- **`phone_number_collection`** — REMOVE it (as above) **iff** the probe confirms the shipping element collects phone via `fields:{ phone:'always' }`. If the probe shows it does not, re-add `phone_number_collection: { enabled: true },`.
+- **`phone_number_collection`** — **KEPT** (`{ enabled: true }`, now in the create block above): Phase 0 confirmed the shipping element rejects `fields`, so phone is collected server-side.
 - **`billing_address_collection: 'required'`** — add it **only if** the probe shows `confirm()` needs it with a separate billing element. Default: omit.
 
 **Why this is safe (verified against `api/webhook.ts`):** the webhook reads `session.customer` (line 81), `session.customer_details` (name/email/phone, lines 80/96/97), and `session.collected_information.shipping_details.address` (line 84). All of those populate from the elements at confirm time regardless of pre-creation; only `stripe_customer_id` depends on `customer_creation`. And `stripe_customer_id` is non-load-bearing: the webhook defaults it to `null`, still upserts the customer by **email** (lines 89–113), and derives the order's `customer_id` from that upsert — not from Stripe. **So the worst case of omitting `customer_creation` is a null `stripe_customer_id`, never a broken checkout.** That is why Phase 0 treats this as a pass/fail probe, not a fixed assumption.
@@ -423,11 +423,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         },
       },
-      // Renders ONE default-checked "same as shipping" checkbox on the billing element. (PROBE)
+      // Renders the default-checked "Billing is same as shipping" checkbox on the billing element. (Phase 0 ✅)
       syncAddressCheckbox: 'billing',
     },
-    // Top-level prefill: shows in the contact element, stays editable. (PROBE)
-    defaultValues: { email: sessionStorage.getItem('checkout_email') || undefined },
+    // NO defaultValues: Phase 0 confirmed initCheckout REJECTS it (IntegrationError:
+    // options.defaultValues is not an accepted parameter). Email prefill is dropped (optional);
+    // never inject the email via an update* call (that's the double-writer bug).
   });
 
   if (typeof window !== 'undefined') window.__checkout = checkout; // keep for probing/debug
@@ -435,7 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Mount Stripe's elements. They auto-sync to the session — NO update* calls anywhere.
   checkout.createContactDetailsElement().mount('[data-stripe-contact]');
   checkout
-    .createShippingAddressElement({ display: { name: 'split' }, fields: { phone: 'always' } })
+    // Phase 0: `fields` is rejected on this element; phone is collected server-side (phone_number_collection).
+    .createShippingAddressElement({ display: { name: 'split' } })
     .mount('[data-stripe-address-shipping]');
   checkout.createBillingAddressElement().mount('[data-stripe-address-billing]');
   checkout
@@ -509,7 +511,7 @@ function wirePromo(checkout) {
     const original = promoBtn.textContent;
     promoBtn.textContent = 'Applying…';
     try {
-      const apply = checkout.applyPromotionCode || checkout.applyDiscount;
+      const apply = checkout.applyPromotionCode; // Phase 0: applyDiscount does not exist on the bundle.
       if (typeof apply === 'function') {
         const r = await apply.call(checkout, code);
         if (r?.type === 'error') showError(r.error?.message || 'Could not apply this code.');
@@ -544,8 +546,7 @@ function escapeHTML(s) {
 
 - **No `updateShippingAddress` / `updateBillingAddress` anywhere.** If the probe shows an address must be pushed (it should not — the elements own collection), that is the *only* legitimate `update*` use and must replace the mounted element, never sit on top of it.
 - `getCart`, `getCartTotal`, `getOrCreateBrowserSessionId`, `formatPrice` come from `main.js` (already global; the current file uses them).
-- The prefill email is sourced ONLY from `sessionStorage.getItem('checkout_email')` (the old `[data-checkout-info-form]` is deleted).
-- **If the Phase 0 probe shows `initCheckout` rejects or ignores top-level `defaultValues`:** drop the `defaultValues` key entirely — email prefill is optional and must NEVER block init or throw. Do not inject the email via an `update*` call.
+- **Email prefill is dropped (Phase 0):** `initCheckout` rejects `defaultValues`, and pushing email via `updateEmail()` over the mounted contact element would recreate the double-writer bug. The contact element starts empty and the buyer types their email; the cart's newsletter email is captured separately. Intentional and acceptable for v1.
 
 **Fallback (only if Phase 0 shows Stripe's elements can't render the layout):** build plain HTML shipping/billing fields and push them ONCE on Pay via `checkout.updateShippingAddress(...)` / `updateBillingAddress(...)` *instead of* mounting the Stripe address elements (never both). Not expected — US-only + no company field makes the native elements sufficient.
 
