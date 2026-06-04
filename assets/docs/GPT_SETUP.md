@@ -6,11 +6,13 @@
 
 This supersedes the archived setup record `archive/v1_4/v1_4_5_C_GPT_SETUP.md` and the retired `PRODUCT_PROTOCOL.md` (its content lives here + in `STORE_ADMINISTRATION.md`). Emy's *simple how-to* lives in `STORE_ADMINISTRATION.md`; this doc is the GPT's brain + the technical protocol.
 
-**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded). The order/fulfillment Actions (`listOrders`, `markShipped`) require the `PRODUCT_API_KEY` Bearer path on `/api/orders`, shipped in `v1_4_6_FINISH_TRACK_C.md` Phase 6 — set the GPT up after that deploys (product creation works independently and can be set up anytime).
+**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded), in **two waves** (Part 3): **Wave 1 (products)** anytime now, **Wave 2 (orders)** only after `v1_4_7_FINISH_TRACK_C.md` Phase 6 deploys. The order Actions (`listOrders`, `markShipped`) require the `PRODUCT_API_KEY` Bearer path on `/api/orders` that Phase 6 ships; product creation (`/api/upload`, `/api/products`) works independently and is verifiable today.
 
 ---
 
 ## Part 1 — What the GPT must know (its knowledge)
+
+> **Canonical knowledge = two uploaded files.** The GPT's product and voice knowledge live in **`assets/docs/gpt/product-reference.md`** (fields, enums, photos, worked example) and **`assets/docs/gpt/voice-guide.md`** (brand voice for writing copy). Those two files are the **source of truth** and are what you upload as Knowledge (§2D). 1A–1C below are a quick summary of `product-reference.md`; keep the uploaded files current and treat them as authoritative. 1D–1E (orders/refunds) are behavioral and live only here + in the Instructions.
 
 ### 1A. Product protocol — the fields she provides
 
@@ -19,7 +21,7 @@ Every product is a row in Supabase; saving it auto-creates the Stripe product so
 **She writes:**
 - **title** — the name of the piece, exactly as shown.
 - **headline** — 5–7 word tagline. Short, poetic; appears under the title.
-- **story_card** — the full story (2–8 paragraphs). The emotional heart; her natural poetic voice (see `BRAND.md`).
+- **story_card** — the full story (2–8 paragraphs). The emotional heart; her natural poetic voice (see `voice-guide.md`).
 - **description** — 2–3 sentence summary. Used in previews, search, social shares.
 - **features** — list of notable features, written beautifully ("Softly illuminated by warm LED glow," not "LED lights").
 - **price** — in **dollars**; we store cents ($245.00 → 24500). Never show her the integer.
@@ -106,6 +108,9 @@ Order rules: always confirm before markShipped; never invent a tracking number o
 
 == REFUNDS ==
 You cannot issue refunds. Tell her to refund in the Stripe dashboard (Payments → find the payment → Refund); Stripe emails the buyer automatically. Refunding does NOT relist the piece — if she wants it for sale again she relists it (available = true) via the admin UI. Don't promise the website does this automatically.
+
+== VOICE (when you write copy) ==
+Everlastings sounds warm, poetic, and quietly magical — like a gentle embrace, drawn from light, home, memory, and the seasons. Never clinical or sales-y. Lead with emotion, then specifics. Lean on: haven, sanctuary, Elsewhere, portal, glow, gentle, still, hold, keep, healing. Avoid: cute, perfect, sale/deal/discount, "escape," sad/tragic. For the full voice + the story-card shape consult your Knowledge file "voice-guide"; for field details + the worked example consult "product-reference."
 
 == ALWAYS ==
 Keep her in plain, warm language. Never reveal API keys, server URLs, or technical detail unless she asks.
@@ -273,7 +278,7 @@ paths:
 ### 2C. Authentication
 
 - **Type:** API Key · **Auth Type:** Bearer · **API Key:** the **production** `PRODUCT_API_KEY` (Vercel → Project → Settings → Environment Variables → `PRODUCT_API_KEY`, **Production** scope). Never the preview value.
-- One key authorizes all four actions (`/api/products`, `/api/upload`, and — after `v1_4_6` Phase 6 — `/api/orders`).
+- One key authorizes all four actions (`/api/products`, `/api/upload`, and — after `v1_4_7` Phase 6 — `/api/orders`).
 
 ### 2D. Settings
 
@@ -281,26 +286,38 @@ paths:
 - **Capabilities:** Web Browsing off, DALL·E off, Code Interpreter on (lets it inspect uploaded images if needed).
 - **Privacy policy URL:** `https://everlastingsbyemaline.com/privacy`
 - **Share:** **Only me** (it carries a live API key — never public).
-- **Knowledge files (optional):** upload `BRAND.md` if you want richer voice; the protocol above is already in the instructions.
+- **Knowledge files (required):** upload the two curated files **`assets/docs/gpt/product-reference.md`** and **`assets/docs/gpt/voice-guide.md`**. Do **not** upload `BRAND.md`, `EVERLASTINGS_STORE.md`, or `STORE_ADMINISTRATION.md` — they carry developer/CSS/architecture detail that confuses the GPT and risks leaking technical jargon to Em. (Role context is already in the Instructions; the GPT doesn't need the human operator how-to.)
 
 ---
 
-## Part 3 — From-scratch setup (Sean, with Em at the keyboard)
+## Part 3 — Setup, in two waves (Sean drives; Em at the keyboard)
 
-The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). Sean drives; she pastes.
+The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in **two waves** for two reasons learned the hard way: the order Actions depend on code that ships in `v1_4_7_FINISH_TRACK_C.md` **Phase 6**, and a third-party Actions runner **cannot authenticate through a Vercel SSO-protected preview** — so each wave is verified against an environment the GPT can actually call. Don't configure an Action you can't immediately verify.
 
-1. ChatGPT → **Explore GPTs → Create → Configure** tab.
+### Wave 1 — Products (do anytime; `/api/upload` + `/api/products` already accept the Bearer key)
+
+1. ChatGPT → **Explore GPTs → Create → Configure**.
 2. Paste **Name** + **Description** (2D).
 3. Paste **Instructions** (2A) verbatim.
-4. **Capabilities** per 2D. Optional: upload `BRAND.md` as Knowledge.
-5. **Create new action** → **Authentication**: API Key, Bearer, paste the **production** `PRODUCT_API_KEY` (2C).
-6. **Schema**: paste the whole YAML (2B) verbatim (YAML is whitespace-sensitive — copy clean).
-7. **Privacy URL** (2D). **Save** → **Only me**.
-8. **Smoke test** (with Em watching): "Add a quick test product. Title: Setup Smoke Test. Price: $1. Headline: setup smoke test. Story: setup smoke test. Description: setup smoke test." Drag in 7 throwaway images. It should upload 7 times, show a preview, then on "go ahead" call `createProduct` with `sync=true` and return a `prod_…` id. Open `https://everlastingsbyemaline.com/product/setup-smoke-test` to confirm it renders. Then **archive it**: Stripe dashboard → archive the product; Supabase Studio → `products` → set the row `available = false` (or delete).
-   - *If `uploadImage` 404s:* the production `/api/upload` deploy or the `servers:` URL is the cause — confirm Track C is deployed to production and the base URL is `https://everlastingsbyemaline.com`. (This was the failure on the earlier attempt, before Track C shipped.)
-9. **Hand-off:** the GPT is already in Em's sidebar. Remind her: always ≥7 photos; it always previews before creating; it can't edit existing products (admin UI for edits); if she ever sees "the connection key needs Sean's attention," text you.
+4. **Capabilities** per 2D. **Knowledge:** upload `assets/docs/gpt/product-reference.md` + `assets/docs/gpt/voice-guide.md` (2D) — never the raw dev docs.
+5. **Create new action → Authentication:** API Key, Bearer, paste the `PRODUCT_API_KEY` for the environment you'll verify against (see the smoke test).
+6. **Schema:** paste the YAML (2B) verbatim (whitespace-sensitive — copy clean). You may paste the full schema now; the `/api/orders` Actions simply won't work until Wave 2.
+7. **Privacy URL** (2D). **Save → Only me**.
+8. **Wave 1 smoke test** — because the GPT can't reach the SSO-protected preview, verify the product pipeline one of two ways:
+   - **Recommended (no live clutter):** Sean curls the **dev preview** first to prove the pipeline (test key from `.env.local`). A bogus-key call → `401` (proves the endpoint is deployed + gated); a real-key `createProduct?sync=true` tags the row `is_test=true`. The GPT wraps these exact calls — green curl = green GPT path.
+   - **GPT end-to-end (at launch):** point the schema `servers:` + key at **production**, then have the GPT add "Setup Smoke Test, $1," drag in 7 throwaway photos → it uploads 7×, previews, then `createProduct` with `sync=true` → `prod_…` id. Open `https://everlastingsbyemaline.com/product/setup-smoke-test`, then archive it (Stripe → archive product; Supabase Studio → set `available=false` or delete).
 
-**Maintenance:** if `PRODUCT_API_KEY` rotates, reopen the GPT → Actions → Authentication → paste the new production value → Save. Nothing else changes. If the API base URL changes, repeat step 6 with the new `servers:` URL.
+### Wave 2 — Orders (only AFTER `v1_4_7_FINISH_TRACK_C.md` Phase 6 deploys + its Phase 8.7 passes)
+
+The order Actions (`listOrders`, `markShipped`) need the `PRODUCT_API_KEY` Bearer path on `/api/orders`, which **Phase 6 ships**. Until it's deployed to the environment the GPT targets, these Actions return `401` — this is exactly the trap from the earlier attempt, so honor the gate:
+
+1. **Confirm Phase 8.7 passed** on the target environment (Sean curls `/api/orders` GET + PATCH with that environment's key → `200`).
+2. GPT → **Edit → Actions → Schema:** confirm the `/api/orders` + `/api/orders/{id}` paths are present (2B).
+3. **Wave 2 smoke test** (with Em watching): "What orders need shipping?" → it calls `listOrders` and reads them back plainly. Then mark a **test** order shipped → it confirms first, calls `markShipped`, the order flips to shipped and the buyer tracking email fires. (Use a test order, never a real customer's.)
+
+**Hand-off:** the GPT is in Em's sidebar. Remind her: always ≥7 photos; it always previews before creating; it can't edit existing products (admin UI for edits); it confirms before marking shipped (that emails the buyer); if she ever sees "the connection key needs Sean's attention," text Sean.
+
+**Maintenance:** if `PRODUCT_API_KEY` rotates, reopen the GPT → Actions → Authentication → paste the new value → Save — nothing else changes. If the API base URL changes, update the `servers:` URL in the schema (2B).
 
 ---
 
@@ -407,7 +424,7 @@ curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" -H "Authorization: Bearer $
 | List orders    | GET    | `/api/orders` (`?status=`, `?q=`)  |
 | Mark shipped   | PATCH  | `/api/orders/{id}`                 |
 
-> **Auth modes.** `/api/products` and `/api/upload` accept `Authorization: Bearer` as either `PRODUCT_API_KEY` (AI/curl/Custom GPT) **or** a Supabase JWT (admin UI signed-in user). As of v1.4.6, **`/api/orders` and `/api/orders/{id}` also accept `PRODUCT_API_KEY`** (the Bearer path added in `v1_4_6_FINISH_TRACK_C.md` Phase 6) in addition to the admin JWT — that's what lets the Custom GPT fulfill orders. `PRODUCT_API_KEY` is per-environment (test in `.env.local`, live in Production); never ship it to the browser.
+> **Auth modes.** `/api/products` and `/api/upload` accept `Authorization: Bearer` as either `PRODUCT_API_KEY` (AI/curl/Custom GPT) **or** a Supabase JWT (admin UI signed-in user). As of v1.4.7, **`/api/orders` and `/api/orders/{id}` also accept `PRODUCT_API_KEY`** (the Bearer path added in `v1_4_7_FINISH_TRACK_C.md` Phase 6) in addition to the admin JWT — that's what lets the Custom GPT fulfill orders. `PRODUCT_API_KEY` is per-environment (test in `.env.local`, live in Production); never ship it to the browser.
 
 > **`npx vercel curl` quirk:** against a protection-enabled preview, the underlying `curl` exits code `3` ("No host part in the URL") even on success; the JSON body still delivers. In `set -e` scripts use `set -uo pipefail` or `|| true`.
 

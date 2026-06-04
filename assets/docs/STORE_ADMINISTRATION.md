@@ -130,5 +130,6 @@ Studio is the **database itself** — the spreadsheet-like source behind your wh
 - The Sunkeeper says *"the connection key needs Sean's attention"* → text Sean.
 - A piece won't save, an email didn't go out, or a number looks wrong → take a screenshot and text Sean.
 - You're not sure which tool to use → use the Sunkeeper; it can almost always help, or tell you to use the Admin panel.
+- **The whole store or admin won't load** (products missing, errors everywhere, or a "project paused" notice) → the database may have gone to sleep after a quiet stretch. **Text Sean — he wakes it back up.** You don't need to, and neither the Sunkeeper nor the Admin panel can. *(For Sean/a contractor: Supabase dashboard → the project → **Restore**, or the Management API. A daily keep-alive cron normally prevents this — see the architecture doc.)*
 
 *This guide is yours — Sean keeps it current. Questions: sean@august.style*

@@ -2,14 +2,15 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-06-02 — v1.4.6: Track C frontend wiring shipped (C1–C4); the checkout repair + order/fulfillment loop is planned to "exclusively executable" in `v1_4_6_FINISH_TRACK_C.md` (single-phase Stripe Custom Checkout, merchant new-order email, GPT-driven fulfillment). Operating docs reorganized: `PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` (AI pipeline) + `STORE_ADMINISTRATION.md` (the client's how-to). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
-**Version**: v1.4.6
-**Status**: Tracks A/B complete and Track C wired on `dev`. Checkout + fulfillment finalization in execution against `v1_4_6_FINISH_TRACK_C.md` (preview-only; not yet launched).
+**Updated**: 2026-06-04 — v1.4.7: the build packet `v1_4_7_FINISH_TRACK_C.md` (renamed from v1.4.6 as it was refined to *truly* exclusively-executable) adds a Supabase keep-alive cron (Phase 7) and a two-wave GPT setup; curated GPT Knowledge files added at `assets/docs/gpt/` (`voice-guide.md` + `product-reference.md`). v1.4.6: Track C frontend wiring shipped (C1–C4); checkout repair + order/fulfillment loop planned exclusively-executable; operating docs reorganized (`PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` + `STORE_ADMINISTRATION.md`). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
+**Version**: v1.4.7
+**Status**: Tracks A/B complete and Track C wired on `dev`. Checkout + fulfillment finalization planned in `v1_4_7_FINISH_TRACK_C.md`, pending the Phase 0 live-probe (preview-only; not yet launched).
 **Build Guide** (current, exclusively-executable):
-  - `assets/docs/archive/v1_4/v1_4_6_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, end-to-end verification
+  - `assets/docs/archive/v1_4/v1_4_7_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification
 **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
+  - `assets/docs/gpt/` — curated Custom-GPT Knowledge uploads (`voice-guide.md`, `product-reference.md`)
 **History** (archived; not required reading):
   - `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md` — Track C wiring (C1–C5); `v1_4_5_C_SESSION_REPORT.md` — the 5-round checkout saga + Sean's launch punch list
   - `assets/docs/archive/v1_4/v1_4_4_IMPLEMENT_UPDATES.md` — consolidated changes v1.4.3 → v1.4.5
@@ -261,7 +262,7 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - Enable any AI assistant to create products programmatically
   19. **Order confirmation via Stripe Dashboard emails + one merchant notification**
       - Buyer's receipt = Stripe's native branded email (enable in Dashboard → Settings → Emails; brand under Settings → Branding). No custom buyer-confirmation email in v1.
-      - The one custom transactional email built in v1.4.6 is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking.
+      - The one custom transactional email (v1.4.7) is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking. (Planned in `v1_4_7_FINISH_TRACK_C.md` Phase 5 — not yet shipped.)
   20. **Custom `PRODUCT_API_KEY` for external API auth**
       - Random 64-char string, stored as env var
       - API endpoints validate this key, then use `SUPABASE_SECRET_KEY` internally
@@ -736,10 +737,11 @@ stripe listen --forward-to localhost:3000/api/webhook
     - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
 
   3. **No Stripe Customer created before checkout**
-    - Shoppers are anonymous. The session uses `customer_creation: 'always'`, so Stripe creates the Customer at confirm time (no pre-created customer object). v1.4.6 removed an earlier pre-creation experiment that broke the element flow — see `v1_4_6_FINISH_TRACK_C.md`.
+    - Shoppers are anonymous — no Stripe Customer is created before checkout (an earlier pre-creation experiment broke the element flow and is being removed). Whether the session sets `customer_creation: 'always'` is finalized by the Phase 0 live-probe; the webhook tolerates a null `stripe_customer_id` either way. See `v1_4_7_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
 
   4. **`api/` file count is not 1:1 with public URLs**
     - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.
+    - **Supabase keep-alive (v1.4.7):** a daily Vercel cron in `vercel.json` (`/api/product-feed`) runs a real DB read so the free-tier project never pauses (~7-day inactivity limit). It deliberately **reuses an existing function** — a dedicated `/api/keepalive` would push past the 11-function Hobby cap. Crons run on production only (activates at launch). Reactive recovery (dashboard Restore / Management API) is a Sean-only step. See `v1_4_7_FINISH_TRACK_C.md` Phase 7.
 
   5. **Endpoint consolidation is intentional, not lazy**
     - The 11-deployable-function shape is a design constraint (Vercel Hobby cap of 12). Splitting `checkout.ts`, `orders.ts`, or `cart.ts` back into one-file-per-action would break the deploy. Add new endpoints into the existing namespaces, or check the cap before introducing a new top-level file. See AR #34.
@@ -1088,7 +1090,7 @@ Compared to v1.3.1:
   - **Brand Guide**: `assets/docs/BRAND.md`
   - **Store Administration (client how-to)**: `assets/docs/STORE_ADMINISTRATION.md`
   - **AI pipeline + Custom GPT**: `assets/docs/GPT_SETUP.md`
-  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_6_FINISH_TRACK_C.md`
+  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_7_FINISH_TRACK_C.md`
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`

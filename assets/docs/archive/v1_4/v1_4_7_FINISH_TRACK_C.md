@@ -1,4 +1,4 @@
-# v1.4.6 — Finish Track C (BUILD packet)
+# v1.4.7 — Finish Track C (BUILD packet)
 
 **Initiative:** Repair checkout, simplify it to a single page, finish the order/fulfillment loop, validate end-to-end on the Vercel preview — so the store can launch and the Custom-GPT pipeline can be finalized.
 **Revision driven by:** Five failed checkout rounds (`v1_4_5_C_SESSION_REPORT.md` Rounds 1–5 + `v1_4_5_C_TESTING_BUG_LOG.md`). Root cause isolated; planning loop run to "exclusively executable" before any code.
@@ -247,6 +247,8 @@ Do this before writing any checkout code. Use Claude-in-Chrome against the dev p
     );
 ```
 *(`complete.js` treats `already_subscribed` as optional — if absent it shows the newsletter prompt, which is fine. No need to add it.)*
+
+*(Scope check: `corsHeaders`, `stripe`, `sessionId`, and `Response` are all visible in the CURRENT block above — this edit only swaps the `retrieve` expand options and the returned object's fields; nothing new to import.)*
 
 *Note: `stripe_event_id` here is the **session** id (`cs_…`), which `complete.js` uses as the browser-side Meta `Purchase` dedup key. Meta Pixel is deferred to v1.5; when it's turned on, the webhook's server-side Purchase currently sends `event_id: event.id` (the `evt_…` id) — to dedupe browser + server it must instead send `session.id`. Latent until then; flagged so v1.5 doesn't double-count.*
 
@@ -633,7 +635,7 @@ and the reserve `body` (lines 143–149) WITH:
 
 **(d) Clean redirect:** change `window.location.href = '/checkout.html';` (line 203) to `window.location.href = '/checkout';`.
 
-**Acceptance:** cart shows one email field; entering it + Checkout reserves the hold and lands on `/checkout` with the email pre-filled and editable; a 409 strips the sold item and shows the recovery overlay correctly (Phase 7.2).
+**Acceptance:** cart shows one email field; entering it + Checkout reserves the hold and lands on `/checkout` with the email pre-filled and editable; a 409 strips the sold item and shows the recovery overlay correctly (Phase 8.2).
 
 ---
 
@@ -690,7 +692,40 @@ export function newOrderNotificationEmailHtml(args: NewOrderNotificationArgs): {
 import { sendEmail, newOrderNotificationEmailHtml } from './_emails/index';
 ```
 
-**(b)** Insert the send **right after the orders insert block** (after current line 174, the `if (orderInsertErr) {...}` close) and **inside the existing outer `try`** (before the cart-holds clear). It must never throw out — own try/catch, log on failure:
+**(b)** Insert the send **right after the orders insert block** and **inside the existing outer `try`** (before the cart-holds clear). It must never throw out — own try/catch, log on failure.
+
+**ANCHOR — find this exact code in `api/webhook.ts` (currently ~lines 149–174) and insert immediately after it:**
+```ts
+    const totalAmount = session.amount_total ?? 0;
+    const fallbackEach = items.length > 0 ? Math.floor(totalAmount / items.length) : 0;
+    const fallbackRemainder = totalAmount - fallbackEach * items.length;
+
+    const orderRows = items.map((item, idx) => {
+      const explicit = perItemAmounts[item.id];
+      const amount = typeof explicit === 'number'
+        ? explicit
+        : fallbackEach + (idx === 0 ? fallbackRemainder : 0);
+      return {
+        stripe_session_id: session.id,
+        stripe_payment_intent: paymentIntentId,
+        product_id: item.id,
+        customer_id: customerId,
+        customer_email: customerEmail,
+        amount,
+        status: 'completed',
+        shipping_address: shippingAddress,
+        is_test: isTest,
+      };
+    });
+
+    const { error: orderInsertErr } = await supabase.from('orders').insert(orderRows);
+    if (orderInsertErr) {
+      console.error(`Orders insert failed for ${event.id}:`, orderInsertErr);
+    }
+    // ↓↓↓ INSERT THE NEW MERCHANT-NOTIFICATION BLOCK HERE ↓↓↓
+```
+
+Then the block to insert:
 ```ts
     // Merchant new-order notification (non-blocking — never 5xx here or Stripe retries).
     if (process.env.ORDER_NOTIFY_EMAIL) {
@@ -728,7 +763,7 @@ import { sendEmail, newOrderNotificationEmailHtml } from './_emails/index';
       }
     }
 ```
-*(`productIds`, `items`, `orderRows`, `totalAmount`, `customerEmail`, `shippingAddress`, `session` are all already in scope at that point.)*
+**Variables this block reads — all already declared above in the same handler (do NOT redeclare):** `productIds` (`webhook.ts:124`, `= items.map(i => i.id)`), `items` (the parsed cart line items), `orderRows` (built at `:153–169`; `orderRows[idx].amount` is the per-line cents), `totalAmount` (`:149`), `customerEmail`, `shippingAddress`, `session`, `isTest`, and `event.id`. The ANCHOR block above is the literal code they're declared in — match it, don't reconstruct it.
 
 *(Per-line `price` in the merchant email is best-effort — the same split logic the order rows use; the email's `total` is authoritative.)*
 
@@ -736,7 +771,7 @@ import { sendEmail, newOrderNotificationEmailHtml } from './_emails/index';
 
 ### 5.4 — Env var (agent edit)
 
-Add `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example` so the variable is documented in-repo. Sean sets the real value in Vercel (Preview + Production) per SEAN MUST DO. `RESEND_FROM_EMAIL` must also be set (it already is). If `ORDER_NOTIFY_EMAIL` is unset at runtime the merchant-email block is skipped silently — so confirm it's set before Phase 7.5.
+Add `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example` so the variable is documented in-repo. Sean sets the real value in Vercel (Preview + Production) per SEAN MUST DO. `RESEND_FROM_EMAIL` must also be set (it already is). If `ORDER_NOTIFY_EMAIL` is unset at runtime the merchant-email block is skipped silently — so confirm it's set before Phase 8.5.
 
 **Acceptance:** completing a test purchase produces `/api/webhook` 200 and an email to `ORDER_NOTIFY_EMAIL` with the order facts + fulfillment steps. The existing buyer tracking email (via `api/orders.ts` PATCH) still fires when tracking is recorded.
 
@@ -833,7 +868,14 @@ WITH:
       submitShip(order.id, trackingNumber, carrier, card);
     });
 ```
-(`productTitle` and `customerEmail` are already in scope in `buildOrderCard`.)
+**Scope check — these locals are declared at the top of `buildOrderCard(order)` (do NOT redeclare):**
+```js
+  const productTitle = order.products?.title ?? '(unknown product)';            // ~line 539
+  const customerEmail = order.customers?.email ?? order.customer_email ?? '';   // ~line 542
+  const totalLabel = totalCents !== null ? `$${centsToDollars(totalCents)}` : '—'; // ~line 552
+  const orderIdShort = String(order.id).slice(0, 8);                            // ~line 567
+```
+`productTitle` + `customerEmail` (used in the confirm dialog) and `orderIdShort` + `totalLabel` + `order` (used in the Order line) are all in scope — visible above.
 
 Nothing else (no bulk actions, inventory, or RMA in v1).
 
@@ -902,9 +944,42 @@ The GPT calls these with `Authorization: Bearer <PRODUCT_API_KEY>` (now accepted
 
 **Acceptance:** `/api/orders` GET + PATCH succeed with the Bearer key (curl test) and still work via the admin JWT; admin shows a confirm prompt + order date.
 
+**GPT pipeline readiness (closes last round's trap).** The GPT's order Actions (`listOrders`, `markShipped`) work **only after this phase deploys** to the environment the GPT targets — which is why `GPT_SETUP.md` splits setup into **Wave 1 (products, verifiable anytime — `/api/upload` + `/api/products` already accept the Bearer key)** and **Wave 2 (orders, only after Phase 8.7 passes here)**. Also note: the GPT is a third-party Actions runner and **cannot authenticate through Vercel SSO**, so it can't be tested against the protected dev preview — order Actions are verified against the environment the GPT actually points at (production at launch). The product pipeline is proven independently via curl on the preview. See `GPT_SETUP.md` Wave 1 / Wave 2.
+
 ---
 
-## PHASE 7 — Verification (all on the dev preview)
+## PHASE 7 — Supabase keep-alive cron (`vercel.json`)
+
+Supabase's free tier **pauses a project after ~7 days of inactivity**; a paused DB means products don't load and checkout breaks. The store owner is non-technical, so prevention must be automatic and hands-off: a daily cron that runs a **real** DB read keeps the inactivity timer from ever tripping.
+
+**Why this endpoint, and why no new function:** `api/product-feed.ts` already runs a live Supabase `select` on GET (see `product-feed.ts:18–22` — `.from('products').select(...).eq('is_test', false)`), is public/read-only, and has no side effects — an ideal heartbeat. Reusing it means **no new serverless function**, so the **11-function Hobby cap is preserved** (the project is at 11). `api/config.ts` only returns env vars (no DB call), so it would NOT count as activity — not a candidate.
+
+**EDIT `vercel.json` — add a top-level `crons` array.** Current file is `cleanUrls` + `trailingSlash` + `rewrites` only; add the `crons` key and **leave `rewrites` exactly as-is**:
+```json
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "crons": [
+    { "path": "/api/product-feed", "schedule": "0 9 * * *" }
+  ],
+  "rewrites": [
+    // ← keep every existing rewrite unchanged
+  ]
+}
+```
+`"0 9 * * *"` = once daily at 09:00 UTC. (Hobby clamps cron frequency to once/day; once/day is well inside the 7-day window — even a few missed runs won't pause it.)
+
+**Notes (true at build time):**
+- Vercel **crons run only on the production deployment**, so this activates at launch (when `main` deploys). Pre-launch, the team's own activity keeps the project warm.
+- There is **one** Supabase project (test + live rows separated by `is_test`), so one production heartbeat keeps the whole project — including the preview's `is_test=true` rows — awake.
+- Honest scope: this is the standard free-tier mitigation, **not a Supabase guarantee** (only the paid tier guarantees no pause); a daily real query is robust in practice.
+- **Reactive recovery is a Sean-only step** (Supabase dashboard → Restore, or the Management API) and is documented in `STORE_ADMINISTRATION.md`. The owner/GPT cannot unpause (no Action; it needs a Supabase access token, not `PRODUCT_API_KEY`).
+
+**Acceptance:** `vercel.json` has a `crons` entry pointing at `/api/product-feed`; `rewrites` is unchanged; the function count is still 11; the build is unaffected (config-only change).
+
+---
+
+## PHASE 8 — Verification (all on the dev preview)
 
 Preview: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`. Stripe TEST webhook already registered.
 
@@ -917,6 +992,7 @@ Preview: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`
 6. **Admin + tracking:** `/admin` → Orders → new order shows (with date) → mark shipped (confirm prompt) + tracking → buyer tracking email fires; copy-address works.
 7. **GPT path:** curl `/api/orders` GET + PATCH with the Bearer key → records tracking + sends buyer email.
 8. **Stripe receipt:** confirm the branded receipt is configured (SEAN MUST DO) — buyer gets it on a test purchase.
+9. **Keep-alive cron (static check):** `vercel.json` has the `crons` entry → `/api/product-feed` (Phase 7) and `rewrites` is intact. (Crons run on production only, so this can't fire on the preview — confirm the config entry exists; it activates at launch.)
 
 ---
 
@@ -945,12 +1021,12 @@ Inherited from `v1_4_5_C_IMPLEMENT.md` Appendix C, mapped to the single-phase bu
 
 The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are untouched here. This packet covers the C3 (cart/checkout/complete/webhook) + orders surface that the five rounds left broken:
 
-| IMPLEMENT item                              | Status in v1.4.6                                                                                              |
+| IMPLEMENT item                              | Status in v1.4.7                                                                                              |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | C3.2 `cart.js` (reserve, 409 recovery)      | Phase 4 — email-only + **409 objects-vs-strings fix**                                                         |
 | C3.3 `checkout.js` (Stripe mount + confirm) | Phase 3 — full rewrite, single-phase, no bridges                                                              |
 | C3.4 `complete.js` (success page)           | Phase 1b — server now returns the fields it reads                                                             |
-| C3.5 Stripe webhook E2E                     | Phase 7.4 (already registered)                                                                                |
+| C3.5 Stripe webhook E2E                     | Phase 8.4 (already registered)                                                                                |
 | `api/checkout.ts` session create            | Phase 1 — drop pre-created customer, keep `customer_creation`                                                 |
 | `api/orders.ts` + admin Orders tab          | Phase 6 — Bearer auth for GPT + polish (exists otherwise)                                                     |
 | Merchant new-order email                    | Phase 5 — **the missing launch blocker, now built**                                                           |
@@ -968,7 +1044,7 @@ The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are unt
 - `api/*.ts` must compile to CommonJS (tsconfig) — ES2020 output crashes the deployed runtime, only visible on a real preview URL.
 - `cleanUrls:true` — redirect/return destinations drop `.html` (`/complete`, `/checkout`, `/cart`).
 - Stripe test/live via Vercel env scoping; verify Production via runtime curl, not file inspection.
-- Supabase schema changes via the Supabase CLI, not MCP. (No schema changes needed in v1.4.6.)
+- Supabase schema changes via the Supabase CLI, not MCP. (No schema changes needed in v1.4.7.)
 - This doc = verified/post-fix truth only; no speculation; no time estimates.
 
 ---
@@ -981,4 +1057,4 @@ The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are unt
 
 ## Handoff / close-out
 
-On completion, append to (or create) the session report per `.agent/DEV_RULES.md`: a three-column expected/planned/actual table, the filled VERIFIED CONTRACT (the real bundle surface), any deviations, and the Phase 7 results. Leave the codebase on `dev`, preview green, ready for Sean's final walkthrough.
+On completion, append to (or create) the session report per `.agent/DEV_RULES.md`: a three-column expected/planned/actual table, the filled VERIFIED CONTRACT (the real bundle surface), any deviations, and the Phase 8 results. Leave the codebase on `dev`, preview green, ready for Sean's final walkthrough.

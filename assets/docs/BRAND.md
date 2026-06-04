@@ -225,12 +225,12 @@ Images are stored in Cloudflare R2 with SEO-friendly filenames:
 
   ```
   /products/{slug}/hero-{slug}.webp
-  /products/{slug}/gallery-{slug}-01.webp
-  /products/{slug}/gallery-{slug}-02.webp
+  /products/{slug}/gallery-01-{slug}.webp
+  /products/{slug}/gallery-02-{slug}.webp
   ...
   /products/{slug}/thumbnail-{slug}.webp
-  /products/{slug}/video-{slug}-01.mp4
-  /products/{slug}/detail-{slug}-01.gif
+  /products/{slug}/video-01-{slug}.mp4
+  /products/{slug}/detail-01-{slug}.gif
   ```
 
 Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before upload to R2. Videos and GIFs upload directly to R2 without transformation.
