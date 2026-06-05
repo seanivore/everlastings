@@ -156,123 +156,73 @@
       </nav>
 
       <h1>Checkout</h1>
+      <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
 
-      <!-- Progressive disclosure: Stage A info → Stage B payment.
-           Both stages live in the same DOM. Track C unlocks Stage B
-           when Stage A's address validates via Stripe AddressElement. -->
+      <!-- Contact (Stripe ContactDetails element mounts the email here; prefilled + editable) -->
+      <fieldset style="border: 0; padding: 0; margin: var(--space-xl) 0 var(--space-lg);">
+        <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Contact</legend>
+        <div data-stripe-contact style="min-height: 60px;"></div>
+      </fieldset>
 
-      <!-- ============================================================
-           STAGE A — Information (email, billing, shipping)
-           ============================================================ -->
-      <section id="checkout-stage-a" data-checkout-stage="a" style="margin-top: var(--space-xl);">
-
-        <h2>1. Your information</h2>
-        <p style="color: var(--text-muted); font-size: var(--text-sm);">All fields required. We use this for shipping and order updates.</p>
-
-        <form id="checkout-info-form" data-checkout-info-form style="margin-top: var(--space-lg);">
-
-          <!-- Contact -->
-          <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
-            <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Contact</legend>
-            <div class="form-field">
-              <label class="form-label" for="checkout-email">Email</label>
-              <input id="checkout-email" name="email" type="email" autocomplete="email" required>
-              <span class="form-help">Order confirmation and tracking sent here.</span>
-            </div>
-            <div class="form-field">
-              <label class="form-label" for="checkout-name">Your name</label>
-              <input id="checkout-name" name="name" type="text" autocomplete="name" required>
-              <span class="form-help">For your order confirmation. We'll pre-fill it for shipping and billing too — you can change either if needed.</span>
-            </div>
-            <div class="form-field">
-              <label class="form-label" for="checkout-phone">Phone (optional)</label>
-              <input id="checkout-phone" name="phone" type="tel" autocomplete="tel">
-              <span class="form-help">For shipping carrier delivery questions only.</span>
-            </div>
-          </fieldset>
-
-          <button type="button" class="btn btn-primary btn-lg" data-checkout-continue>Continue to payment</button>
-        </form>
-      </section>
-
-      <!-- ============================================================
-           STAGE B — Payment (Stripe Payment Element + Confirm & Pay)
-           Hidden until Stage A validates.
-           ============================================================ -->
-      <section id="checkout-stage-b" data-checkout-stage="b" class="hidden" style="margin-top: var(--space-2xl); padding-top: var(--space-xl); border-top: 1px solid var(--color-fog);">
-
-        <h2>2. Payment</h2>
-        <p style="color: var(--text-muted); font-size: var(--text-sm);">All payments are processed securely by Stripe. We never see your card number.</p>
-
-        <!-- Ship to (Stripe AddressElement mounts here after Stage A continues) -->
-        <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 var(--space-xl);">
-          <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Ship to</legend>
-
-          <!-- checkout.js mounts Stripe AddressElement (shipping, US only) into this slot after Stage A continues. -->
-          <div id="address-element-shipping" data-stripe-address-shipping class="hidden" style="min-height: 200px;"></div>
-
-          <!-- US-only restriction error — Stripe AddressElement triggers when user picks non-US country -->
-          <div id="restricted-country-error" data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
-            We currently only ship within the United States. <a href="/contact">Contact us</a> for international inquiries.
-          </div>
-        </fieldset>
-
-        <!-- Billing is collected inside Stripe's PaymentElement (Custom Checkout default).
-             Having a separate BillingAddressElement here caused a duplicate
-             "billing is same as shipping" UI and blocked canConfirm. -->
-
-        <!-- Address validation errors -->
-        <div id="address-incomplete-error" data-address-incomplete class="hidden inline-error" style="margin-bottom: var(--space-md);">
+      <!-- Ship to (Stripe ShippingAddress element, US only, name split, phone) -->
+      <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-lg);">
+        <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Ship to</legend>
+        <div data-stripe-address-shipping style="min-height: 200px;"></div>
+        <div data-restricted-country class="hidden inline-error" style="margin-top: var(--space-sm);">
+          We currently only ship within the United States. <a href="/contact">Contact us</a> for international inquiries.
+        </div>
+        <div data-address-incomplete class="hidden inline-error" style="margin-top: var(--space-sm);">
           Please complete your shipping address.
         </div>
-        <div id="address-undeliverable-error" data-address-undeliverable class="hidden inline-error" style="margin-bottom: var(--space-md);">
-          We couldn't verify this address. Please double-check.
+      </fieldset>
+
+      <!-- Payment (Stripe Payment element; billingDetails:'never' so it does NOT collect billing) -->
+      <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-lg);">
+        <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Payment</legend>
+        <div data-stripe-payment style="min-height: 200px;"></div>
+      </fieldset>
+
+      <!-- Bill to (Stripe Billing element; syncAddressCheckbox renders the default-checked "same as shipping") -->
+      <fieldset style="border: 0; padding: 0; margin: 0 0 var(--space-xl);">
+        <legend style="font-family: var(--font-display); font-size: var(--text-xl); margin-bottom: var(--space-md); padding: 0;">Bill to</legend>
+        <div data-stripe-address-billing style="min-height: 60px;"></div>
+      </fieldset>
+
+      <!-- Order summary -->
+      <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-cream); border-radius: var(--radius-md);">
+        <h3 style="margin-top: 0;">Order summary</h3>
+        <div data-checkout-line-items></div>
+        <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
+          <span>Shipping</span><span data-checkout-shipping>Free</span>
         </div>
-
-        <!-- checkout.js mounts Stripe PaymentElement into this slot after Stage A continues. -->
-        <div id="payment-element" data-stripe-payment style="margin-top: var(--space-lg); min-height: 200px;"></div>
-
-        <!-- Order summary -->
-        <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-cream); border-radius: var(--radius-md);">
-          <h3 style="margin-top: 0;">Order summary</h3>
-          <div data-checkout-line-items>
-            <!-- checkout.js renders one row per cart item from localStorage.cart on load. -->
-          </div>
-          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
-            <span>Shipping</span>
-            <span data-checkout-shipping>Free</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
-            <span>Total</span>
-            <span data-checkout-total>—</span>
-          </div>
+        <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
+          <span>Total</span><span data-checkout-total>—</span>
         </div>
+      </div>
 
-        <!-- Promotion code -->
-        <div class="form-field" style="margin-top: var(--space-lg);">
-          <label class="form-label" for="promo-code">Promotion code (optional)</label>
-          <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--space-sm);">
-            <input id="promo-code" name="promo_code" type="text" placeholder="Enter code">
-            <button type="button" class="btn btn-secondary" data-promo-apply>Apply</button>
-          </div>
+      <!-- Promotion code -->
+      <div class="form-field" style="margin-top: var(--space-lg);">
+        <label class="form-label" for="promo-code">Promotion code (optional)</label>
+        <div style="display: grid; grid-template-columns: 1fr auto; gap: var(--space-sm);">
+          <input id="promo-code" name="promo_code" type="text" placeholder="Enter code">
+          <button type="button" class="btn btn-secondary" data-promo-apply>Apply</button>
         </div>
+      </div>
 
-        <!-- Confirm & Pay -->
-        <button type="button" class="btn btn-primary btn-lg btn-block" data-checkout-confirm disabled style="margin-top: var(--space-xl);">Confirm &amp; Pay</button>
+      <!-- Confirm & Pay -->
+      <button type="button" class="btn btn-primary btn-lg btn-block" data-checkout-confirm disabled style="margin-top: var(--space-xl);">Confirm &amp; Pay</button>
 
-        <!-- Generic checkout error (Stripe decline, payment intent fail, network) -->
-        <div id="checkout-error" data-checkout-error class="hidden error-state" style="margin-top: var(--space-md);">
-          <p data-checkout-error-message>Something went awry. Please try again.</p>
-        </div>
+      <!-- Generic checkout error (decline, intent fail, network) -->
+      <div data-checkout-error class="hidden error-state" style="margin-top: var(--space-md);">
+        <p data-checkout-error-message>Something went awry. Please try again.</p>
+      </div>
 
-        <!-- Hold expired (410) — rare; only after 15+ minutes idle on this page -->
-        <div id="hold-expired-error" data-hold-expired class="hidden error-state" style="margin-top: var(--space-md);">
-          <h3>Your reservation timed out.</h3>
-          <p>Please return to your cart to re-check availability.</p>
-          <a href="/cart" class="btn btn-primary" style="margin-top: var(--space-sm);">Back to Cart</a>
-        </div>
-
-      </section>
+      <!-- Hold expired (410) -->
+      <div data-hold-expired class="hidden error-state" style="margin-top: var(--space-md);">
+        <h3>Your reservation timed out.</h3>
+        <p>Please return to your cart to re-check availability.</p>
+        <a href="/cart" class="btn btn-primary" style="margin-top: var(--space-sm);">Back to Cart</a>
+      </div>
 
       <p style="margin-top: var(--space-2xl); font-size: var(--text-sm); color: var(--text-muted); text-align: center;">
         Secure payment processing by Stripe · No cards stored on our servers

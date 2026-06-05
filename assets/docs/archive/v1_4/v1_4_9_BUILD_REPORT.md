@@ -45,3 +45,6 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 - **1.3** `sessions.create`: omitted `customer_creation`, kept `phone_number_collection`, return_url → clean `/complete?session_id=…`.
 - **1b** `handleSessionStatus`: expanded `['line_items','payment_intent']`; now returns `customer_name`, `amount_total`, `shipping_cost.amount_total`, `items[{slug,title,price}]`, `stripe_event_id: session.id` — exactly the keys `complete.js` reads.
 - **Post-edit check:** `grep` confirms no orphaned `email/name/phone/customerId/emailValid` in `handleSession`; remaining matches are all in `handleReserve` (its own destructure) + the new 1b fields.
+
+### Phase 2 — `checkout.html` ✅ (clean)
+- Replaced the whole `<main>…</main>` (Stage A/B markup) with one section between the MAIN START/END fence. Four Stripe mount slots present: `data-stripe-contact`, `data-stripe-address-shipping`, `data-stripe-payment`, `data-stripe-address-billing`. Removed all `data-checkout-stage` / `#checkout-stage-a/b` / "Continue to payment" / collapse markup. `<head>` (Basil tag :88), header, footer, modals untouched. Only `disabled` attr left is the Pay button.
