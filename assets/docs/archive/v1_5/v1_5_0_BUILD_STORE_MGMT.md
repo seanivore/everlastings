@@ -20,19 +20,19 @@ Invariants to preserve:
 
 ## Pre-flight — verify these anchors before editing
 
-| File | Anchor to confirm |
-| --- | --- |
-| `supabase/migrations/20260421000002_rls_policies.sql` | policy `"Products are publicly readable" … USING (true)` (lines 10–11) |
-| `supabase/migrations/20260421000003_stripe_sync_webhook.sql` | `notify_stripe_sync()` with `IF NEW.is_test = true THEN RETURN NEW;` (22–25) |
-| `api/_lib/stripeSync.ts` | `SyncableProduct` (11–22); `stripe.products.create({ name: product.title, …})` (61–70) |
-| `api/products.ts` | imports (1–5); `authorize` (17–25); `jsonResponse` (27–32); `GET` (38–94); `POST` create+sync (96–211); `PUT` (213–291) |
-| `api/checkout.ts` | session select+guard (68–92); reserve select+filter (184–211) |
-| `api/upload.ts` | `ROLE_PATTERN` (52–53); transform (170–172) |
-| `vercel.json` | `rewrites` array (7–15) |
-| `assets/js/product.js` | `DOMContentLoaded` handler (7–39) |
-| `assets/js/admin.js` | `buildProductPayload` (382–429); `onSaveProduct` (431–468); `openEditor` seo lines (288–289) |
-| `admin/index.html` | SEO row (156–159); upload-role `<select>` (183–206); `form-actions` (218–223) |
-| `assets/docs/GPT_SETUP.md` | Instructions block (97–124); schema `paths:` (136–283) |
+| File                                                         | Anchor to confirm                                                                                                       |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `supabase/migrations/20260421000002_rls_policies.sql`        | policy `"Products are publicly readable" … USING (true)` (lines 10–11)                                                  |
+| `supabase/migrations/20260421000003_stripe_sync_webhook.sql` | `notify_stripe_sync()` with `IF NEW.is_test = true THEN RETURN NEW;` (22–25)                                            |
+| `api/_lib/stripeSync.ts`                                     | `SyncableProduct` (11–22); `stripe.products.create({ name: product.title, …})` (61–70)                                  |
+| `api/products.ts`                                            | imports (1–5); `authorize` (17–25); `jsonResponse` (27–32); `GET` (38–94); `POST` create+sync (96–211); `PUT` (213–291) |
+| `api/checkout.ts`                                            | session select+guard (68–92); reserve select+filter (184–211)                                                           |
+| `api/upload.ts`                                              | `ROLE_PATTERN` (52–53); transform (170–172)                                                                             |
+| `vercel.json`                                                | `rewrites` array (7–15)                                                                                                 |
+| `assets/js/product.js`                                       | `DOMContentLoaded` handler (7–39)                                                                                       |
+| `assets/js/admin.js`                                         | `buildProductPayload` (382–429); `onSaveProduct` (431–468); `openEditor` seo lines (288–289)                            |
+| `admin/index.html`                                           | SEO row (156–159); upload-role `<select>` (183–206); `form-actions` (218–223)                                           |
+| `assets/docs/GPT_SETUP.md`                                   | Instructions block (97–124); schema `paths:` (136–283)                                                                  |
 
 **Sweep already cleared (no change needed):** `api/product-feed.ts` and the homepage read via the **publishable/anon** client, so the new RLS policy (`is_published = true`) hides drafts from them automatically. `api/config.ts` reads no products. Only the **service-role** readers below get explicit guards.
 
