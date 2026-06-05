@@ -77,8 +77,9 @@ owner never thinks about "which title goes where."
   `care_instructions` *(text[])*, `shipping_details` *(text[])*, `artist_note`, `series`,
   `product_type` *(miniature / printable / storybook)*, `quantity`, `available`, `featured`,
   `images` *(jsonb)*, `thumbnail` + `thumbnail_alt`.
-- `media` *(jsonb array, optional)* — ordered MP4 video(s) + optional YouTube for the product page;
-  each item renders only if present (hides when absent). See 3.3 + Phase 7.
+- `media` *(jsonb array, optional)* — ordered MP4 video(s) (+ rare YouTube) for the product page; each
+  clip carries its own behaviour (autoplay + loop silent "GIF-like", or click-to-play with a button);
+  renders only if present (hides when absent). See 3.3 + Phase 7.
 
 **Tier 3 — SEO (drafted + edited):**
 - `seo_title`, `seo_description` *(exist)*.
@@ -149,7 +150,7 @@ tells the GPT "publish"). (6) Publish creates the Stripe product + price, flips 
 clears draft/token. Live + purchasable; the old preview link stops working.
 
 *Edit (change a live product) — the part that also needs the gate:* (1) Owner: "change the Lavender
-Wreath's description to …". (2) GPT finds it via `listProducts`, then `editProduct(id, {description})`.
+Wreath's description to …". (2) GPT pulls it up (`getProduct` by slug when she names it, else `listProducts` to browse), then `editProduct(id, {description})`.
 (3) Because the row is **published**, the change is **staged in `draft`** — **the live page is
 untouched** (shoppers still see the current version) and admin shows **"live · edits pending."** The
 response carries a fresh `preview_url`. (4) GPT hands her the preview the same way. (5) Owner reviews
@@ -224,8 +225,9 @@ So the cold/A reviewer can logic-check that Em can fully run the store by chat. 
 required, not optional** (the GPT can't edit a product, or tell her "draft vs live," without it).
 After v1.5 the GPT's Actions are:
 
-- **Products — read:** `listProducts` (all products + status: live / draft / edits-pending);
-  `getProduct` (one product, by id or slug, full current values — so edits are precise).
+- **Products — read:** `listProducts` (browse all — full values + status: live / draft /
+  edits-pending) and `getProduct` (fetch the one she names, by slug, live or draft) — so the GPT pulls
+  exactly the piece it needs before editing, not the whole catalog.
 - **Products — write:** `createProduct` (→ **draft** + preview link; no Stripe yet);
   `editProduct` (→ stages a `draft` on a published row, or edits a still-unpublished draft; returns
   the preview link); `publishProduct` (new → creates Stripe + goes live; edit → applies the draft).
@@ -396,8 +398,8 @@ NEW:
 ## Phase 3 — `api/products.ts` (create-as-draft, edit-to-draft, publish, coupon, preview)
 
 > The authorized GET (slug / id / list) already returns full rows (`select('*')`), so **`listProducts`
-> and `getProduct` (Phase 9) need no new endpoint** — they map to this GET. Only the **public**
-> (unauthorized) branches gain the `is_published` guard below.
+> and `getProduct` (Phase 9) need no new handler** — they map to this GET (`getProduct` via a by-slug
+> rewrite). Only the **public** (unauthorized) branches gain the `is_published` guard below.
 
 **3.1 — imports + helpers.**
 
@@ -1116,14 +1118,15 @@ NEW:
 ```json
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
     { "source": "/api/products/publish", "destination": "/api/products?_action=publish" },
+    { "source": "/api/products/by-slug/:slug", "destination": "/api/products?slug=:slug" },
     { "source": "/api/coupons", "destination": "/api/products?_action=coupon" },
     { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
 ```
 
 > URL rewrites to the existing `products.ts` function — function count stays 11/12. `/api/coupons`
 > serves **POST** (create) and **GET** (list) via the same rewrite; deactivate is its own route. The
-> GET preview needs no rewrite (`/api/products?slug=…&preview=…`); `listProducts`/`getProduct` are
-> plain GET `/api/products`.
+> GET preview needs no rewrite (`/api/products?slug=…&preview=…`); `listProducts` is plain GET
+> `/api/products`; `getProduct` is the `/api/products/by-slug/{slug}` rewrite → the existing `?slug=`.
 
 ## Phase 7 — `assets/js/product.js` (preview mode + Publish bar)
 
@@ -1243,11 +1246,19 @@ function populateMedia(p) {
       v.src = m.url;
       if (m.poster) v.poster = m.poster;
       v.playsInline = true;
-      v.muted = m.muted !== false;       // default muted
-      v.loop = m.loop !== false;         // default loop
-      v.controls = m.controls === true;  // default: no controls (ambient)
       v.preload = 'metadata';
-      if (m.autoplay !== false) v.autoplay = true; // muted autoplay is allowed
+      // Per-clip behaviour — the GPT/admin sets these case-by-case. Two presets:
+      //   GIF-like      : autoplay:true, loop:true → plays itself, silent, no buttons.
+      //   click-to-play : default → she presses play; buttons shown; sound on.
+      v.autoplay = m.autoplay === true;
+      v.loop = m.loop === true;
+      if (v.autoplay) {
+        v.muted = true;                    // browsers only allow muted autoplay
+        v.controls = m.controls === true;  // GIF-like → no buttons unless asked
+      } else {
+        v.muted = m.muted === true;        // has sound unless she asks to mute
+        v.controls = m.controls !== false; // click-to-play → buttons shown
+      }
       if (m.alt) v.setAttribute('aria-label', m.alt);
       wrap.appendChild(v);
       frag.appendChild(wrap);
@@ -1607,13 +1618,13 @@ In `createProduct`'s `summary` (168–170) drop the `sync=true` language and the
                     type: object
                     required: [type, url]
                     properties:
-                      type: { type: string, enum: [video, youtube] }
-                      url: { type: string }
+                      type: { type: string, enum: [video, youtube], description: "video = an MP4 you uploaded (the usual); youtube = a YouTube link (rare)." }
+                      url: { type: string, description: "MP4 CDN URL (from uploadImage role video-0x) or a YouTube link." }
                       alt: { type: string }
-                      loop: { type: boolean }
-                      autoplay: { type: boolean }
-                      controls: { type: boolean }
-                      poster: { type: string }
+                      loop: { type: boolean, description: "Replay automatically — true for a GIF-like clip." }
+                      autoplay: { type: boolean, description: "Start on its own (always silent — autoplay must be muted). true = GIF-like; false/omit = she presses play." }
+                      controls: { type: boolean, description: "Show play/volume buttons. true or omit = normal click-to-play; false = GIF-like, no buttons." }
+                      poster: { type: string, description: "Optional still-frame image URL shown before a click-to-play video starts." }
                 seo_title: { type: string }
                 seo_description: { type: string }
                 seo_thumbnail: { type: string }
@@ -1675,6 +1686,17 @@ In `createProduct`'s `summary` (168–170) drop the `sync=true` language and the
                 code: { type: string, description: The shareable code to end, e.g. HOLIDAY20. }
       responses:
         '200': { description: Coupon deactivated. }
+  /api/products/by-slug/{slug}:
+    get:
+      operationId: getProduct
+      summary: Get ONE product (live or draft) by its slug, with full current values — use this when she names a specific piece, instead of listing everything.
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: The product (full row, incl. is_published + any staged draft). }
 ```
 
 Also add `checkout_name`, `checkout_description`, `checkout_image`, `seo_thumbnail`, and the **`media`
@@ -1682,9 +1704,10 @@ array** (same shape as in `editProduct` above) to the `createProduct` request sc
 drafts them too), and update the `uploadImage` `role` description to include `checkout_image,
 seo_thumbnail`.
 
-> `getProduct` is optional — `listProducts` returns full rows and the existing
-> `GET /api/products?slug=` / `?id=` already serve a single product. Add a `getProduct` operation
-> only if the holistic review wants the GPT to fetch one by slug without listing.
+> `getProduct` is `GET /api/products/by-slug/{slug}` — a `vercel.json` rewrite to the existing
+> authorized `GET /api/products?slug=` (which already returns the row **live or draft**). No new
+> function or handler; it maps to the GET that's already there. `listProducts` (GET `/api/products`)
+> returns the full list for browsing.
 
 **9.2 — `assets/docs/GPT_SETUP.md` Instructions (2A) — mixed-truth repairs + new flows.**
 
@@ -1700,7 +1723,7 @@ NEW:
 6. createProduct returns a PREVIEW link (not a live page) — the product is a draft until published. Hand her the preview: "Here's your preview: <preview_url> — that's exactly how shoppers will see it. Tap Publish on that page when it looks right, or tell me 'publish'."
 
 == EDITING A PRODUCT ==
-1. Find it: call listProducts (it shows which are live vs draft) and match her words to a product + its id.
+1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id.
 2. Call editProduct with the id and only the fields she's changing. On a published product the change is STAGED as a draft; the live page is untouched until publish.
 3. Always hand back the preview link the same way as step 6 above. Never tell her an edit is live until it's published.
 
@@ -1711,7 +1734,11 @@ The preview link is the real review surface — she can't picture changes from c
 Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons. To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
 
 == MEDIA (optional video on the page) ==
-A product page can show optional MP4 video(s) and (rarely) a YouTube clip, in order, below the story. Upload an MP4 with uploadImage (role video-01..05, skip_transform=true) to get a CDN URL, then set the product's media array, e.g. [{"type":"video","url":"<cdn mp4>","loop":true,"autoplay":true},{"type":"youtube","url":"<link>"}]. MP4s render before YouTube automatically; leave media empty for no video (the section just hides). We don't use GIFs — MP4 looks better and is smaller.
+Most product videos are short MP4 clips. The flow: (1) upload the MP4 with uploadImage (role video-01..05, skip_transform=true) — it goes to the CDN just like a photo; (2) ALWAYS ask her how this particular clip should behave — it's case-by-case, never assume:
+- "Should it play on its own and loop silently, with no buttons (like a GIF)?" → { "type":"video", "url":"<cdn mp4>", "autoplay":true, "loop":true }
+- "Or show a play button she presses (with sound)?" → { "type":"video", "url":"<cdn mp4>" }  (that's the default: play button, sound on, no autoplay). She can also give a still image to show before it plays → add "poster":"<url>".
+Set these per clip. Multiple MP4s are fine (they render in the order given). Leave media empty/omitted for no video — the section just hides. We don't use GIFs (an MP4 looks better and is smaller; convert a GIF with ffmpeg if she has one).
+YouTube is supported but RARE — only if she specifically has a YouTube link (she isn't building that kind of channel): { "type":"youtube", "url":"<link>" }. MP4s always render before any YouTube.
 
 Product rules: never create without showing the preview; never set a price different from what she said; never proceed with fewer than 7 photos; to change a published product's PRICE, make a NEW product (price is frozen after publish); to run a sale, create a coupon — never edit price; on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
 ```
@@ -1785,8 +1812,9 @@ section** (Knowledge the GPT reads):
   it live and, for a new product, creates the Stripe listing; the preview link rotates on publish.
 - *Coupons* — percent or amount off; optional code, product scope, minimum order, expiry, redemption
   cap; no buy-N/BOGO; **list active sales and deactivate one anytime**.
-- *Media* — optional MP4 video(s) + YouTube on the page via the `media` array (MP4s first; hides when
-  empty; no GIFs).
+- *Media* — optional short MP4 clip(s) on the page via the `media` array; **ask her per clip** whether
+  it should autoplay + loop silently (GIF-like, no buttons) or show a play button (default,
+  click-to-play with sound); YouTube is a rare fallback; MP4s render first; hides when empty; no GIFs.
 
 **9.5 — `assets/docs/GPT_SETUP.md` Part 4 (agentic/curl protocol) — reflect v1.5.** Replace the
 "Editing / marking sold (PUT)" example (406–417) so it shows: PUT stages a draft (returns
@@ -2078,7 +2106,5 @@ promotion-code edge case) — not for routine checks.
 # Open items
 
 - **Hero spec (3.7)** — Sean to write (CSS vs. Hyperframe); ignore until then.
-- **`getProduct` operation (9.1)** — add a named by-slug fetch for the GPT, or rely on `listProducts`
-  + the existing GET? Cheap to add; the A review can call it.
 - **Render-tune (not blockers):** story-card exact size (3.3); glow palette + intensity (3.6);
   product-page sticky behaviour + `.product-details` spacing after the reflow (3.2).
