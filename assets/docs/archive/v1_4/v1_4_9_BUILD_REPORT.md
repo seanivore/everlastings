@@ -13,23 +13,23 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 
 **Result: ALL anchors match byte-for-byte. No drift.** Verified including the subtle ones:
 
-| File | Anchor(s) checked | Match |
-| --- | --- | --- |
-| `api/checkout.ts` | body destructure (30–37), customer pre-create (104–118), `sessions.create` incl. `.html` return_url (120–164), `handleSessionStatus` retrieve (360–371) | ✅ |
-| `api/webhook.ts` | no email imports (1–5), `CartItemMeta` (12), `customerEmail` (80), `shippingAddress` (84), `productIds`+mark-sold (124–128), orders-insert anchor (149–174) | ✅ |
-| `api/_emails/index.ts` | `escapeHtml` (20), `shell` (35), `cartRecoveryCouponEmailHtml` (129–153), `SendEmailOpts` (155), `sendEmail` (162) — insert lands cleanly in the 153→155 gap | ✅ |
-| `api/_lib/adminAuth.ts` | JWT-only current shape (full file) | ✅ |
-| `api/_lib/env.ts` | `env()` trims; `isTest` | ✅ |
-| `api/orders.ts` | GET (53–56) + PATCH (98–101) destructure only `supabase` (widened union safe) | ✅ |
-| `api/products.ts` / `api/upload.ts` | `token === env('PRODUCT_API_KEY')` at :22 / :29 (the trimmed compare C1 mirrors) | ✅ |
-| `checkout.html` | MAIN fence (148 / `<main>` 149 / 283) | ✅ |
-| `cart.html` | 3-field prefill `<section>` (183–200) + all sibling selectors present | ✅ |
-| `assets/js/cart.js` | header comment (3), `prefillEmailName` (82–89) + call site (19), reads (130–135), reserve body (143–148), 409 handler (151–179), redirect (203) | ✅ |
-| `assets/js/product.js` | `/cart.html` buy-now redirect (223) | ✅ |
-| `assets/js/admin.js` | `buildOrderCard` locals (539/542/552/567), Order line (608), shipForm submit (628–633) | ✅ |
-| `assets/js/complete.js` | reader contract — all fields the Phase 1b server must return (33/34/35/39–41/47–52/65/70) | ✅ |
-| `vercel.json` | current (no `crons` yet); `tsconfig.json` `module:"CommonJS"` | ✅ |
-| `.env.example` | `ORDER_NOTIFY_EMAIL` absent (needs adding) | ✅ |
+| File                                | Anchor(s) checked                                                                                                                                            | Match |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| `api/checkout.ts`                   | body destructure (30–37), customer pre-create (104–118), `sessions.create` incl. `.html` return_url (120–164), `handleSessionStatus` retrieve (360–371)      | ✅     |
+| `api/webhook.ts`                    | no email imports (1–5), `CartItemMeta` (12), `customerEmail` (80), `shippingAddress` (84), `productIds`+mark-sold (124–128), orders-insert anchor (149–174)  | ✅     |
+| `api/_emails/index.ts`              | `escapeHtml` (20), `shell` (35), `cartRecoveryCouponEmailHtml` (129–153), `SendEmailOpts` (155), `sendEmail` (162) — insert lands cleanly in the 153→155 gap | ✅     |
+| `api/_lib/adminAuth.ts`             | JWT-only current shape (full file)                                                                                                                           | ✅     |
+| `api/_lib/env.ts`                   | `env()` trims; `isTest`                                                                                                                                      | ✅     |
+| `api/orders.ts`                     | GET (53–56) + PATCH (98–101) destructure only `supabase` (widened union safe)                                                                                | ✅     |
+| `api/products.ts` / `api/upload.ts` | `token === env('PRODUCT_API_KEY')` at :22 / :29 (the trimmed compare C1 mirrors)                                                                             | ✅     |
+| `checkout.html`                     | MAIN fence (148 / `<main>` 149 / 283)                                                                                                                        | ✅     |
+| `cart.html`                         | 3-field prefill `<section>` (183–200) + all sibling selectors present                                                                                        | ✅     |
+| `assets/js/cart.js`                 | header comment (3), `prefillEmailName` (82–89) + call site (19), reads (130–135), reserve body (143–148), 409 handler (151–179), redirect (203)              | ✅     |
+| `assets/js/product.js`              | `/cart.html` buy-now redirect (223)                                                                                                                          | ✅     |
+| `assets/js/admin.js`                | `buildOrderCard` locals (539/542/552/567), Order line (608), shipForm submit (628–633)                                                                       | ✅     |
+| `assets/js/complete.js`             | reader contract — all fields the Phase 1b server must return (33/34/35/39–41/47–52/65/70)                                                                    | ✅     |
+| `vercel.json`                       | current (no `crons` yet); `tsconfig.json` `module:"CommonJS"`                                                                                                | ✅     |
+| `.env.example`                      | `ORDER_NOTIFY_EMAIL` absent (needs adding)                                                                                                                   | ✅     |
 
 **Tooling confirmed:** git remote `git@github.com:seanivore/everlastings.git`, branch `dev`; Vercel CLI authenticated (scope `everlastings`); `tsconfig.json` → CommonJS.
 
@@ -200,18 +200,18 @@ Sean created the first admin Auth user (Supabase Studio), logged into `/admin`, 
 
 ## Session report — expected / planned / actual
 
-| Phase / item | Planned (per packet) | Actual |
-| --- | --- | --- |
-| Pre-flight | every quoted CURRENT block matches the repo | ✅ all 13 target files byte-for-byte; no drift |
-| 1 + 1b — `api/checkout.ts` | drop pre-created customer; omit `customer_creation`; expand `handleSessionStatus` for `/complete` | ✅ as written; `tsc` clean |
-| 2 — `checkout.html` | collapse Stage A/B → one page, 4 Stripe mount slots | ✅ |
-| 3 — `assets/js/checkout.js` | full rewrite, single-phase, **zero `update*`** | ✅ (proven the *correct* call — see Fix) |
-| 4 — cart / `product.js` | email-only cart, 409 objects-vs-strings fix, clean URLs | ✅; 409 fix **verified live** |
-| 5 — merchant email | `newOrderNotificationEmailHtml` + webhook wire + env | ✅; **verified live** |
-| 6 — `adminAuth.ts` / `admin.js` | C1 trimmed-key Bearer path + date/confirm polish | ✅ |
-| 7 — `vercel.json` | keep-alive cron, 11/12 functions | ✅ |
-| **Fix (unplanned, Phase 8)** | — | ⚠️ removed `phone_number_collection` (the real Pay blocker) + added `friendlyPaymentError()` |
-| 8 — verification | full preview E2E | ✅ core loop: 8.0 / 8.1 / 8.4 / 8.5 / 8.6 / 8.2 / 8.9; 8.7 + 8.8 → launch |
+| Phase / item                    | Planned (per packet)                                                                              | Actual                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Pre-flight                      | every quoted CURRENT block matches the repo                                                       | ✅ all 13 target files byte-for-byte; no drift                                               |
+| 1 + 1b — `api/checkout.ts`      | drop pre-created customer; omit `customer_creation`; expand `handleSessionStatus` for `/complete` | ✅ as written; `tsc` clean                                                                   |
+| 2 — `checkout.html`             | collapse Stage A/B → one page, 4 Stripe mount slots                                               | ✅                                                                                           |
+| 3 — `assets/js/checkout.js`     | full rewrite, single-phase, **zero `update*`**                                                    | ✅ (proven the *correct* call — see Fix)                                                     |
+| 4 — cart / `product.js`         | email-only cart, 409 objects-vs-strings fix, clean URLs                                           | ✅; 409 fix **verified live**                                                                |
+| 5 — merchant email              | `newOrderNotificationEmailHtml` + webhook wire + env                                              | ✅; **verified live**                                                                        |
+| 6 — `adminAuth.ts` / `admin.js` | C1 trimmed-key Bearer path + date/confirm polish                                                  | ✅                                                                                           |
+| 7 — `vercel.json`               | keep-alive cron, 11/12 functions                                                                  | ✅                                                                                           |
+| **Fix (unplanned, Phase 8)**    | —                                                                                                 | ⚠️ removed `phone_number_collection` (the real Pay blocker) + added `friendlyPaymentError()` |
+| 8 — verification                | full preview E2E                                                                                  | ✅ core loop: 8.0 / 8.1 / 8.4 / 8.5 / 8.6 / 8.2 / 8.9; 8.7 + 8.8 → launch                    |
 
 ## Sean's launch to-do (leftover)
 
