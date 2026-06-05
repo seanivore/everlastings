@@ -1,5 +1,7 @@
 # v1.5.0 — AI Store Management + Design (IMPLEMENT)
 
+> **⚠️ SUPERSEDED — history only; do not build from this.** Folded (with `v1_5_0_BUILD_STORE_MGMT.md`) into the single living plan `v1_5_1_IMPLEMENT.md`. Build from that doc.
+
 **Created**: 2026-06-05
 **Status**: Architecture spec / planning. Not yet built. Supersedes the design-only sketch that was briefly considered for v1.5.
 **Purpose**: Define what v1.5.0 builds and why, in enough detail to drive a later exclusively-executable build doc (the usual string-anchored + gap-review pass). **Functionality comes first; design second.**

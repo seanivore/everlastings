@@ -1,5 +1,7 @@
 # v1.5.0 — AI Store Management: EXECUTABLE BUILD DOC
 
+> **⚠️ SUPERSEDED — history only; do not build from this.** Re-merged into the single living plan `v1_5_1_IMPLEMENT.md` (its Part 2). Build from that doc.
+
 **Source spec:** `assets/docs/archive/v1_5/v1_5_0_IMPLEMENT.md` (Part 1 — functionality).
 **Branch:** `dev` · **Scope:** draft→preview→publish, the 3-tier field model, the Stripe-lock, coupons, admin draft/publish wiring + new fields, GPT actions/knowledge.
 **Out of scope (separate later doc):** Part 2 design (glow/nav/filters/hero) + the admin *visual* restyle. GPT *configuration* is Sean's (this only authors the GPT docs).

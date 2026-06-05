@@ -1,8 +1,8 @@
 # Development Protocols
 
-**Version**: v4.0.0
-**Last Updated**: 2026-06-04
-**Changes**: Strategic restructure. Re-centers the doc on the two things that make this workflow work — planning to **exclusively executable** and proving it with **fresh-instance gap review** — and cuts boilerplate that buried the signal (Common Pitfalls, Agent Documentation Standards, the enterprise parallel-dev essay, the research/testing/commit templates). New: the *subagent-pass vs fresh-instance-gate* distinction, the reviewer **access→perspective** model, the gate framed as non-waivable + ego-safe, and an IMPLEMENT template that stops seeding tiny version-milestone BUILDs.
+**Version**: v4.0.1
+**Last Updated**: 2026-06-05
+**Changes**: v4.0.1 — added the *Markdown-table width* convention (≤ ~100 cols, else grouped bullets). v4.0.0 — Strategic restructure. Re-centers the doc on the two things that make this workflow work — planning to **exclusively executable** and proving it with **fresh-instance gap review** — and cuts boilerplate that buried the signal (Common Pitfalls, Agent Documentation Standards, the enterprise parallel-dev essay, the research/testing/commit templates). New: the *subagent-pass vs fresh-instance-gate* distinction, the reviewer **access→perspective** model, the gate framed as non-waivable + ego-safe, and an IMPLEMENT template that stops seeding tiny version-milestone BUILDs.
 **Purpose**: How we plan and build with agentic tools. Read THE CORE first; the rest is the machinery and reference.
 **Syncing**: One canonical copy, propagated to every project via `filemgmt` (see § *Syncing*).
 
@@ -295,6 +295,7 @@ After step 3, `dev` and `main` are at the same commit. The dev→main ff-merge m
 - **Commits:** `type(scope): brief [vX.Y.Z]` + body bullets (`feat fix docs style refactor test chore`); word them to mirror the BUILD chunk so history maps to plan.
 - **Drift:** fix protocol drift you hit (whether or not you caused it); if unsure it's drift, confirm with the human first.
 - **Research:** verify current docs while planning — never ship training-data recall as fact. Business-grade research only → `.agent/RESEARCH_PROTOCOL.md`.
+- **Markdown tables ≤ ~100 cols.** Keep a table's total rendered width under ~100 monospace characters (any number of columns within that budget); past it, rows wrap and become unreadable in editors (and paste badly into Thot). If the data won't fit, drop the table for **grouped bullets** (one sub-list per row) — never a wider table. *Exception:* a doc read **only** by agents (e.g. a frozen BUILD) may keep a wider table when it genuinely conveys structure better than bullets — never in human-facing docs (IMPLEMENT, README, FEEDBACK, PROJECT_NAME).
 - **Testing:** the BUILD carries the verification plan; the orchestrator records results in the BUILD_REPORT.
 - **Syncing:** one canonical copy → every project via `filemgmt -f ~/Development -r <path>/.agent/DEV_RULES.md` (new shared files: `-a`). `.agent/PROJECT_LESSONS.md` is per-project, not synced.
 
