@@ -30,11 +30,8 @@ async function handleSession(request: Request): Promise<Response> {
     const body = (await request.json()) as {
       items?: CartItem[];
       session_id?: string;
-      email?: string;
-      name?: string;
-      phone?: string;
     };
-    const { items, session_id, email, name, phone } = body;
+    const { items, session_id } = body;
 
     if (!Array.isArray(items) || items.length === 0 || !session_id || typeof session_id !== 'string') {
       return Response.json(
@@ -101,30 +98,13 @@ async function handleSession(request: Request): Promise<Response> {
 
     const itemsMeta = items.map((i) => ({ id: i.product_id, slug: i.slug }));
 
-    // Pre-create a Stripe Customer with the contact data captured in Stage A.
-    // Binding the session to a customer (vs customer_email) lets Stripe's
-    // AddressElement pre-fill "Full name" from customer.name — no duplicate
-    // typing for the buyer. Same pattern as the freelance-payments project.
-    const emailValid = email && typeof email === 'string' && email.includes('@');
-    let customerId: string | undefined;
-    if (emailValid) {
-      const customer = await stripe.customers.create({
-        email: email!,
-        ...(name && typeof name === 'string' && name.trim() ? { name: name.trim() } : {}),
-        ...(phone && typeof phone === 'string' && phone.trim() ? { phone: phone.trim() } : {}),
-        metadata: { session_id },
-      });
-      customerId = customer.id;
-    }
-
     const stripeSession = await stripe.checkout.sessions.create({
       ui_mode: 'custom',
       mode: 'payment',
       line_items,
       allow_promotion_codes: true,
       shipping_address_collection: { allowed_countries: ['US'] },
-      // v1: static $0 "Free shipping" — Emy factors shipping into product price.
-      // v1.1: replace with Shippo per-product rate using sum of line_items[].shipping_cents.
+      // v1: static $0 "Free shipping" — keeps the total resolvable so canConfirm works.
       shipping_options: [
         {
           shipping_rate_data: {
@@ -138,29 +118,17 @@ async function handleSession(request: Request): Promise<Response> {
           },
         },
       ],
+      // Phone: the shipping element rejects `fields` (Phase 0), so collect phone server-side.
       phone_number_collection: { enabled: true },
-      ...(customerId
-        ? {
-            customer: customerId,
-            // Write the shipping address (and any name change) the buyer
-            // enters in Stripe's AddressElement back to the Customer record,
-            // so the customer object ends up complete for fulfillment and
-            // future receipts. Required when binding a session to a customer
-            // while collecting shipping/billing info.
-            customer_update: {
-              shipping: 'auto',
-              address: 'auto',
-              name: 'auto',
-            },
-          }
-        : emailValid
-          ? { customer_email: email!, customer_creation: 'always' }
-          : { customer_creation: 'always' }),
+      // customer_creation: OMITTED (Phase 0). Not verified to populate session.customer under
+      // ui_mode:'custom' without a pre-made customer, and forcing it risked the 500 that burned
+      // past rounds. Safe to omit: the webhook null-guards stripe_customer_id and derives
+      // customer_id from the email-keyed customers upsert. (Re-add + verify in v1.1 if wanted.)
       metadata: {
         items: JSON.stringify(itemsMeta),
         session_id,
       },
-      return_url: `${getBaseUrl(request)}/complete.html?session_id={CHECKOUT_SESSION_ID}`,
+      return_url: `${getBaseUrl(request)}/complete?session_id={CHECKOUT_SESSION_ID}`,
     });
 
     return Response.json(
@@ -358,14 +326,34 @@ async function handleSessionStatus(request: Request): Promise<Response> {
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['payment_intent'],
+      expand: ['line_items', 'payment_intent'],
     });
+
+    // Pair metadata.items (creation order) with line_items.data (same order)
+    // to recover slug + title + per-line price for the success page.
+    let metaItems: Array<{ id: string; slug: string }> = [];
+    try {
+      metaItems = JSON.parse(session.metadata?.items || '[]') as Array<{ id: string; slug: string }>;
+    } catch {
+      metaItems = [];
+    }
+    const lines = session.line_items?.data ?? [];
+    const items = lines.map((li, i) => ({
+      slug: metaItems[i]?.slug ?? null,
+      title: li.description ?? null,
+      price: li.amount_total ?? 0,
+    }));
 
     return Response.json(
       {
         status: session.status,
         payment_status: session.payment_status,
         customer_email: session.customer_details?.email ?? session.customer_email ?? null,
+        customer_name: session.customer_details?.name ?? null,
+        amount_total: session.amount_total ?? 0,
+        shipping_cost: { amount_total: session.shipping_cost?.amount_total ?? 0 },
+        items,
+        stripe_event_id: session.id,
       },
       { headers: corsHeaders(request) },
     );
