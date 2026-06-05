@@ -3,7 +3,7 @@
 **Initiative:** Repair checkout, simplify it to a single page, finish the order/fulfillment loop, validate end-to-end on the Vercel preview — so the store can launch and the Custom-GPT pipeline can be finalized.
 **Revision driven by:** Five failed checkout rounds (`v1_4_5_C_SESSION_REPORT.md` Rounds 1–5 + `v1_4_5_C_TESTING_BUG_LOG.md`). Root cause isolated; planning loop run to "exclusively executable" before any code.
 **Status:** Phase 0 probe COMPLETE (2026-06-04, dev preview) — VERIFIED CONTRACT filled with observed values below. Ready for execution of Phases 1–8.
-**v1.4.9 (from v1.4.8):** folded the two repo-aware gap reviews (`v1_4_8_GAP_REVIEW_B.md` fidelity + `v1_4_8_GAP_REVIEW_C.md` integration; both verdict READY). The one real bug: the GPT Bearer-auth path now compares against the **trimmed** `env('PRODUCT_API_KEY')` — this project's Vercel vars carry trailing newlines, and raw `process.env` would 401 the GPT scope-locally. Also: the merchant-email env read is hoisted to a const (TS narrowing across `await`), the title lookup drops a redundant `is_test` filter, Phase 2 is now string-anchored on the `<!-- MAIN START/END -->` fence, the last `.html` nav is cleaned (`product.js`), and a Meta-Pixel double-count guard is added (SEAN MUST DO). **Build-ready.** v1.4.8 kept for history.
+**v1.4.9 (from v1.4.8):** folded the two repo-aware gap reviews (`v1_4_8_GAP_REVIEW_B.md` fidelity + `v1_4_8_GAP_REVIEW_C.md` integration; both verdict READY). The one real bug: the GPT Bearer-auth path now compares against the **trimmed** `env('PRODUCT_API_KEY')` — this project's Vercel vars carry trailing newlines, and raw `process.env` would 401 the GPT scope-locally. Also: the merchant-email env read is hoisted to a const (TS narrowing across `await`), the title lookup drops a redundant `is_test` filter, Phase 2 is now string-anchored on the `<!-- MAIN START/END -->` fence, the last `.html` nav is cleaned (`product.js`), and a Meta-Pixel double-count guard is added (SEAN MUST DO). **Build-ready.** (Pre-handoff pass 2026-06-05: SEAN MUST DO reordered chronologically and verified against the live Vercel env — `ORDER_NOTIFY_EMAIL` (the one unset var) is now set by the agent in Phase 5.4; Meta Pixel setup flagged dated and deferred to v1.5.) v1.4.8 kept for history.
 **v1.4.8 (from v1.4.7):** folded the cold/no-repo self-containment review (`v1_4_7_GAP_REVIEW_A.md`). Every delete/replace now anchors on a **quoted CURRENT block** (no edit is located by line number alone); the cross-file contracts are *shown* not asserted (`complete.js` fields, the pre-existing `available=false` write, the `orders.ts` auth consumer, the shared `cart.js`/`checkout.js` session id); the `vercel.json` example is valid JSON; and every ambient helper is quoted in an appendix. v1.4.7 kept for history.
 **Branch:** `dev`. Test only on the Vercel preview, never localhost.
 
@@ -45,34 +45,42 @@
 
 ---
 
-## SEAN MUST DO (the human-owned steps — clean checklist)
+## SEAN MUST DO (human-owned steps, in the order they come up)
 
-These are the things the executing agent cannot do for you. Each is short and standalone.
+These are the things the executing agent can't do for you, grouped by **when** they happen — a couple before you hand off the doc, a couple the agent flags you for mid-build, and the rest at launch. The agent will tell you when a mid-build or launch item is ready, so you're never guessing whether something is blocked.
 
-### Before launch validation
-- [ ] **Add `ORDER_NOTIFY_EMAIL`** to Vercel (Preview **and** Production scope) = `orders@everlastingsbyemaline.com`. This is where the new merchant notification lands. (The agent adds it to `.env.example` in Phase 5.4 — you just set the real value in Vercel.)
-- [ ] **Confirm `RESEND_FROM_EMAIL` is set** in Vercel (it should already be `sunkeeper@everlastingsbyemaline.com`). `sendEmail()` fails without it.
-- [ ] **Phase 0 probe** needs a Vercel-authenticated browser (the preview has SSO). Either you run the probe with the agent watching, or hand it your authed browser. Do this before the agent writes any checkout code.
-- [ ] **Keep `META_PIXEL_ID` and `META_ACCESS_TOKEN` UNSET** in Preview **and** Production until v1.5. `api/config.ts` ships `metaPixelId` to the browser the moment it's set, which lights up the client-side Meta `Purchase` — keyed on the session id (`cs_…`) — while the webhook's server-side `Purchase` is keyed on the event id (`evt_…`), so the two **double-count** until the v1.5 dedup fix. Left unset, no Pixel fires at all (intended for v1).
+### ✅ Already done (verified 2026-06-05)
+- [x] **Phase 0 probe** — run together on the dev preview (2026-06-04). The **VERIFIED CONTRACT** at the end of Phase 0 is filled with the observed values; the executing agent uses those tokens as-is. Nothing more here.
+- [x] **`RESEND_FROM_EMAIL`** — confirmed set in Vercel (Development, Preview, **and** Production). `sendEmail()` has its From address.
+- [x] **`PRODUCT_API_KEY`** — set in all three Vercel scopes; `.env.local` refreshed last session (key handy for the GPT smoke test).
+- [x] **`META_PIXEL_ID` / `META_ACCESS_TOKEN`** — confirmed **unset** in every scope, which is correct for v1 (see "Deferred to v1.5"). No action; just leave them unset.
 
-### Stripe dashboard (the buyer's order confirmation — no code)
-- [ ] **TEST mode** (for preview validation): Settings → Emails → turn ON "Successful payments." That's the buyer receipt the `/complete` page promises.
-- [ ] **Brand it**: Settings → Branding → add the logo, brand colors, business name/address so the receipt looks like Everlastings.
-- [ ] **LIVE mode** (at launch): repeat both toggles in live mode. Also confirm "Refunds" email is ON (that's the refund notification to buyers).
+### Before you hand the doc to the build agent
+- **`ORDER_NOTIFY_EMAIL` — handled by the agent, not you.** It's currently unset; the agent sets it in Vercel (Preview + Production) via CLI as part of **Phase 5.4**, the same way the other env vars were set up. Listed here only so you know it's covered.
+- [ ] **Stripe buyer receipt — TEST mode** (so the Phase 8 preview validation shows it): Stripe Dashboard → Settings → Emails → turn ON "Successful payments" (the receipt the `/complete` page promises), and Settings → Branding → add logo, brand colors, business name/address.
 
-### After Phase 6 ships (the GPT)
-- [ ] **Recreate the Custom GPT** from the rebuilt `GPT_SETUP.md` (delete the old "Sunkeeper" GPT; paste fresh — it's minutes). The order actions only work once Phase 6's Bearer auth is deployed.
+### Mid-build — the agent will flag you when each is ready
+- [ ] **Recreate the Custom GPT** — *after Phase 6 deploys* (the agent will say when). From `GPT_SETUP.md`: delete the old "Sunkeeper" GPT and paste fresh. Order actions only work once Phase 6's Bearer auth is live; products work anytime (GPT_SETUP Wave 1 / Wave 2).
+- [ ] **Fill the 8 content placeholders** in about / contact / terms / privacy with real copy — yours/Em's call (legal + brand voice; the agent can't invent these). The agent owns the **gate** (`grep -rn 'PLACEHOLDER:' .` must return zero before launch); you own the **content**.
 
-### Carried from `v1_4_5_C_SESSION_REPORT.md` (still yours)
-- [ ] **C5 cutover** (live keys + coupon bootstrap, DNS flip, `dev→main` merge/tag) — unchanged; do after Checkpoint-C testing passes.
-- [ ] **`.env.local` `PRODUCT_API_KEY` refresh** (post-rotation) so local curl + the GPT smoke test work.
-- [ ] **`PLACEHOLDER:` hygiene gate**: `grep -rn 'PLACEHOLDER:' .` must return zero before launch (the 8 content placeholders in about/contact/terms/privacy are yours to fill).
+### At launch / cutover (only after Checkpoint-C testing passes on the preview)
+- [ ] **Stripe buyer receipt — LIVE mode**: repeat the TEST-mode toggles in LIVE mode (Settings → Emails → "Successful payments" ON) and confirm the "Refunds" email is ON (the buyer refund notice). Branding carries over from TEST.
+- [ ] **C5 cutover** — the go-live switch (full detail in `v1_4_5_C_SESSION_REPORT.md`). Four plain steps; none happen until checkout + fulfillment pass on the preview — **ping me and I'll walk you through each:**
+    1. **Live Stripe keys** → set the live `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in the **Production** Vercel scope (test keys stay in Preview).
+    2. **Coupon bootstrap** → create the **live-mode** Stripe promotion codes the newsletter-welcome + cart-recovery emails hand out (they exist only in test mode right now).
+    3. **DNS flip** → point `everlastingsbyemaline.com` at the Vercel production deployment.
+    4. **`dev → main` merge + tag** → merge the finished `dev` branch into `main` (which is what deploys Production) and tag the release.
+
+### Deferred to v1.5 — do NOT set up now (flagged so we don't forget)
+- [ ] **Meta Pixel + Conversions API** — **tabled until post-launch.** Keep `META_PIXEL_ID` / `META_ACCESS_TOKEN` unset until then (if set, `api/config.ts` lights up the browser Pixel and the cs_/evt_ Purchase events double-count — see Phase 1b). **When we do pick it up:** the old setup guide `v1_4_3_02_PREP_META_SETUP.md` is **dated** — Meta no longer treats the Pixel as a paste-in ID/key; it's now a *dataset* with a guided setup (Meta's own wizard, Google Tag Manager, or "send to your developer"), so the Pixel + CAPI steps need fresh research against Meta's current UI. Use that prep doc only for the account / Business-Portfolio groundwork; **re-validate everything Pixel-related.** v1.5 also ships the webhook dedup fix (`event_id: session.id`).
 
 ---
 
-## PHASE 0 — Probe the live bundle (MANDATORY first step; fills the VERIFIED CONTRACT)
+## PHASE 0 — Probe the live bundle (✅ COMPLETE — fills the VERIFIED CONTRACT)
 
-Do this before writing any checkout code. Use Claude-in-Chrome against the dev preview. The current deployed `/checkout` already calls `stripe.initCheckout(...)` and exposes `window.__checkout` (after the Stage-A "Continue"), so the real object can be enumerated there.
+> **STATUS: DONE** (2026-06-04, run by Sean + Claude via Claude-in-Chrome on the dev preview). The **VERIFIED CONTRACT** below is filled with observed values. **The executing agent does NOT re-run this probe** — use the contract tokens as-is; they are the authoritative surface and already supersede every doc. The procedure below is retained only as the record of *how* the contract was obtained (and for re-validation if the Stripe bundle visibly changes).
+
+The current deployed `/checkout` already calls `stripe.initCheckout(...)` and exposes `window.__checkout` (after the Stage-A "Continue"), so the real object can be enumerated there.
 
 **Reference (optional — NOT in this repo, not required):** Stripe's official vanilla sample lives in the **sibling** project `freelance-payments-dev` (on Sean's machine at `…/freelance-payments-dev/assets/docs/RESOURCES/stripe-sample-code/public/checkout.js`) — a fresh agent or CI checkout won't have it, so do not depend on it. You don't need to: **the VERIFIED CONTRACT below is the authoritative surface** and the probe has already superseded the sample. It is noted only as provenance — the sample mounts `createPaymentElement()` + `createBillingAddressElement()` with **no** `update*` calls, which is exactly the shape the contract confirmed.
 
@@ -992,9 +1000,17 @@ Then the block to insert:
 
 ### 5.3 — Buyer confirmation = Stripe receipt (no code; see SEAN MUST DO).
 
-### 5.4 — Env var (agent edit)
+### 5.4 — Env var (agent edit — both parts are the agent's)
 
-Add `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example` so the variable is documented in-repo. Sean sets the real value in Vercel (Preview + Production) per SEAN MUST DO. `RESEND_FROM_EMAIL` must also be set (it already is). If `ORDER_NOTIFY_EMAIL` is unset at runtime the merchant-email block is skipped silently — so confirm it's set before Phase 8.5.
+1. **Document it in-repo:** add `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example`.
+2. **Set the real value in Vercel** (Preview **and** Production). It is currently **unset in every scope** (verified 2026-06-05), so the agent sets it via the logged-in Vercel CLI — the same way the project's other env vars were set up. Use `printf` (not `echo`) so **no trailing newline** is stored (this project's env values have been bitten by trailing newlines before — see `api/_lib/env.ts`):
+   ```bash
+   printf 'orders@everlastingsbyemaline.com' | vercel env add ORDER_NOTIFY_EMAIL preview
+   printf 'orders@everlastingsbyemaline.com' | vercel env add ORDER_NOTIFY_EMAIL production
+   vercel env ls | grep ORDER_NOTIFY_EMAIL   # confirm two rows (preview + production)
+   ```
+
+`RESEND_FROM_EMAIL` is already set in all scopes (verified) — don't touch it. If `ORDER_NOTIFY_EMAIL` is unset at runtime the merchant-email block is skipped silently, so confirm the two rows above before Phase 8.5.
 
 **Acceptance:** completing a test purchase produces `/api/webhook` 200 and an email to `ORDER_NOTIFY_EMAIL` with the order facts + fulfillment steps. The existing buyer tracking email (via `api/orders.ts` PATCH) still fires when tracking is recorded.
 
@@ -1295,7 +1311,7 @@ The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are unt
 
 ## Out of scope / v1.1+
 
-`charge.refunded` auto-handling (status flip + relist); branded buyer confirmation email (v1 uses the Stripe receipt); carrier tracking webhooks → auto delivered/ETA emails; review-request follow-up; Shippo/EasyPost label API + GPT label-buying; returning-customer address prefill. Meta Pixel (v1.5), launch copy placeholders, and C5 cutover (live keys, DNS, merge/tag) are Sean-owned and tracked in `v1_4_5_C_SESSION_REPORT.md`.
+`charge.refunded` auto-handling (status flip + relist); branded buyer confirmation email (v1 uses the Stripe receipt); carrier tracking webhooks → auto delivered/ETA emails; review-request follow-up; Shippo/EasyPost label API + GPT label-buying; returning-customer address prefill. Meta Pixel + CAPI (v1.5 — old setup guide `v1_4_3_02_PREP_META_SETUP.md` is **dated**; the Pixel is no longer a paste-in ID/key, so it needs fresh research — see SEAN MUST DO), launch copy placeholders, and C5 cutover (live keys, DNS, merge/tag) are Sean-owned and tracked in `v1_4_5_C_SESSION_REPORT.md`.
 
 ---
 
@@ -1303,20 +1319,20 @@ The IMPLEMENT's C1/C2/C4 (foundations, per-page wiring, SEO) shipped and are unt
 
 Every global the edits above call, with its source + signature, so the build never has to discover a name or shape:
 
-| Helper | Source | Signature / behavior |
-| ------ | ------ | -------------------- |
-| `getOrCreateBrowserSessionId()` | `main.js:86` | `() => string` — returns/creates localStorage `everlastings_session_id` (via `crypto.randomUUID()`). **The same instance `cart.js` and `checkout.js` both call** — this is the hold key (D2 invariant). |
-| `getCart()` | `main.js:99` | `() => Array<{product_id, slug, title, price, thumbnail, series?, quantity?}>` — parses localStorage `cart`; returns `[]` on empty/parse-fail. |
-| `getCartTotal()` | `main.js:162` | `() => number` — sum of `price * (quantity||1)`, in **cents**. |
-| `formatPrice(cents)` | `main.js:27` | `(number) => string` — `Intl.NumberFormat` USD; divides by 100. |
-| `removeFromCart(productId)` | `main.js:144` | `(string) => void` — drops the item from localStorage `cart`, fires GA4 `remove_from_cart`. |
-| `showSoldRecovery({ unavailable, related })` | `recovery.js:6` | `({unavailable=[], related=[]}) => void` — populates the `[data-sold-recovery]` overlay. |
-| `renderLineItems(cart, container)` | `cart.js:38` (same file) | `(cartArray, HTMLElement) => void` — re-renders the `.cart-line` rows into `container`. |
-| `updateTotals()` | `cart.js:74` (same file) | `() => void` — repaints `[data-cart-subtotal]` / `[data-cart-estimate]`. |
-| `wireRemoveButtons()` | `cart.js:91` (same file) | `() => void` — idempotently wires `[data-cart-remove]` clicks. |
-| `escapeHtml(input)` | `api/_emails/index.ts:20` (module-private) | `(string) => string` — HTML-escapes for email bodies. |
-| `shell(bodyHtml)` | `api/_emails/index.ts:35` (module-private) | `(string) => string` — wraps a body in the branded email shell. |
-| `sendEmail({ to, subject, html, replyTo? })` | `api/_emails/index.ts:162` | `=> Promise<{ id: string\|null; error: unknown\|null }>` — Resend send; needs `RESEND_FROM_EMAIL` (returns an error object if unset, never throws). |
+| Helper                                       | Source                                     | Signature / behavior                                                                                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getOrCreateBrowserSessionId()`              | `main.js:86`                               | `() => string` — returns/creates localStorage `everlastings_session_id` (via `crypto.randomUUID()`). **The same instance `cart.js` and `checkout.js` both call** — this is the hold key (D2 invariant). |
+| `getCart()`                                  | `main.js:99`                               | `() => Array<{product_id, slug, title, price, thumbnail, series?, quantity?}>` — parses localStorage `cart`; returns `[]` on empty/parse-fail.                                                          |
+| `getCartTotal()`                             | `main.js:162`                              | `() => number` — sum of `price * (quantity                                                                                                                                                              |  | 1)`, in **cents**. |
+| `formatPrice(cents)`                         | `main.js:27`                               | `(number) => string` — `Intl.NumberFormat` USD; divides by 100.                                                                                                                                         |
+| `removeFromCart(productId)`                  | `main.js:144`                              | `(string) => void` — drops the item from localStorage `cart`, fires GA4 `remove_from_cart`.                                                                                                             |
+| `showSoldRecovery({ unavailable, related })` | `recovery.js:6`                            | `({unavailable=[], related=[]}) => void` — populates the `[data-sold-recovery]` overlay.                                                                                                                |
+| `renderLineItems(cart, container)`           | `cart.js:38` (same file)                   | `(cartArray, HTMLElement) => void` — re-renders the `.cart-line` rows into `container`.                                                                                                                 |
+| `updateTotals()`                             | `cart.js:74` (same file)                   | `() => void` — repaints `[data-cart-subtotal]` / `[data-cart-estimate]`.                                                                                                                                |
+| `wireRemoveButtons()`                        | `cart.js:91` (same file)                   | `() => void` — idempotently wires `[data-cart-remove]` clicks.                                                                                                                                          |
+| `escapeHtml(input)`                          | `api/_emails/index.ts:20` (module-private) | `(string) => string` — HTML-escapes for email bodies.                                                                                                                                                   |
+| `shell(bodyHtml)`                            | `api/_emails/index.ts:35` (module-private) | `(string) => string` — wraps a body in the branded email shell.                                                                                                                                         |
+| `sendEmail({ to, subject, html, replyTo? })` | `api/_emails/index.ts:162`                 | `=> Promise<{ id: string\|null; error: unknown\|null }>` — Resend send; needs `RESEND_FROM_EMAIL` (returns an error object if unset, never throws).                                                     |
 
 `escapeHTML` inside `checkout.js` is a **file-local** copy (defined at the bottom of the Phase 3 rewrite), *not* the `_emails` `escapeHtml` — both exist by design; don't try to share them across the client/server boundary.
 
