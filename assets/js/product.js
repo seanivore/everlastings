@@ -220,7 +220,7 @@ function wireCartButtons(p) {
       e.preventDefault();
       if (btn.disabled) return;
       addToCart(itemForCart);
-      window.location.href = '/cart.html';
+      window.location.href = '/cart';
     });
   });
 }

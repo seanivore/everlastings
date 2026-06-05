@@ -1,6 +1,6 @@
 // assets/js/cart.js
-// Renders cart line items, prefills email/name from sessionStorage, and handles the [CHECKOUT] click.
-// On 200 → fire begin_checkout + redirect /checkout.html. On 409 → strip sold items + show recovery.
+// Renders cart line items, prefills email from sessionStorage, and handles the [CHECKOUT] click.
+// On 200 → fire begin_checkout + redirect /checkout. On 409 → strip sold items + show recovery.
 // Track B's [data-sold-recovery] overlay is populated by recovery.js (loaded before this on cart.html).
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderLineItems(cart, withItems);
   updateTotals();
-  prefillEmailName();
+  prefillEmail();
   wireRemoveButtons();
   wireCheckoutButton();
 
@@ -79,13 +79,9 @@ function updateTotals() {
   if (estimateEl) estimateEl.textContent = formatPrice(total);
 }
 
-function prefillEmailName() {
+function prefillEmail() {
   const emailInput = document.querySelector('[data-cart-prefill] input[name="email"]');
-  const nameInput = document.querySelector('[data-cart-prefill] input[name="name"]');
-  const phoneInput = document.querySelector('[data-cart-prefill] input[name="phone"]');
   if (emailInput) emailInput.value = sessionStorage.getItem('checkout_email') || '';
-  if (nameInput) nameInput.value = sessionStorage.getItem('checkout_name') || '';
-  if (phoneInput) phoneInput.value = sessionStorage.getItem('checkout_phone') || '';
 }
 
 function wireRemoveButtons() {
@@ -128,11 +124,7 @@ async function onCheckoutClick(e) {
   hideError();
 
   const email = (document.querySelector('[data-cart-prefill] input[name="email"]')?.value || '').trim();
-  const name = (document.querySelector('[data-cart-prefill] input[name="name"]')?.value || '').trim();
-  const phone = (document.querySelector('[data-cart-prefill] input[name="phone"]')?.value || '').trim();
   if (email) sessionStorage.setItem('checkout_email', email);
-  if (name) sessionStorage.setItem('checkout_name', name);
-  if (phone) sessionStorage.setItem('checkout_phone', phone);
 
   const session_id = getOrCreateBrowserSessionId();
 
@@ -144,22 +136,21 @@ async function onCheckoutClick(e) {
         items: cart.map((i) => ({ product_id: i.product_id, slug: i.slug })),
         session_id,
         email: email || undefined,
-        name: name || undefined,
       }),
     });
 
     if (res.status === 409) {
       const data = await res.json().catch(() => ({}));
-      const unavailableSlugs = Array.isArray(data.unavailable) ? data.unavailable : [];
-      const unavailableItems = unavailableSlugs.map((slug) => {
-        const item = cart.find((i) => i.slug === slug);
+      const unavailable = Array.isArray(data.unavailable) ? data.unavailable : []; // [{ product_id, slug }]
+      const unavailableItems = unavailable.map((u) => {
+        const item = cart.find((i) => i.product_id === u.product_id || i.slug === u.slug);
         return item
-          ? { slug, title: item.title, thumbnail: item.thumbnail }
-          : { slug, title: slug };
+          ? { slug: u.slug, title: item.title, thumbnail: item.thumbnail }
+          : { slug: u.slug, title: u.slug };
       });
       // Strip sold items from localStorage cart.
-      unavailableSlugs.forEach((slug) => {
-        const item = cart.find((i) => i.slug === slug);
+      unavailable.forEach((u) => {
+        const item = cart.find((i) => i.product_id === u.product_id || i.slug === u.slug);
         if (item) removeFromCart(item.product_id);
       });
       // Re-render remaining items (if any).
@@ -200,7 +191,7 @@ async function onCheckoutClick(e) {
       currency: 'USD',
     });
 
-    window.location.href = '/checkout.html';
+    window.location.href = '/checkout';
   } catch (err) {
     showError('Could not reach the server. Please try again.');
     btn.disabled = false;

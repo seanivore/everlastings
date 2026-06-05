@@ -53,3 +53,13 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 - Full-file replacement. Old file confirmed as the two-stage version carrying the double-writer calls (`updateShippingAddress` @199, `updateBillingAddress` @254) — the saga's root cause.
 - New file: single-phase; session created on load; mounts contact / shipping (`display:{name:'split'}`) / payment (`billingDetails:'never'`) / billing elements; `syncAddressCheckbox:'billing'`; one read-only `change` listener gates the Pay button + paints totals; `applyPromotionCode` only.
 - **Verified by grep:** ZERO `update*` calls; all four mount slots referenced; no `defaultValues`, no `initCheckoutElementsSdk`; clean `/cart` + `/complete` URLs.
+
+### Phase 4 — `cart.html` + `cart.js` + `product.js` ✅
+- **4.1** `cart.html`: 3-field form → single email field ("Join the Firelight Council"). `data-cart-prefill` + `name="email"` preserved so JS selectors resolve.
+- **4.2a** `prefillEmailName` → `prefillEmail` (email only) + call site at :19.
+- **4.2b** dropped the `name`/`phone` reads + sessionStorage writes; reserve body now sends `email` only.
+- **4.2c** 409 handler rewritten for `[{ product_id, slug }]` objects (was treating them as slug strings) — matches by `product_id`-or-`slug`, strips by `product_id`.
+- **4.2d** redirect `/checkout.html` → `/checkout` (:194); header comment (line 3) updated.
+- **4.3** `product.js` buy-now `/cart.html` → `/cart`.
+- **Verified by grep:** no `prefillEmailName`/`unavailableSlugs`/`checkout_name`/`checkout_phone`/`.html` residue; `cart.html` has only email inputs.
+- **Minor deviation (beyond the packet's explicit edits):** also corrected the stale `cart.js:2` header comment ("prefills email/name" → "prefills email") — the packet's 4.2d only named line 3; line 2 was left mentioning the now-removed name field. Comment-only, no behavior change. Recorded per the no-mixed-truth rule.

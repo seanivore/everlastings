@@ -179,22 +179,14 @@
           </div>
         </div>
 
-        <!-- Optional email/name capture before checkout (Track C wires) -->
+        <!-- Email capture (optional). Prefills the checkout contact field + holds the cart. -->
         <section style="margin-top: var(--space-xl); padding: var(--space-lg); border: 1px solid var(--color-fog); border-radius: var(--radius-md);">
-          <h3 style="margin-top: 0;">Almost there</h3>
-          <p style="color: var(--text-secondary); font-size: var(--text-sm);">Save your email so we can hold your cart and send order updates. Not required to checkout, but recommended.</p>
-          <form id="cart-prefill-form" data-cart-prefill style="display: grid; gap: var(--space-md); grid-template-columns: 1fr 1fr;">
+          <h3 style="margin-top: 0;">Join the Firelight Council</h3>
+          <p style="color: var(--text-secondary); font-size: var(--text-sm);">Save your email for first look at new havens and order updates. Not required to check out.</p>
+          <form id="cart-prefill-form" data-cart-prefill style="display: grid; gap: var(--space-md); max-width: 420px;">
             <div class="form-field" style="margin: 0;">
-              <label class="form-label" for="cart-email">Email</label>
-              <input id="cart-email" name="email" type="email" autocomplete="email">
-            </div>
-            <div class="form-field" style="margin: 0;">
-              <label class="form-label" for="cart-name">Name</label>
-              <input id="cart-name" name="name" type="text" autocomplete="name">
-            </div>
-            <div class="form-field" style="margin: 0; grid-column: 1 / -1;">
-              <label class="form-label" for="cart-phone">Phone (optional)</label>
-              <input id="cart-phone" name="phone" type="tel" autocomplete="tel">
+              <label class="form-label visually-hidden" for="cart-email">Email</label>
+              <input id="cart-email" name="email" type="email" autocomplete="email" placeholder="Your email">
             </div>
           </form>
         </section>
