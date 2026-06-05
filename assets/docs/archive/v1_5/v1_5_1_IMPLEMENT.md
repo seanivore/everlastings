@@ -77,6 +77,8 @@ owner never thinks about "which title goes where."
   `care_instructions` *(text[])*, `shipping_details` *(text[])*, `artist_note`, `series`,
   `product_type` *(miniature / printable / storybook)*, `quantity`, `available`, `featured`,
   `images` *(jsonb)*, `thumbnail` + `thumbnail_alt`.
+- `media` *(jsonb array, optional)* — ordered MP4 video(s) + optional YouTube for the product page;
+  each item renders only if present (hides when absent). See 3.3 + Phase 7.
 
 **Tier 3 — SEO (drafted + edited):**
 - `seo_title`, `seo_description` *(exist)*.
@@ -175,11 +177,12 @@ a coupon (1.5).
   the real limiters are `max_redemptions` + `redeem_by`/`expires_at`. (Confirmed.)
 - **Redemption already works** (`checkout.js` → `applyPromotionCode`). We add only the **create**
   side, folded into `products.ts` (no new file).
-- **v1.5 scope = create** (decided). To **end a sale early** the owner sets `expires_at` /
-  `max_redemptions` at creation, or archives the code in the Stripe dashboard (the same "dashboard for
-  the rare case" pattern as refunds) — there is no GPT *deactivate* action in v1.5. For a
-  **product-scoped** coupon the GPT passes Stripe **product IDs**, which it reads from `listProducts`
-  (each published product carries its `stripe_product_id`).
+- **v1.5 scope = create, list, deactivate** (so she can pull a sale as spontaneously as she starts
+  one — no calendar planning required). Create makes the Coupon + Promotion Code; `listCoupons` shows
+  what's active; `deactivateCoupon` ends one immediately (sets the promotion code `active:false` —
+  existing orders keep their history; no new redemptions). She can still set `expires_at` /
+  `max_redemptions` at creation for auto-expiry. For a **product-scoped** coupon the GPT passes Stripe
+  **product IDs**, read from `listProducts` (each published product carries its `stripe_product_id`).
 
 ## 1.6 Admin panel — unify, show status, light vibe
 
@@ -226,15 +229,16 @@ After v1.5 the GPT's Actions are:
 - **Products — write:** `createProduct` (→ **draft** + preview link; no Stripe yet);
   `editProduct` (→ stages a `draft` on a published row, or edits a still-unpublished draft; returns
   the preview link); `publishProduct` (new → creates Stripe + goes live; edit → applies the draft).
-- **Media:** `uploadImage` (roles incl. the new `checkout_image`, `seo_thumbnail`).
-- **Discounts:** `createCoupon` (Coupon + Promotion Code).
+- **Media:** `uploadImage` (roles incl. the new `checkout_image`, `seo_thumbnail`); the create/edit
+  `media` array sets the page's optional MP4 / YouTube (renders in order, hides when absent).
+- **Discounts:** `createCoupon` (Coupon + Promotion Code), `listCoupons`, `deactivateCoupon` (end a
+  sale anytime).
 - **Orders:** `listOrders`; `markShipped` (emails the buyer; confirm first).
 - **Refunds:** guided only — Em does them in the Stripe dashboard (no Action in v1).
 
-*Decided:* `product_type` **is** editable (it isn't a frozen Stripe field — per 1.2; added to the
-draftable set + `editProduct`). Coupons are **create-only** in v1.5 (end a sale early via
-expiry / `max_redemptions` or the Stripe dashboard — 1.5). The one true open is **dynamic product
-media** (see Open items).
+*Decided:* `product_type` **is** editable (not Stripe-frozen — 1.2). Coupons are **create + list +
+deactivate** (she can end a sale on a whim — 1.5). **Dynamic product media** is **in** v1.5 too
+(optional MP4 / YouTube, hides when absent — 3.3 + Phase 7) — nothing left open here.
 
 ---
 
@@ -456,6 +460,9 @@ export async function GET(request: Request) {
   const previewToken = url.searchParams.get('preview');
   const isAuthorized = await authorize(request);
 
+  // v1.5: list active discounts (?_action=coupon, GET) — admin/GPT only.
+  if (url.searchParams.get('_action') === 'coupon') return handleCouponList(request);
+
   // v1.5 preview: a valid preview_token grants a one-off read of the unpublished/draft
   // row (capability URL — no login). Returns the live row with `draft` overlaid, so the
   // product page renders exactly what publishing will make live.
@@ -535,6 +542,7 @@ export async function POST(request: Request) {
   const action = new URL(request.url).searchParams.get('_action');
   if (action === 'publish') return handlePublish(request);
   if (action === 'coupon') return handleCoupon(request);
+  if (action === 'coupon_deactivate') return handleCouponDeactivate(request);
 
   if (!(await authorize(request))) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
@@ -693,7 +701,7 @@ export async function PUT(request: Request) {
 NEW:
 ```ts
 const DRAFTABLE = [
-  'title', 'description', 'headline', 'story_card', 'features', 'images',
+  'title', 'description', 'headline', 'story_card', 'features', 'images', 'media',
   'thumbnail', 'thumbnail_alt', 'seo_title', 'seo_description', 'seo_thumbnail',
   'available', 'featured', 'quantity', 'dimensions', 'weight', 'materials',
   'power_supply', 'care_instructions', 'shipping_details', 'series', 'product_type', 'artist_note',
@@ -957,6 +965,55 @@ async function handleCoupon(request: Request): Promise<Response> {
     return jsonResponse(request, { error: 'Failed to create the coupon' }, 502);
   }
 }
+
+// ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
+async function handleCouponList(request: Request): Promise<Response> {
+  if (!(await authorize(request))) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401);
+  }
+  try {
+    const promos = await stripe.promotionCodes.list({ active: true, limit: 100 });
+    const coupons = promos.data.map((pc) => ({
+      code: pc.code,
+      promotion_code_id: pc.id,
+      percent_off: pc.coupon?.percent_off ?? null,
+      amount_off: pc.coupon?.amount_off ?? null,
+      times_redeemed: pc.times_redeemed,
+      max_redemptions: pc.max_redemptions ?? null,
+      expires_at: pc.expires_at ?? null,
+    }));
+    return jsonResponse(request, { coupons });
+  } catch (err) {
+    console.error('Coupon list failed:', err);
+    return jsonResponse(request, { error: 'Failed to list coupons' }, 502);
+  }
+}
+
+// ?_action=coupon_deactivate (POST) — end a sale now (promotion code active:false).
+async function handleCouponDeactivate(request: Request): Promise<Response> {
+  if (!(await authorize(request))) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401);
+  }
+  let body: { code?: string; promotion_code_id?: string };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonResponse(request, { error: 'Invalid JSON' }, 400);
+  }
+  try {
+    let promoId = body.promotion_code_id;
+    if (!promoId && body.code) {
+      const found = await stripe.promotionCodes.list({ code: body.code, limit: 1 });
+      promoId = found.data[0]?.id;
+    }
+    if (!promoId) return jsonResponse(request, { error: 'Coupon code not found' }, 404);
+    const updated = await stripe.promotionCodes.update(promoId, { active: false });
+    return jsonResponse(request, { success: true, code: updated.code, active: updated.active });
+  } catch (err) {
+    console.error('Coupon deactivate failed:', err);
+    return jsonResponse(request, { error: 'Failed to deactivate the coupon' }, 502);
+  }
+}
 ```
 
 > **Note:** this removes the only use of `stripe.prices.*` (the old PUT price rotation). `stripe` is
@@ -1060,11 +1117,13 @@ NEW:
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
     { "source": "/api/products/publish", "destination": "/api/products?_action=publish" },
     { "source": "/api/coupons", "destination": "/api/products?_action=coupon" },
+    { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
 ```
 
-> URL rewrites to the existing `products.ts` function — function count stays 11/12. The GET preview
-> needs no rewrite (it's `/api/products?slug=…&preview=…`). `listProducts`/`getProduct` also need no
-> rewrite (plain GET `/api/products`).
+> URL rewrites to the existing `products.ts` function — function count stays 11/12. `/api/coupons`
+> serves **POST** (create) and **GET** (list) via the same rewrite; deactivate is its own route. The
+> GET preview needs no rewrite (`/api/products?slug=…&preview=…`); `listProducts`/`getProduct` are
+> plain GET `/api/products`.
 
 ## Phase 7 — `assets/js/product.js` (preview mode + Publish bar)
 
@@ -1102,6 +1161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateHero(product);
   populateGallery(product);
   populateStory(product);
+  populateMedia(product);
   populateFeatures(product);
   wireCartButtons(product);
   wireProductInterestForm(product);
@@ -1161,6 +1221,59 @@ function mountPreviewBanner(product, token) {
   bar.appendChild(btn);
   document.body.appendChild(bar);
   document.body.style.paddingTop = '48px';
+}
+
+// v1.5 — optional media (MP4 + YouTube), data-driven, hides when absent. Mirrors the portfolio's
+// renderMedia pattern (structured + createElement + hide-when-empty, 360-design
+// media-controller.js); we build the YouTube iframe from a parsed video id rather than storing raw
+// embed HTML — safer for GPT-generated values (no innerHTML injection).
+function populateMedia(p) {
+  const container = document.querySelector('[data-product-media]');
+  if (!container) return;
+  const items = Array.isArray(p.media) ? p.media : [];
+  if (!items.length) return; // stays hidden — media is optional
+  const ordered = [...items].sort((a, b) => (a?.type === 'youtube' ? 1 : 0) - (b?.type === 'youtube' ? 1 : 0)); // MP4s first
+  const frag = document.createDocumentFragment();
+  for (const m of ordered) {
+    if (!m || !m.url) continue;
+    if (m.type === 'video') {
+      const wrap = document.createElement('div');
+      wrap.className = 'product-media__item';
+      const v = document.createElement('video');
+      v.src = m.url;
+      if (m.poster) v.poster = m.poster;
+      v.playsInline = true;
+      v.muted = m.muted !== false;       // default muted
+      v.loop = m.loop !== false;         // default loop
+      v.controls = m.controls === true;  // default: no controls (ambient)
+      v.preload = 'metadata';
+      if (m.autoplay !== false) v.autoplay = true; // muted autoplay is allowed
+      if (m.alt) v.setAttribute('aria-label', m.alt);
+      wrap.appendChild(v);
+      frag.appendChild(wrap);
+    } else if (m.type === 'youtube') {
+      const id = youtubeId(m.url);
+      if (!id) continue;
+      const wrap = document.createElement('div');
+      wrap.className = 'product-media__item product-media__item--embed';
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${id}`;
+      iframe.title = m.alt || 'Video';
+      iframe.loading = 'lazy';
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+      frag.appendChild(wrap);
+    }
+  }
+  if (!frag.childNodes.length) return;
+  container.innerHTML = '';
+  container.appendChild(frag);
+  container.classList.remove('hidden');
+}
+
+function youtubeId(url) {
+  const m = String(url || '').match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|v\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 ```
 
@@ -1374,6 +1487,50 @@ async function publishProduct(id, btn) {
 > Admin auth is the Supabase JWT (`authHeader()`), so publish-by-`id` is authorized through the
 > admin/GPT path — no token needed in the panel.
 
+**8.10 — `admin/index.html` + `assets/js/admin.js`: a media field (JSON).** Em sets media by chat
+(the GPT is the friendly path); this is admin/Sean parity.
+
+`admin/index.html` CURRENT (155):
+```html
+              <label class="field"><span>Artist Note</span><textarea id="p-artist-note" rows="2"></textarea></label>
+```
+NEW:
+```html
+              <label class="field"><span>Artist Note</span><textarea id="p-artist-note" rows="2"></textarea></label>
+              <label class="field"><span>Media (JSON array — optional MP4 / YouTube, in order)</span><textarea id="p-media" rows="3" placeholder='[{"type":"video","url":"https://cdn.../video-01-slug.mp4","loop":true,"autoplay":true},{"type":"youtube","url":"https://youtu.be/ID"}]'></textarea></label>
+```
+
+`assets/js/admin.js` CURRENT (`buildProductPayload`, homepage_theme tail, ~421–423):
+```js
+  } else {
+    payload.homepage_theme = null;
+  }
+```
+NEW:
+```js
+  } else {
+    payload.homepage_theme = null;
+  }
+
+  const mediaRaw = $('p-media').value.trim();
+  if (mediaRaw) {
+    try { payload.media = JSON.parse(mediaRaw); }
+    catch { throw new Error('Media must be a valid JSON array or empty'); }
+  } else {
+    payload.media = null;
+  }
+```
+
+`assets/js/admin.js` CURRENT (`openEditor`, 284):
+```js
+  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
+```
+NEW:
+```js
+  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
+  $('p-media').value = product?.media ? JSON.stringify(product.media) : '';
+```
+
 ## Phase 9 — GPT docs (author only; Sean configures the GPT later)
 
 This phase also **repairs mixed truth**: the current GPT docs say the GPT *can't edit*, *never sets
@@ -1444,6 +1601,19 @@ In `createProduct`'s `summary` (168–170) drop the `sync=true` language and the
                 thumbnail: { type: string }
                 thumbnail_alt: { type: string }
                 images: { type: array, items: { type: object, properties: { url: { type: string }, alt: { type: string } } } }
+                media:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, url]
+                    properties:
+                      type: { type: string, enum: [video, youtube] }
+                      url: { type: string }
+                      alt: { type: string }
+                      loop: { type: boolean }
+                      autoplay: { type: boolean }
+                      controls: { type: boolean }
+                      poster: { type: string }
                 seo_title: { type: string }
                 seo_description: { type: string }
                 seo_thumbnail: { type: string }
@@ -1485,11 +1655,32 @@ In `createProduct`'s `summary` (168–170) drop the `sync=true` language and the
                 max_redemptions: { type: integer, description: Max total redemptions. Optional. }
       responses:
         '200': { description: Coupon created; returns the code. }
+    get:
+      operationId: listCoupons
+      summary: List active discounts (codes, percent/amount off, redemptions, expiry) so you can tell Em what's running and end one.
+      responses:
+        '200': { description: Active coupons. }
+  /api/coupons/deactivate:
+    post:
+      operationId: deactivateCoupon
+      summary: End a discount now — deactivates the promotion code so it stops working. Existing orders keep their history.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: The shareable code to end, e.g. HOLIDAY20. }
+      responses:
+        '200': { description: Coupon deactivated. }
 ```
 
-Also add `checkout_name`, `checkout_description`, `checkout_image`, `seo_thumbnail` to the
-`createProduct` request schema (so the GPT drafts them too), and update the `uploadImage` `role`
-description to include `checkout_image, seo_thumbnail`.
+Also add `checkout_name`, `checkout_description`, `checkout_image`, `seo_thumbnail`, and the **`media`
+array** (same shape as in `editProduct` above) to the `createProduct` request schema (so the GPT
+drafts them too), and update the `uploadImage` `role` description to include `checkout_image,
+seo_thumbnail`.
 
 > `getProduct` is optional — `listProducts` returns full rows and the existing
 > `GET /api/products?slug=` / `?id=` already serve a single product. Add a `getProduct` operation
@@ -1517,7 +1708,10 @@ NEW:
 The preview link is the real review surface — she can't picture changes from chat. If she says "publish" (or "make it live"), call publishProduct with the id. For a brand-new product, publishing is what creates the Stripe listing and makes it purchasable. After publish, the old preview link stops working (that's expected).
 
 == COUPONS ==
-Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope, minimum order amount, redemption cap. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her.
+Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons. To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
+
+== MEDIA (optional video on the page) ==
+A product page can show optional MP4 video(s) and (rarely) a YouTube clip, in order, below the story. Upload an MP4 with uploadImage (role video-01..05, skip_transform=true) to get a CDN URL, then set the product's media array, e.g. [{"type":"video","url":"<cdn mp4>","loop":true,"autoplay":true},{"type":"youtube","url":"<link>"}]. MP4s render before YouTube automatically; leave media empty for no video (the section just hides). We don't use GIFs — MP4 looks better and is smaller.
 
 Product rules: never create without showing the preview; never set a price different from what she said; never proceed with fewer than 7 photos; to change a published product's PRICE, make a NEW product (price is frozen after publish); to run a sale, create a coupon — never edit price; on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
 ```
@@ -1590,7 +1784,9 @@ section** (Knowledge the GPT reads):
 - *Draft → Preview → Publish* — create/edit make a draft + a private preview link; publishing makes
   it live and, for a new product, creates the Stripe listing; the preview link rotates on publish.
 - *Coupons* — percent or amount off; optional code, product scope, minimum order, expiry, redemption
-  cap; no buy-N/BOGO.
+  cap; no buy-N/BOGO; **list active sales and deactivate one anytime**.
+- *Media* — optional MP4 video(s) + YouTube on the page via the `media` array (MP4s first; hides when
+  empty; no GIFs).
 
 **9.5 — `assets/docs/GPT_SETUP.md` Part 4 (agentic/curl protocol) — reflect v1.5.** Replace the
 "Editing / marking sold (PUT)" example (406–417) so it shows: PUT stages a draft (returns
@@ -1605,8 +1801,10 @@ Additive edits: in the products schema table add `checkout_name`, `checkout_desc
 `checkout_image`, `seo_thumbnail`, `is_published`, `published_at`, `draft (jsonb)`, `preview_token`;
 add a **"Draft → Preview → Publish"** subsection (the model, the preview-token capability,
 Stripe-at-publish, the frozen checkout fields, the `is_published` RLS gate, the INSERT trigger now
-skips drafts); note the `?_action=publish` / `?_action=coupon` routes + the two `vercel.json`
-rewrites; note the GPT gained edit / publish / coupon / list actions.
+skips drafts); note the `?_action=publish` / `?_action=coupon` / `?_action=coupon_deactivate` routes
++ the `vercel.json` rewrites; note the `media` jsonb is now rendered on the page (optional MP4 /
+YouTube via `populateMedia`); note the GPT gained edit / publish / coupon (create + list +
+deactivate) / media actions.
 
 ## Phase 11 — Verify + test
 
@@ -1631,9 +1829,13 @@ third-party calls):**
 7. **Purchasability guard:** a draft cannot be reserved/checked out (reserve → unavailable; session
    → rejected).
 8. **Coupons:** percent + amount; store-wide + product-scoped; `min_amount`; `expires_at`; redeem the
-   code at checkout (`applyPromotionCode`); duplicate code → 409; confirm BOGO is refused.
-9. **GPT behaviour:** drafts every tier; hands back the preview link with good language; picks coupon
-   params; confirms-vs-expedites; fails gracefully.
+   code at checkout (`applyPromotionCode`); duplicate code → 409; BOGO refused. **`listCoupons`** shows
+   it active; **`deactivateCoupon`** ends it (the code then fails at checkout).
+9. **Media:** set `media` (an MP4 item + a YouTube item) via create/edit → the page renders the video
+   (MP4 first), respects its aspect ratio, YouTube after; empty/absent `media` → the section stays
+   hidden; no GIF element.
+10. **GPT behaviour:** drafts every tier; hands back the preview link with good language; picks coupon
+    params; lists/deactivates a sale; sets `media`; confirms-vs-expedites; fails gracefully.
 
 Then the **gap-review gate** (below) before a fresh agent executes against the repo.
 
@@ -1722,31 +1924,40 @@ affect population.
 **Render check (not a blocker):** the sticky card keeps BUY in view down the page; details read well
 in the right column; the `.product-details` top margin/border may want trimming once it's in-column.
 
-## 3.3 Story card, video, GIFs (CSS executable; media handling is direction)
+## 3.3 Story card + media (executable)
 
-- **Story-card text reads too small** because `.story-card` is the *display serif, italic* at
-  `--text-lg` (`styles.css:929–935`). Sean wants it to "feel like main page text." Proposed:
-  ```css
-  .story-card {
-    font-family: var(--font-body);
-    font-size: var(--text-lg);
-    line-height: var(--leading-loose);
-    color: var(--text-primary);
-    font-style: normal;
-  }
-  ```
-  (Keeps the blockquote framing Sean likes — the `border-left` + `--color-cream` background are inline
-  on the section. Confirm the exact size token on the live render.)
-- **MP4 video must respect its own aspect ratio** — today the placeholder forces `aspect-ratio: 16/9`
-  (black bars on non-16:9 clips, `product.html:240`). Use a container that lets the `<video>` size to
-  its intrinsic ratio (drop the forced `aspect-ratio`, cap with `max-height`/`width:100%`). YouTube
-  embeds keep 16/9 and come **after** the MP4(s).
-- **Drop GIFs entirely → MP4** `<video autoplay loop muted playsinline>` (better quality, smaller,
-  longer). Retire the `gif-0[1-5]` upload roles (Phase 5 `ROLE_PATTERN`) in the design slice. Sean's
-  conversion: `ffmpeg -i input.gif -movflags +faststart -pix_fmt yuv420p output.mp4`.
-- **All media optional except the featured image.** The unused `media jsonb` column
-  (`schema:60`) is the natural home for the ordered video/YouTube list once media becomes
-  data-driven (today the media row is static placeholder markup).
+**Story card reads too small** because `.story-card` is the display serif, italic, at `--text-lg`
+(`styles.css:929–935`). Sean wants it to read like body copy:
+```css
+.story-card {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  line-height: var(--leading-loose);
+  color: var(--text-primary);
+  font-style: normal;
+}
+```
+(Keeps the blockquote framing — the `border-left` + `--color-cream` background are inline on the
+section; confirm the exact size on render.)
+
+**Media is data-driven** (Phase 7 `populateMedia` renders `p.media`; §1.1). Replace the **static**
+`.product-gallery__media` block in `product.html` (the placeholder video + GIF + Rickroll iframe,
+~lines 235–258) with an empty, hidden, data-bound container — this also drops the GIF and the
+placeholder embed:
+```html
+<!-- v1.5: optional media (MP4 / YouTube) — product.js populateMedia fills it; hidden when none. -->
+<div class="product-gallery__media hidden" data-product-media></div>
+```
+CSS — MP4 respects its intrinsic ratio (no forced 16/9 black bars); YouTube embeds get 16/9:
+```css
+.product-gallery__media { display: grid; gap: var(--space-md); }
+.product-media__item video { width: 100%; height: auto; display: block; border-radius: var(--radius-md); }
+.product-media__item--embed { aspect-ratio: 16 / 9; }
+.product-media__item--embed iframe { width: 100%; height: 100%; border: 0; border-radius: var(--radius-md); }
+```
+**GIFs are out** — an MP4 `<video loop muted playsinline>` looks better and is smaller; convert with
+`ffmpeg -i input.gif -movflags +faststart -pix_fmt yuv420p output.mp4`. (The `gif-0[1-5]` upload
+roles in `ROLE_PATTERN` can be retired in a follow-up; harmless if left.)
 
 ## 3.4 Shop filters → compact dropdowns (direction)
 
@@ -1866,13 +2077,6 @@ promotion-code edge case) — not for routine checks.
 
 # Open items
 
-- **Dynamic product media (the one real open — decide before/at the A review).** The GPT/admin can
-  *upload* video (`video-0x` roles → CDN URLs) but the product page renders the media block
-  **statically** (placeholder markup; the `media` jsonb column, `schema:60`, is unused). So a video Em
-  adds by chat won't appear on the page until the `media` column is wired to `product.js` **and** a
-  field lets the GPT/admin set it. Decide: **build in v1.5** (it's part of "managed entirely by chat")
-  or **carry forward**. If in-scope it adds: a `media` field to create/edit + the GPT schema, and a
-  `populateMedia()` in `product.js` rendering the ordered video/YouTube list into §3.2's `media` area.
 - **Hero spec (3.7)** — Sean to write (CSS vs. Hyperframe); ignore until then.
 - **`getProduct` operation (9.1)** — add a named by-slug fetch for the GPT, or rely on `listProducts`
   + the existing GET? Cheap to add; the A review can call it.
