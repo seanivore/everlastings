@@ -4,11 +4,15 @@
 
 **The three angles test three different properties.** Run each at least once — they're complementary, not redundant:
 
-| Angle                  | Property it tests                                                         | Reviewer setup                                                                                                  |
-| ---------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| **A — Cold / no-repo** | *Self-containment* — can the doc be executed without looking anything up? | A tool with **NO** codebase access (a Claude.ai or ChatGPT window; paste the doc only). The truest test of "exclusively executable." |
-| **B — Fidelity**       | *Accuracy* — do the quoted before/after blocks match the real repo?      | A fresh Claude Code instance **in** the repo.                                                                   |
-| **C — Integration**    | *System fit* — does it respect the wider architecture?                   | A fresh Claude Code instance **+** the architecture doc.                                                        |
+| Angle                  | Property it tests  | Reviewer setup                    |
+| ---------------------- | ------------------ | --------------------------------- |
+| **A — Cold / no-repo** | *Self-containment* | Claude.ai/GPT; NO codebase access |
+| **B — Fidelity**       | *Accuracy*         | Fresh instance; in repo.          |
+| **C — Integration**    | *System fit*       | Fresh instance; PROJECT_NAME.md   |
+
++ *Self-containment* — can the doc be executed without looking anything up? **The truest test of "exclusively executable."**
++ *Accuracy* — do the quoted before/after blocks match the real repo?
++ *System fit* — does it respect the wider architecture?
 
 ### Why the no-repo reviewer (Angle A) matters most for "exclusively executable"
 
@@ -16,9 +20,9 @@ The build doc is a surgical patch: it embeds the "before" and "after" for each e
 
 ### How to run it
 
-1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window (Claude.ai / ChatGPT) with ONLY the build doc pasted in. It has no filesystem, so it outputs its review as a complete `v1_4_7_GAP_REVIEW_A.md` document in the chat — drop that into `assets/docs/archive/v1_4/` yourself (or paste it to me and I'll file it).
-2. **Angles B and C** in fresh Claude Code instances in the repo, effort **max**. Each one **writes its findings to a file** — `v1_4_7_GAP_REVIEW_B.md` / `v1_4_7_GAP_REVIEW_C.md` in `assets/docs/archive/v1_4/`. So you don't have to copy anything: just tell me they're done and I'll read the files and fold the valid items.
-3. **Repeat until each angle returns nothing load-bearing.** When a fresh pass of each finds nothing that would derail the build, the doc is as ready as it needs to be (a residual gap is expected and accepted).
+  1. **Angle A first** (it shapes the doc most). Paste **Prompt A** into a no-codebase window (Claude.ai / ChatGPT) with ONLY the build doc pasted in. It has no filesystem, so it outputs its review as a complete `v1_4_7_GAP_REVIEW_A.md` document in the chat — drop that into `assets/docs/archive/v1_4/` yourself (or paste it to me and I'll file it).
+  2. **Angles B and C** in fresh Claude Code instances in the repo, effort **max**. Each one **writes its findings to a file** — `v1_4_7_GAP_REVIEW_B.md` / `v1_4_7_GAP_REVIEW_C.md` in `assets/docs/archive/v1_4/`. So you don't have to copy anything: just tell me they're done and I'll read the files and fold the valid items.
+  3. **Repeat until each angle returns nothing load-bearing.** When a fresh pass of each finds nothing that would derail the build, the doc is as ready as it needs to be (a residual gap is expected and accepted).
 
 ### Folding feedback back
 
