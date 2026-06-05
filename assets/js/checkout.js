@@ -1,37 +1,130 @@
 // assets/js/checkout.js
-// Two-stage progressive disclosure checkout:
-//  Stage A — capture email + Stripe AddressElement (shipping; optional billing if "same as shipping" unchecked)
-//  Stage B — Stripe PaymentElement + Confirm. Stripe redirects to /complete.html on success.
-// 410 (hold expired) → bounce to /cart.html. No 409 here; cart.html owns that.
+// Single-phase Stripe Custom Checkout (Basil). The session is created quietly on
+// page load; Stripe's own elements own ALL field collection and auto-sync to the
+// session. There are NO update* bridges (the double-writer bug that burned 5 rounds).
+// One Pay button → checkout.confirm(). 410 (hold expired) → bounce to /cart.
+// 409 is owned by cart.js and never reached here.
 
 document.addEventListener('DOMContentLoaded', async () => {
   const cart = getCart();
   if (cart.length === 0) {
-    window.location.href = '/cart.html';
+    window.location.href = '/cart';
     return;
   }
   const sessionId = getOrCreateBrowserSessionId();
-
   renderOrderSummary(cart);
-  prefillEmail();
-  prefillName();
-  prefillPhone();
 
-  // Wait for /api/config → Stripe publishable key in main.js's initConfig.
+  // Wait for /api/config → Stripe publishable key (main.js initConfig) + Stripe.js.
   for (let i = 0; i < 80 && !window._stripePublishableKey; i++) {
     await new Promise((r) => setTimeout(r, 50));
   }
-  if (!window._stripePublishableKey) {
-    showError('Could not load checkout. Please refresh.');
+  if (!window._stripePublishableKey) { showError('Could not load checkout. Please refresh.'); return; }
+  if (typeof Stripe !== 'function') { showError('Could not load Stripe. Please refresh.'); return; }
+
+  // Create the Checkout Session (single-phase). 410 → hold expired → /cart.
+  let clientSecret;
+  try {
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: cart.map((i) => ({ product_id: i.product_id, slug: i.slug })),
+        session_id: sessionId,
+      }),
+    });
+    if (res.status === 410) {
+      document.querySelector('[data-hold-expired]')?.classList.remove('hidden');
+      setTimeout(() => { window.location.href = '/cart'; }, 2200);
+      return;
+    }
+    if (!res.ok) { showError('Something went awry. Please try again.'); return; }
+    const data = await res.json();
+    clientSecret = data.clientSecret;
+  } catch (err) {
+    showError('Could not reach the server. Please refresh.');
     return;
   }
-  if (typeof Stripe !== 'function') {
-    showError('Could not load Stripe. Please refresh.');
-    return;
-  }
+  if (!clientSecret) { showError('Checkout not ready. Please refresh.'); return; }
+
   const stripe = Stripe(window._stripePublishableKey);
 
-  wireStageA(stripe, cart, sessionId);
+  // ---- VERIFIED CONTRACT tokens (Phase 0). Lead with repo-proven calls. ----
+  const checkout = await stripe.initCheckout({
+    fetchClientSecret: async () => clientSecret,
+    elementsOptions: {
+      appearance: {
+        theme: 'stripe',
+        variables: {
+          colorPrimary: '#4A1942',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        },
+      },
+      // Renders the default-checked "Billing is same as shipping" checkbox on the billing element. (Phase 0 ✅)
+      syncAddressCheckbox: 'billing',
+    },
+    // NO defaultValues: Phase 0 confirmed initCheckout REJECTS it (IntegrationError:
+    // options.defaultValues is not an accepted parameter). Email prefill is dropped (optional);
+    // never inject the email via an update* call (that's the double-writer bug).
+  });
+
+  if (typeof window !== 'undefined') window.__checkout = checkout; // keep for probing/debug
+
+  // Mount Stripe's elements. They auto-sync to the session — NO update* calls anywhere.
+  checkout.createContactDetailsElement().mount('[data-stripe-contact]');
+  checkout
+    // Phase 0: `fields` is rejected on this element; phone is collected server-side (phone_number_collection).
+    .createShippingAddressElement({ display: { name: 'split' } })
+    .mount('[data-stripe-address-shipping]');
+  checkout.createBillingAddressElement().mount('[data-stripe-address-billing]');
+  checkout
+    .createPaymentElement({ fields: { billingDetails: 'never' } })
+    .mount('[data-stripe-payment]');
+
+  const confirmBtn = document.querySelector('[data-checkout-confirm]');
+
+  // Read-only listener: gate the Pay button, paint totals, and surface US-only / incomplete states.
+  // NEVER write back to the session here.
+  checkout.on('change', (session) => {
+    if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
+
+    // session.total.total.amount / session.shippingOption.total.amount are the standard Basil
+    // Custom-Checkout session shape. NOTE: this shape was NOT separately captured in the Phase 0
+    // probe — it is verified FUNCTIONALLY at Phase 8.1 (apply a promo, confirm this Total drops).
+    // The optional chaining is deliberate: if the shape ever differs, the pre-painted cart total
+    // stands in rather than printing $NaN — and Phase 8.1 catches a wrong accessor.
+    const total = session.total?.total?.amount;
+    if (Number.isFinite(total)) setText('[data-checkout-total]', formatPrice(total));
+
+    const ship = session.shippingOption?.total?.amount;
+    if (Number.isFinite(ship)) setText('[data-checkout-shipping]', ship === 0 ? 'Free' : formatPrice(ship));
+
+    // US-only messaging (server enforces allowed_countries; this is just UX).
+    const country = session.shippingAddress?.address?.country;
+    document.querySelector('[data-restricted-country]')?.classList.toggle('hidden', !(country && country !== 'US'));
+  });
+
+  wirePromo(checkout);
+
+  confirmBtn?.addEventListener('click', async () => {
+    if (confirmBtn.disabled) return;
+    confirmBtn.disabled = true;
+    const label = confirmBtn.textContent;
+    confirmBtn.textContent = 'Processing…';
+    hideError();
+    try {
+      const result = await checkout.confirm();
+      if (result && result.type === 'error') {
+        showError(result.error?.message || 'Payment could not be processed.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = label;
+      }
+      // On success Stripe redirects to return_url (/complete?session_id=…).
+    } catch (err) {
+      showError(`Payment could not be processed: ${err?.message || 'unknown error'}`);
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = label;
+    }
+  });
 });
 
 function renderOrderSummary(cart) {
@@ -48,320 +141,35 @@ function renderOrderSummary(cart) {
   if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
 }
 
-function prefillEmail() {
-  const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
-  if (emailInput && !emailInput.value) {
-    emailInput.value = sessionStorage.getItem('checkout_email') || '';
-  }
-}
-
-function prefillName() {
-  const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
-  if (nameInput && !nameInput.value) {
-    nameInput.value = sessionStorage.getItem('checkout_name') || '';
-  }
-}
-
-function prefillPhone() {
-  const phoneInput = document.querySelector('[data-checkout-info-form] input[name="phone"]');
-  if (phoneInput && !phoneInput.value) {
-    phoneInput.value = sessionStorage.getItem('checkout_phone') || '';
-  }
-}
-
-function wireStageA(stripe, cart, sessionId) {
-  const continueBtn = document.querySelector('[data-checkout-continue]');
-  if (!continueBtn || continueBtn.dataset.wired === '1') return;
-  continueBtn.dataset.wired = '1';
-
-  continueBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const emailInput = document.querySelector('[data-checkout-info-form] input[name="email"]');
-    const nameInput = document.querySelector('[data-checkout-info-form] input[name="name"]');
-    const phoneInput = document.querySelector('[data-checkout-info-form] input[name="phone"]');
-    const email = (emailInput?.value || '').trim();
-    const name = (nameInput?.value || '').trim();
-    const phone = (phoneInput?.value || '').trim();
-    if (!email || !email.includes('@')) {
-      showError('Please enter a valid email.');
-      emailInput?.focus();
-      return;
-    }
-    if (!name) {
-      showError('Please enter your full name.');
-      nameInput?.focus();
-      return;
-    }
-    sessionStorage.setItem('checkout_email', email);
-    sessionStorage.setItem('checkout_name', name);
-    if (phone) sessionStorage.setItem('checkout_phone', phone);
-    hideError();
-    continueBtn.disabled = true;
-    continueBtn.textContent = 'Loading payment…';
-
-    let data;
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map((i) => ({
-            product_id: i.product_id,
-            slug: i.slug,
-            stripe_price_id: i.stripe_price_id,
-          })),
-          session_id: sessionId,
-          email,
-          name,
-          phone: phone || undefined,
-        }),
-      });
-      if (res.status === 410) {
-        document.querySelector('[data-hold-expired]')?.classList.remove('hidden');
-        setTimeout(() => { window.location.href = '/cart.html'; }, 2200);
-        return;
-      }
-      if (!res.ok) {
-        showError('Something went awry. Please try again.');
-        continueBtn.disabled = false;
-        continueBtn.textContent = 'Continue to payment';
-        return;
-      }
-      data = await res.json();
-    } catch (err) {
-      showError('Unable to load checkout. Please refresh.');
-      continueBtn.disabled = false;
-      continueBtn.textContent = 'Continue to payment';
-      return;
-    }
-
-    if (!data?.clientSecret) {
-      showError('Checkout not ready. Please refresh.');
-      return;
-    }
-
-    await mountStageB(stripe, data);
-    revealStageB();
-    // Lock only filled inputs so the user can still add an empty optional field later
-    // (e.g., type a phone number in Stage A after seeing the order summary).
-    document.querySelectorAll('[data-checkout-stage="a"] input').forEach((el) => {
-      if (el.value && el.type !== 'checkbox') el.disabled = true;
-    });
-    const continueBtnEl = document.querySelector('[data-checkout-stage="a"] [data-checkout-continue]');
-    if (continueBtnEl) continueBtnEl.disabled = true;
-    document.querySelector('[data-checkout-stage="a"]')?.classList.add('collapsed');
-  });
-}
-
-async function mountStageB(stripe, data) {
-  const checkout = await stripe.initCheckout({
-    fetchClientSecret: async () => data.clientSecret,
-    elementsOptions: {
-      appearance: {
-        theme: 'stripe',
-        variables: {
-          colorPrimary: '#4A1942',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        },
-      },
-    },
-  });
-
-  // Stage A's AddressElement also mounts here so users can still edit shipping
-  // (Stripe Custom Checkout owns address collection; Track B's pre-mount placeholder is the slot).
-  const shippingMount = document.querySelector('[data-stripe-address-shipping]');
-  if (shippingMount) {
-    shippingMount.classList.remove('hidden');
-    shippingMount.innerHTML = '';
-    const shippingElement = checkout.createShippingAddressElement();
-    shippingElement.mount('[data-stripe-address-shipping]');
-    shippingElement.on('change', async (ev) => {
-      const country = ev.value?.address?.country;
-      const restricted = document.querySelector('[data-restricted-country]');
-      const incomplete = document.querySelector('[data-address-incomplete]');
-      restricted?.classList.add('hidden');
-      incomplete?.classList.add('hidden');
-      if (country && country !== 'US') {
-        restricted?.classList.remove('hidden');
-        return;
-      }
-      if (ev.complete === false) {
-        incomplete?.classList.remove('hidden');
-        return;
-      }
-      // Bridge: Stripe's createShippingAddressElement does NOT auto-sync form
-      // values to the session. We have to push ev.value into the session via
-      // checkout.updateShippingAddress when the user's input is complete.
-      // Without this bridge session.shippingAddress stays null forever and
-      // canConfirm never becomes true.
-      if (ev.complete && ev.value?.address) {
-        try {
-          await checkout.updateShippingAddress({
-            name: ev.value.name,
-            address: ev.value.address,
-            ...(ev.value.phone ? { phone: ev.value.phone } : {}),
-          });
-        } catch (err) {
-          console.error('[checkout] updateShippingAddress sync failed:', err);
-        }
-      }
-    });
-  }
-
-  // Billing is collected inside Stripe's PaymentElement (Custom Checkout
-  // default). We no longer mount a separate BillingAddressElement — having
-  // both created a duplicate "billing is same as shipping" UI and blocked
-  // canConfirm because Stripe couldn't reconcile two billing sources.
-
-  const paymentMount = document.querySelector('[data-stripe-payment]');
-  if (paymentMount) {
-    paymentMount.innerHTML = '';
-    const paymentElement = checkout.createPaymentElement();
-    paymentElement.mount('[data-stripe-payment]');
-    paymentElement.on('change', async (ev) => {
-      console.log('[checkout] paymentElement change FULL:', JSON.stringify(ev.value || {}, null, 2));
-      console.log('[checkout] paymentElement change:', {
-        complete: ev.complete,
-        valueType: ev.value?.type,
-      });
-      if (!ev.complete) return;
-
-      // When "billing same as shipping" is checked, ev.value.billingDetails
-      // may not carry the full address — Stripe just flags the choice. In
-      // that case, copy the session's shipping address into billing
-      // ourselves so canConfirm can resolve.
-      let billingPayload = null;
-      if (ev.value?.billingDetails?.address?.line1) {
-        billingPayload = {
-          name: ev.value.billingDetails.name,
-          address: ev.value.billingDetails.address,
-          ...(ev.value.billingDetails.phone ? { phone: ev.value.billingDetails.phone } : {}),
-        };
-      } else {
-        const session = checkout.session();
-        const ship = session?.shippingAddress;
-        if (ship?.address?.line1) {
-          billingPayload = {
-            name: ship.name,
-            address: ship.address,
-            ...(ship.phone ? { phone: ship.phone } : {}),
-          };
-        }
-      }
-
-      if (billingPayload) {
-        try {
-          await checkout.updateBillingAddress(billingPayload);
-          console.log('[checkout] billing pushed to session');
-        } catch (err) {
-          console.error('[checkout] updateBillingAddress sync failed:', err);
-        }
-      } else {
-        console.warn('[checkout] payment complete but no billing payload available (shipping not in session yet?)');
-      }
-    });
-  }
-
-  // NOTE: previously tried checkout.updateShippingAddress(...) here to
-  // pre-fill the customer's name into the Ship to form. It didn't show
-  // in the form (Stripe AddressElement doesn't reflect session updates
-  // visually) AND it appears to put the session into a "shipping touched
-  // but invalid" state that broke the form-to-session sync entirely —
-  // canConfirm stayed false because Stripe stopped accepting user-typed
-  // input as "complete". Removed; pre-fill remains an open issue
-  // documented in v1_4_5_C_SESSION_REPORT.md Round 4.
-
-  // Expose for live debugging in DevTools: window.__checkout.session()
-  if (typeof window !== 'undefined') window.__checkout = checkout;
-
-  const confirmBtn = document.querySelector('[data-checkout-confirm]');
-  checkout.on('change', (session) => {
-    // Log canConfirm + key field completeness so we can see what's missing
-    // when the Confirm button stays disabled. Trim to avoid PII spam.
-    console.log('[checkout] session change:', {
-      canConfirm: session.canConfirm,
-      status: session.status,
-      shippingAddressComplete: !!session.shippingAddress?.address?.line1,
-      billingAddressComplete: !!session.billingAddress?.address?.line1,
-      paymentMethodType: session.paymentMethodPreview?.type || null,
-      totalAmount: session.total?.total?.amount,
-      shippingOptionId: session.shippingOption?.id || null,
-    });
-    if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
-    const totalAmount = session.total?.total?.amount;
-    if (Number.isFinite(totalAmount)) {
-      const totalEl = document.querySelector('[data-checkout-total]');
-      if (totalEl) totalEl.textContent = formatPrice(totalAmount);
-    }
-    const shipAmount = session.shippingOption?.total?.amount;
-    if (Number.isFinite(shipAmount)) {
-      const shipEl = document.querySelector('[data-checkout-shipping]');
-      if (shipEl) shipEl.textContent = shipAmount === 0 ? 'Free' : formatPrice(shipAmount);
-    }
-  });
-
-  confirmBtn?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (confirmBtn.disabled) return;
-    confirmBtn.disabled = true;
-    const originalLabel = confirmBtn.textContent;
-    confirmBtn.textContent = 'Processing…';
-    hideError();
-    try {
-      // Stripe Custom Checkout (Basil): confirm() lives directly on the
-      // checkout object. The older loadActions() → actions.confirm() pattern
-      // was removed; the React <CheckoutProvider> wrapper has always called
-      // checkout.confirm() directly and the vanilla SDK now matches.
-      const confirmResult = await checkout.confirm();
-      console.log('[checkout] confirm result:', confirmResult);
-      if (confirmResult && confirmResult.type === 'error') {
-        console.error('[checkout] confirm error:', confirmResult.error);
-        showError(confirmResult.error?.message || 'Payment could not be processed.');
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = originalLabel;
-      }
-      // On success, Stripe redirects via the session's return_url (/complete.html?session_id=…).
-    } catch (err) {
-      console.error('[checkout] confirm threw exception:', err);
-      showError(`Payment could not be processed: ${err?.message || 'unknown error'}`);
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = originalLabel;
-    }
-  }, { once: false });
-
-  // Wire the optional promo-code apply button to Stripe's checkout.applyPromotionCode.
+function wirePromo(checkout) {
   const promoBtn = document.querySelector('[data-promo-apply]');
   const promoInput = document.getElementById('promo-code');
-  if (promoBtn && promoInput) {
-    promoBtn.addEventListener('click', async () => {
-      const code = promoInput.value.trim();
-      if (!code) return;
-      promoBtn.disabled = true;
-      const original = promoBtn.textContent;
-      promoBtn.textContent = 'Applying…';
-      try {
-        const apply = checkout.applyPromotionCode || checkout.applyDiscount;
-        if (typeof apply === 'function') {
-          const r = await apply.call(checkout, code);
-          if (r?.type === 'error') {
-            showError(r.error?.message || 'Could not apply this code.');
-          }
-        }
-      } catch (err) {
-        showError('Could not apply this code. Please try again.');
-      } finally {
-        promoBtn.disabled = false;
-        promoBtn.textContent = original;
+  if (!promoBtn || !promoInput) return;
+  promoBtn.addEventListener('click', async () => {
+    const code = promoInput.value.trim();
+    if (!code) return;
+    promoBtn.disabled = true;
+    const original = promoBtn.textContent;
+    promoBtn.textContent = 'Applying…';
+    try {
+      const apply = checkout.applyPromotionCode; // Phase 0: applyDiscount does not exist on the bundle.
+      if (typeof apply === 'function') {
+        const r = await apply.call(checkout, code);
+        if (r?.type === 'error') showError(r.error?.message || 'Could not apply this code.');
       }
-    });
-  }
+    } catch (err) {
+      showError('Could not apply this code. Please try again.');
+    } finally {
+      promoBtn.disabled = false;
+      promoBtn.textContent = original;
+    }
+  });
 }
 
-function revealStageB() {
-  document.querySelector('[data-checkout-stage="b"]')?.classList.remove('hidden');
-  document.querySelector('[data-checkout-stage="b"]')?.scrollIntoView({ behavior: 'smooth' });
+function setText(sel, val) {
+  const el = document.querySelector(sel);
+  if (el && val !== undefined && val !== null) el.textContent = val;
 }
-
 function showError(msg) {
   const err = document.querySelector('[data-checkout-error]');
   const msgEl = document.querySelector('[data-checkout-error-message]') || err;
@@ -369,11 +177,9 @@ function showError(msg) {
   msgEl.textContent = msg;
   err.classList.remove('hidden');
 }
-
 function hideError() {
   document.querySelector('[data-checkout-error]')?.classList.add('hidden');
 }
-
 function escapeHTML(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

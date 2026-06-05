@@ -48,3 +48,8 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 
 ### Phase 2 — `checkout.html` ✅ (clean)
 - Replaced the whole `<main>…</main>` (Stage A/B markup) with one section between the MAIN START/END fence. Four Stripe mount slots present: `data-stripe-contact`, `data-stripe-address-shipping`, `data-stripe-payment`, `data-stripe-address-billing`. Removed all `data-checkout-stage` / `#checkout-stage-a/b` / "Continue to payment" / collapse markup. `<head>` (Basil tag :88), header, footer, modals untouched. Only `disabled` attr left is the Pay button.
+
+### Phase 3 — `assets/js/checkout.js` ✅ (clean — the core fix)
+- Full-file replacement. Old file confirmed as the two-stage version carrying the double-writer calls (`updateShippingAddress` @199, `updateBillingAddress` @254) — the saga's root cause.
+- New file: single-phase; session created on load; mounts contact / shipping (`display:{name:'split'}`) / payment (`billingDetails:'never'`) / billing elements; `syncAddressCheckbox:'billing'`; one read-only `change` listener gates the Pay button + paints totals; `applyPromotionCode` only.
+- **Verified by grep:** ZERO `update*` calls; all four mount slots referenced; no `defaultValues`, no `initCheckoutElementsSdk`; clean `/cart` + `/complete` URLs.
