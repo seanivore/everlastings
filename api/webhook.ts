@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest } from './_lib/env';
 import { stripe } from './_lib/stripe';
+import { sendEmail, newOrderNotificationEmailHtml } from './_emails/index';
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,
@@ -171,6 +172,46 @@ export async function POST(request: Request) {
     const { error: orderInsertErr } = await supabase.from('orders').insert(orderRows);
     if (orderInsertErr) {
       console.error(`Orders insert failed for ${event.id}:`, orderInsertErr);
+    }
+
+    // Merchant new-order notification (non-blocking — never 5xx here or Stripe retries).
+    // Hoist the env read to a const so the `string` narrowing survives the awaits below
+    // (TS drops process.env.X narrowing across an await → would fail `to: string` with TS2345).
+    const notifyTo = process.env.ORDER_NOTIFY_EMAIL;
+    if (notifyTo) {
+      try {
+        // Title lookup keyed by PK only — mirrors the mark-sold write above (no is_test filter:
+        // id uniquely identifies the row, and a stray is_test skew would needlessly drop the title).
+        const { data: titleRows } = await supabase
+          .from('products')
+          .select('id, title')
+          .in('id', productIds);
+        const titleMap = new Map((titleRows || []).map((r) => [r.id, r.title as string | null]));
+        const notifyItems = items.map((it, idx) => ({
+          title: titleMap.get(it.id) || it.slug,
+          price: orderRows[idx]?.amount ?? 0,
+        }));
+        const a = shippingAddress as Record<string, string | null> | null;
+        const shippingAddressText = a
+          ? [
+              session.customer_details?.name ?? null,
+              a.line1, a.line2,
+              [a.city, a.state, a.postal_code].filter(Boolean).join(', '),
+              a.country,
+            ].filter(Boolean).join('\n')
+          : null;
+        const { subject, html } = newOrderNotificationEmailHtml({
+          sessionId: session.id,
+          buyerName: session.customer_details?.name ?? null,
+          buyerEmail: customerEmail,
+          items: notifyItems,
+          shippingAddressText,
+          total: totalAmount,
+        });
+        await sendEmail({ to: notifyTo, subject, html });
+      } catch (notifyErr) {
+        console.error(`New-order notification failed for ${event.id} (non-blocking):`, notifyErr);
+      }
     }
 
     const holdSessionId = session.metadata?.hold_session_id ?? session.metadata?.session_id ?? null;

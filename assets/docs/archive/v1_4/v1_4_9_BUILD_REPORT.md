@@ -63,3 +63,10 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 - **4.3** `product.js` buy-now `/cart.html` → `/cart`.
 - **Verified by grep:** no `prefillEmailName`/`unavailableSlugs`/`checkout_name`/`checkout_phone`/`.html` residue; `cart.html` has only email inputs.
 - **Minor deviation (beyond the packet's explicit edits):** also corrected the stale `cart.js:2` header comment ("prefills email/name" → "prefills email") — the packet's 4.2d only named line 3; line 2 was left mentioning the now-removed name field. Comment-only, no behavior change. Recorded per the no-mixed-truth rule.
+
+### Phase 5 — merchant new-order email ✅
+- **5.1** added `NewOrderNotificationArgs` + `newOrderNotificationEmailHtml` to `api/_emails/index.ts` in the 153→155 gap (uses module-private `shell()` / `escapeHtml()`).
+- **5.2a** imported `{ sendEmail, newOrderNotificationEmailHtml }` from `./_emails/index` in `webhook.ts` (same path `orders.ts` already uses).
+- **5.2b** inserted the non-blocking merchant-notification block right after the orders-insert (before the cart-holds clear), inside the outer `try`, with its own try/catch. `notifyTo` hoisted to a const (B2 narrowing-across-await). Title lookup keyed by PK only (C4 — no `is_test` filter). Reads only in-scope vars: `productIds`, `items` (typed `CartItemMeta[]`), `orderRows`, `totalAmount`, `customerEmail`, `shippingAddress`, `session`, `event.id`.
+- **5.4 part 1** added `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example` (with a one-line comment). Vercel scopes set in Step 8.
+- Typecheck deferred to Step 9 (after Phase 6 — the last `api/*.ts` edit).

@@ -152,6 +152,45 @@ ${itemsHtml ? `<p style="margin:0 0 8px 0;">What you were holding:</p>${itemsHtm
   };
 }
 
+export interface NewOrderNotificationArgs {
+  sessionId: string;
+  buyerName: string | null;
+  buyerEmail: string | null;
+  items: Array<{ title: string; price: number }>; // price in cents
+  shippingAddressText: string | null;
+  total: number; // cents
+}
+
+export function newOrderNotificationEmailHtml(args: NewOrderNotificationArgs): { subject: string; html: string } {
+  const name = escapeHtml(args.buyerName || 'Unknown');
+  const email = escapeHtml(args.buyerEmail || 'unknown');
+  const total = `$${(args.total / 100).toFixed(2)}`;
+  const itemsHtml = args.items.length
+    ? `<ul style="margin:0 0 16px 0;padding-left:20px;">${args.items
+        .map((i) => `<li style="margin:0 0 6px 0;">${escapeHtml(i.title)} — $${(i.price / 100).toFixed(2)}</li>`)
+        .join('')}</ul>`
+    : '<p style="margin:0 0 16px 0;">(no line items)</p>';
+  const addr = args.shippingAddressText
+    ? `<pre style="font-family:ui-monospace,Menlo,monospace;background:#f6f4ef;padding:12px;border-radius:4px;white-space:pre-wrap;">${escapeHtml(args.shippingAddressText)}</pre>`
+    : '<p style="margin:0 0 16px 0;">No shipping address on file.</p>';
+
+  const body = `
+<h1 style="margin:0 0 16px 0;font-size:24px;line-height:1.3;color:#2a2a2a;">New order — ${total}</h1>
+<p style="margin:0 0 8px 0;"><strong>${name}</strong> &lt;${email}&gt;</p>
+<p style="margin:16px 0 8px 0;">Items:</p>${itemsHtml}
+<p style="margin:16px 0 8px 0;">Ship to:</p>${addr}
+<p style="margin:24px 0 8px 0;font-weight:bold;">To fulfill this order:</p>
+<ol style="margin:0 0 16px 0;padding-left:20px;">
+  <li style="margin:0 0 6px 0;">Make a shipping label (Shippo or your preferred tool) for the address above.</li>
+  <li style="margin:0 0 6px 0;">Package the piece.</li>
+  <li style="margin:0 0 6px 0;">Tell the Sunkeeper GPT (or open the admin Orders tab) the tracking number + carrier — that emails the buyer automatically.</li>
+</ol>
+<p style="margin:24px 0 0 0;font-size:13px;color:#7a6f5f;">Order reference: ${escapeHtml(args.sessionId)}</p>
+`;
+
+  return { subject: `New order — ${total} — ${name}`, html: shell(body) };
+}
+
 export interface SendEmailOpts {
   to: string;
   subject: string;
