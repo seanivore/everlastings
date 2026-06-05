@@ -166,5 +166,32 @@ Sean toggled **Deployment Protection → Vercel Authentication → Require Log I
 ### 🔴 THIRD FINDING (8.6 prerequisite) — no admin Auth users exist (admin panel never provisioned)
 The Supabase **Auth** users table is empty (`/auth/v1/admin/users` → `user_count = 0`) — so the `/admin` panel has **never been logged into** (Sean confirmed first-time). Note: this is distinct from the Supabase **org/dashboard** team (admin@/emyh@/sean@ are org Owners) — those manage the Supabase account, not the app's login. **Pre-launch must-do (Sean-owned; agent must not create accounts or enter passwords):** create the admin login(s) via Supabase Studio → project → **Authentication → Users → Add user** (email + password, Auto-Confirm). Then `/admin` is usable. The mark-shipped → tracking-email flow can alternatively be verified via `PATCH /api/orders/:id` with the Bearer key (also covers 8.7) without the UI.
 
+### 8.6 — admin fulfillment loop VERIFIED ✅
+Sean created the first admin Auth user (Supabase Studio), logged into `/admin`, and marked the Placeholder Haven I order shipped. Backend confirms: `status: shipped`, `tracking_number: 7232097278923`, `carrier: USPS`, `shipped_at` + `tracking_email_sent_at` both stamped. The branded **buyer tracking email** ("Your haven is on its way", USPS, Track button) arrived at `admin@`. Admin date display + confirm dialog (Phase 6.2) exercised.
+
 ### Phase 8 status snapshot
-✅ 8.0 (/complete) · ✅ 8.1 (Pay enables, phone fix) · ✅ 8.4 (webhook→order/customer/sold) · ✅ 8.5 (merchant email) · ✅ 8.9 (cron config). Pending: 8.6 (admin mark-shipped + buyer tracking email — order ready), 8.2 (sold-recovery 409 — have sold products), 8.3 (hold-expiry 410), 8.7 (GPT Bearer curl — preview key sensitive; verify at launch w/ prod key), 8.8 (Stripe receipt — test-mode caveat above).
+**Core purchase→fulfillment loop fully verified end-to-end.** ✅ 8.0 (/complete) · ✅ 8.1 (Pay enables, phone fix) · ✅ 8.4 (webhook→order/customer/sold) · ✅ 8.5 (merchant email) · ✅ 8.6 (admin mark-shipped + buyer tracking email + DB update) · ✅ 8.9 (cron config).
+- **8.2 sold-recovery (409): VERIFIED LIVE ✅** — added a product to cart, marked it sold via Supabase, hit Checkout → 409 → the overlay rendered **"Placeholder Book Nook — has found its home"** (correct title, proving the Phase 4.2c objects-vs-strings fix — old code couldn't match `{product_id,slug}` objects to strip/title), the sold item was **stripped from the cart**, and the 10% gift + related-products section showed. Product restored to available after. *(Minor cosmetic, pre-existing/not v1.4.9: the "related" items show $0.00 — the reserve API's `related` payload omits price; v1.1 polish.)*
+- **8.3 hold-expiry (410):** trusted — confirmed in prior-round testing (Sean); the path is essentially unchanged (new `checkout.js` does a clean `status===410 → /cart` bounce; the session-id invariant holds).
+- **8.7 GPT Bearer curl:** endpoint proven via the admin-JWT PATCH; C1 Bearer path deployed. Verify at launch with the **production** `PRODUCT_API_KEY` (the GPT can't reach the SSO preview), or on preview with auth off + the Preview key. Tracked in `GPT_SETUP.md` Wave 2.
+- **8.8 Stripe receipt:** deferred to Sean — brand it (Settings → Business → Branding) + send-receipt test later. Live mode auto-sends.
+
+---
+
+## Close-out / handoff
+
+**Outcome:** The five-round checkout is **repaired and verified live**. The single root cause was **`phone_number_collection:{enabled:true}`** forcing an unsatisfiable phone requirement (no element collects a phone) — `canConfirm` could never go true. Removing it (checkout.js correctly stays bridge-free; the mounted elements are the confirm-time source of truth) makes Pay enable normally. Full purchase→order→merchant-email→admin-ship→buyer-tracking-email loop confirmed on the dev preview.
+
+**Deviations from the v1.4.9 packet (all justified by live Phase 8 findings, recorded above):**
+1. Removed `phone_number_collection` from `api/checkout.ts` (packet/Phase-0 said keep it).
+2. Added `friendlyPaymentError()` in `checkout.js` (buyers never see Stripe integration jargon — Sean's catch).
+3. `ORDER_NOTIFY_EMAIL` scoped to Preview **(dev)** to match the project's existing env convention (packet showed bare `preview`).
+4. Corrected the stale `cart.js:2` header comment (beyond the packet's explicit 4.2d).
+
+**Findings surfaced for launch (not v1.4.9 code bugs):**
+- Preview **Vercel Authentication** blocks the Stripe webhook + GPT (third-party callers can't pass SSO). Production (custom domain) is unprotected → both work at launch. **Sean turned it OFF for testing → RE-ENABLE it.** Launch check: keep Deployment Protection "Standard," not "All Deployments."
+- **No Supabase Auth users existed** → `/admin` had never been usable. Sean created the first admin login this session; add the rest (≈3 admins) pre-launch.
+
+**Commits:** `7e280dc`→`100bc5d` (Phases 1–7 + report) and `5cd7b0b` (phone fix + friendly error) on `dev`, plus report doc commits. tsc clean. Codebase on `dev`, preview green.
+
+**Remaining SEAN MUST DO (post-session):** re-enable Vercel Auth · Stripe receipt branding + send-receipt test · recreate the Custom GPT (Wave 1 now / Wave 2 verifies at launch) · fill the 8 content placeholders (the `grep -rn 'PLACEHOLDER:'` launch gate) · C5 cutover (live keys, coupon bootstrap, DNS, `dev→main` merge/tag). v1.1: re-confirm 8.2 409 strip; add phone collection if wanted; webhook `event_id: session.id` dedup + Meta Pixel (v1.5).
