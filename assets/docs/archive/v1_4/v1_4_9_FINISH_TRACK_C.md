@@ -57,14 +57,15 @@ These are the things the executing agent can't do for you, grouped by **when** t
 
 ### Before you hand the doc to the build agent
 - **`ORDER_NOTIFY_EMAIL` — handled by the agent, not you.** It's currently unset; the agent sets it in Vercel (Preview + Production) via CLI as part of **Phase 5.4**, the same way the other env vars were set up. Listed here only so you know it's covered.
-- [ ] **Stripe buyer receipt — TEST mode** (so the Phase 8 preview validation shows it): Stripe Dashboard → **Settings → Business → Customer emails → Payments** → turn ON "Successful payments" (the receipt the `/complete` page promises), then add logo + brand colors + business name/address under **Settings → Business → Branding**. *(We never set `receipt_email` in the API — confirmed — so this toggle is what governs the receipt; the "ignored when receipt_email is provided" note doesn't apply to us.)*
+- [x] **Stripe buyer receipt — toggle** (account-level; set once): Stripe Dashboard → **Settings → Business → Customer emails → Payments** → "Successful payments" ON. **Done** (set on the live side 2026-06-05). This is a single shared account setting — Stripe hides the editor in test mode on purpose, so you set it in live and it governs both modes' config. We never set `receipt_email` in the API (confirmed), so this toggle is what governs the receipt.
+- [ ] **Stripe receipt — branding** (the remaining piece, not a build blocker): **Settings → Business → Branding** → add logo, brand colors, business name/address so the receipt looks like Everlastings.
 
 ### Mid-build — the agent will flag you when each is ready
 - [ ] **Recreate the Custom GPT** — *after Phase 6 deploys* (the agent will say when). From `GPT_SETUP.md`: delete the old "Sunkeeper" GPT and paste fresh. Order actions only work once Phase 6's Bearer auth is live; products work anytime (GPT_SETUP Wave 1 / Wave 2).
 - [ ] **Fill the 8 content placeholders** in about / contact / terms / privacy with real copy — yours/Em's call (legal + brand voice; the agent can't invent these). The agent owns the **gate** (`grep -rn 'PLACEHOLDER:' .` must return zero before launch); you own the **content**.
 
 ### At launch / cutover (only after Checkpoint-C testing passes on the preview)
-- [ ] **Stripe buyer receipt — LIVE mode**: repeat the TEST-mode toggle in LIVE mode (**Settings → Business → Customer emails → Payments** → "Successful payments" ON) and, in that same section, confirm **"Refunds"** is ON (the buyer refund notice). Branding carries over from TEST.
+- [ ] **Stripe receipt — launch check**: the "Successful payments" toggle is account-level (already ON), so there's nothing to "switch to live" — just confirm it's still ON and turn **"Refunds"** ON too (same section: **Settings → Business → Customer emails → Payments**) so buyers get refund notices. Branding should be done by now.
 - [ ] **C5 cutover** — the go-live switch (full detail in `v1_4_5_C_SESSION_REPORT.md`). Four plain steps; none happen until checkout + fulfillment pass on the preview — **ping me and I'll walk you through each:**
     1. **Live Stripe keys** → set the live `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in the **Production** Vercel scope (test keys stay in Preview).
     2. **Coupon bootstrap** → create the **live-mode** Stripe promotion codes the newsletter-welcome + cart-recovery emails hand out (they exist only in test mode right now).
@@ -1251,7 +1252,7 @@ Preview: `https://everlastings-website-git-dev-everlastingsbyemaline.vercel.app`
 5. **Merchant email:** new-order notification arrives at `ORDER_NOTIFY_EMAIL` with the fulfillment walkthrough.
 6. **Admin + tracking:** `/admin` → Orders → new order shows (with date) → mark shipped (confirm prompt) + tracking → buyer tracking email fires; copy-address works.
 7. **GPT path:** curl `/api/orders` GET + PATCH with the Bearer key → records tracking + sends buyer email. **Run this against BOTH the preview key and the production `PRODUCT_API_KEY`** — the `env()` trim (Phase 6.1) handles trailing newlines, but a preview-only pass can mask a production-scope key issue, so verify the live key with a runtime curl before declaring Wave 2 ready.
-8. **Stripe receipt:** confirm the branded receipt is configured (SEAN MUST DO) — buyer gets it on a test purchase.
+8. **Stripe receipt:** the account-level "Successful payments" toggle is ON (SEAN MUST DO). **Test-mode caveat (per Stripe docs):** test payments do NOT auto-email a receipt to arbitrary addresses — only to an email on your Stripe account/team. To verify the receipt + branding here, enter — as the test buyer's email — an address that's a **user on the Stripe account/team** (the Stripe login email, or `admin@everlastingsbyemaline.com` *only if* it's been added under Settings → Business → Team); the receipt then sends to it. For any other test email, preview it via the Dashboard → open the test payment → **Send receipt**. Real buyers receive it automatically in live mode, so a missing receipt for a random test email is NOT a failure.
 9. **Keep-alive cron (static check):** `vercel.json` has the `crons` entry → `/api/product-feed` (Phase 7) and `rewrites` is intact. (Crons run on production only, so this can't fire on the preview — confirm the config entry exists; it activates at launch.)
 
 ---
