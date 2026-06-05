@@ -74,8 +74,9 @@ owner never thinks about "which title goes where."
 - `story_card` — the 2–8 paragraph narrative (`section.story-card`, `product.html:265`).
 - `description` — a 2–3 sentence summary (previews, search, social shares).
 - `features` *(jsonb array)*, `dimensions`, `weight`, `materials` *(text[])*, `power_supply`,
-  `care_instructions` *(text[])*, `shipping_details` *(text[])*, `artist_note`, `series`, `quantity`,
-  `available`, `featured`, `images` *(jsonb)*, `thumbnail` + `thumbnail_alt`.
+  `care_instructions` *(text[])*, `shipping_details` *(text[])*, `artist_note`, `series`,
+  `product_type` *(miniature / printable / storybook)*, `quantity`, `available`, `featured`,
+  `images` *(jsonb)*, `thumbnail` + `thumbnail_alt`.
 
 **Tier 3 — SEO (drafted + edited):**
 - `seo_title`, `seo_description` *(exist)*.
@@ -136,6 +137,30 @@ CMS behaviour; it's also the footage that sells the piece).
   so it's effectively Em's (and still works if she's logged into admin). Unguessable; rotates on
   publish. No expiry in v1 (rotation is the limiter).
 
+**The two flows, step by step.**
+
+*Create (new product):* (1) Owner: "add this piece…" + photos. (2) GPT drafts every field (all three
+tiers, 1.1) → `createProduct`. (3) Saved **unpublished**, **no Stripe object yet**; the response
+carries a `preview_url`. (4) GPT: "Here's your preview: <preview_url> — exactly how shoppers will see
+it. Tap **Publish** when it looks right." (5) Owner opens it (no login), reviews, taps **Publish** (or
+tells the GPT "publish"). (6) Publish creates the Stripe product + price, flips `is_published=true`,
+clears draft/token. Live + purchasable; the old preview link stops working.
+
+*Edit (change a live product) — the part that also needs the gate:* (1) Owner: "change the Lavender
+Wreath's description to …". (2) GPT finds it via `listProducts`, then `editProduct(id, {description})`.
+(3) Because the row is **published**, the change is **staged in `draft`** — **the live page is
+untouched** (shoppers still see the current version) and admin shows **"live · edits pending."** The
+response carries a fresh `preview_url`. (4) GPT hands her the preview the same way. (5) Owner reviews
+on the preview page, taps **Publish** (or says "publish") → the draft applies to the live columns and
+clears. The change is now live. (6) Each new edit **re-stages the draft and rotates the preview
+token**, so only the latest preview link works (an earlier one 404s) — the GPT always returns the
+current link.
+
+So **every change — new product or edit — passes the same review gate**: nothing reaches shoppers
+until the owner sees it on a real page and publishes. The only things she can't change on a published
+product are the checkout fields + price (1.3): to change price she makes a new product; to run a sale,
+a coupon (1.5).
+
 ## 1.5 Coupons / discounts via the GPT (include in v1.5.0)
 
 - **Vocabulary:** **Coupon** = the rule (`percent_off` **or** `amount_off`+currency, optional
@@ -150,6 +175,11 @@ CMS behaviour; it's also the footage that sells the piece).
   the real limiters are `max_redemptions` + `redeem_by`/`expires_at`. (Confirmed.)
 - **Redemption already works** (`checkout.js` → `applyPromotionCode`). We add only the **create**
   side, folded into `products.ts` (no new file).
+- **v1.5 scope = create** (decided). To **end a sale early** the owner sets `expires_at` /
+  `max_redemptions` at creation, or archives the code in the Stripe dashboard (the same "dashboard for
+  the rare case" pattern as refunds) — there is no GPT *deactivate* action in v1.5. For a
+  **product-scoped** coupon the GPT passes Stripe **product IDs**, which it reads from `listProducts`
+  (each published product carries its `stripe_product_id`).
 
 ## 1.6 Admin panel — unify, show status, light vibe
 
@@ -201,9 +231,10 @@ After v1.5 the GPT's Actions are:
 - **Orders:** `listOrders`; `markShipped` (emails the buyer; confirm first).
 - **Refunds:** guided only — Em does them in the Stripe dashboard (no Action in v1).
 
-*Open for the holistic review:* should the GPT also **list/deactivate coupons** and **edit
-`product_type`** in v1.5, or are those deferrable? (Flagged in Open items — not built unless the
-review says so.)
+*Decided:* `product_type` **is** editable (it isn't a frozen Stripe field — per 1.2; added to the
+draftable set + `editProduct`). Coupons are **create-only** in v1.5 (end a sale early via
+expiry / `max_redemptions` or the Stripe dashboard — 1.5). The one true open is **dynamic product
+media** (see Open items).
 
 ---
 
@@ -665,7 +696,7 @@ const DRAFTABLE = [
   'title', 'description', 'headline', 'story_card', 'features', 'images',
   'thumbnail', 'thumbnail_alt', 'seo_title', 'seo_description', 'seo_thumbnail',
   'available', 'featured', 'quantity', 'dimensions', 'weight', 'materials',
-  'power_supply', 'care_instructions', 'shipping_details', 'series', 'artist_note',
+  'power_supply', 'care_instructions', 'shipping_details', 'series', 'product_type', 'artist_note',
   'homepage_theme',
 ];
 const FROZEN_AFTER_PUBLISH = [
@@ -1405,6 +1436,7 @@ In `createProduct`'s `summary` (168–170) drop the `sync=true` language and the
                 care_instructions: { type: array, items: { type: string } }
                 shipping_details: { type: array, items: { type: string } }
                 series: { type: string }
+                product_type: { type: string, enum: [miniature, printable, storybook] }
                 artist_note: { type: string }
                 quantity: { type: integer }
                 available: { type: boolean }
@@ -1643,22 +1675,52 @@ NEW:
 > natural one-column flow when no `grid-template-columns` is set — confirm on the dev preview that
 > mobile still stacks (it should; a grid with no explicit columns is a single column).
 
-## 3.2 Product-page layout & media order (direction — confirm on the live render)
+## 3.2 Product-page layout — restore the intended two-column + sticky (per FEEDBACK)
 
-Per the feedback, the desired structure:
-- **Left column:** featured image + clickable thumbnails → **story_card** → MP4 video(s) → YouTube.
-- **Right column (sticky):** the buy card **and** the details/features section, so the BUY button +
-  details follow the scroll. (Today the `.product-details` features block sits full-width *below*
-  both columns — move it into the right `aside`, or into the sticky region.)
-- **Mobile:** one column — featured images first, then the card (not sticky), then story/media.
+This is the original two-column design that the 3.1 bug flattened, plus the element order from
+`v1_5_0_FEEDBACK.md`. Target:
 
-This is a real reflow of `product.html` (move `.product-details` into the right column; reorder the
-left column so `.story-card` precedes the media block) + the matching `product.js` populate targets.
-**Next step to make it executable:** read `product.js` `populateGallery`/`populateStory`/
-`populateFeatures` + the `.product-details`/`.product-gallery__media` markup, then write the
-string-anchored moves. Sub-decisions to confirm with Sean (don't invent): does the features/details
-block sit *inside* the sticky card or as a second sticky element; right-column width at the larger
-breakpoint given the added details.
+- **Left column:** featured image + clickable thumbnails → **story_card** → **MP4 video(s)** →
+  YouTube (if any). All media optional except the featured image.
+- **Right column (sticky):** the buy **card** *and* the **details/features** section, so the BUY
+  button + details follow the scroll.
+- **Mobile (one column):** featured images → **card** → story → media → details (card pulled up;
+  not sticky).
+
+**Structure.** Make the blocks **direct children** of `.product-layout` (unwrap the current
+`.product-story` div, and move `.product-details` in from below the grid), and drive both layouts with
+`grid-template-areas` — that's what cleanly gives the desktop two-column *and* the mobile interleave
+where the card sits between images and story:
+
+```css
+.product-layout { display: grid; gap: var(--space-2xl); margin-top: var(--space-md);
+  grid-template-columns: 1fr;
+  grid-template-areas: "gallery" "card" "story" "media" "details"; }   /* mobile order */
+.product-layout > .product-gallery        { grid-area: gallery; }
+.product-layout > .product-sticky-card    { grid-area: card; }
+.product-layout > .story-card             { grid-area: story; }
+.product-layout > .product-gallery__media { grid-area: media; }
+.product-layout > .product-details        { grid-area: details; }
+@media (min-width: 768px) {
+  .product-layout { grid-template-columns: 1fr 380px;
+    grid-template-areas: "gallery card" "story card" "media details"; }
+  .product-layout > .product-sticky-card { align-self: start; } /* lets the existing sticky rule work in the grid */
+}
+```
+
+(The existing `.product-sticky-card { position: sticky; top: … }` at ≥768px, `styles.css:885–890`,
+supplies the stickiness — keep it.)
+
+**HTML moves** (string-anchored in the build): (1) unwrap `.product-story` so `.product-gallery` and
+`.story-card` are **direct children** of `.product-layout`; (2) lift `.product-gallery__media` out of
+`.product-gallery` to its own direct child **after** `.story-card`, order its children **video →
+YouTube**, and **delete the GIF `<img>`**; (3) move the `.product-details` section from below the grid
+to a direct child of `.product-layout`; (4) move `grid-template-columns` out of the inline style per
+3.1. `product.js` targets data-attributes (`data-product-*`), so relocating the elements does **not**
+affect population.
+
+**Render check (not a blocker):** the sticky card keeps BUY in view down the page; details read well
+in the right column; the `.product-details` top margin/border may want trimming once it's in-column.
 
 ## 3.3 Story card, video, GIFs (CSS executable; media handling is direction)
 
@@ -1697,13 +1759,40 @@ After 3.1 the filters live in a real sidebar again. Sean wants them **compact** 
 Scale sizing down so cart / checkout / cards don't push content below the fold on desktop at smaller
 widths.
 
-## 3.6 Glow — "Firelight" ambient glow (direction — palette + context first)
+## 3.6 Glow — "Firelight" ambient glow (planned; executable — tune colours on render)
 
-A warm bloom seeping inward from the viewport edges (ref `assets/docs/archive/images/
-everlastings-website-red-glow.jpg`). A fixed full-viewport overlay (conic-gradient ring + edge
-radials), animated via CSS `@keyframes`; one `--glow-color` custom property is the control. Honor
-`prefers-reduced-motion`. v1.5: a curated palette seeded from `BRAND.md`, page-themed + randomized.
-Deferred: the owner's per-product accent picker (one `accent_color` column).
+Decided last session: a warm bloom seeping inward from all four viewport edges (ref
+`assets/docs/archive/images/everlastings-website-red-glow.jpg` — strongest on the right there; we
+intensify + even it out). Fog-like: subtle scale "breathing", opacity drift, slow **clockwise**
+travel. One CSS custom property `--glow-color` is the only colour control; `--glow-intensity` tunes
+strength. Honors `prefers-reduced-motion`.
+
+**Build.** One fixed, non-interactive overlay behind content (add once per page — in the template
+before `</body>`, or inject from `main.js`):
+
+```css
+:root { --glow-color: 74, 25, 66; --glow-intensity: 0.5; } /* RGB triplet; page JS overrides */
+.firelight-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(120% 80% at 50% 110%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(80% 120% at -10% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(80% 120% at 110% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%);
+  animation: glow-breathe 14s ease-in-out infinite; }
+.firelight-glow::before { content: ""; position: absolute; inset: -20%;
+  background: conic-gradient(from 0deg, transparent, rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)), transparent 60%);
+  animation: glow-rotate 40s linear infinite; }
+@keyframes glow-breathe { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes glow-rotate  { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .firelight-glow, .firelight-glow::before { animation: none; } }
+```
+
+Page content sits above it (the main wrapper gets `position: relative; z-index: 1` if needed).
+**Colour behaviour:** `main.js` sets `--glow-color` per context — page-themed, randomized across the
+gallery, and reflecting the featured / cart / checkout piece (seed the palette from `BRAND.md`). The
+exact RGB palette + intensity get **tuned against the live effect** (Sean's "palette-first") — that's
+the one render step; the mechanism above is the plan. Deferred: a per-product `accent_color` column
+feeding `--glow-color`.
 
 ## 3.7 Hero (Open — Sean's spec pending)
 
@@ -1777,13 +1866,15 @@ promotion-code edge case) — not for routine checks.
 
 # Open items
 
-- **Coupon management scope** — v1.5 ships coupon *create*. Should the GPT also **list / deactivate**
-  coupons? (Flag for the A review.)
-- **`product_type` editability** — not in `DRAFTABLE` (so `editProduct` can't change it). Add it, or
-  keep it create-only? (Flag for the A review.)
-- **Product-page reflow sub-decisions (3.2)** — details inside the sticky card vs. a second sticky
-  element; right-column width at the large breakpoint. (Sean's eye on the live render.)
-- **Story-card exact size token (3.3)** — confirm on the live render.
-- **Hero spec (3.7)** — Sean to write (CSS vs. Hyperframe).
-- **`getProduct` operation (9.1)** — add a by-slug fetch for the GPT, or rely on `listProducts` +
-  the existing GET? (Cheap to add; A review can call it.)
+- **Dynamic product media (the one real open — decide before/at the A review).** The GPT/admin can
+  *upload* video (`video-0x` roles → CDN URLs) but the product page renders the media block
+  **statically** (placeholder markup; the `media` jsonb column, `schema:60`, is unused). So a video Em
+  adds by chat won't appear on the page until the `media` column is wired to `product.js` **and** a
+  field lets the GPT/admin set it. Decide: **build in v1.5** (it's part of "managed entirely by chat")
+  or **carry forward**. If in-scope it adds: a `media` field to create/edit + the GPT schema, and a
+  `populateMedia()` in `product.js` rendering the ordered video/YouTube list into §3.2's `media` area.
+- **Hero spec (3.7)** — Sean to write (CSS vs. Hyperframe); ignore until then.
+- **`getProduct` operation (9.1)** — add a named by-slug fetch for the GPT, or rely on `listProducts`
+  + the existing GET? Cheap to add; the A review can call it.
+- **Render-tune (not blockers):** story-card exact size (3.3); glow palette + intensity (3.6);
+  product-page sticky behaviour + `.product-details` spacing after the reflow (3.2).
