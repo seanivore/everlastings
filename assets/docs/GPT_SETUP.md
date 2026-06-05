@@ -6,7 +6,14 @@
 
 This supersedes the archived setup record `archive/v1_4/v1_4_5_C_GPT_SETUP.md` and the retired `PRODUCT_PROTOCOL.md` (its content lives here + in `STORE_ADMINISTRATION.md`). Emy's *simple how-to* lives in `STORE_ADMINISTRATION.md`; this doc is the GPT's brain + the technical protocol.
 
-**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded), in **two waves** (Part 3): **Wave 1 (products)** anytime now, **Wave 2 (orders)** only after `v1_4_9_FINISH_TRACK_C.md` Phase 6 deploys. The order Actions (`listOrders`, `markShipped`) require the `PRODUCT_API_KEY` Bearer path on `/api/orders` that Phase 6 ships; product creation (`/api/upload`, `/api/products`) works independently and is verifiable today.
+**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded), in **two waves** (Part 3): **Wave 1 (products)** anytime now, **Wave 2 (orders)** after the `/api/orders` Bearer path is live on the target environment. That path **shipped in v1.4.9** (verified on the dev preview), so Wave 2 is unblocked — it just needs verifying against whichever environment the GPT points at (production, at launch). Product creation (`/api/upload`, `/api/products`) works independently and is verifiable today.
+
+**Which environment the GPT talks to (read this first).** The GPT only ever sees the environment its Action `servers:` URL + key point at — `isTest = VERCEL_ENV !== 'production'` (`api/_lib/env.ts`) scopes *every* product/order read and write, so test data lives only on a preview and live data only on production.
+- **To test the GPT on throwaway data:** point the Action at the **dev preview** + the **preview** `PRODUCT_API_KEY`, with Vercel SSO **off** (a third-party Actions runner can't pass SSO). Everything it creates/lists is `is_test=true` — create products, list orders, mark shipped, with no real money.
+- **To hand off:** switch the Action to **production** + the production key. From then on it sees only live data.
+- The **owner's day-to-day never touches this** — her safety net is the draft preview (v1.5). The test↔live switch is Sean's testing/demo tool.
+
+**Coming in v1.5.0:** the GPT gains **edit**, **draft → preview → publish**, and **coupon** actions (see `archive/v1_5/v1_5_0_IMPLEMENT.md`); this doc's Actions + Knowledge expand then.
 
 ---
 
@@ -292,7 +299,7 @@ paths:
 
 ## Part 3 — Setup, in two waves (Sean drives; Em at the keyboard)
 
-The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in **two waves** for two reasons learned the hard way: the order Actions depend on code that ships in `v1_4_9_FINISH_TRACK_C.md` **Phase 6**, and a third-party Actions runner **cannot authenticate through a Vercel SSO-protected preview** — so each wave is verified against an environment the GPT can actually call. Don't configure an Action you can't immediately verify.
+The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in **two waves** for two reasons learned the hard way: the order Actions depend on the `/api/orders` Bearer path that **shipped in v1.4.9 (Phase 6)**, and a third-party Actions runner **cannot authenticate through a Vercel SSO-protected preview** — so each wave is verified against an environment the GPT can actually call (point the Action at the dev preview to test, production to hand off — see the Status note's environment rule). Don't configure an Action you can't immediately verify.
 
 ### Wave 1 — Products (do anytime; `/api/upload` + `/api/products` already accept the Bearer key)
 
@@ -307,15 +314,15 @@ The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in
    - **Recommended (no live clutter):** Sean curls the **dev preview** first to prove the pipeline (test key from `.env.local`). A bogus-key call → `401` (proves the endpoint is deployed + gated); a real-key `createProduct?sync=true` tags the row `is_test=true`. The GPT wraps these exact calls — green curl = green GPT path.
    - **GPT end-to-end (at launch):** point the schema `servers:` + key at **production**, then have the GPT add "Setup Smoke Test, $1," drag in 7 throwaway photos → it uploads 7×, previews, then `createProduct` with `sync=true` → `prod_…` id. Open `https://everlastingsbyemaline.com/product/setup-smoke-test`, then archive it (Stripe → archive product; Supabase Studio → set `available=false` or delete).
 
-### Wave 2 — Orders (only AFTER `v1_4_9_FINISH_TRACK_C.md` Phase 6 deploys + its Phase 8.7 passes)
+### Wave 2 — Orders (the `/api/orders` Bearer path shipped in v1.4.9; verify it on the environment the GPT targets)
 
 The order Actions (`listOrders`, `markShipped`) need the `PRODUCT_API_KEY` Bearer path on `/api/orders`, which **Phase 6 ships**. Until it's deployed to the environment the GPT targets, these Actions return `401` — this is exactly the trap from the earlier attempt, so honor the gate:
 
 1. **Confirm Phase 8.7 passed** on the target environment (Sean curls `/api/orders` GET + PATCH with that environment's key → `200`).
 2. GPT → **Edit → Actions → Schema:** confirm the `/api/orders` + `/api/orders/{id}` paths are present (2B).
-3. **Wave 2 smoke test** (with Em watching): "What orders need shipping?" → it calls `listOrders` and reads them back plainly. Then mark a **test** order shipped → it confirms first, calls `markShipped`, the order flips to shipped and the buyer tracking email fires. (Use a test order, never a real customer's.)
+3. **Wave 2 smoke test** (with Em watching): "What orders need shipping?" → it calls `listOrders` and reads them back plainly. Then mark a **test** order shipped → it confirms first, calls `markShipped`, the order flips to shipped and the buyer tracking email fires. **A "test order" exists only on the dev preview** — point the GPT there to rehearse with `is_test` data and no real money. In **production** there are no test orders; for a launch sanity check, make one $1 throwaway purchase, ship it via the GPT, then refund + archive. Never mark a real customer's order as a rehearsal.
 
-**Hand-off:** the GPT is in Em's sidebar. Remind her: always ≥7 photos; it always previews before creating; it can't edit existing products (admin UI for edits); it confirms before marking shipped (that emails the buyer); if she ever sees "the connection key needs Sean's attention," text Sean.
+**Hand-off:** the GPT is in Em's sidebar. Remind her: always ≥7 photos; it always previews before creating; today it creates products and handles orders (**product editing + draft preview + coupons arrive in v1.5**; until then, edits are in the admin UI); it confirms before marking shipped (that emails the buyer); if she ever sees "the connection key needs Sean's attention," text Sean.
 
 **Maintenance:** if `PRODUCT_API_KEY` rotates, reopen the GPT → Actions → Authentication → paste the new value → Save — nothing else changes. If the API base URL changes, update the `servers:` URL in the schema (2B).
 

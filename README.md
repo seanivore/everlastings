@@ -2,6 +2,8 @@
 
 **Handcrafted havens for the stories that stay** — A custom e-commerce site for artisan miniature dioramas.
 
+**Status:** Checkout + fulfillment **built and verified on the preview** (v1.4.9); pre-launch. Next: **v1.5.0** AI store-management — the whole store managed through chat (create / edit / draft-preview / publish + coupons). See [Architecture](/assets/docs/EVERLASTINGS_STORE.md) and the [v1.5.0 plan](/assets/docs/archive/v1_5/v1_5_0_IMPLEMENT.md).
+
 ---
 
 ## What Makes This Special
@@ -92,6 +94,8 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 | [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                                    |
 | [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy, email templates                |
 | [Implementation Guide](/assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md)      | Phase 0 setup + Tracks A/B/C build                              |
+| [v1.4.9 Build Report](/assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md)    | What shipped in the checkout/fulfillment build + deviations     |
+| [v1.5.0 Plan](/assets/docs/archive/v1_5/v1_5_0_IMPLEMENT.md)               | Next: AI store-management (edit/draft/publish/coupons) + design |
 | [GA4 KPIs + Advertising](/assets/docs/archive/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                               |
 | [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Client how-to: products + orders across GPT, Admin, Studio      |
 | [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Sunkeeper Custom GPT brain + setup; agentic curl protocol       |
