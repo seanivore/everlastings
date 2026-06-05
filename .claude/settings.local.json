@@ -10,5 +10,8 @@
       "mcp__claude_ai_Vercel__list_deployments",
       "mcp__claude_ai_Supabase__execute_sql"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "resend"
+  ]
 }
