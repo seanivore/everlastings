@@ -1832,7 +1832,9 @@ Stripe-at-publish, the frozen checkout fields, the `is_published` RLS gate, the 
 skips drafts); note the `?_action=publish` / `?_action=coupon` / `?_action=coupon_deactivate` routes
 + the `vercel.json` rewrites; note the `media` jsonb is now rendered on the page (optional MP4 /
 YouTube via `populateMedia`); note the GPT gained edit / publish / coupon (create + list +
-deactivate) / media actions.
+deactivate) / media actions. Also correct now-changed current-state lines: "adding a product makes
+it live immediately" → it creates a **draft** (live at publish); and the `media` column shape →
+`{ type, url, alt, loop, autoplay, controls, poster }` (drop the GIF reference).
 
 ## Phase 11 — Verify + test
 
