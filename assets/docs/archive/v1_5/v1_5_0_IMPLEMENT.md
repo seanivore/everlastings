@@ -22,21 +22,21 @@ A boundary slipped into v1.4.x that Sean did not sign off on — the Custom GPT 
 
 Every product field belongs to one of three tiers. The GPT generates **all** of them (see 1.2), so the owner never has to think about "which title goes where."
 
-| Field | Tier | New / reuse | Editable after publish? | Surfaces |
-| --- | --- | --- | --- | --- |
-| `checkout_name` | **Stripe-locked** | new | No — frozen like price | Stripe → checkout summary, `/complete`, receipt |
-| `checkout_description` (one short line) | **Stripe-locked** | new | No — frozen | checkout / receipt |
-| `checkout_image` (single) | **Stripe-locked** | new | No — frozen | checkout / receipt visual |
-| `price` | **Stripe-locked** | exists | No — new product to change | everywhere |
-| `title` (Page Title) | Page / marketing | reuse | Yes (draft→publish) | shop, product page |
-| `description` (Page Summary, longer) | Page / marketing | reuse | Yes | product page |
-| `headline`, `story_card` | Page / marketing | reuse | Yes | product page |
-| `images` (hero + gallery) | Page / marketing | reuse | Yes | product page |
-| `thumbnail` + `thumbnail_alt` (Tile) | Page / marketing | reuse | Yes | shop tile, cart |
-| `seo_title` | SEO | exists | Yes | `<title>`, OG/Twitter |
-| `seo_description` | SEO | exists | Yes | meta description, OG |
-| `seo_thumbnail` (OG image, ~1.91:1 crop) | SEO | **new** | Yes | OG / Twitter card image |
-| `is_published`, `published_at`, `draft` (jsonb), `preview_token` | system | new | — | draft/publish machinery |
+| Field                                                            | Tier              | New / reuse | Editable after publish?    | Surfaces                                        |
+| ---------------------------------------------------------------- | ----------------- | ----------- | -------------------------- | ----------------------------------------------- |
+| `checkout_name`                                                  | **Stripe-locked** | new         | No — frozen like price     | Stripe → checkout summary, `/complete`, receipt |
+| `checkout_description` (one short line)                          | **Stripe-locked** | new         | No — frozen                | checkout / receipt                              |
+| `checkout_image` (single)                                        | **Stripe-locked** | new         | No — frozen                | checkout / receipt visual                       |
+| `price`                                                          | **Stripe-locked** | exists      | No — new product to change | everywhere                                      |
+| `title` (Page Title)                                             | Page / marketing  | reuse       | Yes (draft→publish)        | shop, product page                              |
+| `description` (Page Summary, longer)                             | Page / marketing  | reuse       | Yes                        | product page                                    |
+| `headline`, `story_card`                                         | Page / marketing  | reuse       | Yes                        | product page                                    |
+| `images` (hero + gallery)                                        | Page / marketing  | reuse       | Yes                        | product page                                    |
+| `thumbnail` + `thumbnail_alt` (Tile)                             | Page / marketing  | reuse       | Yes                        | shop tile, cart                                 |
+| `seo_title`                                                      | SEO               | exists      | Yes                        | `<title>`, OG/Twitter                           |
+| `seo_description`                                                | SEO               | exists      | Yes                        | meta description, OG                            |
+| `seo_thumbnail` (OG image, ~1.91:1 crop)                         | SEO               | **new**     | Yes                        | OG / Twitter card image                         |
+| `is_published`, `published_at`, `draft` (jsonb), `preview_token` | system            | new         | —                          | draft/publish machinery                         |
 
 **Why the split works.** The site (shop, product page, cart) reads the **database**; the Stripe Elements checkout summary, `/complete`, and the receipt read the **Stripe catalog** (`checkout.ts:94` builds line items from `stripe_price_id`; `:346` shows `li.description`). By making the three checkout fields **frozen and Stripe-bound** — set once, pushed to Stripe at publish, never edited — editing marketing/SEO copy **never has to touch Stripe**, so the catalog can never go stale. Price already follows this rule (a price change creates a new Stripe Price; `products.ts` PUT does this today). The short, ~one-line `checkout_description` earns its own field precisely because only a sentence shows at checkout/receipt — and the GPT can phrase that line however the owner needs, or give its best estimate in a pinch.
 
