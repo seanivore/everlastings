@@ -70,3 +70,9 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 - **5.2b** inserted the non-blocking merchant-notification block right after the orders-insert (before the cart-holds clear), inside the outer `try`, with its own try/catch. `notifyTo` hoisted to a const (B2 narrowing-across-await). Title lookup keyed by PK only (C4 — no `is_test` filter). Reads only in-scope vars: `productIds`, `items` (typed `CartItemMeta[]`), `orderRows`, `totalAmount`, `customerEmail`, `shippingAddress`, `session`, `event.id`.
 - **5.4 part 1** added `ORDER_NOTIFY_EMAIL=orders@everlastingsbyemaline.com` to `.env.example` (with a one-line comment). Vercel scopes set in Step 8.
 - Typecheck deferred to Step 9 (after Phase 6 — the last `api/*.ts` edit).
+
+### Phase 6 — admin + GPT auth ✅
+- **6.1** full-file replace `api/_lib/adminAuth.ts`: widened `RequireAdminResult` union (adds `{ supabase; viaApiKey: true }`); added the `PRODUCT_API_KEY` path comparing the **trimmed** `env('PRODUCT_API_KEY')` — the C1 fix, mirroring `products.ts:22` / `upload.ts:29` (a raw `process.env` read would 401 the GPT scope-locally on trailing newlines). `orders.ts` unchanged — it destructures only `supabase`, which both non-error variants carry.
+- **6.2a** `admin.js` Order line appends `· <created_at locale date>` when present.
+- **6.2b** `admin.js` mark-shipped now `window.confirm(...)` before submit (irreversible + emails the buyer); uses in-scope `productTitle` / `customerEmail`.
+- **6.3** NO edit — verified `GPT_SETUP.md` already carries the `listOrders`/`markShipped` OpenAPI schema (224–265), the Wave 2 gate, and the trimmed-key note (427). GPT recreation is Sean's (after Phase 6 deploys).

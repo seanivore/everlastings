@@ -605,7 +605,7 @@ function buildOrderCard(order) {
       <img src="${escapeHtml(productThumb)}" alt="${escapeHtml(productTitle)}" />
     </div>
     <div class="order-info">
-      <p><span class="label">Order</span> ${escapeHtml(orderIdShort)} · ${escapeHtml(productTitle)} · ${totalLabel}</p>
+      <p><span class="label">Order</span> ${escapeHtml(orderIdShort)} · ${escapeHtml(productTitle)} · ${totalLabel}${order.created_at ? ` · ${escapeHtml(new Date(order.created_at).toLocaleDateString())}` : ''}</p>
       <p><span class="label">Customer</span> ${escapeHtml(customerName)} &lt;${escapeHtml(customerEmail)}&gt; ${escapeHtml(phone)}</p>
       ${addrText ? `<p><span class="label">Ship to</span></p><pre class="address-block">${escapeHtml(addrText)}</pre><button type="button" class="copy-address">Copy address</button>` : '<p><em>No shipping address on file.</em></p>'}
       ${formHtml}
@@ -629,6 +629,10 @@ function buildOrderCard(order) {
       e.preventDefault();
       const trackingNumber = card.querySelector('.ship-tracking').value.trim();
       const carrier = card.querySelector('.ship-carrier').value;
+      const confirmed = window.confirm(
+        `Mark "${productTitle}" as shipped and email ${customerEmail || 'the buyer'} their ${carrier} tracking number? This can't be undone.`,
+      );
+      if (!confirmed) return;
       submitShip(order.id, trackingNumber, carrier, card);
     });
   }
