@@ -79,3 +79,17 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 
 ### Phase 7 — `vercel.json` keep-alive cron ✅
 - Added top-level `crons: [{ path: "/api/product-feed", schedule: "0 9 * * *" }]`. `rewrites` byte-for-byte unchanged (7 entries). JSON validated. Deployable-function count still **11/12** (cron reuses an existing function — no new file). Crons run production-only → activates at launch; pre-launch the team's own activity keeps Supabase warm.
+
+---
+
+## Steps 8–10 — Verification & deploy
+
+### Step 9 — Typecheck ✅
+`npx tsc --noEmit -p tsconfig.json` → **clean** (CommonJS output, the deploy-runtime guardrail). Covers the `api/*.ts` edits (Phases 1/1b/5/6): the webhook `notifyTo` const-hoist (B2) and the widened `adminAuth` union both compile.
+
+### Step 8 — `ORDER_NOTIFY_EMAIL` set in Vercel ✅
+Set via `printf` (no trailing newline) to **Production** and **Preview (dev)**; `vercel env ls` confirms two rows. (Project linked: `everlastings-website`. `RESEND_FROM_EMAIL` confirmed already present in all scopes.)
+- **Deviation from the packet's literal command:** the packet showed `vercel env add … preview` (all-preview); I scoped it `preview dev` to match this project's existing convention (`RESEND_FROM_EMAIL` is "Preview (dev)") and to guarantee the `dev`-branch preview we test reads it. Functionally equivalent for the test; tidier against the project's env layout.
+
+### Step 10 — Push to `dev` → preview rebuild
+Per-phase commits `7e280dc` → `100bc5d`. Pushed once after tsc clean + env var set, so the rebuild picks up `ORDER_NOTIFY_EMAIL`.
