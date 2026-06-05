@@ -57,14 +57,14 @@ These are the things the executing agent can't do for you, grouped by **when** t
 
 ### Before you hand the doc to the build agent
 - **`ORDER_NOTIFY_EMAIL` — handled by the agent, not you.** It's currently unset; the agent sets it in Vercel (Preview + Production) via CLI as part of **Phase 5.4**, the same way the other env vars were set up. Listed here only so you know it's covered.
-- [ ] **Stripe buyer receipt — TEST mode** (so the Phase 8 preview validation shows it): Stripe Dashboard → Settings → Emails → turn ON "Successful payments" (the receipt the `/complete` page promises), and Settings → Branding → add logo, brand colors, business name/address.
+- [ ] **Stripe buyer receipt — TEST mode** (so the Phase 8 preview validation shows it): Stripe Dashboard → **Settings → Business → Customer emails → Payments** → turn ON "Successful payments" (the receipt the `/complete` page promises), then add logo + brand colors + business name/address under **Settings → Business → Branding**. *(We never set `receipt_email` in the API — confirmed — so this toggle is what governs the receipt; the "ignored when receipt_email is provided" note doesn't apply to us.)*
 
 ### Mid-build — the agent will flag you when each is ready
 - [ ] **Recreate the Custom GPT** — *after Phase 6 deploys* (the agent will say when). From `GPT_SETUP.md`: delete the old "Sunkeeper" GPT and paste fresh. Order actions only work once Phase 6's Bearer auth is live; products work anytime (GPT_SETUP Wave 1 / Wave 2).
 - [ ] **Fill the 8 content placeholders** in about / contact / terms / privacy with real copy — yours/Em's call (legal + brand voice; the agent can't invent these). The agent owns the **gate** (`grep -rn 'PLACEHOLDER:' .` must return zero before launch); you own the **content**.
 
 ### At launch / cutover (only after Checkpoint-C testing passes on the preview)
-- [ ] **Stripe buyer receipt — LIVE mode**: repeat the TEST-mode toggles in LIVE mode (Settings → Emails → "Successful payments" ON) and confirm the "Refunds" email is ON (the buyer refund notice). Branding carries over from TEST.
+- [ ] **Stripe buyer receipt — LIVE mode**: repeat the TEST-mode toggle in LIVE mode (**Settings → Business → Customer emails → Payments** → "Successful payments" ON) and, in that same section, confirm **"Refunds"** is ON (the buyer refund notice). Branding carries over from TEST.
 - [ ] **C5 cutover** — the go-live switch (full detail in `v1_4_5_C_SESSION_REPORT.md`). Four plain steps; none happen until checkout + fulfillment pass on the preview — **ping me and I'll walk you through each:**
     1. **Live Stripe keys** → set the live `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` in the **Production** Vercel scope (test keys stay in Preview).
     2. **Coupon bootstrap** → create the **live-mode** Stripe promotion codes the newsletter-welcome + cart-recovery emails hand out (they exist only in test mode right now).

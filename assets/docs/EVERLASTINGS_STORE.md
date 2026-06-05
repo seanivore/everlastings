@@ -261,7 +261,7 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - `POST /api/products` + `POST /api/upload`
       - Enable any AI assistant to create products programmatically
   19. **Order confirmation via Stripe Dashboard emails + one merchant notification**
-      - Buyer's receipt = Stripe's native branded email (enable in Dashboard → Settings → Emails; brand under Settings → Branding). No custom buyer-confirmation email in v1.
+      - Buyer's receipt = Stripe's native branded email (enable in Dashboard → Settings → Business → Customer emails → Payments → "Successful payments"; brand under Settings → Business → Branding). We never set the `receipt_email` API param, so this toggle governs the receipt. No custom buyer-confirmation email in v1.
       - The one custom transactional email is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking. (Planned in `v1_4_9_FINISH_TRACK_C.md` Phase 5 — not yet shipped.)
   20. **Custom `PRODUCT_API_KEY` for external API auth**
       - Random 64-char string, stored as env var
@@ -890,7 +890,7 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
 | 1   | Supabase        | Project pause after 7 days idle                                                  |
 | 2   | Resend          | Free tier = 3,000 emails/mo                                                      |
 | 3   | Shippo          | Starter = 30 USPS labels/mo                                                      |
-| 4   | Stripe          | Dashboard > Settings > Emails: "Successful payments" + "Refunds" both toggled ON |
+| 4   | Stripe          | Dashboard > Settings > Business > Customer emails > Payments: "Successful payments" + "Refunds" both ON |
 | 5   | Cloudflare R2   | 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo                           |
 | 6   | Vercel          | 100 GB bandwidth/mo, 1k serverless function invocations/day                      |
 | 7   | SquareSpace     | Domain auto-renewal paid through Google Workspace                                |
