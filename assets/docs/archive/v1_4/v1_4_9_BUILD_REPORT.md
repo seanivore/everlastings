@@ -194,4 +194,34 @@ Sean created the first admin Auth user (Supabase Studio), logged into `/admin`, 
 
 **Commits:** `7e280dc`→`100bc5d` (Phases 1–7 + report) and `5cd7b0b` (phone fix + friendly error) on `dev`, plus report doc commits. tsc clean. Codebase on `dev`, preview green.
 
-**Remaining SEAN MUST DO (post-session):** re-enable Vercel Auth · Stripe receipt branding + send-receipt test · recreate the Custom GPT (Wave 1 now / Wave 2 verifies at launch) · fill the 8 content placeholders (the `grep -rn 'PLACEHOLDER:'` launch gate) · C5 cutover (live keys, coupon bootstrap, DNS, `dev→main` merge/tag). v1.1: re-confirm 8.2 409 strip; add phone collection if wanted; webhook `event_id: session.id` dedup + Meta Pixel (v1.5).
+**Remaining SEAN MUST DO (post-session):** re-enable Vercel Auth · Stripe receipt branding + send-receipt test · recreate the Custom GPT (Wave 1 now / Wave 2 verifies at launch) · fill the 8 content placeholders (the `grep -rn 'PLACEHOLDER:'` launch gate) · C5 cutover (live keys, coupon bootstrap, DNS, `dev→main` merge/tag). v1.1: add phone collection if wanted; 409-overlay related-products price; webhook `event_id: session.id` dedup + Meta Pixel (v1.5).
+
+---
+
+## Session report — expected / planned / actual
+
+| Phase / item | Planned (per packet) | Actual |
+| --- | --- | --- |
+| Pre-flight | every quoted CURRENT block matches the repo | ✅ all 13 target files byte-for-byte; no drift |
+| 1 + 1b — `api/checkout.ts` | drop pre-created customer; omit `customer_creation`; expand `handleSessionStatus` for `/complete` | ✅ as written; `tsc` clean |
+| 2 — `checkout.html` | collapse Stage A/B → one page, 4 Stripe mount slots | ✅ |
+| 3 — `assets/js/checkout.js` | full rewrite, single-phase, **zero `update*`** | ✅ (proven the *correct* call — see Fix) |
+| 4 — cart / `product.js` | email-only cart, 409 objects-vs-strings fix, clean URLs | ✅; 409 fix **verified live** |
+| 5 — merchant email | `newOrderNotificationEmailHtml` + webhook wire + env | ✅; **verified live** |
+| 6 — `adminAuth.ts` / `admin.js` | C1 trimmed-key Bearer path + date/confirm polish | ✅ |
+| 7 — `vercel.json` | keep-alive cron, 11/12 functions | ✅ |
+| **Fix (unplanned, Phase 8)** | — | ⚠️ removed `phone_number_collection` (the real Pay blocker) + added `friendlyPaymentError()` |
+| 8 — verification | full preview E2E | ✅ core loop: 8.0 / 8.1 / 8.4 / 8.5 / 8.6 / 8.2 / 8.9; 8.7 + 8.8 → launch |
+
+## Sean's launch to-do (leftover)
+
+**⚠️ Right now:** **Re-enable Vercel Authentication** on the preview (Settings → Deployment Protection → "Require Log In" back ON) — the preview is publicly accessible until you do.
+
+**For launch (all documented, no rush):**
+- **Stripe receipt** — brand it (Settings → Business → Branding) + "Send receipt" to eyeball it. *(Test mode auto-sends only to Stripe-account/team emails; live sends to every buyer.)*
+- **Custom GPT** — recreate it; the orders Actions verify at launch with the **production** `PRODUCT_API_KEY` (it can't pass preview SSO, same as the webhook). Follow `GPT_SETUP.md` Wave 1/Wave 2.
+- **Admin logins** — add the other ~2 admins in Supabase Auth (project → Authentication → Users → Add user).
+- **Content placeholders** — fill the 8 in about / contact / terms / privacy; `grep -rn 'PLACEHOLDER:' .` must return zero before launch.
+- **C5 cutover** — live Stripe keys (Production scope), live-mode coupon bootstrap, DNS flip to production, `dev → main` merge + tag.
+
+**v1.1 / v1.5:** phone collection if wanted (real Contact field + `updatePhoneNumber` — safe, no mounted phone element) · 409-overlay related-products price · webhook `event_id: session.id` dedup + Meta Pixel (v1.5).
