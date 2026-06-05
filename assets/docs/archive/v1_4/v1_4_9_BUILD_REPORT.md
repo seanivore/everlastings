@@ -142,3 +142,13 @@ On a fresh `/checkout` with the address + card filled via the form (no bridges),
 - **8.6 admin Orders panel**: the just-created order shows (with date) → mark shipped (Phase 6.2 confirm dialog) → buyer tracking email fires → copy-address works. *(Phase 6 code shipped; this is the live review Sean asked about.)*
 - **8.4 webhook→order row + `available=false`** and **8.5 merchant email** — verify via `vercel logs` + Supabase REST `curl` (MCP is 403 on this project).
 - **8.2 sold-recovery 409**, **8.3 hold-expiry 410**, **8.7 GPT Bearer curl**, **8.8 Stripe receipt**. (8.9 cron static check = done at Phase 7.)
+
+### 🔴 SECOND FINDING (8.4/8.5/8.7) — preview Vercel SSO blocks the Stripe webhook
+After the successful test payment, `orders`, `customers`, and `webhook_events` were **all empty** (Supabase REST) and Placeholder Book Nook stayed `available:true`. Root cause: a direct `POST` to `https://…git-dev…/api/webhook` returns **`401 Authentication Required` (Vercel Deployment Protection / SSO HTML wall)** — Stripe's webhook delivery is blocked before it reaches the function, so the idempotency claim + order insert never run. The Stripe test endpoint itself is correctly configured (verified via `stripe webhook_endpoints list`: `…git-dev…/api/webhook`, `checkout.session.completed`, enabled).
+
+**This is the same SSO limitation the packet flagged for the GPT** (a third-party caller can't auth through Vercel SSO). It applies to the **Stripe webhook too** (the packet implied the webhook "works" on preview — it can't, while the preview is SSO-protected). **Production is not SSO-protected, so the webhook + GPT both work at launch** — but the order/fulfillment loop (8.4 order creation, 8.5 merchant email, the rows the admin panel 8.6 shows, 8.7 GPT curl) **cannot be verified on the protected preview** as-is.
+
+**Options to verify now (Sean-owned — it's a security setting, agent must not toggle it):**
+1. Temporarily set Vercel **Deployment Protection → off (or Production-only)** for this project → Stripe + GPT reach the preview → run the full loop once → re-enable. (Simplest; one clean pass verifies 8.1 visual + 8.4 + 8.5 + 8.6 + 8.7.)
+2. **Protection Bypass for Automation**: generate the bypass secret, append `?x-vercel-protection-bypass=…` to the Stripe webhook URL (Stripe allows query params) + add the header to the GPT Action. Keeps human SSO on; more setup.
+3. **Defer to launch** — accept the checkout UI as verified; verify the order loop in production at cutover (where there's no SSO). Matches how the packet already treats the GPT.
