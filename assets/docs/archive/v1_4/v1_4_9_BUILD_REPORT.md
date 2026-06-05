@@ -92,4 +92,53 @@ Set via `printf` (no trailing newline) to **Production** and **Preview (dev)**; 
 - **Deviation from the packet's literal command:** the packet showed `vercel env add … preview` (all-preview); I scoped it `preview dev` to match this project's existing convention (`RESEND_FROM_EMAIL` is "Preview (dev)") and to guarantee the `dev`-branch preview we test reads it. Functionally equivalent for the test; tidier against the project's env layout.
 
 ### Step 10 — Push to `dev` → preview rebuild
-Per-phase commits `7e280dc` → `100bc5d`. Pushed once after tsc clean + env var set, so the rebuild picks up `ORDER_NOTIFY_EMAIL`.
+Per-phase commits `7e280dc` → `100bc5d`. Pushed once after tsc clean + env var set, so the rebuild picks up `ORDER_NOTIFY_EMAIL`. Preview built **Ready** (`vercel ls`).
+
+---
+
+## Step 11 — Phase 8 verification (dev preview)
+
+### What PASSED (structural — validated live in Sean's authed Chrome)
+- **8.0** `/checkout` reachable via clean URL; cart→reserve(hold)→`/checkout` redirect works (no 410).
+- **Checkout mounts cleanly:** all four Stripe elements render (Contact email, Ship-to with **First/Last split** via `display:{name:'split'}`, Payment with the method tabs, **Bill-to with the default-checked "Billing is same as shipping"** via `syncAddressCheckbox:'billing'`). **Zero console errors/exceptions.** No `IntegrationError` at mount — the saga's mount-time failure does NOT reproduce.
+- Order summary **Total renders $185 (no `$NaN`)**; Pay button correctly **disabled** until the session is confirmable; contact **email syncs** to the session.
+- Phase 4 cart: single email field renders; reserve + clean redirect work.
+
+### 🔴 CRITICAL FINDING (8.1) — checkout still cannot confirm; root cause identified
+A full purchase could **not** be completed. `canConfirm` never becomes true through normal UI use, so **Confirm & Pay stays disabled**. Diagnosed live via `window.__checkout.session()` + a `change` logger + console experiments:
+
+**The decisive `confirm()` error** (after forcing the session full via console bridges):
+> "You called confirm() while the **Address Element is mounted**, but you previously also called **updateBillingAddress()**. If you intend to use the value from the Address Element, you should not call updateBillingAddress()…"
+
+**Evidence chain:**
+- With the address typed/selected into the mounted elements, `session.shippingAddress` / `billingAddress` read null **and** `canConfirm` stayed false.
+- Forcing `updateShippingAddress()` + `updateBillingAddress()` from the console → both returned `"success"` (no error) and set the session, **but `canConfirm` was still false** (change log: `cc:false` with ship+bill set).
+- Adding `updatePhoneNumber()` → **`canConfirm` flipped true** (change log: `cc:true`). So the phone was the final missing requirement.
+- Clicking **Confirm & Pay** then failed with the integration error above — because the mounted Address/Billing elements + my `updateBillingAddress()` are **two writers for one field**.
+
+**Root cause (refined — narrower than "elements don't sync"):**
+1. The mounted Address/Billing/Payment elements **are** the confirm-time source of truth (the error proves the Address Element holds the value). So v1.4.9's "no `update*` on address/billing" design is **correct** — calling those bridges *breaks* `confirm()`.
+2. The real blocker is **`phone_number_collection: { enabled: true }`** (kept in Phase 1.3 / `api/checkout.ts`): it makes a phone **required**, but **no mounted element collects a phone** (the Contact element renders email only; Phase 0 found the Shipping element rejects `fields:{phone}`). So `canConfirm` is **unsatisfiable from the UI** → Pay never enables.
+
+**Why Phase 0 missed it:** the probe only confirmed the elements *mount*; it explicitly deferred the typed-input→confirm round-trip to Phase 8. The phone-collection gap only surfaces at confirm/`canConfirm` time.
+
+**Candidate fixes (Sean to decide — see handoff):**
+- **A (simplest):** remove `phone_number_collection: { enabled: true }` from `api/checkout.ts` `handleSession`. No phone collected; mounted elements satisfy `canConfirm`; `checkout.js` stays bridge-free. Loses the (nice-to-have) phone.
+- **B (keep phone, safe):** keep `phone_number_collection`; add a plain HTML phone `<input>` to `checkout.html` and call `checkout.updatePhoneNumber(value)` from `checkout.js` on input. This bridge is **safe** because there is **no mounted phone element to conflict** (unlike address/billing). Preserves phone for carrier questions (AR #30 intent).
+- Both keep the address/billing/payment as mounted elements with **no `update*`** (required, per the confirm error).
+
+**Residual unknown to verify before coding:** that the mounted address elements satisfy `canConfirm` *on their own* once phone is resolved (the confirm error strongly implies yes). Confirm via a clean browser test: fresh `/checkout`, fill address via the element + card via magic-fill, set **only** phone via `updatePhoneNumber` (no address bridge), then `confirm()` should succeed and redirect to `/complete`.
+
+### PROOF the fix is correct (live, before changing code)
+On a fresh `/checkout` with the address + card filled via the form (no bridges), setting **only** the phone via `updatePhoneNumber()` flipped **`canConfirm: false → true`**, the Pay button enabled (the `checkout.js` change-listener works), and **the test payment went through** → redirected to `/complete`, which rendered correctly: customer name, email, **Total $185.00**, line item, order id (**Phase 1b validated live**). So the mounted address/billing/payment elements satisfy `canConfirm` on their own; the phone requirement was the sole blocker, and `confirm()` succeeds when no `update*` is called on the mounted address elements.
+
+### FIX APPLIED (deviation from the packet — justified by the Phase 8 finding)
+- **`api/checkout.ts`**: removed `phone_number_collection: { enabled: true }` from `handleSession`'s `sessions.create`. (The packet/Phase-0 contract said keep it; Phase 8 proved it makes the Pay button permanently un-enableable because no element collects a phone. A card needs none.) `checkout.js` stays **bridge-free** (correct per the confirm() error). tsc clean.
+- **`assets/js/checkout.js`**: added `friendlyPaymentError()` — buyers now get Stripe's user-safe text for `card_error`/`validation_error` and a friendly generic for integration/network errors, instead of raw Stripe jargon (Sean's catch from the live error box).
+- **Phone deferred:** if Emy wants a phone later, the right approach is a real field in the Contact section + `checkout.updatePhoneNumber()` (safe — no mounted phone element to conflict). v1.1.
+
+### Re-verification pending (on the rebuilt preview, post-fix)
+- **8.1 real-buyer checkout** (no console): Pay enables on its own → confirm → `/complete`.
+- **8.6 admin Orders panel**: the just-created order shows (with date) → mark shipped (Phase 6.2 confirm dialog) → buyer tracking email fires → copy-address works. *(Phase 6 code shipped; this is the live review Sean asked about.)*
+- **8.4 webhook→order row + `available=false`** and **8.5 merchant email** — verify via `vercel logs` + Supabase REST `curl` (MCP is 403 on this project).
+- **8.2 sold-recovery 409**, **8.3 hold-expiry 410**, **8.7 GPT Bearer curl**, **8.8 Stripe receipt**. (8.9 cron static check = done at Phase 7.)

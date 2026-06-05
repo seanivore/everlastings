@@ -118,8 +118,11 @@ async function handleSession(request: Request): Promise<Response> {
           },
         },
       ],
-      // Phone: the shipping element rejects `fields` (Phase 0), so collect phone server-side.
-      phone_number_collection: { enabled: true },
+      // Phone: NOT collected in v1. phone_number_collection:{enabled:true} was REMOVED — it made a
+      // phone REQUIRED for canConfirm, but no mounted element renders a phone field (Contact = email
+      // only; the Shipping element rejects `fields`), so Pay could never enable (verified live, Phase 8).
+      // A card payment needs no phone. To add it later: a real field in the Contact section +
+      // checkout.updatePhoneNumber() (safe — there is no mounted phone element to conflict).
       // customer_creation: OMITTED (Phase 0). Not verified to populate session.customer under
       // ui_mode:'custom' without a pre-made customer, and forcing it risked the 500 that burned
       // past rounds. Safe to omit: the webhook null-guards stripe_customer_id and derives

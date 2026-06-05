@@ -114,13 +114,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const result = await checkout.confirm();
       if (result && result.type === 'error') {
-        showError(result.error?.message || 'Payment could not be processed.');
+        showError(friendlyPaymentError(result.error));
         confirmBtn.disabled = false;
         confirmBtn.textContent = label;
       }
       // On success Stripe redirects to return_url (/complete?session_id=…).
     } catch (err) {
-      showError(`Payment could not be processed: ${err?.message || 'unknown error'}`);
+      showError(friendlyPaymentError(err));
       confirmBtn.disabled = false;
       confirmBtn.textContent = label;
     }
@@ -169,6 +169,13 @@ function wirePromo(checkout) {
 function setText(sel, val) {
   const el = document.querySelector(sel);
   if (el && val !== undefined && val !== null) el.textContent = val;
+}
+// Buyers should never see Stripe integration jargon. Card declines + validation errors carry
+// user-safe messages from Stripe; anything else (integration/api/network) gets a friendly generic.
+function friendlyPaymentError(err) {
+  const type = err && err.type;
+  if ((type === 'card_error' || type === 'validation_error') && err && err.message) return err.message;
+  return 'We couldn’t process your payment. Please double-check your card details and try again — if it keeps happening, contact us and we’ll help.';
 }
 function showError(msg) {
   const err = document.querySelector('[data-checkout-error]');
