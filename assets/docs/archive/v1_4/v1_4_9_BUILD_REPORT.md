@@ -76,3 +76,6 @@ Per the packet's anti-fragility rule (every CURRENT block is the locator; STOP a
 - **6.2a** `admin.js` Order line appends `· <created_at locale date>` when present.
 - **6.2b** `admin.js` mark-shipped now `window.confirm(...)` before submit (irreversible + emails the buyer); uses in-scope `productTitle` / `customerEmail`.
 - **6.3** NO edit — verified `GPT_SETUP.md` already carries the `listOrders`/`markShipped` OpenAPI schema (224–265), the Wave 2 gate, and the trimmed-key note (427). GPT recreation is Sean's (after Phase 6 deploys).
+
+### Phase 7 — `vercel.json` keep-alive cron ✅
+- Added top-level `crons: [{ path: "/api/product-feed", schedule: "0 9 * * *" }]`. `rewrites` byte-for-byte unchanged (7 entries). JSON validated. Deployable-function count still **11/12** (cron reuses an existing function — no new file). Crons run production-only → activates at launch; pre-launch the team's own activity keeps Supabase warm.
