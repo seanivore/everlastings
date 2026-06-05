@@ -2,11 +2,11 @@
 `everlastingsbyemaline.com`
 
 **Created**: 2026-03-16
-**Updated**: 2026-06-05 — v1.4.8: folded gap-review **A** (cold/no-repo self-containment) into a new build packet `v1_4_8_FINISH_TRACK_C.md` — every edit is string-anchored on a quoted CURRENT block (line numbers demoted to hints), the cross-file contracts are *shown* not asserted (`complete.js` fields, the pre-existing `available=false` write, the `orders.ts` auth consumer, the shared `cart.js`/`checkout.js` session id), the `vercel.json` example is valid JSON, and ambient helpers are quoted in an appendix; review prompts bumped to `v1_4_8_REVIEW_PROMPTS.md` (run B + C next). v1.4.7 kept in the same folder for history. v1.4.7: the build packet `v1_4_7_FINISH_TRACK_C.md` (renamed from v1.4.6 as it was refined to *truly* exclusively-executable) adds a Supabase keep-alive cron (Phase 7) and a two-wave GPT setup; curated GPT Knowledge files added at `assets/docs/gpt/` (`voice-guide.md` + `product-reference.md`). v1.4.6: Track C frontend wiring shipped (C1–C4); checkout repair + order/fulfillment loop planned exclusively-executable; operating docs reorganized (`PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` + `STORE_ADMINISTRATION.md`). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
-**Version**: v1.4.8
-**Status**: Tracks A/B complete and Track C wired on `dev`. Checkout + fulfillment finalization planned in `v1_4_8_FINISH_TRACK_C.md` (Phase 0 live-probe **complete**; multi-angle gap-review in progress before build). Preview-only; not yet launched.
+**Updated**: 2026-06-05 — v1.4.9: folded the two repo-aware gap reviews (`v1_4_8_GAP_REVIEW_B.md` fidelity + `v1_4_8_GAP_REVIEW_C.md` integration; both verdict **READY**) into a new build packet `v1_4_9_FINISH_TRACK_C.md` — **build-ready**. The one real bug fixed: the GPT Bearer-auth path now compares the **trimmed** `env('PRODUCT_API_KEY')` (Vercel vars carry trailing newlines; raw `process.env` would 401 the GPT scope-locally), matching `products.ts`/`upload.ts`; plus a TS-narrowing `const` hoist on the merchant email, a dropped redundant `is_test` filter, Phase 2 string-anchored on the MAIN START/END fence, the last `.html` nav cleaned (`product.js`), and a Meta-Pixel double-count guard. v1.4.8 kept for history. v1.4.8: folded gap-review **A** (cold/no-repo self-containment) into a new build packet `v1_4_8_FINISH_TRACK_C.md` — every edit is string-anchored on a quoted CURRENT block (line numbers demoted to hints), the cross-file contracts are *shown* not asserted (`complete.js` fields, the pre-existing `available=false` write, the `orders.ts` auth consumer, the shared `cart.js`/`checkout.js` session id), the `vercel.json` example is valid JSON, and ambient helpers are quoted in an appendix; review prompts bumped to `v1_4_8_REVIEW_PROMPTS.md` (run B + C next). v1.4.7 kept in the same folder for history. v1.4.7: the build packet `v1_4_7_FINISH_TRACK_C.md` (renamed from v1.4.6 as it was refined to *truly* exclusively-executable) adds a Supabase keep-alive cron (Phase 7) and a two-wave GPT setup; curated GPT Knowledge files added at `assets/docs/gpt/` (`voice-guide.md` + `product-reference.md`). v1.4.6: Track C frontend wiring shipped (C1–C4); checkout repair + order/fulfillment loop planned exclusively-executable; operating docs reorganized (`PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` + `STORE_ADMINISTRATION.md`). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
+**Version**: v1.4.9
+**Status**: Tracks A/B complete and Track C wired on `dev`. Checkout + fulfillment finalization planned in `v1_4_9_FINISH_TRACK_C.md` (Phase 0 live-probe **complete**; multi-angle gap-review **complete** — B + C both READY; **build-ready**). Preview-only; not yet launched.
 **Build Guide** (current, exclusively-executable):
-  - `assets/docs/archive/v1_4/v1_4_8_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification (prior `v1_4_7_FINISH_TRACK_C.md` retained in the same folder for history)
+  - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` retained in the same folder for history)
 **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
@@ -262,7 +262,7 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - Enable any AI assistant to create products programmatically
   19. **Order confirmation via Stripe Dashboard emails + one merchant notification**
       - Buyer's receipt = Stripe's native branded email (enable in Dashboard → Settings → Emails; brand under Settings → Branding). No custom buyer-confirmation email in v1.
-      - The one custom transactional email is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking. (Planned in `v1_4_8_FINISH_TRACK_C.md` Phase 5 — not yet shipped.)
+      - The one custom transactional email is the **merchant new-order notification** to `ORDER_NOTIFY_EMAIL` (`orders@…`), fired from `api/webhook.ts` after the order rows insert via `newOrderNotificationEmailHtml` in `api/_emails/index.ts`. Non-blocking. (Planned in `v1_4_9_FINISH_TRACK_C.md` Phase 5 — not yet shipped.)
   20. **Custom `PRODUCT_API_KEY` for external API auth**
       - Random 64-char string, stored as env var
       - API endpoints validate this key, then use `SUPABASE_SECRET_KEY` internally
@@ -737,11 +737,11 @@ stripe listen --forward-to localhost:3000/api/webhook
     - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
 
   3. **No Stripe Customer created before checkout**
-    - Shoppers are anonymous — no Stripe Customer is created before checkout. The Phase 0 probe (2026-06-04) resolved the open question: the session **omits `customer_creation`** (it wasn't verified to populate `session.customer` under `ui_mode:'custom'`, and forcing it risked a 500). The webhook null-guards `stripe_customer_id` and keys customers by email. See `v1_4_8_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
+    - Shoppers are anonymous — no Stripe Customer is created before checkout. The Phase 0 probe (2026-06-04) resolved the open question: the session **omits `customer_creation`** (it wasn't verified to populate `session.customer` under `ui_mode:'custom'`, and forcing it risked a 500). The webhook null-guards `stripe_customer_id` and keys customers by email. See `v1_4_9_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
 
   4. **`api/` file count is not 1:1 with public URLs**
     - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.
-    - **Supabase keep-alive (v1.4.8):** a daily Vercel cron in `vercel.json` (`/api/product-feed`) runs a real DB read so the free-tier project never pauses (~7-day inactivity limit). It deliberately **reuses an existing function** — a dedicated `/api/keepalive` would push past the 11-function Hobby cap. Crons run on production only (activates at launch). Reactive recovery (dashboard Restore / Management API) is a Sean-only step. See `v1_4_8_FINISH_TRACK_C.md` Phase 7.
+    - **Supabase keep-alive (v1.4.8):** a daily Vercel cron in `vercel.json` (`/api/product-feed`) runs a real DB read so the free-tier project never pauses (~7-day inactivity limit). It deliberately **reuses an existing function** — a dedicated `/api/keepalive` would push past the 11-function Hobby cap. Crons run on production only (activates at launch). Reactive recovery (dashboard Restore / Management API) is a Sean-only step. See `v1_4_9_FINISH_TRACK_C.md` Phase 7.
 
   5. **Endpoint consolidation is intentional, not lazy**
     - The 11-deployable-function shape is a design constraint (Vercel Hobby cap of 12). Splitting `checkout.ts`, `orders.ts`, or `cart.ts` back into one-file-per-action would break the deploy. Add new endpoints into the existing namespaces, or check the cap before introducing a new top-level file. See AR #34.
@@ -983,6 +983,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | homepage_theme    | jsonb       | Nullable — {colors, mood} for dynamic homepage |
 | created_at        | timestamptz | Auto                                           |
 | updated_at        | timestamptz | Auto                                           |
+| is_test           | boolean     | NOT NULL DEFAULT false — dev/preview isolation |
 
 ### `customers` table
 
@@ -997,6 +998,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | source             | text        | checkout, newsletter, cart-recovery |
 | created_at         | timestamptz | Auto                                |
 | updated_at         | timestamptz | Auto                                |
+| is_test            | boolean     | NOT NULL DEFAULT false — dev/preview |
 
 ### `orders` table
 
@@ -1016,6 +1018,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | shipped_at            | timestamptz | When Emy marked shipped — triggers Resend email |
 | delivered_at          | timestamptz | Post-launch via Shippo webhook                  |
 | created_at            | timestamptz | Auto                                            |
+| is_test               | boolean     | NOT NULL DEFAULT false — dev/preview isolation  |
 
 Partial index `idx_orders_needs_shipping` on `(created_at DESC)` WHERE `shipped_at IS NULL AND status = 'completed'` for fast admin queue lookups.
 
@@ -1029,6 +1032,7 @@ Partial index `idx_orders_needs_shipping` on `(created_at DESC)` WHERE `shipped_
 | promo_code            | text        | Dynamic Stripe promotion code (newsletter welcome or contemplation CTA)                                       |
 | promo_code_expires_at | timestamptz | When the promo code expires (30 days after generation)                                                        |
 | created_at            | timestamptz | Auto                                                                                                          |
+| is_test               | boolean     | NOT NULL DEFAULT false — dev/preview isolation                                                                |
 
 ### `site_config` table
 
@@ -1057,6 +1061,7 @@ Used for webhook idempotency. Prevents duplicate processing when Stripe retries 
 | product_slug | text        | Product they're interested in           |
 | notified     | boolean     | Default false — set true after notified |
 | created_at   | timestamptz | Auto                                    |
+| is_test      | boolean     | NOT NULL DEFAULT false — dev/preview    |
 
 Unique constraint on (email, product_slug). Tracks who wants to be notified about specific products.
 
@@ -1069,8 +1074,11 @@ Unique constraint on (email, product_slug). Tracks who wants to be notified abou
 | product_id | uuid        | FK to products (ON DELETE CASCADE)   |
 | expires_at | timestamptz | 15 minutes after creation; soft hold |
 | created_at | timestamptz | Auto                                 |
+| is_test    | boolean     | NOT NULL DEFAULT false — dev/preview |
 
 Index on `(product_id, expires_at)` for efficient availability lookups. A product is "available for purchase by session X" if `products.available = true AND NOT EXISTS (cart_hold WHERE product_id = X AND session_id != X AND expires_at > now())`. This prevents the "sold while entering payment" UX shock — availability is checked and held when the user clicks {CHECKOUT} on `/cart.html`, before any PII is entered.
+
+**`is_test` isolation (all six core tables).** `products`, `customers`, `orders`, `subscribers`, `product_interests`, and `cart_holds` each carry `is_test boolean NOT NULL DEFAULT false` (migration `20260421000001`) — the backbone of dev/preview vs. production data separation (see **Environment Strategy** + AR #37). Partial indexes `idx_products_live` / `idx_subscribers_live` (`WHERE is_test = false`) keep production reads fast on the mixed-data tables. `site_config` and `webhook_events` are the two tables **without** `is_test` (global config + idempotency ledger; environment-agnostic).
 
 ---
 
@@ -1090,7 +1098,7 @@ Compared to v1.3.1:
   - **Brand Guide**: `assets/docs/BRAND.md`
   - **Store Administration (client how-to)**: `assets/docs/STORE_ADMINISTRATION.md`
   - **AI pipeline + Custom GPT**: `assets/docs/GPT_SETUP.md`
-  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_8_FINISH_TRACK_C.md` (prior `v1_4_7_FINISH_TRACK_C.md` kept for history)
+  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` kept for history)
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`

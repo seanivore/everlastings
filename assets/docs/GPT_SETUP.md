@@ -6,7 +6,7 @@
 
 This supersedes the archived setup record `archive/v1_4/v1_4_5_C_GPT_SETUP.md` and the retired `PRODUCT_PROTOCOL.md` (its content lives here + in `STORE_ADMINISTRATION.md`). Emy's *simple how-to* lives in `STORE_ADMINISTRATION.md`; this doc is the GPT's brain + the technical protocol.
 
-**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded), in **two waves** (Part 3): **Wave 1 (products)** anytime now, **Wave 2 (orders)** only after `v1_4_8_FINISH_TRACK_C.md` Phase 6 deploys. The order Actions (`listOrders`, `markShipped`) require the `PRODUCT_API_KEY` Bearer path on `/api/orders` that Phase 6 ships; product creation (`/api/upload`, `/api/products`) works independently and is verifiable today.
+**Status note (2026-06):** the GPT is set up **from scratch** with this doc (any earlier "Sunkeeper" attempt is discarded), in **two waves** (Part 3): **Wave 1 (products)** anytime now, **Wave 2 (orders)** only after `v1_4_9_FINISH_TRACK_C.md` Phase 6 deploys. The order Actions (`listOrders`, `markShipped`) require the `PRODUCT_API_KEY` Bearer path on `/api/orders` that Phase 6 ships; product creation (`/api/upload`, `/api/products`) works independently and is verifiable today.
 
 ---
 
@@ -278,7 +278,7 @@ paths:
 ### 2C. Authentication
 
 - **Type:** API Key · **Auth Type:** Bearer · **API Key:** the **production** `PRODUCT_API_KEY` (Vercel → Project → Settings → Environment Variables → `PRODUCT_API_KEY`, **Production** scope). Never the preview value.
-- One key authorizes all four actions (`/api/products`, `/api/upload`, and — after `v1_4_8` Phase 6 — `/api/orders`).
+- One key authorizes all four actions (`/api/products`, `/api/upload`, and — after `v1_4_9` Phase 6 — `/api/orders`).
 
 ### 2D. Settings
 
@@ -292,7 +292,7 @@ paths:
 
 ## Part 3 — Setup, in two waves (Sean drives; Em at the keyboard)
 
-The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in **two waves** for two reasons learned the hard way: the order Actions depend on code that ships in `v1_4_8_FINISH_TRACK_C.md` **Phase 6**, and a third-party Actions runner **cannot authenticate through a Vercel SSO-protected preview** — so each wave is verified against an environment the GPT can actually call. Don't configure an Action you can't immediately verify.
+The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in **two waves** for two reasons learned the hard way: the order Actions depend on code that ships in `v1_4_9_FINISH_TRACK_C.md` **Phase 6**, and a third-party Actions runner **cannot authenticate through a Vercel SSO-protected preview** — so each wave is verified against an environment the GPT can actually call. Don't configure an Action you can't immediately verify.
 
 ### Wave 1 — Products (do anytime; `/api/upload` + `/api/products` already accept the Bearer key)
 
@@ -307,7 +307,7 @@ The GPT lives in **Em's** ChatGPT (she has Plus; she's the owner). It's built in
    - **Recommended (no live clutter):** Sean curls the **dev preview** first to prove the pipeline (test key from `.env.local`). A bogus-key call → `401` (proves the endpoint is deployed + gated); a real-key `createProduct?sync=true` tags the row `is_test=true`. The GPT wraps these exact calls — green curl = green GPT path.
    - **GPT end-to-end (at launch):** point the schema `servers:` + key at **production**, then have the GPT add "Setup Smoke Test, $1," drag in 7 throwaway photos → it uploads 7×, previews, then `createProduct` with `sync=true` → `prod_…` id. Open `https://everlastingsbyemaline.com/product/setup-smoke-test`, then archive it (Stripe → archive product; Supabase Studio → set `available=false` or delete).
 
-### Wave 2 — Orders (only AFTER `v1_4_8_FINISH_TRACK_C.md` Phase 6 deploys + its Phase 8.7 passes)
+### Wave 2 — Orders (only AFTER `v1_4_9_FINISH_TRACK_C.md` Phase 6 deploys + its Phase 8.7 passes)
 
 The order Actions (`listOrders`, `markShipped`) need the `PRODUCT_API_KEY` Bearer path on `/api/orders`, which **Phase 6 ships**. Until it's deployed to the environment the GPT targets, these Actions return `401` — this is exactly the trap from the earlier attempt, so honor the gate:
 
@@ -424,7 +424,7 @@ curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" -H "Authorization: Bearer $
 | List orders    | GET    | `/api/orders` (`?status=`, `?q=`)  |
 | Mark shipped   | PATCH  | `/api/orders/{id}`                 |
 
-> **Auth modes.** `/api/products` and `/api/upload` accept `Authorization: Bearer` as either `PRODUCT_API_KEY` (AI/curl/Custom GPT) **or** a Supabase JWT (admin UI signed-in user). As of v1.4.8, **`/api/orders` and `/api/orders/{id}` also accept `PRODUCT_API_KEY`** (the Bearer path added in `v1_4_8_FINISH_TRACK_C.md` Phase 6) in addition to the admin JWT — that's what lets the Custom GPT fulfill orders. `PRODUCT_API_KEY` is per-environment (test in `.env.local`, live in Production); never ship it to the browser.
+> **Auth modes.** `/api/products` and `/api/upload` accept `Authorization: Bearer` as either `PRODUCT_API_KEY` (AI/curl/Custom GPT) **or** a Supabase JWT (admin UI signed-in user). As of v1.4.9, **`/api/orders` and `/api/orders/{id}` also accept `PRODUCT_API_KEY`** (the Bearer path added in `v1_4_9_FINISH_TRACK_C.md` Phase 6, comparing the trimmed `env('PRODUCT_API_KEY')`) in addition to the admin JWT — that's what lets the Custom GPT fulfill orders. `PRODUCT_API_KEY` is per-environment (test in `.env.local`, live in Production); never ship it to the browser.
 
 > **`npx vercel curl` quirk:** against a protection-enabled preview, the underlying `curl` exits code `3` ("No host part in the URL") even on success; the JSON body still delivers. In `set -e` scripts use `set -uo pipefail` or `|| true`.
 
