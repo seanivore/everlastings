@@ -1222,6 +1222,18 @@ async function handlePublish(request: Request): Promise<Response> {
   }
   if (!row) return jsonResponse(request, { error: 'Product not found' }, 404);
 
+  // Breadth-pass guard: a product archived AFTER a preview link was shared still carries its
+  // preview_token (archive doesn't clear it), so a stale link could publish an archived row →
+  // split state (is_published=true + Stripe active, but archived_at set so RLS hides it). Refuse;
+  // unarchive first. (Covers both the token path and the admin/GPT id path.)
+  if (row.archived_at) {
+    return jsonResponse(
+      request,
+      { error: 'This product is archived — resurface it (unarchive) before publishing.' },
+      409,
+    );
+  }
+
   // Edit-publish: published row with staged draft → apply draft → live columns.
   if (row.is_published) {
     const draft =
@@ -1457,27 +1469,24 @@ async function handleArchive(request: Request, archive: boolean): Promise<Respon
 }
 
 // ?_action=discard (POST) — scrap a published row's STAGED draft without publishing (Q2). The inverse
-// of publish. Dual auth like handlePublish: a valid preview_token (possessing the link), else admin/GPT
-// auth + id. Only meaningful on a published row with pending edits; an unpublished row IS its own draft
-// (edit it, or archive it).
+// of publish. AUTH-ONLY (admin JWT / GPT key) — unlike publish, there is no discard control on the
+// preview page, so it deliberately does NOT accept a preview_token (breadth pass: a token path here
+// would let anyone holding a shared preview link wipe Em's staged edits, with no UX that needs it).
+// Only meaningful on a published row with pending edits; an unpublished row IS its own draft (edit it,
+// or archive it).
 async function handleDiscard(request: Request): Promise<Response> {
-  let body: { id?: string; token?: string };
+  if (!(await authorize(request))) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401);
+  }
+  let body: { id?: string };
   try {
-    body = (await request.json()) as { id?: string; token?: string };
+    body = (await request.json()) as { id?: string };
   } catch {
     return jsonResponse(request, { error: 'Invalid JSON' }, 400);
   }
+  if (!body.id) return jsonResponse(request, { error: 'Missing id' }, 400);
 
-  let query = supabase.from('products').select('*').eq('is_test', isTest);
-  if (body.token) {
-    query = query.eq('preview_token', body.token); // possessing the link = authority
-  } else {
-    if (!(await authorize(request))) {
-      return jsonResponse(request, { error: 'Unauthorized' }, 401);
-    }
-    if (!body.id) return jsonResponse(request, { error: 'Missing id' }, 400);
-    query = query.eq('id', body.id);
-  }
+  const query = supabase.from('products').select('*').eq('is_test', isTest).eq('id', body.id);
 
   const { data: row, error: findError } = await query.maybeSingle();
   if (findError) {
@@ -1573,6 +1582,55 @@ NEW (archived ⇒ unavailable — 1.12):
         if (!product || product.is_published !== true || product.archived_at != null || product.available !== true || (product.quantity ?? 0) < 1) return true;
 ```
 
+**4.3 — `handleReserve` "related / alternatives" queries (breadth pass — `checkout.ts` is service-role,
+so RLS does NOT protect it; without this the suggested-alternative rail would surface drafts + archived
+pieces as dead/unbuyable links when a cart item is sold).** Both sub-queries need the same
+`is_published`/`archived_at` guard the primary read got.
+
+CURRENT (series-related, 226–232):
+```ts
+        const { data: seriesRelated } = await supabase
+          .from('products')
+          .select('id, slug, available, series')
+          .in('series', seriesValues)
+          .eq('available', true)
+          .eq('is_test', isTest)
+          .limit(12);
+```
+NEW:
+```ts
+        const { data: seriesRelated } = await supabase
+          .from('products')
+          .select('id, slug, available, series')
+          .in('series', seriesValues)
+          .eq('available', true)
+          .eq('is_test', isTest)
+          .eq('is_published', true)
+          .is('archived_at', null)
+          .limit(12);
+```
+
+CURRENT (fallback, 240–245):
+```ts
+        const { data: fallback } = await supabase
+          .from('products')
+          .select('id, slug, available')
+          .eq('available', true)
+          .eq('is_test', isTest)
+          .limit(6);
+```
+NEW:
+```ts
+        const { data: fallback } = await supabase
+          .from('products')
+          .select('id, slug, available')
+          .eq('available', true)
+          .eq('is_test', isTest)
+          .eq('is_published', true)
+          .is('archived_at', null)
+          .limit(6);
+```
+
 ## Phase 4.5 — strict test isolation on the public path (Gap A #3 / 1.11)
 
 The public anon reads (`main.js`) must filter `is_test` to the deployment so production never shows a
@@ -1656,6 +1714,13 @@ NEW:
 > stays server-set, never user-editable. The dev-preview publish test (Phase 11 #3) still renders
 > (preview's `window._isTest` is `true`). RLS already hides drafts + archived, so these filters add
 > **only** the `is_test` dimension.
+>
+> **Why no explicit `is_published`/`archived_at` filter here (vs. Phase 4.6's product-feed)?** `main.js`
+> is the **browser anon client** — it can *only ever* be the anon/publishable key (the service key can't
+> ship to the browser), so RLS permanently governs it; there's no "future refactor to service-role" risk
+> the way there is for the server-side `product-feed.ts`. The existing `stripe_price_id IS NOT NULL`
+> filter already hides drafts (a draft has no Stripe price until publish); RLS hides archived. So the
+> explicit filter would be a redundant no-op here — deliberately omitted, not overlooked (breadth pass).
 
 ## Phase 4.6 — `api/product-feed.ts` (defense-in-depth on the public Meta catalog — 3rd Gap A #1)
 
@@ -1880,7 +1945,7 @@ function mountPreviewBanner(product, token) {
     } catch {
       btn.disabled = false;
       btn.textContent = 'Publish';
-      label.textContent = 'Could not publish — please try again, or text Sean.';
+      label.textContent = 'Could not publish — try again, or open your admin panel and tap “Publish now” there. If it still fails, text Sean.';
     }
   });
   bar.appendChild(label);
@@ -2623,7 +2688,7 @@ note after the new paths below). Then after the `/api/products` `post` block, ad
                 type: { type: string, enum: [percent, amount], description: percent off, or a fixed amount off in CENTS. }
                 value: { type: number, description: "percent (1–100) or amount in cents (e.g. 500 = $5)." }
                 code: { type: string, description: The shareable code, e.g. HOLIDAY20. Optional — Stripe generates one if omitted. }
-                product_ids: { type: array, items: { type: string }, description: Stripe product IDs to limit the discount to. Omit for store-wide. }
+                product_ids: { type: array, items: { type: string }, description: "Stripe product IDs (the stripe_product_id field from listProducts — NOT the Supabase id) to limit the discount to. Omit for store-wide." }
                 min_amount: { type: integer, description: Minimum order total in cents to qualify. Optional. }
                 expires_at: { type: integer, description: Unix timestamp when the code expires. Optional. }
                 max_redemptions: { type: integer, description: Max total redemptions. Optional. }
@@ -2704,7 +2769,7 @@ By default, confirm the drafted fields with her before saving (read back the key
 4. PHOTOS (2nd Gap A G14): to add / remove / reorder photos, getProduct, adjust the FULL `images` array (and `thumbnail` if needed), and resend it via editProduct — there's no per-photo command, so always send the complete desired array. (A removed photo's file lingers on the CDN; harmless.)
 
 == REMOVING / RE-PRICING A PIECE ==
-To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE (2nd Gap A G16). Marking a published piece sold via editProduct {available:false} instead STAGES a draft, so it won't take effect until you publish — fine if she wants to preview it first, but for an instant takedown use archiveProduct. (A real purchase still flips a piece to sold automatically.) To change a published price (Q1): just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
+To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE (2nd Gap A G16). Marking a published piece sold/unavailable via editProduct {available:false} instead STAGES a draft, so it won't take effect until you publish — so DON'T just say "preview staged" and stop: either offer to publish it right away ("want me to make the sold status live now?") or, if she wants it gone from the shop immediately, use archiveProduct. (A real purchase still flips a piece to sold automatically.) To change a published price (Q1): just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
 
 == PREVIEW & PUBLISHING ==
 The preview link is the real review surface — she can't picture changes from chat. If she says "publish" (or "make it live"), call publishProduct with the id. For a brand-new product, publishing is what creates the Stripe listing and makes it purchasable. After publish, the old preview link stops working (that's expected).
@@ -2953,8 +3018,13 @@ third-party calls):**
 16. **Coupon pagination (3rd Gap A #6):** `listCoupons` returns every owner-tagged sale even when many
     system codes exist (no single-page truncation of real sales); the `owner_sale` filter still excludes
     cart-recovery / newsletter codes.
-
-Then the **gap-review gate** (below) before a fresh agent executes against the repo.
+17. **Checkout never suggests a hidden product (breadth pass):** when a cart item is unavailable, the
+    reserve "related/alternatives" response (series-related + fallback) must contain **only** published,
+    non-archived, non-test rows — archive or unpublish a piece, then trigger the unavailable-item path,
+    and confirm it never appears as a suggested alternative (no dead/unbuyable links).
+18. **No publishing an archived piece (breadth pass):** publishing via a *stale* preview link (or by id)
+    for an archived product → **409** "resurface it first" (no split state where Stripe goes active while
+    `archived_at` is set). Unarchive, then publish → works.
 
 ---
 
@@ -3233,3 +3303,11 @@ promotion-code edge case) — not for routine checks.
   takedown, and a real purchase always writes live. A correct auto-fix is timestamp-aware (only apply a
   draft's `available` if staged after the last sale) — deferred to v1.1 to avoid a naive "sold always
   wins" clamp that would block legitimate re-listing. For now: documented; use Archive for takedown.
+- **Admin polish (breadth pass — noted, not blocking):** (a) after **unarchive**, the editor doesn't
+  re-open to the piece, so resurfacing an archived *draft* then publishing it is a two-step (find →
+  re-open → publish) — acceptable for v1, a one-call convenience later. (b) `openEditor` shows the
+  preview link only right after a save; reopening a draft later needs a no-op "Save draft" to resurface
+  the link (which rotates the token) — a later nicety would surface the current `preview_token`'s link on
+  open. (c) Optional bulletproofing: re-`pick(DRAFTABLE)` the `draft` at publish-apply so a *Studio
+  hand-edit* of the `draft` jsonb can't inject a system column — negligible (Studio access = service-role
+  already), so deferred.
