@@ -1,8 +1,6 @@
-> ⛔ **SUPERSEDED by `v1_5_6_REVIEW_PROMPTS.md`** (5th Gap Review A folded → v1.5.6). History only.
-
 # v1.5.x — Gap-review prompts (fresh instances)
 
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_5_IMPLEMENT.md`.
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_6_IMPLEMENT.md`.
 Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per
 pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
@@ -21,20 +19,25 @@ pass** (no context contamination). Reviewers change **nothing** — output is fi
 > **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
 > finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
-> **A has run four times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
+> **A has run five times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
 > (`v1_5_2_GAP_REVIEW_A.md`, 16 incl. one real blocker G1) → v1.5.3; pass 3 (`v1_5_3_GAP_REVIEW_A.md`,
 > 10, no code-breaking logic bug; +discard Q2 + price-rotation Q1) → v1.5.4; pass 4
-> (`v1_5_4_GAP_REVIEW_A.md`, **no build-breaking error, landmines held**) → **v1.5.5**: it found one
-> real code bug (price-rotation **ordering** — deactivate-before-create could leave a live product
-> pointing at an inactive Price; now create→write→deactivate-best-effort), one doc bug (the Studio note
-> conflated INSERT vs flag-flip UPDATE re the AFTER-INSERT trigger), one scope decision (**D1** —
-> media-by-link `uploadImage`, since by-chat upload wasn't buildable as written), and one fold (**D2** —
-> a `charge.refunded` branch so order status reflects refunds), plus anchors + small UX/GPT notes. **This
-> is the re-run of A against v1.5.5.** Landmines 7–18 below are the recent fixes/changes — confirm they
-> hold; don't re-raise the originals.
+> (`v1_5_4_GAP_REVIEW_A.md`, **no build-breaking error, landmines held**) → v1.5.5: one real code bug
+> (price-rotation **ordering** — now create→write→deactivate-best-effort), one doc bug (Studio
+> INSERT-vs-flag-flip-UPDATE), one scope decision (**D1** media-by-link `uploadImage`), one fold (**D2**
+> `charge.refunded`). Pass 5 (`v1_5_5_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow — doc/instruction
+> reconciliation, zero architecture; landmines held**) → **v1.5.6**: it found a real self-contradiction
+> (the v1.5.5 "make `available` live" fold had missed two staging-language spots) + a buggy curl recipe
+> (`{available:false, quantity:0}`), and these resolved decisions: **`quantity` now applies LIVE too**
+> (beside price + available — it gates checkout identically, so staging a restock would be an oversell trap), and a wrong
+> stated fact — **`sku` is DB-generated** (`'EVE-'||uuid8` column default), not caller-supplied, so it's
+> NOT in `CREATE_FIELDS`. Plus a `getProduct`→`listProducts` 404 fallback, refund-by-chat kept in Stripe
+> (GPT walks her through it + **web search on**), and small anchors/notes. **This is the re-run of A
+> against v1.5.6.** Landmines 7–20 below are the recent fixes/changes — confirm they hold; don't
+> re-raise the originals.
 
 > **Before this A-pass:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) runs against `v1_5_5_IMPLEMENT.md` to
+> integration/state-machine, **through the review lens above**) runs against `v1_5_6_IMPLEMENT.md` to
 > clear the obvious; cold A then does the thorough self-containment/completeness gate. (Subagents are
 > pre-gate breadth — never the gate itself; per DEV_RULES.)
 
@@ -49,15 +52,15 @@ pass** (no context contamination). Reviewers change **nothing** — output is fi
 
 ## What to hand each reviewer
 
-- **A:** `v1_5_5_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The
+- **A:** `v1_5_6_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The
   architecture doc is what lets a cold reviewer judge *functionality completeness*, not just
   self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens +
   landmines are **inlined in each prompt block below** — no separate paste needed.
-- **B / C:** the repo + `v1_5_5_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
+- **B / C:** the repo + `v1_5_6_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
 
-These are inlined verbatim into each prompt block below. Items 7–18 are the most recent fixes/changes —
+These are inlined verbatim into each prompt block below. Items 7–20 are the most recent fixes/changes —
 confirm they hold rather than re-flagging.
 
 - The Postgres **INSERT trigger** `notify_stripe_sync` (`supabase/migrations/20260421000003_*`)
@@ -88,7 +91,10 @@ confirm they hold rather than re-flagging.
   **auth-only** (no token path); GPT `discardEdits`, admin "Discard pending edits" button.
 - **(allow-list) Create is allow-listed:** the create insert is built from an explicit field allow-list;
   system columns can't be injected. The generated `slug` is set onto `product` upstream so the allow-list
-  captures it (4th Gap A #4 anchor); `sku` is caller-supplied.
+  captures it. **`sku` is DB-generated** (`sku text UNIQUE NOT NULL DEFAULT ('EVE-'||substr(uuid,1,8))`,
+  initial schema) → it is **deliberately NOT in `CREATE_FIELDS`** (allow-listing a caller `sku` would risk
+  a UNIQUE collision); the GPT `createProduct` schema has no `sku` either. (5th Gap A #4 — the prior plan
+  wrongly called it "caller-supplied.")
 - **(preview_url) `getProduct` returns an origin-correct `preview_url`** from `new URL(request.url).origin`
   when a `preview_token` exists; the GPT relays that link (never hardcodes a host). The origin premise is
   recorded + tested (4th Gap A #10).
@@ -107,8 +113,29 @@ confirm they hold rather than re-flagging.
 - **(#3, NEW) The Studio operator note** splits the two failure modes: a Studio INSERT with
   `is_published=true` fires the trigger but bypasses `handlePublish`; a Studio UPDATE flag-flip does NOT
   fire the AFTER-INSERT trigger → a published-but-no-Stripe zombie. Never publish from Studio.
-- **(#7, NEW) Admin price-only edit** shows "price is live now — nothing to publish" and **no** Publish
-  button (a price-only change stages nothing).
+- **(#7) Admin live-only edit** shows "<X> change is live now — nothing to publish" and **no** Publish
+  button (a price / availability / quantity-only change stages nothing).
+- **(THREE live-apply fields, v1.5.6) `price`, `available`, AND `quantity` apply LIVE immediately** on a
+  published row (no preview/publish) — all three gate purchasability (`checkout.ts:79`
+  `available !== true || (quantity ?? 0) < 1`), and `available` is also flipped live by a real purchase
+  (`webhook.ts:128`), so staging any of them is an oversell/stale-stock trap. All three are **change-detected** (`updates.x !== current.x`) so a
+  no-op admin re-send doesn't write or report a spurious update; all three are excluded from the draft
+  staging filter on the published branch. Everything else stages. `quantity`-live is latent today (only
+  qty-1 `miniature` exists) but prevents the trap for a future multi-qty `product_type`. (5th Gap A
+  #1/#2/#8.) The plan must say this consistently across §1.3, the PUT, §9.2, §9.5, §10b, and the admin
+  panel — confirm no surface still says `available`/`quantity` "stages until publish."
+- **(getProduct fallback, v1.5.6) If `getProduct` 404s** (a title with an apostrophe/ampersand makes a
+  slug the GPT can't reconstruct), the GPT must fall back to `listProducts` and match by title — never
+  report "not found" without listing first. (5th Gap A #3.)
+- **(refunds-by-chat, v1.5.6) Refunds stay in the Stripe dashboard** (no refund Action in v1.5) — the GPT
+  WALKS Em through the current dashboard steps and **uses web search to confirm the steps** as Stripe's UI
+  drifts. This requires the GPT's **web-browsing capability ENABLED** (it was OFF before — a `GPT_SETUP.md`
+  config requirement). A FULL refund reflects via `charge.refunded`; partial does not. (5th Gap A #6.)
+- **(`uploadImage` roles, v1.5.6) `ROLE_PATTERN` is extended** in Phase 5 to include `checkout_image` and
+  `seo_thumbnail` (the two NEW v1.5 roles) alongside `hero|thumbnail|gallery-NN|video-0N|detail-0N|gif-0N`
+  — both the multipart and URL-intake guards use it, and the new transform crops handle those two roles.
+  The GPT may also send **several media links in one message** (it loops `uploadImage`). (5th Gap A #10 +
+  lens note.)
 
 ---
 
@@ -116,7 +143,7 @@ confirm they hold rather than re-flagging.
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-your only output is findings (write them to v1_5_5_GAP_REVIEW_A.md, or print the full file contents
+your only output is findings (write them to v1_5_6_GAP_REVIEW_A.md, or print the full file contents
 if you have no filesystem).
 
 THE REVIEW LENS (judge every gap against this, not against doc-internal consistency)
@@ -131,12 +158,13 @@ THE REVIEW LENS (judge every gap against this, not against doc-internal consiste
   URL); the GPT asks for a link when a file is pasted.
 
 CONTEXT
-- You are given TWO documents and NO repository: (1) v1_5_5_IMPLEMENT.md — a single living plan a
+- You are given TWO documents and NO repository: (1) v1_5_6_IMPLEMENT.md — a single living plan a
   FRESH agent will execute against the repo, then test on the dev preview; it is meant to be
   "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so
   the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the
   store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
-- This is the FIFTH A-pass; the plan has absorbed four prior ones. Landmines 7-18 are the most recent
+- This is the SIXTH A-pass; the plan has absorbed five prior ones. The 5th was NEEDS-ANOTHER-PASS but
+  NARROW (doc/instruction reconciliation, zero architecture). Landmines 7-20 are the most recent
   fixes/changes — confirm they hold rather than re-raising the originals.
 - Landmines to respect (validate the plan against these, not your training data):
   1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
@@ -160,7 +188,9 @@ CONTEXT
   9. (validate) Discard exists: ?_action=discard clears draft + preview_token on a published row,
      auth-only; GPT discardEdits + admin button.
   10. (validate) Create is allow-listed (system columns can't be injected); the generated slug lands on
-     `product` so the allow-list captures it; sku is caller-supplied.
+     `product` so the allow-list captures it. sku is DB-GENERATED (UNIQUE NOT NULL DEFAULT 'EVE-'||uuid8)
+     → NOT in CREATE_FIELDS and not in the GPT schema (a caller sku could collide). [5th-A corrected the
+     prior "caller-supplied" claim.]
   11. (validate) getProduct returns an origin-correct preview_url when a preview_token exists; the GPT
      relays it rather than hardcoding a host.
   12. (validate) listCoupons auto-paginates so owner sales aren't truncated; a product-scoped coupon
@@ -173,7 +203,23 @@ CONTEXT
   15. (NEW) The Studio note splits Studio-INSERT (fires trigger, bypasses handlePublish) vs Studio-UPDATE
      flag-flip (doesn't fire the AFTER-INSERT trigger → published-but-no-Stripe zombie). Never publish
      from Studio.
-  16. (NEW) Admin price-only edit shows "price is live now — nothing to publish" and no Publish button.
+  16. Admin live-only edit shows "<X> change is live now — nothing to publish" and no Publish button.
+  17. (v1.5.6) THREE fields apply LIVE immediately on a published row — price, available, AND quantity.
+     All three gate checkout (checkout.ts:79 available!==true || (quantity??0)<1); available is also
+     flipped by a real purchase (webhook.ts:128), so staging any is an oversell/stale-stock trap. (Note:
+     the webhook does NOT yet decrement quantity — qty-1 today; wire on the first multi-qty type.) All
+     three are CHANGE-DETECTED
+     (updates.x !== current.x) and excluded from the draft staging filter. Everything else stages. The
+     plan must say this consistently across §1.3 / PUT / §9.2 / §9.5 / §10b / admin panel — flag any
+     surface still saying available/quantity "stages until publish" (the 5th A's headline finding).
+  18. (v1.5.6) If getProduct 404s (apostrophe/ampersand titles make an unreconstructable slug), the GPT
+     falls back to listProducts and matches by title — never "not found" without listing first.
+  19. (v1.5.6) Refunds stay in Stripe (no refund Action) — the GPT walks Em through the dashboard steps
+     and uses WEB SEARCH to confirm current steps (Stripe UI drifts); this needs the GPT's web-browsing
+     capability ENABLED (a GPT_SETUP.md config requirement; it was off before). Full refund reflects via
+     charge.refunded; partial does not.
+  20. (v1.5.6) ROLE_PATTERN is extended to include checkout_image + seo_thumbnail (the two new v1.5 roles)
+     so uploadImage accepts them; the GPT may send several media links in one message (loops uploadImage).
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
 1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a
@@ -205,7 +251,7 @@ beats "coupons look incomplete."
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_5_GAP_REVIEW_B.md).
+output findings only (write them to v1_5_6_GAP_REVIEW_B.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
 her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
@@ -214,7 +260,7 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- v1_5_5_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
+- v1_5_6_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
   repo, then test on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block;
   the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — so
   treat a CURRENT line-ref there as a locator to confirm, not a hard byte match.
@@ -272,7 +318,7 @@ OUTPUT
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_5_GAP_REVIEW_C.md).
+output findings only (write them to v1_5_6_GAP_REVIEW_C.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
 store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
@@ -281,7 +327,7 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_5_5_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
+- Read EVERLASTINGS_STORE.md FIRST, then v1_5_6_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
   repo and test on the dev preview.
 - Landmines (validate against reality, not training data):
   1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,
