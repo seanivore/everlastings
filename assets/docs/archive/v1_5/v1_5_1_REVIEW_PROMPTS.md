@@ -1,6 +1,10 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_1_IMPLEMENT.md`.
+> ⚠️ **SUPERSEDED by `v1_5_2_REVIEW_PROMPTS.md`** — the five landmines are now **inlined** into each
+> prompt block (they shipped as an empty `[paste …]` placeholder here), plus archive + strict-isolation
+> landmines. Use that file for the A re-run.
+
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_2_IMPLEMENT.md`.
 Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per
 pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
