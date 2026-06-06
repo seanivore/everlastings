@@ -12,13 +12,13 @@
 > and the GPT asks for a link when a file is pasted.
 
 **Created**: 2026-03-16
-**Updated**: 2026-06-05 — v1.4.9 **BUILT + VERIFIED LIVE** (dev preview; see `v1_4_9_BUILD_REPORT.md`): checkout repaired and the full purchase→order→merchant-email→admin-ship→buyer-tracking-email loop verified end-to-end. Real root cause = `phone_number_collection:{enabled:true}` forcing an unsatisfiable phone requirement (no mounted element renders a phone field) — removed it; `checkout.js` stays bridge-free (the mounted elements are the confirm-time source of truth); added `friendlyPaymentError()`. Launch findings (not code bugs): preview Vercel SSO blocks the Stripe webhook + GPT (production is unprotected; **re-enable preview SSO**); no Supabase Auth users existed so `/admin` had never been usable (first admin login created). **Next: v1.5.0** AI store-management (GPT edit + draft/preview/publish + coupons + admin unify, then design) — `archive/v1_5/v1_5_1_IMPLEMENT.md` (single living plan — build + spec merged). v1.4.9 planning: folded the two repo-aware gap reviews (`v1_4_8_GAP_REVIEW_B.md` fidelity + `v1_4_8_GAP_REVIEW_C.md` integration; both verdict **READY**) into a new build packet `v1_4_9_FINISH_TRACK_C.md` — **build-ready**. The one real bug fixed: the GPT Bearer-auth path now compares the **trimmed** `env('PRODUCT_API_KEY')` (Vercel vars carry trailing newlines; raw `process.env` would 401 the GPT scope-locally), matching `products.ts`/`upload.ts`; plus a TS-narrowing `const` hoist on the merchant email, a dropped redundant `is_test` filter, Phase 2 string-anchored on the MAIN START/END fence, the last `.html` nav cleaned (`product.js`), and a Meta-Pixel double-count guard. v1.4.8 kept for history. v1.4.8: folded gap-review **A** (cold/no-repo self-containment) into a new build packet `v1_4_8_FINISH_TRACK_C.md` — every edit is string-anchored on a quoted CURRENT block (line numbers demoted to hints), the cross-file contracts are *shown* not asserted (`complete.js` fields, the pre-existing `available=false` write, the `orders.ts` auth consumer, the shared `cart.js`/`checkout.js` session id), the `vercel.json` example is valid JSON, and ambient helpers are quoted in an appendix; review prompts bumped to `v1_4_8_REVIEW_PROMPTS.md` (run B + C next). v1.4.7 kept in the same folder for history. v1.4.7: the build packet `v1_4_7_FINISH_TRACK_C.md` (renamed from v1.4.6 as it was refined to *truly* exclusively-executable) adds a Supabase keep-alive cron (Phase 7) and a two-wave GPT setup; curated GPT Knowledge files added at `assets/docs/gpt/` (`voice-guide.md` + `product-reference.md`). v1.4.6: Track C frontend wiring shipped (C1–C4); checkout repair + order/fulfillment loop planned exclusively-executable; operating docs reorganized (`PRODUCT_PROTOCOL.md` retired into `GPT_SETUP.md` + `STORE_ADMINISTRATION.md`). v1.4.5: Tracks A and B shipped; 11 deployable functions (Hobby cap); AI product pipeline finalized (signed Cloudinary uploads, `?sync=true` inline Stripe sync, idempotent helper); AR #34–37.
+**Updated**: 2026-06-05 — **v1.4.9 BUILT + VERIFIED LIVE** on the dev preview (`v1_4_9_BUILD_REPORT.md`): the full buy→order→merchant-email→admin-ship→buyer-tracking-email loop works end-to-end (checkout repaired — the real bug was `phone_number_collection` forcing an unsatisfiable phone field). Launch to-dos: re-enable preview SSO (Sean), Custom GPT setup, content placeholders, C5 cutover. **Next: v1.5.0** — AI store-management (GPT edit + draft/preview/publish + coupons + admin unify), then design; single living plan at `archive/v1_5/v1_5_5_IMPLEMENT.md`. _(Per-version build history lives in the `archive/v1_4/` + `archive/v1_5/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_
 **Version**: v1.4.9
-**Status**: Tracks A/B/C **built and verified end-to-end on the dev preview** (`v1_4_9_BUILD_REPORT.md`) — checkout repaired (single-phase), order→merchant-email→admin-ship→buyer-tracking-email loop confirmed. Pre-launch tasks remain (re-enable preview SSO; Custom GPT setup; content placeholders; C5 cutover). **v1.5.0 planned** (AI store-management then design — see `archive/v1_5/v1_5_1_IMPLEMENT.md`). Preview-only; not yet launched.
+**Status**: Tracks A/B/C **built and verified end-to-end on the dev preview** (`v1_4_9_BUILD_REPORT.md`) — checkout repaired (single-phase), order→merchant-email→admin-ship→buyer-tracking-email loop confirmed. Pre-launch tasks remain (re-enable preview SSO; Custom GPT setup; content placeholders; C5 cutover). **v1.5.0 in planning** (AI store-management then design — single living plan `archive/v1_5/v1_5_5_IMPLEMENT.md`, in the gap-review gate). Preview-only; not yet launched.
 **Build Guide** (current, exclusively-executable):
   - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` retained in the same folder for history)
   - `assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md` — what actually shipped in v1.4.9 + deviations (phone-collection removal, `friendlyPaymentError`, the two launch findings)
-  - `assets/docs/archive/v1_5/v1_5_1_IMPLEMENT.md` — **next**: AI store-management (GPT edit + draft/preview/publish + coupons + admin unify) then design; the single living, exclusively-executable plan (build + spec merged; the v1_5_0 IMPLEMENT + BUILD_STORE_MGMT are superseded). Reviews: `v1_5_1_REVIEW_PROMPTS.md`
+  - `assets/docs/archive/v1_5/v1_5_5_IMPLEMENT.md` — **next**: AI store-management (GPT edit + draft/preview/publish + coupons + admin unify) then design; the single living, exclusively-executable plan (build + spec merged; v1_5_0…v1_5_4 superseded). Reviews: `v1_5_5_REVIEW_PROMPTS.md`
 **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
@@ -897,20 +897,20 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 Free-tier services have caps and auto-pause behavior. This is the operational checklist for the first year of production — the things that don't show up in architecture docs but will absolutely interrupt the site if ignored.
 
-| #   | Service         | Limit                                                                            |
-| --- | --------------- | -------------------------------------------------------------------------------- |
-| 1   | Supabase        | Project pause after 7 days idle                                                  |
-| 2   | Resend          | Free tier = 3,000 emails/mo                                                      |
-| 3   | Shippo          | Starter = 30 USPS labels/mo                                                      |
+| #   | Service         | Limit                                                                                                   |
+| --- | --------------- | ------------------------------------------------------------------------------------------------------- |
+| 1   | Supabase        | Project pause after 7 days idle                                                                         |
+| 2   | Resend          | Free tier = 3,000 emails/mo                                                                             |
+| 3   | Shippo          | Starter = 30 USPS labels/mo                                                                             |
 | 4   | Stripe          | Dashboard > Settings > Business > Customer emails > Payments: "Successful payments" + "Refunds" both ON |
-| 5   | Cloudflare R2   | 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo                           |
-| 6   | Vercel          | 100 GB bandwidth/mo, 1k serverless function invocations/day                      |
-| 7   | SquareSpace     | Domain auto-renewal paid through Google Workspace                                |
-| 8   | Meta Commerce   | New products appear in Instagram Shopping within 24 hours of publishing          |
-| 9   | Stripe API Key  | Rotate if a device is lost or key is shared                                      |
-| 10  | DB Password     | Supabase password rotate if exposed                                              |
-| 11  | PRODUCT_API_KEY | Rotate if exposed                                                                |
-| 12  | DMARC policy    | Launch with p=none; upgrade if clean send history or monthly volume > 1,000      |
+| 5   | Cloudflare R2   | 10 GB storage + 1M Class A ops/mo + 10M Class B ops/mo                                                  |
+| 6   | Vercel          | 100 GB bandwidth/mo, 1k serverless function invocations/day                                             |
+| 7   | SquareSpace     | Domain auto-renewal paid through Google Workspace                                                       |
+| 8   | Meta Commerce   | New products appear in Instagram Shopping within 24 hours of publishing                                 |
+| 9   | Stripe API Key  | Rotate if a device is lost or key is shared                                                             |
+| 10  | DB Password     | Supabase password rotate if exposed                                                                     |
+| 11  | PRODUCT_API_KEY | Rotate if exposed                                                                                       |
+| 12  | DMARC policy    | Launch with p=none; upgrade if clean send history or monthly volume > 1,000                             |
 
   1. Traffic keeps it alive; Pro tier ($25/mo) doesn't pause — consider built in ping every few days or daily 
   2. Paid tier ($20/mo for 50k) when monthly volume crosses ~2,500
@@ -999,17 +999,17 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 
 ### `customers` table
 
-| Column             | Type        | Notes                               |
-| ------------------ | ----------- | ----------------------------------- |
-| id                 | uuid        | PK                                  |
-| email              | text        | Unique — primary identifier         |
-| name               | text        | From Stripe checkout                |
-| phone              | text        | From Stripe checkout                |
-| shipping_address   | jsonb       | Latest shipping address             |
-| stripe_customer_id | text        | Stripe's customer ID                |
-| source             | text        | checkout, newsletter, cart-recovery |
-| created_at         | timestamptz | Auto                                |
-| updated_at         | timestamptz | Auto                                |
+| Column             | Type        | Notes                                |
+| ------------------ | ----------- | ------------------------------------ |
+| id                 | uuid        | PK                                   |
+| email              | text        | Unique — primary identifier          |
+| name               | text        | From Stripe checkout                 |
+| phone              | text        | From Stripe checkout                 |
+| shipping_address   | jsonb       | Latest shipping address              |
+| stripe_customer_id | text        | Stripe's customer ID                 |
+| source             | text        | checkout, newsletter, cart-recovery  |
+| created_at         | timestamptz | Auto                                 |
+| updated_at         | timestamptz | Auto                                 |
 | is_test            | boolean     | NOT NULL DEFAULT false — dev/preview |
 
 ### `orders` table
