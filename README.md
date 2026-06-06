@@ -1,17 +1,49 @@
 # Everlastings by Emaline
 
-**Handcrafted havens for the stories that stay** — A custom e-commerce site for artisan miniature dioramas.
+**Handcrafted havens for the stories that stay** — a custom e-commerce site for artisan miniature dioramas, built so the owner can run the *entire* store by chatting with an AI assistant.
 
-**Status:** Checkout + fulfillment **built and verified on the preview** (v1.4.9); pre-launch. Next: **v1.5.0** AI store-management — the whole store managed through chat (create / edit / draft-preview / publish + coupons). See [Architecture](/assets/docs/EVERLASTINGS_STORE.md) and the [v1.5.0 plan](/assets/docs/archive/v1_5/v1_5_0_IMPLEMENT.md).
+**Status:** On-site checkout + fulfillment **built and verified on the preview** (v1.4.9), pre-launch. **AI store-management is in active development (v1.5)** — the layer that lets a non-technical owner create, edit, preview, publish, price, discount, and inventory the whole catalog through a Custom GPT. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v1.5 plan + design history](/assets/docs/archive/v1_5/).
 
 ---
 
-## What Makes This Special
+## The idea: a store you run by talking to it
 
-  + **Database-driven static site** — Products live in Supabase, not in code. Client edits content through a web UI, site reflects instantly.
-  + **Near-zero operating costs** — Vercel free tier + Supabase free tier + Cloudflare R2 = ~$15-75/year total.
-  + **On-site checkout** — Stripe Custom Checkout (Elements) keeps customers on-site with full brand experience.
-  + **Template-friendly** — Architecture designed for reuse across multiple client projects.
+Most "no-code" storefronts still make a non-technical owner *do the work* — log into a dashboard, fill in forms, wrangle image crops, remember which field does what. This architecture moves that work to a **Custom GPT**: the owner describes what she wants in plain language, and the assistant does what a developer would have done for her.
+
+> **North Star —** minimize the owner's friction to manage her *entire* digital product (site, store, sales) by offloading the work to her Custom GPT, which should be able to do anything a capable engineering agent could do on her behalf.
+
+In practice, the owner can — by chat — :
+
+| She says… | The assistant does |
+| --- | --- |
+| "Add the Lavender Wreath, here are the photos" *(pastes Drive links)* | Creates the product, uploads + crops every image, drafts the copy/SEO, returns a **private preview link** |
+| "Looks great — publish it" | Creates the Stripe product + price, takes it live at the same URL |
+| "Change the price to $145" | Rotates the Stripe price **in place** — same page, same link — live immediately |
+| "Mark the Sage one sold" / "we got 3 more in" | Flips availability / stock **live**, no publish step |
+| "Run 20% off everything until New Year's" | Builds the coupon + promo code, scoped and dated |
+| "Take the Fern down for now" | Archives it (reversible — nothing is ever hard-deleted) |
+| "Refund that last order" | Walks her through Stripe (web-search-current steps); the order status updates itself |
+
+The safety net is **draft → preview → publish**: she always *sees* the real page before anything goes live, because no one can picture a change from a chat message alone.
+
+### Why this is the differentiator
+
+Having managed a print store with 500+ SKUs — even with Make automations and Notion databases — store upkeep still meant **hours** of manual building per batch. With this architecture, the ongoing barrier collapses to:
+
+  + **One ~$20/month ChatGPT subscription** — the owner's only real recurring cost/skill requirement.
+  + **~$15–75/year hosting** — Vercel + Supabase free tiers + Cloudflare R2.
+
+So a person with **no technical knowledge** can stand up and maintain a robust, professional storefront — product pages, galleries, SEO, on-site checkout, sales, inventory — for roughly the price of a streaming service. That is the whole pitch.
+
+---
+
+## What makes it work
+
+  + **Database-driven static site** — products live in Supabase, not in code; the public site is fast static HTML/JS reading through Row-Level-Security.
+  + **On-site checkout** — Stripe Custom Checkout (`ui_mode: 'custom'`) keeps customers on-brand, never bounced to a hosted page.
+  + **Draft/preview/publish CMS model** — staged edits, an unguessable preview link, a one-tap Publish — the standard safety UX non-technical owners need.
+  + **AI-first management surface** — a Custom GPT with Actions is the primary admin; a browser admin panel and direct DB access are fallbacks, not the main path.
+  + **Built to be productized** — environment-scoped (test/live), template-friendly, and deliberately generic where it can be. The same architecture re-skins for the next client; the management layer is the reusable asset.
 
 ---
 
@@ -37,13 +69,23 @@
 
 ---
 
-## Key Features
+## Shipped today (v1.4.9 — verified on preview)
 
-  + **Product catalog** — Rich product pages with 7-15 photo galleries, poetic story cards, and embedded checkout
-  + **Admin panel** — Non-technical client manages products through browser-based UI
-  + **Dynamic homepage** — Rotating themes and featured product carousel driven by database
-  + **Stripe integration** — Custom on-site checkout with cart, automatic inventory updates via webhooks
-  + **Smart filters** — Shop grid with multi-select filtering by series, type, and availability
+  + **Product catalog** — rich product pages with 7–15 photo galleries, poetic story cards, and embedded checkout
+  + **On-site checkout** — Stripe Custom Checkout with cart and automatic inventory updates via webhooks
+  + **Fulfillment** — Shippo labels (owner prints in the Shippo UI), admin records tracking, Resend sends the branded email
+  + **Admin panel** — browser-based product + order management
+  + **Dynamic homepage** — rotating themes and a featured-product carousel driven by the database
+  + **Smart filters** — shop grid with multi-select filtering by series, type, and availability
+
+## In active development (v1.5 — AI store-management)
+
+  + Custom GPT that can **create, edit, draft-preview, and publish** every product field (copy, SEO, photos by link, price)
+  + **Live price rotation**, **mark-sold / restock**, and **coupons** (create / list / end) by chat
+  + **Archive / resurface** (no hard delete) and truthful **order status** including refunds
+  + Unified admin panel on the same draft/publish path, with an on-brand pass
+
+> Currently in the design + gap-review hardening loop before build. Status here is kept honest — the management layer is **planned and specified, not yet live**.
 
 ---
 
@@ -52,11 +94,12 @@
   + **Frontend**: Vanilla HTML/CSS/JS (no framework)
   + **Backend**: Vercel Serverless Functions (TypeScript)
   + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
-  + **Payments**: Stripe Custom Checkout (ui_mode: 'custom')
+  + **Payments**: Stripe Custom Checkout (`ui_mode: 'custom'`)
+  + **AI management**: OpenAI Custom GPT with Actions (JSON API), authenticated via a product API key
   + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN at `cdn.everlastingsbyemaline.com`)
   + **Analytics**: Google Analytics 4 (gtag.js) + Meta Pixel (retargeting + Instagram Shopping)
   + **Email**: Resend (transactional — tracking, cart recovery coupons, newsletter welcome)
-  + **Shipping**: Shippo free tier (Emy prints labels in Shippo UI, admin records tracking, Resend sends branded email)
+  + **Shipping**: Shippo free tier (owner prints labels in Shippo UI, admin records tracking, Resend sends branded email)
   + **Hosting**: Vercel (auto-deploy on push)
 
 ---
@@ -83,7 +126,7 @@
   - `dev` → Preview/staging (test Stripe keys)
   - `feat/*` → Feature branches (test Stripe keys)
 
-Vercel auto-scopes environment variables per branch. See implementation guide for full environment strategy.
+Vercel auto-scopes environment variables per branch, so the same codebase runs against test or live Stripe depending on where it's deployed. See the implementation guide for the full environment strategy.
 
 ---
 
@@ -95,18 +138,18 @@ Vercel auto-scopes environment variables per branch. See implementation guide fo
 | [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy, email templates                |
 | [Implementation Guide](/assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md)      | Phase 0 setup + Tracks A/B/C build                              |
 | [v1.4.9 Build Report](/assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md)    | What shipped in the checkout/fulfillment build + deviations     |
-| [v1.5.0 Plan](/assets/docs/archive/v1_5/v1_5_0_IMPLEMENT.md)               | Next: AI store-management (edit/draft/publish/coupons) + design |
+| [v1.5 Plan + Gap-Review History](/assets/docs/archive/v1_5/)               | AI store-management — the living plan + its cold-review hardening|
 | [GA4 KPIs + Advertising](/assets/docs/archive/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                               |
-| [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Client how-to: products + orders across GPT, Admin, Studio      |
-| [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Sunkeeper Custom GPT brain + setup; agentic curl protocol       |
-| [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist to send to Emy                        |
+| [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Owner how-to: products + orders across GPT, Admin, Studio       |
+| [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Custom GPT brain + setup; agentic curl protocol                 |
+| [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist                                       |
 | [v2.0 Email/AI Pipeline Planning](/assets/docs/archive/v2_0/)              | Post-launch roadmap — AI-assisted email marketing, inbox agents |
 
 ---
 
 ## About
 
-**Everlastings by Emaline** was built by [Sean August Horvath](mailto:sean@august.style) for artist Emy Hoff — creating miniature sanctuaries where loss transforms into something you can hold.
+**Everlastings by Emaline** was built by [Sean August Horvath](mailto:sean@august.style) for artist Emy Hoff — creating miniature sanctuaries where loss transforms into something you can hold. The store's architecture is designed to be reusable: a by-chat management layer over a low-cost, on-brand storefront that the same developer can re-skin and extend for other makers and merchants.
 
   + Client: [everlastingsbyemaline.com](https://everlastingsbyemaline.com)
   + Developer: [august.style](https://august.style)
