@@ -1,8 +1,6 @@
-> ⛔ **SUPERSEDED by `v1_5_7_REVIEW_PROMPTS.md`.** Kept as history — use the v1.5.7 prompts.
-
 # v1.5.x — Gap-review prompts (fresh instances)
 
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_6_IMPLEMENT.md`.
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_7_IMPLEMENT.md`.
 Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per
 pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
@@ -21,32 +19,39 @@ pass** (no context contamination). Reviewers change **nothing** — output is fi
 > **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
 > finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
-> **A has run five times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
+> **A has run six times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
 > (`v1_5_2_GAP_REVIEW_A.md`, 16 incl. one real blocker G1) → v1.5.3; pass 3 (`v1_5_3_GAP_REVIEW_A.md`,
 > 10, no code-breaking logic bug; +discard Q2 + price-rotation Q1) → v1.5.4; pass 4
 > (`v1_5_4_GAP_REVIEW_A.md`, **no build-breaking error, landmines held**) → v1.5.5: one real code bug
 > (price-rotation **ordering** — now create→write→deactivate-best-effort), one doc bug (Studio
 > INSERT-vs-flag-flip-UPDATE), one scope decision (**D1** media-by-link `uploadImage`), one fold (**D2**
-> `charge.refunded`). Pass 5 (`v1_5_5_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow — doc/instruction
-> reconciliation, zero architecture; landmines held**) → **v1.5.6**: it found a real self-contradiction
-> (the v1.5.5 "make `available` live" fold had missed two staging-language spots) + a buggy curl recipe
-> (`{available:false, quantity:0}`), and these resolved decisions: **`quantity` now applies LIVE too**
-> (beside price + available — it gates checkout identically, so staging a restock would be an oversell trap), and a wrong
-> stated fact — **`sku` is DB-generated** (`'EVE-'||uuid8` column default), not caller-supplied, so it's
-> NOT in `CREATE_FIELDS`. Plus a `getProduct`→`listProducts` 404 fallback, refund-by-chat kept in Stripe
-> (GPT walks her through it + **web search on**), and small anchors/notes. **This is the re-run of A
-> against v1.5.6.** Landmines 7–20 below are the recent fixes/changes — confirm they hold; don't
-> re-raise the originals.
+> `charge.refunded`). Pass 5 (`v1_5_5_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow**) → **v1.5.6**:
+> a real self-contradiction (the "make `available` live" fold had missed two staging-language spots) + a
+> buggy curl recipe, plus decisions: **`quantity` now applies LIVE too**, and **`sku` is DB-generated**
+> (not in `CREATE_FIELDS`); + `getProduct`→`listProducts` fallback and refund-by-chat kept in Stripe.
+> Pass 6 (`v1_5_6_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow — same doc/instruction class, no
+> architecture gap, all 20 landmines held**) → **v1.5.7**, folding: (RANK 1) the real one — the `slug`
+> schema↔instruction contradiction (schema marks `slug` required + the GPT computes it for `uploadImage`,
+> yet prose said "system handles slug, never set"); fixed by instructing the GPT to **derive the slug
+> once and reuse it** + a **server-side `slugify`** in `products.ts` (URL-safe, reconstructable). (RANK 2)
+> the coupon **owner-sale isolation** now byte-anchors the three system coupon-create call sites
+> (`cart.ts`/`subscribe.ts`/`_bootstrap`) proving none tags a coupon `owner_sale`. (RANK 3) **first-publish
+> now re-validates** with the same `validateProductRules` create uses (extracted to module scope) so an
+> edit can't ship a malformed product. (RANK 4) the publish panel surfaces a **preserved pending draft**
+> on a live-only edit. (RANK 5) preview Buy/cart controls **disabled ("Preview only")**. (RANK 6) the
+> webhook idempotency-claim block + an admin `state.client` grep hard-gate are now quoted. **This is the
+> re-run of A against v1.5.7.** Landmines 7–25 below are the recent fixes/changes — confirm they hold;
+> don't re-raise the originals.
 
 > **Before this A-pass:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) runs against `v1_5_6_IMPLEMENT.md` to
+> integration/state-machine, **through the review lens above**) runs against `v1_5_7_IMPLEMENT.md` to
 > clear the obvious; cold A then does the thorough self-containment/completeness gate. (Subagents are
 > pre-gate breadth — never the gate itself; per DEV_RULES.)
 
 ## Sequencing (per Sean's gap-review flow)
 
 1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc
-   (`v1_5_6_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing.
+   (`v1_5_7_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing.
    Big-picture functionality gaps must surface here, before the detailed reviews.
 2. **B + C** (in repo) — run consecutively, fold both at once, re-run if either finds something
    load-bearing.
@@ -54,15 +59,15 @@ pass** (no context contamination). Reviewers change **nothing** — output is fi
 
 ## What to hand each reviewer
 
-- **A:** `v1_5_6_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The
+- **A:** `v1_5_7_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The
   architecture doc is what lets a cold reviewer judge *functionality completeness*, not just
   self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens +
   landmines are **inlined in each prompt block below** — no separate paste needed.
-- **B / C:** the repo + `v1_5_6_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
+- **B / C:** the repo + `v1_5_7_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
 
-These are inlined verbatim into each prompt block below. Items 7–20 are the most recent fixes/changes —
+These are inlined verbatim into each prompt block below. Items 7–21 are the most recent fixes/changes —
 confirm they hold rather than re-flagging.
 
 - The Postgres **INSERT trigger** `notify_stripe_sync` (`supabase/migrations/20260421000003_*`)
@@ -92,11 +97,11 @@ confirm they hold rather than re-flagging.
 - **(Q2) Discard exists:** `?_action=discard` clears `draft` + `preview_token` on a published row;
   **auth-only** (no token path); GPT `discardEdits`, admin "Discard pending edits" button.
 - **(allow-list) Create is allow-listed:** the create insert is built from an explicit field allow-list;
-  system columns can't be injected. The generated `slug` is set onto `product` upstream so the allow-list
-  captures it. **`sku` is DB-generated** (`sku text UNIQUE NOT NULL DEFAULT ('EVE-'||substr(uuid,1,8))`,
-  initial schema) → it is **deliberately NOT in `CREATE_FIELDS`** (allow-listing a caller `sku` would risk
-  a UNIQUE collision); the GPT `createProduct` schema has no `sku` either. (5th Gap A #4 — the prior plan
-  wrongly called it "caller-supplied.")
+  system columns can't be injected. The **normalized `slug` is set onto `product` upstream** (see the
+  slug landmine #21) so the allow-list captures it; `slug` IS in `CREATE_FIELDS` (the GPT supplies it).
+  **`sku` is DB-generated** (`sku text UNIQUE NOT NULL DEFAULT ('EVE-'||substr(uuid,1,8))`, initial
+  schema) → it is **deliberately NOT in `CREATE_FIELDS`** (allow-listing a caller `sku` would risk a
+  UNIQUE collision); the GPT `createProduct` schema has no `sku` either. (5th Gap A #4.)
 - **(preview_url) `getProduct` returns an origin-correct `preview_url`** from `new URL(request.url).origin`
   when a `preview_token` exists; the GPT relays that link (never hardcodes a host). The origin premise is
   recorded + tested (4th Gap A #10).
@@ -138,6 +143,34 @@ confirm they hold rather than re-flagging.
   — both the multipart and URL-intake guards use it, and the new transform crops handle those two roles.
   The GPT may also send **several media links in one message** (it loops `uploadImage`). (5th Gap A #10 +
   lens note.)
+- **(#21 slug — derive once + server-normalize, v1.5.7) The `slug` is GPT-supplied, not system-filled.**
+  The `createProduct` schema marks `slug` **required** AND the GPT computes it for every `uploadImage`
+  call (photos upload before the row exists) — so any prose saying "the system handles slug / never set
+  it" is the false half (6th Gap A RANK 1, now fixed). The plan instructs the GPT to **derive the slug
+  ONCE** from the title (lowercase, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats) and reuse the
+  SAME string for uploads + create; and `products.ts` runs a server-side `slugify` on both the
+  caller-supplied and title-derived slug so it's always URL-safe + reconstructable (also softens the #18
+  apostrophe/ampersand fallback at the source). Confirm no surviving "system handles slug, never set" in
+  any GPT-facing NEW block, and that `slug` stays required in the schema.
+- **(#22 first-publish re-validates, v1.5.7) `handlePublish`'s first-publish branch re-runs the SAME
+  per-type rules as create** via a shared module-scope `validateProductRules` (extracted from the inline
+  create checks) BEFORE the Stripe create — so an edit that blanked `story_card`/`images` on an
+  unpublished draft can't ship a malformed product (6th Gap A RANK 3). Confirm create and publish call the
+  one shared validator (no divergent copies) and the function count still reads 11/12 (it's a helper, not
+  an endpoint).
+- **(#23 coupon owner-sale isolation is byte-anchored, v1.5.7) `listCoupons`/`deactivateCoupon` key on
+  `pc.coupon?.metadata?.source === 'owner_sale'`** — the plan now QUOTES the three system coupon-create
+  call sites (`cart.ts` tags the *promotion code* `source:'cart-recovery'`; `subscribe.ts` tags nothing;
+  `_bootstrap/coupons.ts` creates the base coupons with no metadata) proving **no system coupon carries
+  `owner_sale`** (6th Gap A RANK 2). Invariant: the bootstrap must never tag a coupon `owner_sale`.
+- **(#24 panel honesty on a live-only edit over a pending draft, v1.5.7) `renderPublishPanel`** now checks
+  `body.product.draft`: a price/availability/quantity-only change that PRESERVES an earlier staged copy
+  edit shows "…live now — but you still have edits pending" + the preview link + Publish/Discard, instead
+  of "nothing to publish" (6th Gap A RANK 4) — so the panel never contradicts the list pill.
+- **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page
+  disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product
+  can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full
+  visual styling still deferred to Part 3).
 
 ---
 
@@ -145,7 +178,7 @@ confirm they hold rather than re-flagging.
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-your only output is findings (write them to v1_5_6_GAP_REVIEW_A.md, or print the full file contents
+your only output is findings (write them to v1_5_7_GAP_REVIEW_A.md, or print the full file contents
 if you have no filesystem).
 
 THE REVIEW LENS (judge every gap against this, not against doc-internal consistency)
@@ -160,14 +193,15 @@ THE REVIEW LENS (judge every gap against this, not against doc-internal consiste
   URL); the GPT asks for a link when a file is pasted.
 
 CONTEXT
-- You are given TWO documents and NO repository: (1) v1_5_6_IMPLEMENT.md — a single living plan a
+- You are given TWO documents and NO repository: (1) v1_5_7_IMPLEMENT.md — a single living plan a
   FRESH agent will execute against the repo, then test on the dev preview; it is meant to be
   "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so
   the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the
   store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
-- This is the SIXTH A-pass; the plan has absorbed five prior ones. The 5th was NEEDS-ANOTHER-PASS but
-  NARROW (doc/instruction reconciliation, zero architecture). Landmines 7-20 are the most recent
-  fixes/changes — confirm they hold rather than re-raising the originals.
+- This is the SEVENTH A-pass; the plan has absorbed six prior ones. The 6th was NEEDS-ANOTHER-PASS but
+  NARROW (doc/instruction reconciliation + two correctness anchors, no architecture gap, all 20 prior
+  landmines held). Landmines 7-25 are the most recent fixes/changes — confirm they hold rather than
+  re-raising the originals.
 - Landmines to respect (validate the plan against these, not your training data):
   1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
      objects — a SQL TRIGGER, not a Studio webhook, and AFTER INSERT ONLY (a flag-flip UPDATE doesn't
@@ -189,10 +223,10 @@ CONTEXT
      policy still has qual='true'.
   9. (validate) Discard exists: ?_action=discard clears draft + preview_token on a published row,
      auth-only; GPT discardEdits + admin button.
-  10. (validate) Create is allow-listed (system columns can't be injected); the generated slug lands on
-     `product` so the allow-list captures it. sku is DB-GENERATED (UNIQUE NOT NULL DEFAULT 'EVE-'||uuid8)
-     → NOT in CREATE_FIELDS and not in the GPT schema (a caller sku could collide). [5th-A corrected the
-     prior "caller-supplied" claim.]
+  10. (validate) Create is allow-listed (system columns can't be injected); the GPT-supplied, server-
+     normalized slug lands on `product` so the allow-list captures it (slug IS in CREATE_FIELDS — see #21).
+     sku is DB-GENERATED (UNIQUE NOT NULL DEFAULT 'EVE-'||uuid8) → NOT in CREATE_FIELDS and not in the GPT
+     schema (a caller sku could collide). [5th-A corrected the prior "caller-supplied" claim.]
   11. (validate) getProduct returns an origin-correct preview_url when a preview_token exists; the GPT
      relays it rather than hardcoding a host.
   12. (validate) listCoupons auto-paginates so owner sales aren't truncated; a product-scoped coupon
@@ -222,6 +256,30 @@ CONTEXT
      charge.refunded; partial does not.
   20. (v1.5.6) ROLE_PATTERN is extended to include checkout_image + seo_thumbnail (the two new v1.5 roles)
      so uploadImage accepts them; the GPT may send several media links in one message (loops uploadImage).
+  21. (v1.5.7) slug is GPT-SUPPLIED, not system-filled: the createProduct schema marks slug REQUIRED and
+     the GPT computes it for every uploadImage (photos upload before the row exists), so any "system
+     handles slug / never set it" prose is the false half (6th-A RANK 1, fixed). The GPT derives the slug
+     ONCE (lowercase, spaces→-, strip non-[a-z0-9-], collapse repeats) and reuses it for uploads + create;
+     products.ts runs a server-side slugify on caller/derived slug so it's always URL-safe + reconstructable
+     (also softens #18). Confirm no surviving "system handles slug, never set" in any GPT-facing block, and
+     slug stays required in the schema.
+  22. (v1.5.7) First-publish re-validates: handlePublish's first-publish branch runs the SAME per-type rules
+     as create via a shared module-scope validateProductRules (extracted from the inline create checks),
+     before the Stripe create — so an edit that blanked story_card/images can't ship a malformed product
+     (6th-A RANK 3). One shared validator (no divergent copies); function count still 11/12.
+  23. (v1.5.7) Coupon owner-sale isolation is byte-anchored: listCoupons/deactivateCoupon key on
+     coupon.metadata.source==='owner_sale'; the plan QUOTES the three system coupon-create sites (cart.ts
+     tags the PROMO CODE 'cart-recovery'; subscribe.ts tags nothing; _bootstrap creates coupons with no
+     metadata) proving no system coupon carries owner_sale (6th-A RANK 2). Bootstrap must never tag a
+     coupon owner_sale.
+  24. (v1.5.7) Panel honesty: renderPublishPanel checks body.product.draft — a price/availability/quantity-
+     only change that PRESERVES an earlier staged copy edit shows "live now — but edits still pending" +
+     preview link + Publish/Discard, not "nothing to publish" (6th-A RANK 4); never contradicts the list
+     pill.
+  25. (v1.5.7) Preview Buy disabled: on a preview load (previewToken present) the product page disables +
+     relabels the cart/buy controls "Preview only" so an EDIT preview of a PUBLISHED product can't transact
+     at the live price under the "not yet live" banner (6th-A RANK 5; full visual styling deferred to
+     Part 3).
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
 1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a
@@ -253,7 +311,7 @@ beats "coupons look incomplete."
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_6_GAP_REVIEW_B.md).
+output findings only (write them to v1_5_7_GAP_REVIEW_B.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
 her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
@@ -262,7 +320,7 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- v1_5_6_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
+- v1_5_7_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
   repo, then test on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block;
   the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — so
   treat a CURRENT line-ref there as a locator to confirm, not a hard byte match.
@@ -320,7 +378,7 @@ OUTPUT
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_6_GAP_REVIEW_C.md).
+output findings only (write them to v1_5_7_GAP_REVIEW_C.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
 store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
@@ -329,7 +387,7 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_5_6_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
+- Read EVERLASTINGS_STORE.md FIRST, then v1_5_7_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
   repo and test on the dev preview.
 - Landmines (validate against reality, not training data):
   1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,

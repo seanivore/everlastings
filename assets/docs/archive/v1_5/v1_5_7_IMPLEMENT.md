@@ -1,23 +1,21 @@
-> ⛔ **SUPERSEDED by `v1_5_7_IMPLEMENT.md`** (6th Gap-Review-A folded). Kept as history — do not build from this file.
-
 # v1.5.0 — AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-**Version**: v1.5.6
+**Version**: v1.5.7
 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the
 v1.5 design pass. Functionality first; design second.
-**Revision history**: hardened through five cold Gap-Review-A passes + two in-house subagent breadth
+**Revision history**: hardened through six cold Gap-Review-A passes + two in-house subagent breadth
 passes, each adjudicated against the live repo and folded. The accumulated decisions are stated inline
 below as plain current-state (no pass-by-pass narration); the full review trail lives in the superseded
-`v1_5_1…v1_5_5_IMPLEMENT.md` and the `v1_5_*_GAP_REVIEW_*` files. Net feature set: GPT/admin
+`v1_5_1…v1_5_6_IMPLEMENT.md` and the `v1_5_*_GAP_REVIEW_*` files. Net feature set: GPT/admin
 create→preview→publish with a real preview link; edit stages a draft (publish XOR discard); **price**,
 the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation;
 coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete);
 media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an
-extensible per-`product_type` create ruleset. Everything folds into existing functions (no new Vercel
-function).
+extensible per-`product_type` create ruleset (re-validated at first publish, not just create). Everything
+folds into existing functions (no new Vercel function).
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) · **this doc only** —
-do NOT read the superseded `v1_5_0_*` / `v1_5_1_*` / `v1_5_2_*` / `v1_5_3_*` / `v1_5_4_*` / `v1_5_5_*` files; their content is folded in here.
-**Supersedes (history — do not build from them)**: `v1_5_5_IMPLEMENT.md`, `v1_5_4_IMPLEMENT.md`, `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`,
+do NOT read the superseded `v1_5_0_*` … `v1_5_6_*` files; their content is folded in here.
+**Supersedes (history — do not build from them)**: `v1_5_6_IMPLEMENT.md`, `v1_5_5_IMPLEMENT.md`, `v1_5_4_IMPLEMENT.md`, `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`,
 `v1_5_1_IMPLEMENT.md`, `v1_5_0_IMPLEMENT.md`, `v1_5_0_BUILD_STORE_MGMT.md`.
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the
@@ -118,9 +116,17 @@ owner never thinks about "which title goes where."
 - `seo_title`, `seo_description` *(exist)*.
 - `seo_thumbnail` *(new)* — the OG / Twitter card image (~1.91:1 crop).
 
-**System-filled (never set by GPT or owner):** `slug` (from title, immutable), `sku`, the Stripe IDs,
-the photo CDN URLs, and the v1.5 machinery below. *(`homepage_theme` is **admin/owner-editable** via
-the admin panel and is draftable — but the GPT doesn't author it; its `editProduct` schema omits it.)*
+**Derived (GPT-computed from the title, then immutable):** `slug` — the GPT computes the URL-safe form
+of the title **once** (lowercase, spaces→`-`, strip anything not `[a-z0-9-]`, collapse repeat hyphens)
+and reuses that **same** string for every `uploadImage` call *and* `createProduct` (the photos upload
+before the row exists, so the GPT must own the slug at upload time; that's why it's a **required** field
+on the create schema). The server normalizes it again identically on create (belt-and-suspenders — see
+§3.3), so a title with `'`/`&` can never yield a non-URL-safe or unreconstructable slug. After create it
+is **immutable** (rejected by both PUT branches). The GPT never *invents* a slug — it derives it.
+
+**System-filled (never set by GPT or owner):** `sku`, the Stripe IDs, the photo CDN URLs, the SEO
+fields, and the v1.5 machinery below. *(`homepage_theme` is **admin/owner-editable** via the admin
+panel and is draftable — but the GPT doesn't author it; its `editProduct` schema omits it.)*
 
 **System (draft/publish machinery, new columns):** `is_published` (bool, default false),
 `published_at` (timestamptz), `draft` (jsonb overlay), `preview_token` (text, unique), `archived_at`
@@ -461,6 +467,11 @@ the feature:**
   (`fetch('/api/products…', {authHeader})`), **not** the RLS-bound `state.client`. So the admin
   draft/publish/archive UI never goes blind. (The only product op that ever used `state.client` was the
   old hard delete — Phase 8.11 replaces it with the archive API.) ✓
+  **HARD GATE (RANK 6 — run after the 8.11 edits, before considering Phase 8 done):**
+  `grep -n "state\.client\.from('products')" assets/js/admin.js` must return **zero** matches. A single
+  surviving `state.client` product *read* would go RLS-blind to drafts/archived after the Phase 1 policy
+  swap — silently inverting the feature (the admin would stop seeing exactly the rows v1.5 exists to
+  manage). If it returns anything, that call must be moved to the service-role API before Phase 8 ships.
 
 **Price round-trip (the change-detect `!==` guard depends on it).** The published-edit guard rejects
 a frozen field only when `updates[f] !== current[f]`. For the admin path that is safe **only if the
@@ -955,50 +966,53 @@ CURRENT (the required-fields + image-count validation, 108–156):
     return jsonResponse(request, { error: 'Minimum 5 gallery images required' }, 400);
   }
 ```
-NEW (rules looked up per `product_type`; `miniature` keeps the exact current values):
+NEW (the inline checks become a single call to the shared module-scope validator `validateProductRules`,
+defined just below — so create and **first-publish** enforce the SAME per-type rules; RANK 3):
 ```ts
-  // Per-type create requirements. miniature is the only type today; new types are added
-  // here, not by editing the checks below. `default` (= miniature) catches any unknown/new type so it
-  // is never left un-validated. A type may drop a required field or lower a photo minimum.
-  type TypeRules = { required: string[]; minHero: number; minGallery: number; requireThumbnail: boolean };
-  const PRODUCT_TYPE_RULES: Record<string, TypeRules> = {
-    miniature: {
-      required: ['title', 'description', 'price', 'product_type', 'headline', 'story_card'],
-      minHero: 1, minGallery: 5, requireThumbnail: true,
-    },
-  };
-  const typeKey = typeof product.product_type === 'string' ? product.product_type : '';
-  const rules: TypeRules = PRODUCT_TYPE_RULES[typeKey] ?? PRODUCT_TYPE_RULES.miniature; // default = miniature
+  // Per-type product-shape validation, shared with first-publish (handlePublish) via the module-scope
+  // helper below. Reports ALL problems at once (joined) instead of one-at-a-time.
+  const problems = validateProductRules(product as Record<string, unknown>);
+  if (problems.length) {
+    return jsonResponse(request, { error: problems.join('; ') }, 400);
+  }
+```
+
+**Add the shared validator at module scope** (a hoisted `function` declaration so create — defined above
+PUT — can call it without a TDZ; place it near `DRAFTABLE` / `FROZEN_AFTER_PUBLISH`):
+```ts
+// Shared product-shape validator — used by BOTH create (POST) and first-publish (handlePublish), so a
+// product can never go LIVE in a state create would reject (an edit that blanked `story_card`/`images`,
+// then publish, would otherwise ship a malformed product). Returns human-readable problems; [] = OK.
+// Per-type rules: `miniature` is the only type today; new types are added HERE, not by editing checks.
+// `default` (= miniature) catches any unknown/new type so it is never left un-validated.
+type TypeRules = { required: string[]; minHero: number; minGallery: number; requireThumbnail: boolean };
+const PRODUCT_TYPE_RULES: Record<string, TypeRules> = {
+  miniature: {
+    required: ['title', 'description', 'price', 'product_type', 'headline', 'story_card'],
+    minHero: 1, minGallery: 5, requireThumbnail: true,
+  },
+};
+function validateProductRules(p: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  const typeKey = typeof p.product_type === 'string' ? p.product_type : '';
+  const rules: TypeRules = PRODUCT_TYPE_RULES[typeKey] ?? PRODUCT_TYPE_RULES.miniature;
 
   const missing = rules.required.filter((f) => {
-    const v = product[f];
+    const v = p[f];
     if (v === undefined || v === null) return true;
     if (typeof v === 'string' && v.trim() === '') return true;
     return false;
   });
-  if (missing.length) {
-    return jsonResponse(
-      request,
-      { error: `Missing required fields: ${missing.join(', ')}` },
-      400,
-    );
-  }
+  if (missing.length) problems.push(`Missing required fields: ${missing.join(', ')}`);
 
-  if (!Number.isInteger(product.price) || (product.price as number) <= 0) {
-    return jsonResponse(
-      request,
-      { error: 'Price must be a positive integer in cents' },
-      400,
-    );
+  if (!Number.isInteger(p.price) || (p.price as number) <= 0) {
+    problems.push('Price must be a positive integer in cents');
   }
 
   const needsImages = rules.minHero > 0 || rules.minGallery > 0 || rules.requireThumbnail;
-  const images = Array.isArray(product.images) ? (product.images as ImageEntry[]) : null;
-  if (needsImages && (!images || images.length === 0)) {
-    return jsonResponse(request, { error: 'images array is required' }, 400);
-  }
+  const images = Array.isArray(p.images) ? (p.images as ImageEntry[]) : null;
+  if (needsImages && (!images || images.length === 0)) problems.push('images array is required');
   const imgList = images ?? [];
-
   const filenameOf = (img: ImageEntry): string => {
     const u = typeof img?.url === 'string' ? img.url : '';
     return u.split('/').pop() ?? '';
@@ -1006,16 +1020,14 @@ NEW (rules looked up per `product_type`; `miniature` keeps the exact current val
   const roleName = (img: ImageEntry): string => filenameOf(img).replace(/^test_/, '');
   const heroImages = imgList.filter((img) => roleName(img).startsWith('hero-'));
   const galleryImages = imgList.filter((img) => roleName(img).startsWith('gallery-'));
+  if (heroImages.length < rules.minHero) problems.push(`At least ${rules.minHero} hero image(s) required`);
+  if (rules.requireThumbnail && (typeof p.thumbnail !== 'string' || !(p.thumbnail as string).trim())) {
+    problems.push('Thumbnail URL required');
+  }
+  if (galleryImages.length < rules.minGallery) problems.push(`Minimum ${rules.minGallery} gallery images required`);
 
-  if (heroImages.length < rules.minHero) {
-    return jsonResponse(request, { error: `At least ${rules.minHero} hero image(s) required` }, 400);
-  }
-  if (rules.requireThumbnail && (typeof product.thumbnail !== 'string' || !product.thumbnail.trim())) {
-    return jsonResponse(request, { error: 'Thumbnail URL required' }, 400);
-  }
-  if (galleryImages.length < rules.minGallery) {
-    return jsonResponse(request, { error: `Minimum ${rules.minGallery} gallery images required` }, 400);
-  }
+  return problems;
+}
 ```
 
 > **Adding a new product_type later = one config entry.** e.g. a low-photo `storybook` would be
@@ -1104,19 +1116,45 @@ NEW:
 }
 ```
 
+**Slug normalization (RANK 1b — belt-and-suspenders).** The slug-generation block that runs **above**
+this insert is upgraded to normalize **both** a caller-supplied slug and the title-derived fallback into
+the same URL-safe, reconstructable handle — so a title with `'`/`&` ("Em's Lavender & Sage") can never
+yield a non-URL-safe or unreconstructable slug regardless of what the GPT/caller sends. (The GPT computes
+the identical form client-side per §9.2 "THE SLUG"; this is the server-side guarantee.) This also
+softens landmine #18's apostrophe/ampersand list-fallback at the source.
+
+CURRENT (`api/products.ts` 158–163 — runs before the allow-list pick):
+```ts
+  const title = String(product.title).trim();
+  const slug =
+    typeof product.slug === 'string' && product.slug.trim()
+      ? product.slug.trim()
+      : title.toLowerCase().replace(/ /g, '-');
+  product.slug = slug;
+```
+NEW:
+```ts
+  const title = String(product.title).trim();
+  // Normalize whatever slug we land on (caller-supplied OR title-derived) to a URL-safe handle:
+  // lowercase, spaces→'-', drop anything not [a-z0-9-], collapse repeat hyphens, trim edge hyphens.
+  // Guarantees a reconstructable, URL-safe slug no matter what the caller sends.
+  const slugify = (s: string): string =>
+    s
+      .toLowerCase()
+      .replace(/ /g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-{2,}/g, '-')
+      .replace(/^-+|-+$/g, '');
+  const rawSlug =
+    typeof product.slug === 'string' && product.slug.trim() ? product.slug : title;
+  const slug = slugify(rawSlug);
+  product.slug = slug;   // ← lands on `product`, so CREATE_FIELDS' pick of 'slug' captures it
+```
+
 > **`slug` provenance — why the allow-list captures it (anchor).** `CREATE_FIELDS` picks `slug`
-> **from `product`**, and the generation code upstream (unchanged, **above** this insert) assigns the
-> generated slug back **onto `product`**, so the pick captures it:
-> ```ts
-> // api/products.ts 158–163 (CURRENT — runs before the allow-list pick):
-> const title = String(product.title).trim();
-> const slug =
->   typeof product.slug === 'string' && product.slug.trim()
->     ? product.slug.trim()
->     : title.toLowerCase().replace(/ /g, '-');
-> product.slug = slug;   // ← lands on `product`, so CREATE_FIELDS' pick of 'slug' captures it
-> ```
-> The NOT-NULL/unique `slug` is therefore always set. **`sku` is DB-generated** by a column default and
+> **from `product`**, and the normalizer above assigns the cleaned slug back **onto `product`** before
+> the pick, so the pick captures it. The NOT-NULL/unique `slug` is therefore always set. **`sku` is
+> DB-generated** by a column default and
 > is deliberately **not** in `CREATE_FIELDS` (so a caller can't override it / collide on its UNIQUE
 > index) — the GPT `createProduct` schema has no `sku` field either, matching v1.4.9 create which works
 > precisely because the DB fills it:
@@ -1504,7 +1542,15 @@ async function handlePublish(request: Request): Promise<Response> {
     return jsonResponse(request, { success: true, product: updated, url: liveUrl(request, String(updated.slug)) });
   }
 
-  // First publish: validate checkout essentials, create Stripe, flip live.
+  // First publish: re-validate the SAME product-shape rules create enforces (RANK 3), THEN the checkout
+  // essentials, THEN create Stripe + flip live. An unpublished product's edits write straight to its live
+  // columns (the unpublished-draft PUT branch), so `row` already holds the current values — no draft
+  // overlay to merge here. This is the single chokepoint that guarantees a published product is
+  // well-formed even if an earlier edit blanked story_card / images.
+  const shapeProblems = validateProductRules(row as Record<string, unknown>);
+  if (shapeProblems.length) {
+    return jsonResponse(request, { error: `Cannot publish — ${shapeProblems.join('; ')}` }, 400);
+  }
   const checkoutImage = (row.checkout_image as string) || (row.thumbnail as string) || '';
   const missing: string[] = [];
   if (!row.checkout_name && !row.title) missing.push('checkout_name (or title)');
@@ -1597,7 +1643,48 @@ async function handleCoupon(request: Request): Promise<Response> {
     return jsonResponse(request, { error: 'Failed to create the coupon' }, 502);
   }
 }
+```
 
+> **Owner-sale isolation anchor (the invariant `listCoupons`/`deactivateCoupon` depend on).** The
+> isolation rests on this fact: **no system-generated coupon object carries
+> `metadata.source='owner_sale'`** — only the owner-created coupon above (line `couponParams.metadata =
+> { source: 'owner_sale' }`) does. The three current system coupon-create call sites, quoted byte-exact
+> so a cold builder can verify it without opening the files:
+> ```ts
+> // api/cart.ts 87–96 (CURRENT) — tags the PROMOTION CODE, not the coupon, and with 'cart-recovery':
+> const promotionCode = await stripe.promotionCodes.create({
+>   coupon: 'cart-recovery-10',
+>   max_redemptions: 1,
+>   expires_at: Math.floor(expiresAtMs / 1000),
+>   metadata: { source: 'cart-recovery', email, lost_items: JSON.stringify(lostItems) },
+> });
+> ```
+> ```ts
+> // api/subscribe.ts 40–45 (CURRENT) — promo code only, NO metadata at all:
+> await stripe.promotionCodes.create({
+>   coupon: 'newsletter-welcome-5',
+>   code,
+>   max_redemptions: 1,
+>   expires_at: Math.floor(expiresAtMs / 1000),
+> });
+> ```
+> ```ts
+> // api/_bootstrap/coupons.ts 12–17 (CURRENT) — the two base COUPONS, NO metadata:
+> await stripe.coupons.create({
+>   id: c.id,            // 'cart-recovery-10' | 'newsletter-welcome-5'
+>   name: c.name,
+>   percent_off: c.percent_off,
+>   duration: 'forever',
+> });
+> ```
+> So: `cart.ts` stamps the **promotion code** with `source:'cart-recovery'` (the coupon stays untagged);
+> `subscribe.ts` stamps nothing; the bootstrap creates the coupons with no metadata. The
+> `pc.coupon?.metadata?.source === 'owner_sale'` filter therefore matches **only** owner sales.
+> **Invariant to hold forever:** the bootstrap (and any future system coupon) must **never** set
+> `metadata.source='owner_sale'` on a *coupon* object — that tag is the owner-managed marker. If a
+> system coupon ever needs its own metadata, use a different `source` value (e.g. `'system'`).
+
+```ts
 // ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
 async function handleCouponList(request: Request): Promise<Response> {
   if (!(await authorize(request))) {
@@ -2019,6 +2106,28 @@ idempotency claim (so a refund event is claimed + de-duped like any other), look
 charge's payment intent, and sets `status='refunded'` on a **full** refund (a partial refund is logged,
 not status-changed — the enum has no partial state; flag a `partially_refunded` value for v1.1).
 
+> **Claim-ordering anchor (RANK 6 — why the new branch is de-duped).** The idempotency claim already runs
+> at the **top** of the handler, *before* the event-type branching, so the `charge.refunded` branch
+> inserted below it inherits the same once-only guarantee that test #22's dedup sub-assertion relies on.
+> Quoted byte-exact so it's verifiable without opening the file:
+> ```ts
+> // api/webhook.ts 48–58 (CURRENT — runs before any type check; the new branch sits AFTER this):
+>   // Idempotency claim (AR #21): INSERT-as-claim before any side effect.
+>   // 23505 = unique_violation → another delivery already processed (or is processing) this event.
+>   const claim = await supabase.from('webhook_events').insert({ event_id: event.id });
+>   if (claim.error) {
+>     if (claim.error.code === '23505') {
+>       console.log(`Duplicate webhook event ignored: ${event.id}`);
+>       return new Response(JSON.stringify({ received: true, no_op: true }), { status: 200, headers });
+>     }
+>     console.error(`Failed to claim webhook event ${event.id}:`, claim.error);
+>     return new Response(JSON.stringify({ error: 'Idempotency claim failed' }), { status: 500, headers });
+>   }
+> ```
+> So a re-delivered `charge.refunded` hits the `23505` short-circuit and never reaches the update — and
+> even if it did, the `UPDATE … status='refunded'` is naturally idempotent. (Line numbers are hints;
+> match on the `webhook_events` insert text.)
+
 CURRENT (the no-op guard for non-checkout events, 60–63):
 ```ts
   if (event.type !== 'checkout.session.completed') {
@@ -2408,8 +2517,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!previewToken) fireViewItem(product); // no view_item/ViewContent on an owner preview load
   renderRelatedProducts(product);
 
-  if (previewToken) mountPreviewBanner(product, previewToken);
+  if (previewToken) {
+    // RANK 5 — an EDIT preview of an already-PUBLISHED product is is_published/available with a live
+    // stripe_price_id, so its Buy/Add controls would create a REAL Checkout Session at the live price
+    // beneath the "Draft preview — not yet live" banner. Disable + relabel them so the banner isn't
+    // contradicted by a working purchase. (New-draft previews are also covered — checkout already rejects
+    // unpublished rows server-side, but the controls shouldn't look active either.) The buttons honor
+    // `btn.disabled`, so this is sufficient to block a transaction; full visual treatment is Part 3.
+    disableCartControlsForPreview();
+    mountPreviewBanner(product, previewToken);
+  }
 });
+
+// RANK 5 — neutralize the live purchase controls on a preview load (kept visible so Em sees the layout,
+// but non-functional + clearly labeled). Full styling lands with the Part 3 preview visual slice.
+function disableCartControlsForPreview() {
+  document.querySelectorAll('[data-product-add-to-cart], [data-product-buy-now]').forEach((btn) => {
+    btn.disabled = true;
+    btn.setAttribute('aria-disabled', 'true');
+    btn.title = 'Preview only — publish to make this buyable';
+    btn.textContent = 'Preview only';
+  });
+}
 
 // v1.5 — preview fetches the draft via the service-role API (the anon client can't
 // read unpublished rows under RLS). The token in the URL is the read capability.
@@ -2757,39 +2886,55 @@ NEW (archived takes precedence — 1.12):
 function renderPublishPanel(body, id) {
   const panel = $('publish-panel');
   if (!panel) return;
-  const previewUrl = body.preview_url;
-  // There's only something to publish when a draft exists (a new product, or staged edits) — both
-  // return a preview_url. A price / availability / quantity-only change goes live immediately and
-  // stages nothing.
+  // A fresh draft / staged edit from THIS save returns a preview_url. A price/availability/quantity-only
+  // change stages nothing and returns none — BUT if an earlier copy edit is still staged, this PUT
+  // preserved the row's draft + preview_token (RANK 4). Detect that pending draft and build its preview
+  // link client-side from body.product, so the panel never contradicts the list pill ("live · edits
+  // pending") or let Em think her staged copy edit vanished.
+  const pendingDraft = !!(body.product && body.product.draft != null && body.product.preview_token);
+  let previewUrl = body.preview_url;
+  if (!previewUrl && pendingDraft) {
+    previewUrl = '/product/' + body.product.slug + '?preview=' + encodeURIComponent(body.product.preview_token);
+  }
+  // Something is publishable when there's a draft to publish — a new draft/staged edit this save, OR a
+  // pending draft preserved through a live-only change.
   const publishable = !!previewUrl;
   panel.classList.remove('hidden');
   panel.innerHTML = '';
   const p = document.createElement('p');
   p.style.margin = '0 0 8px';
-  if (previewUrl) {
+  const pendingLink = (lead) =>
+    lead + ' — you still have edits pending: <a href="' + previewUrl + '" target="_blank" rel="noopener">open preview</a>, then publish or discard.';
+  if (body.preview_url) {
     p.innerHTML =
-      'Preview how it looks: <a href="' + previewUrl + '" target="_blank" rel="noopener">open preview</a> — then publish when it looks right.';
+      'Preview how it looks: <a href="' + body.preview_url + '" target="_blank" rel="noopener">open preview</a> — then publish when it looks right.';
   } else if (body.price_updated || body.availability_updated || body.quantity_updated) {
-    // Price / availability / quantity-only change: live now, nothing staged → say so, NO Publish
-    // button. All three go live immediately like price.
+    // Price / availability / quantity-only change: live now. All three go live immediately like price.
     const bits = [];
     if (body.price_updated) bits.push('Price change');
     if (body.availability_updated) bits.push('Availability change');
     if (body.quantity_updated) bits.push('Stock change');
-    p.textContent = bits.join(' and ') + ' is live now — nothing else to publish.';
+    const lead = bits.join(' and ') + ' is live now';
+    // If a copy edit is still staged, say so (and give the preview link) instead of "nothing to publish".
+    if (pendingDraft) p.innerHTML = pendingLink(lead);
+    else p.textContent = lead + ' — nothing else to publish.';
+  } else if (pendingDraft) {
+    p.innerHTML = pendingLink('Saved');
   } else {
     p.textContent = 'Saved.';
   }
   panel.appendChild(p);
-  // When a price change rides ALONGSIDE staged copy edits, add the "price already live" detail
-  // (the copy still needs publishing). For a price-ONLY change the line above already covers it.
-  if (body.price_updated && previewUrl) {
+  // When a price change rides ALONGSIDE a freshly-staged copy edit (one save), add the "price already
+  // live" detail. (For a price-only change, or a price change over a PRE-existing pending draft, the
+  // line above already covers it — gate on body.preview_url so we don't duplicate.)
+  if (body.price_updated && body.preview_url) {
     const note = document.createElement('p');
     note.style.margin = '0 0 8px';
     note.textContent = 'Price change is live now (price updates immediately; it isn’t part of the draft preview).';
     panel.appendChild(note);
   }
-  // Publish button only when there's a draft to publish — never for a price-only (already-live) change.
+  // Publish button whenever there's a draft to publish — a fresh draft OR a preserved pending draft;
+  // never for a pure live-only change with nothing staged.
   if (publishable) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -2798,9 +2943,8 @@ function renderPublishPanel(body, id) {
     btn.addEventListener('click', () => publishProduct(id, btn));
     panel.appendChild(btn);
   }
-  // When edits are STAGED on a published product, offer to discard them (the inverse of publish).
-  // Not shown for a brand-new draft (no staged overlay) or a price-only change (nothing staged).
-  if (body.staged) {
+  // Discard when edits are staged this save OR a prior draft is still pending (the inverse of publish).
+  if (body.staged || pendingDraft) {
     const discardBtn = document.createElement('button');
     discardBtn.type = 'button';
     discardBtn.className = 'danger';
@@ -3051,7 +3195,7 @@ per G10):
               required: [title, headline, story_card, description, price, product_type, slug, images, thumbnail]
               properties:
                 title: { type: string }
-                slug: { type: string }
+                slug: { type: string, description: "URL-safe handle you derive from the title (lowercase, spaces→hyphens, strip anything not a-z0-9-, collapse repeats) and reuse for every uploadImage call. Required because photos upload before the row exists. The server normalizes it again; it's permanent after creation." }
                 headline: { type: string }
                 story_card: { type: string }
                 description: { type: string }
@@ -3321,6 +3465,9 @@ NEW:
 5. On confirmation, call createProduct. Also draft the checkout line (checkout_name, checkout_description — one short line — and checkout_image; each defaults to the page title/description/thumbnail if you leave it blank) and the SEO fields (seo_title, seo_description, seo_thumbnail). Convert materials, features, care_instructions, shipping_details to arrays of strings. Price goes in CENTS ($245 → 24500) — but always show her dollars.
 6. createProduct returns a PREVIEW link (not a live page) — the product is a draft until published. Hand her the preview: "Here's your preview: <preview_url> — that's exactly how shoppers will see it. Tap Publish on that page when it looks right, or tell me 'publish'."
 
+== THE SLUG (derive it ONCE, before you upload anything) ==
+The slug is the product's URL handle (everlastingsbyemaline.com/product/<slug>) and the folder its photos live in on the CDN. You MUST compute it yourself and send it on createProduct (it's a required field) — and because photos upload BEFORE the product row exists, you need the slug ready before the very first uploadImage. Derive it deterministically from the title and use the SAME string everywhere: lowercase the title, turn spaces into hyphens, strip anything that isn't a-z, 0-9, or a hyphen (so "Em's Lavender & Sage" → "ems-lavender-sage"), and collapse any repeated hyphens. Compute it once at the start of a new product, reuse that exact string for every uploadImage call and for createProduct — never let the photos land under one slug and the product under another. (The server also normalizes whatever you send the same way, so a stray character is corrected, not fatal — but compute it cleanly so the preview/live URL reads well.) The slug is permanent after creation; you don't set it on edits.
+
 == CONFIRMING VS. EXPEDITING ==
 By default, confirm the drafted fields with her before saving (read back the key ones in plain language). If she's said "just go ahead" / "you don't need to check with me" — for this piece or in general — EXPEDITE: skip the line-by-line confirmation and go straight to the preview. The preview page is the real review either way.
 
@@ -3344,7 +3491,7 @@ Translate her wish into createCoupon params: "20% off everything until New Year'
 You can SEE order status (listOrders) but you do NOT have an Action to issue a refund — refunds happen in the Stripe dashboard, which she signs into for payouts anyway. When she asks to refund someone, WALK HER THROUGH IT in plain steps (Stripe → Payments → find the payment → Refund). Stripe changes its dashboard over time, so if you're not certain the steps are current, USE WEB SEARCH to confirm today's Stripe refund flow before you tell her — don't recite steps you're unsure about. Once she completes a FULL refund in Stripe, the order's status updates to "refunded" on its own (a webhook reflects it); a PARTIAL refund won't show in status — tell her to check Stripe for partial-refund history. A refund does NOT put the piece back up for sale — if she refunded because the sale fell through and wants it listed again, offer to relist it: editProduct {available:true} (immediate, no publish step).
 
 == ADDING PHOTOS & MEDIA (by link) ==
-You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. She can paste SEVERAL links in one message — accept them all and loop uploadImage over each (don't make her send one per message). For EACH photo or video, call uploadImage({ url: <her link>, slug: <product slug>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
+You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. She can paste SEVERAL links in one message — accept them all and loop uploadImage over each (don't make her send one per message). For EACH photo or video, call uploadImage({ url: <her link>, slug: <the slug you derived from the title — see "THE SLUG" above; the SAME string you'll pass to createProduct>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
 REQUIRED PHOTO SET (the create API enforces this — a wrong mix gets a 400, not just "too few"): every product needs at least ONE photo at role `hero`, at least FIVE at roles `gallery-01..05`, AND a `thumbnail` (you can reuse the hero image's URL for the thumbnail). That's the 7-photo minimum. `detail-01..05`, `video-0x`, `checkout_image`, and `seo_thumbnail` are all EXTRAS on top — they don't count toward the 5 gallery. So if she gives you 7 images, assign them as 1 hero + 5 gallery + 1 thumbnail; don't spend them on `detail`/`video` roles and come up short on gallery. If she truly can't supply 5 gallery angles, tell her plainly the store needs them (ask for more angles) rather than retrying — the create won't go through without them.
 LARGE VIDEOS: a Google Drive link often won't work for a video bigger than ~25 MB (Drive shows a scan page instead of the file, and there's no Drive link form that bypasses it) — if uploadImage 400s on a big video, ask her for a direct hosted URL (e.g. a Dropbox "?dl=1" direct link or any CDN link), not a Drive share.
 - If she pastes a photo directly into the chat: say you can't grab a pasted file, and ask her to share it as a Google Drive "anyone with the link" link (or any direct image URL) so you can add it.
@@ -3376,12 +3523,13 @@ CURRENT (50):
 NEW:
 ```
 **You also write (SEO + checkout):** `seo_title`, `seo_description`, `seo_thumbnail` (OG image); and the checkout line `checkout_name` / `checkout_description` (one short line) / `checkout_image` — each falls back to the page title / description / thumbnail if left blank, and all freeze once the product is published.
-**The system handles (never set):** `slug` (from title, immutable), `sku`, `stripe_product_id`/`stripe_price_id`, the photo CDN URLs, `homepage_theme`, and the draft/publish machinery.
+**You derive `slug` from the title (compute once, reuse) — see "THE SLUG" in the Instructions:** required on createProduct and on every uploadImage; the server normalizes it; permanent after creation.
+**The system handles (never set):** `sku`, `stripe_product_id`/`stripe_price_id`, the photo CDN URLs, `homepage_theme`, and the draft/publish machinery.
 ```
 
 Also update the status note (16): drop the stale **`see archive/v1_5/v1_5_0_IMPLEMENT.md`** pointer
 (that file is superseded) and the "coming in v1.5.0" framing — edit / draft / publish / coupons /
-archive are specified here (this v1.5.5 plan); keep "the GPT only ever sees the environment its
+archive are specified here (this plan); keep "the GPT only ever sees the environment its
 Action points at." And fix the two **GIF** references (1C line 75 + instruction line 103,
 "skip_transform=true for videos and GIFs") → just **videos** — GIFs are retired (3.3); MP4 is the path.
 
@@ -3408,10 +3556,17 @@ NEW:
   **but `price` can**: editing the price rotates the Stripe price in place (same product/URL),
   effective immediately.
 
+## The slug — you derive it, once
+
+`slug` is the product's URL handle and its CDN photo folder. You compute it from the title yourself
+(lowercase, spaces→hyphens, strip anything not `a-z0-9-`, collapse repeats) and reuse the **same**
+string for every `uploadImage` call and `createProduct` — it's a required create field, and the photos
+upload before the row exists. The server normalizes it identically, and it's permanent after creation
+(you never set it on edits). See "THE SLUG" in the Instructions.
+
 ## The system fills these in — never set them
 
-`slug` (made from the title, permanent), `sku`, the Stripe IDs, the photo CDN URLs, the homepage
-theme, and the draft/publish machinery.
+`sku`, the Stripe IDs, the photo CDN URLs, the homepage theme, and the draft/publish machinery.
 ```
 
 CURRENT (64):
@@ -3667,8 +3822,15 @@ third-party calls):**
 24. **Per-type create validation is extensible:** a `miniature` create enforces exactly the
     current rules (≥1 hero + ≥5 gallery + thumbnail + the required scalar fields); an unknown/new
     `product_type` falls back to the `miniature` ruleset (never un-validated). Confirm the `miniature`
-    error messages/behaviour are byte-identical to today (no regression), and that adding a hypothetical
-    `PRODUCT_TYPE_RULES` entry would change only that type's minimums.
+    error messages/behaviour match today (no regression — the same checks, now reported together via the
+    shared `validateProductRules`), and that adding a hypothetical `PRODUCT_TYPE_RULES` entry would
+    change only that type's minimums.
+25. **First-publish can't ship a malformed product (RANK 3):** create a valid unpublished draft, then
+    `editProduct` it into an invalid state (e.g. blank `story_card`, or set `images:[]`), then
+    `publishProduct` → **400** "Cannot publish — …" naming the missing fields/image minimums (same
+    messages as create, via the shared `validateProductRules`), and the product stays unpublished with
+    **no** Stripe object created. A well-formed draft still publishes 200 and creates the Stripe product.
+    Confirms create and first-publish are in lock-step (the edit path can't bypass create's rules).
 
 ---
 
@@ -3878,9 +4040,10 @@ fresh agent executes on the dev preview.
   commented) once active-list size warrants it; an optional admin **"hide archived"** filter (the
   archived pill already ships, 8.8).
 - **Known limitations (noted, not blocking):** no granular per-photo edit — the GPT resends
-  the full `images` array, and a removed photo's R2 object lingers (harmless); the preview page's
-  cart-button visual treatment (disable / "preview only") is a Part 3 design-slice call — only the
-  analytics-skip is wired now.
+  the full `images` array, and a removed photo's R2 object lingers (harmless). The preview page's
+  cart/buy controls are now **disabled + relabeled "Preview only"** on a preview load (RANK 5 — so an
+  edit-preview of a published piece can't transact at the live price under the "not yet live" banner);
+  only the full **visual** treatment (styling of that disabled state) remains a Part 3 design-slice call.
 - **Resolved (`available` + `quantity` now apply live):** the prior known-edge — a *stale*
   `available:true` in a pending draft re-raising a sold piece on publish — **no longer applies on a
   published row**, because `available` is now applied LIVE immediately and never staged into the draft (it
