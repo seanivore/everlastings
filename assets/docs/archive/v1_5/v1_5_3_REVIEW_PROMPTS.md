@@ -1,5 +1,10 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
+> ⚠️ **SUPERSEDED by `v1_5_4_REVIEW_PROMPTS.md`** — A ran a third time against `v1_5_3_IMPLEMENT.md`
+> (`v1_5_3_GAP_REVIEW_A.md`, NEEDS ANOTHER PASS); findings folded into `v1_5_4_IMPLEMENT.md`. Use the
+> v1.5.4 prompts (output files → `v1_5_4_GAP_REVIEW_*`; landmine 3 changed — price now rotates, not
+> frozen; new landmines for discard / create allow-list / dynamic preview_url / coupon pagination).
+
 All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_3_IMPLEMENT.md`.
 Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per
 pass** (no context contamination). Reviewers change **nothing** — output is findings only.
