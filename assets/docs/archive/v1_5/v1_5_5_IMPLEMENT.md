@@ -14,7 +14,14 @@ decision (D1)** — "upload a photo by chat" was asserted but unbuildable (no `u
 defined, and `/api/upload` is multipart-only, which a Custom GPT Action can't drive); resolved to a
 **URL-based `uploadImage`** (Em shares a Drive/direct link; the server fetches it). **One fold (D2)** —
 a `charge.refunded` webhook branch so order status reflects dashboard refunds. Plus the `refunded`
-blind-spot doc, the create slug-provenance + MP4 anchors, and small UX/GPT notes. *Pass 1*
+blind-spot doc, the create slug-provenance + MP4 anchors, and small UX/GPT notes. **A pre-A in-house
+subagent breadth pass** (owner-journey + integration, through the North Star lens) then folded: the
+real photo-composition rule the GPT must state (1 hero + 5 gallery + thumbnail, not just "7"), a
+**make-mark-sold-immediate** decision (`available` now applies live like price — owner-decided; this
+also retires the old #8b stale-draft edge), an **extensible per-`product_type` create validator**
+(miniature = today's rules; new types are a config entry — owner-decided), coupon-scope in
+`listCoupons`, a Drive large-video honesty note, a pre-fetch role check, and a few clarifying comments.
+*Pass 1*
 (`v1_5_1_GAP_REVIEW_A.md`): its four "blockers" proved to be doc-hardening, not bugs — every
 load-bearing CURRENT block is now **quoted** (the Stripe trigger + `CREATE TRIGGER`, the `product.js`
 handler, `syncProductToStripe`), the real gaps fixed (coupon system-code collision, draft-price edit,
@@ -175,6 +182,9 @@ field in all three tiers** from her intent + photos, then either presents them f
   intact; a permanent re-price is the rotation above.
 - **Marketing/SEO edits never call Stripe.** (The only post-publish Stripe write from an edit is the
   price rotation; checkout identity + the product object are untouched.)
+- **Two fields apply LIVE immediately on a published row (no preview/publish step):** `price` (rotates
+  the Stripe Price — Q1) and **`available`** (the sold flag — breadth G2; a real purchase already writes
+  it live, so a chat "mark it sold" must too). Everything else (copy/SEO/photos/media) stages as a draft.
 
 ## 1.4 Draft → preview → publish
 
@@ -900,6 +910,128 @@ export async function POST(request: Request) {
   }
 ```
 
+**Make the create validation product-type-aware (breadth G1b).** Today only `miniature` exists, so this
+changes **nothing** operationally — but it turns "add a new product_type" (storybook / printable / …)
+into a CONFIG entry rather than a validator rewrite: a new type reuses the miniature shape by default and
+may override its required scalar fields and photo minimums (incl. dropping a field's obligation). Unknown
+types fall back to `default` (= miniature) so a new type is never silently un-validated.
+
+CURRENT (the required-fields + image-count validation, 108–156):
+```ts
+  const required = ['title', 'description', 'price', 'product_type', 'headline', 'story_card'];
+  const missing = required.filter((f) => {
+    const v = product[f];
+    if (v === undefined || v === null) return true;
+    if (typeof v === 'string' && v.trim() === '') return true;
+    return false;
+  });
+  if (missing.length) {
+    return jsonResponse(
+      request,
+      { error: `Missing required fields: ${missing.join(', ')}` },
+      400,
+    );
+  }
+
+  if (!Number.isInteger(product.price) || (product.price as number) <= 0) {
+    return jsonResponse(
+      request,
+      { error: 'Price must be a positive integer in cents' },
+      400,
+    );
+  }
+
+  const images = Array.isArray(product.images) ? (product.images as ImageEntry[]) : null;
+  if (!images || images.length === 0) {
+    return jsonResponse(request, { error: 'images array is required' }, 400);
+  }
+
+  const filenameOf = (img: ImageEntry): string => {
+    const u = typeof img?.url === 'string' ? img.url : '';
+    return u.split('/').pop() ?? '';
+  };
+  const roleName = (img: ImageEntry): string => filenameOf(img).replace(/^test_/, '');
+  const heroImages = images.filter((img) => roleName(img).startsWith('hero-'));
+  const galleryImages = images.filter((img) => roleName(img).startsWith('gallery-'));
+
+  if (heroImages.length < 1) {
+    return jsonResponse(request, { error: 'At least 1 hero image required' }, 400);
+  }
+  if (typeof product.thumbnail !== 'string' || !product.thumbnail.trim()) {
+    return jsonResponse(request, { error: 'Thumbnail URL required' }, 400);
+  }
+  if (galleryImages.length < 5) {
+    return jsonResponse(request, { error: 'Minimum 5 gallery images required' }, 400);
+  }
+```
+NEW (rules looked up per `product_type`; `miniature` keeps the exact current values):
+```ts
+  // Breadth G1b — per-type create requirements. miniature is the only type today; new types are added
+  // here, not by editing the checks below. `default` (= miniature) catches any unknown/new type so it
+  // is never left un-validated. A type may drop a required field or lower a photo minimum.
+  type TypeRules = { required: string[]; minHero: number; minGallery: number; requireThumbnail: boolean };
+  const PRODUCT_TYPE_RULES: Record<string, TypeRules> = {
+    miniature: {
+      required: ['title', 'description', 'price', 'product_type', 'headline', 'story_card'],
+      minHero: 1, minGallery: 5, requireThumbnail: true,
+    },
+  };
+  const typeKey = typeof product.product_type === 'string' ? product.product_type : '';
+  const rules: TypeRules = PRODUCT_TYPE_RULES[typeKey] ?? PRODUCT_TYPE_RULES.miniature; // default = miniature
+
+  const missing = rules.required.filter((f) => {
+    const v = product[f];
+    if (v === undefined || v === null) return true;
+    if (typeof v === 'string' && v.trim() === '') return true;
+    return false;
+  });
+  if (missing.length) {
+    return jsonResponse(
+      request,
+      { error: `Missing required fields: ${missing.join(', ')}` },
+      400,
+    );
+  }
+
+  if (!Number.isInteger(product.price) || (product.price as number) <= 0) {
+    return jsonResponse(
+      request,
+      { error: 'Price must be a positive integer in cents' },
+      400,
+    );
+  }
+
+  const needsImages = rules.minHero > 0 || rules.minGallery > 0 || rules.requireThumbnail;
+  const images = Array.isArray(product.images) ? (product.images as ImageEntry[]) : null;
+  if (needsImages && (!images || images.length === 0)) {
+    return jsonResponse(request, { error: 'images array is required' }, 400);
+  }
+  const imgList = images ?? [];
+
+  const filenameOf = (img: ImageEntry): string => {
+    const u = typeof img?.url === 'string' ? img.url : '';
+    return u.split('/').pop() ?? '';
+  };
+  const roleName = (img: ImageEntry): string => filenameOf(img).replace(/^test_/, '');
+  const heroImages = imgList.filter((img) => roleName(img).startsWith('hero-'));
+  const galleryImages = imgList.filter((img) => roleName(img).startsWith('gallery-'));
+
+  if (heroImages.length < rules.minHero) {
+    return jsonResponse(request, { error: `At least ${rules.minHero} hero image(s) required` }, 400);
+  }
+  if (rules.requireThumbnail && (typeof product.thumbnail !== 'string' || !product.thumbnail.trim())) {
+    return jsonResponse(request, { error: 'Thumbnail URL required' }, 400);
+  }
+  if (galleryImages.length < rules.minGallery) {
+    return jsonResponse(request, { error: `Minimum ${rules.minGallery} gallery images required` }, 400);
+  }
+```
+
+> **Adding a new product_type later = one config entry.** e.g. a low-photo `storybook` would be
+> `storybook: { required: ['title','description','price','product_type','headline','story_card'],
+> minHero: 1, minGallery: 0, requireThumbnail: true }` — no other code changes, and `miniature` is
+> untouched. (We only ship `miniature` now; this is the extensibility scaffold, not a new type.)
+
 CURRENT (create insert + inline sync, 179–210):
 ```ts
   const insertRow = { ...product, is_test: isTest };
@@ -1086,6 +1218,9 @@ const DRAFTABLE = [
   'power_supply', 'care_instructions', 'shipping_details', 'series', 'product_type', 'artist_note',
   'homepage_theme',
 ];
+// `available` stays in DRAFTABLE for the UNPUBLISHED-draft branch (where everything applies to live
+// columns anyway — nothing's live yet). On a PUBLISHED row it's pulled out and applied LIVE immediately
+// (breadth G2, like price) — see the published branch's `DRAFTABLE.filter(k => k !== 'available')`.
 // Q1: `price` is NOT frozen — it rotates in place (handled in the published branch below). The
 // checkout IDENTITY fields + sku + the Stripe IDs stay frozen after publish.
 const FROZEN_AFTER_PUBLISH = [
@@ -1200,8 +1335,17 @@ export async function PUT(request: Request) {
       liveUpdate.price = updates.price;
     }
 
-    // Stage copy/SEO edits (only when there are any — a price-only change must NOT flag "edits pending").
-    const draftable = pick(DRAFTABLE);
+    // Breadth pass (G2): `available` (the sold / on-sale flag) goes LIVE immediately on a published
+    // row, like price — it isn't a visual change that needs a preview, and a real purchase already
+    // writes `available:false` to the live row (webhook.ts). Staging it would let "mark it sold" sit
+    // un-applied until publish (an oversell trap). So apply it live, and exclude it from staging below.
+    if (updates.available !== undefined && typeof updates.available === 'boolean') {
+      liveUpdate.available = updates.available;
+    }
+
+    // Stage copy/SEO edits (only when there are any — a price-only / availability-only change must NOT
+    // flag "edits pending"). `available` is handled live above, so it never stages.
+    const draftable = pick(DRAFTABLE.filter((k) => k !== 'available'));
     const hasDraftable = Object.keys(draftable).length > 0;
     const rowUpdate: Record<string, unknown> = { ...liveUpdate };
     if (hasDraftable) {
@@ -1239,6 +1383,7 @@ export async function PUT(request: Request) {
       product: data,
       staged: hasDraftable,
       ...(liveUpdate.price !== undefined ? { price_updated: true } : {}),
+      ...(liveUpdate.available !== undefined ? { availability_updated: true } : {}),
       ...(hasDraftable
         ? { preview_url: previewUrl(request, String(data.slug), previewToken), preview_token: previewToken }
         : {}),
@@ -1448,7 +1593,15 @@ async function handleCouponList(request: Request): Promise<Response> {
     const SCAN_CAP = 2000; // far above any realistic active-code count for this store
     for await (const pc of stripe.promotionCodes.list({ active: true, limit: 100 })) {
       scanned += 1;
+      // Isolation keys on the COUPON's positive owner_sale tag (set at create, line ~1416). This is
+      // safe despite an asymmetry the breadth pass flagged (N3): system codes tag the PROMOTION CODE
+      // (cart.ts) or nothing (subscribe.ts / _bootstrap), never the coupon — so they lack owner_sale
+      // and are correctly excluded. Keep keying on the coupon-level tag; don't switch to promo metadata.
       if (pc.coupon?.metadata?.source === 'owner_sale') { // Gap A #8 — owner sales only
+        // Breadth pass (G5): surface SCOPE so Em can verify by chat whether a sale is store-wide or
+        // tied to specific pieces. applies_to.products holds the Stripe product ids the coupon is
+        // limited to (empty/absent = store-wide).
+        const scopedProducts = pc.coupon?.applies_to?.products ?? null;
         coupons.push({
           code: pc.code,
           promotion_code_id: pc.id,
@@ -1457,6 +1610,8 @@ async function handleCouponList(request: Request): Promise<Response> {
           times_redeemed: pc.times_redeemed,
           max_redemptions: pc.max_redemptions ?? null,
           expires_at: pc.expires_at ?? null,
+          store_wide: !scopedProducts || scopedProducts.length === 0,
+          product_ids: scopedProducts && scopedProducts.length ? scopedProducts : null,
         });
       }
       if (scanned >= SCAN_CAP) break;
@@ -1857,6 +2012,10 @@ NEW (handle `charge.refunded` first, then keep the existing no-op for everything
         : charge.payment_intent?.id ?? null;
       const fullyRefunded = charge.amount_refunded >= charge.amount;
       if (piId && fullyRefunded) {
+        // `refunded` is terminal truth: this intentionally overwrites a prior 'shipped'/'delivered'
+        // status (a refund after shipping is still a refund). The partial-shipping-queue index
+        // (WHERE status='completed') drops the row, so a refunded order leaves the GPT's shipping
+        // list cleanly. The admin order view reads `status` directly, so it reflects the flip.
         const { error: refundErr } = await supabase
           .from('orders')
           .update({ status: 'refunded' })
@@ -1887,6 +2046,11 @@ NEW (handle `charge.refunded` first, then keep the existing no-op for everything
 > `STORE_ADMINISTRATION.md`. `Stripe.Charge` is already covered by the imported `Stripe` types — no new
 > import. The match is by `stripe_payment_intent` (set on every order row at checkout, webhook.ts:161),
 > which uniquely keys the order(s) in a Stripe mode, so no `is_test` filter is needed.
+>
+> **Owner-facing honesty (breadth pass G4):** only a **full** refund flips the status. A **partial**
+> refund is logged, not reflected — so `STORE_ADMINISTRATION.md` + the GPT's orders guidance must say:
+> "partial refunds aren't shown in order status yet — check Stripe for partial-refund history." (A
+> `partially_refunded` status is a v1.1 item.)
 
 ## Phase 5 — `api/upload.ts` (URL-intake for the GPT + two new image roles + their crops)
 
@@ -1983,6 +2147,11 @@ NEW:
     }
     if (typeof body.url !== 'string' || typeof body.slug !== 'string' || typeof body.role !== 'string') {
       return jsonResponse(request, { error: 'Missing url, slug, or role' }, 400);
+    }
+    // Breadth pass (N1): validate the role BEFORE fetching, so a bad role can't trigger a server-side
+    // fetch of an arbitrary owner-supplied URL (the multipart path checks ROLE_PATTERN downstream too).
+    if (!ROLE_PATTERN.test(body.role.trim())) {
+      return jsonResponse(request, { error: 'Invalid role' }, 400);
     }
     let mediaRes: Response;
     try {
@@ -2549,9 +2718,13 @@ function renderPublishPanel(body, id) {
   if (previewUrl) {
     p.innerHTML =
       'Preview how it looks: <a href="' + previewUrl + '" target="_blank" rel="noopener">open preview</a> — then publish when it looks right.';
-  } else if (body.price_updated) {
-    // Price-only change: live now, nothing staged → say so, and show NO Publish button (4th Gap A #7).
-    p.textContent = 'Price change is live now — nothing else to publish.';
+  } else if (body.price_updated || body.availability_updated) {
+    // Price- or availability-only change: live now, nothing staged → say so, NO Publish button
+    // (4th Gap A #7 + breadth G2). `available` goes live immediately like price.
+    const bits = [];
+    if (body.price_updated) bits.push('Price change');
+    if (body.availability_updated) bits.push('Availability change');
+    p.textContent = bits.join(' and ') + ' is live now — nothing else to publish.';
   } else {
     p.textContent = 'Saved.';
   }
@@ -3095,17 +3268,19 @@ By default, confirm the drafted fields with her before saving (read back the key
 4. PHOTOS (2nd Gap A G14): to ADD a photo, first get it onto the CDN with uploadImage (see "ADDING PHOTOS & MEDIA" below) to get its url, then put that url in the FULL `images` array; to remove / reorder, just adjust the array. Either way getProduct first, send the COMPLETE desired `images` array (and `thumbnail` if needed) via editProduct — there's no per-photo command. (A removed photo's file lingers on the CDN; harmless.)
 
 == REMOVING / RE-PRICING A PIECE ==
-To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE (2nd Gap A G16). Marking a published piece sold/unavailable via editProduct {available:false} instead STAGES a draft, so it won't take effect until you publish — so DON'T just say "preview staged" and stop: either offer to publish it right away ("want me to make the sold status live now?") or, if she wants it gone from the shop immediately, use archiveProduct. (A real purchase still flips a piece to sold automatically.) To change a published price (Q1): just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
+To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE (2nd Gap A G16). Marking a published piece sold/unavailable via editProduct {available:false} is ALSO immediate now (breadth G2) — like price, it goes live the moment you save (no preview, no publish step), so just tell her "done, it's marked sold" (it shows as sold but stays on the page). Use that for "mark it sold / out of stock"; use archiveProduct when she wants it GONE from the shop entirely. (A real purchase still flips a piece to sold automatically.) To change a published price (Q1): just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
 
 == PREVIEW & PUBLISHING ==
 The preview link is the real review surface — she can't picture changes from chat. If she says "publish" (or "make it live"), call publishProduct with the id. For a brand-new product, publishing is what creates the Stripe listing and makes it purchasable. After publish, the old preview link stops working (that's expected).
 To RE-SHOW a preview she lost (2nd Gap A G9; 3rd Gap A #10): getProduct by slug. If there are pending edits (or it's still a draft) it returns a ready-to-share `preview_url` — hand her THAT exact link; it's already correct for wherever the store is running, so never hand-build the URL or assume the production domain. If getProduct returns no `preview_url`/`preview_token`, it's fully live with nothing pending — give the plain product page link from the create/publish response. (Don't make a no-op edit to "regenerate" a link — that would stage an empty draft.)
 
 == COUPONS ==
-Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons. To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
+Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons — it tells you each code's discount, redemptions, expiry, AND whether it's store-wide or limited to specific pieces (store_wide / product_ids), so relay the scope too ("HOLIDAY20 — 20% off everything" vs "just the Lavender Wreath"). To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
 
 == ADDING PHOTOS & MEDIA (by link) ==
 You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. For EACH photo or video, call uploadImage({ url: <her link>, slug: <product slug>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
+REQUIRED PHOTO SET (the create API enforces this — a wrong mix gets a 400, not just "too few"): every product needs at least ONE photo at role `hero`, at least FIVE at roles `gallery-01..05`, AND a `thumbnail` (you can reuse the hero image's URL for the thumbnail). That's the 7-photo minimum. `detail-01..05`, `video-0x`, `checkout_image`, and `seo_thumbnail` are all EXTRAS on top — they don't count toward the 5 gallery. So if she gives you 7 images, assign them as 1 hero + 5 gallery + 1 thumbnail; don't spend them on `detail`/`video` roles and come up short on gallery. If she truly can't supply 5 gallery angles, tell her plainly the store needs them (ask for more angles) rather than retrying — the create won't go through without them.
+LARGE VIDEOS: a Google Drive link often won't work for a video bigger than ~25 MB (Drive shows a scan page instead of the file, and there's no Drive link form that bypasses it) — if uploadImage 400s on a big video, ask her for a direct hosted URL (e.g. a Dropbox "?dl=1" direct link or any CDN link), not a Drive share.
 - If she pastes a photo directly into the chat: say you can't grab a pasted file, and ask her to share it as a Google Drive "anyone with the link" link (or any direct image URL) so you can add it.
 - If uploadImage returns a 400 ("not directly downloadable" / "looks like a share page"): the link is a Drive PREVIEW page, not the file, or it isn't shared publicly — ask her to set the share to "anyone with the link," or to paste a direct file URL, then retry.
 
@@ -3116,7 +3291,7 @@ Most product videos are short MP4 clips. The flow: (1) upload the MP4 with uploa
 Set these per clip. Multiple MP4s are fine (they render in the order given). Leave media empty/omitted for no video — the section just hides. We don't use GIFs (an MP4 looks better and is smaller; convert a GIF with ffmpeg if she has one).
 YouTube is supported but RARE — only if she specifically has a YouTube link (she isn't building that kind of channel): { "type":"youtube", "url":"<link>" }. MP4s always render before any YouTube.
 
-Product rules: never create without showing the preview; never set a price different from what she said; never proceed with fewer than 7 photos; media comes in as a LINK (Drive "anyone with the link" or a direct URL) — you can't take a file pasted into the chat, so ask for a link, and always run it through uploadImage to get the real CDN url (never invent one); price is editable anytime — on a published product a price change rotates in place and goes live immediately (same product/URL), so there's no "new product" dance; the checkout_* identity fields freeze at first publish; for a TEMPORARY sale create a coupon (leaves the list price intact); staged edits can be scrapped with discardEdits; to take a piece down, archiveProduct (never delete); on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
+Product rules: never create without showing the preview; never set a price different from what she said; never proceed without the required photo set (≥1 hero + ≥5 gallery + a thumbnail = 7 minimum; detail/video/checkout_image/seo_thumbnail are extras — see ADDING PHOTOS); media comes in as a LINK (Drive "anyone with the link" or a direct URL) — you can't take a file pasted into the chat, so ask for a link, and always run it through uploadImage to get the real CDN url (never invent one); price is editable anytime — on a published product a price change rotates in place and goes live immediately (same product/URL), so there's no "new product" dance; the checkout_* identity fields freeze at first publish; for a TEMPORARY sale create a coupon (leaves the list price intact); staged edits can be scrapped with discardEdits; to take a piece down, archiveProduct (never delete); on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
 ```
 
 CURRENT (26):
@@ -3180,7 +3355,8 @@ Always show Em a clean **preview** first — title, price in dollars, headline, 
 NEW:
 ```markdown
 Always hand Em the **preview link** the create/edit returns — that's the real review ("here's how
-shoppers will see it"), better than reading fields back. Never create with fewer than 7 photos, and
+shoppers will see it"), better than reading fields back. Never create without the required photo set
+(at least 1 hero + 5 gallery + a thumbnail = 7 minimum; detail/video are extras), and
 never set a price different from what she told you. You **can edit** a product now (copy, photos,
 SEO) — edits stage as a draft she previews, then publishes. The only frozen things after publish are
 the **checkout identity** fields (name / description / image); **price you can change anytime** — it
@@ -3265,8 +3441,9 @@ stage as a draft she previews, then publishes — the live page is untouched unt
 sale, see what's running, end one on the spot); **archive / resurface** ("remove" takes a piece down but
 keeps it — she can bring it back; nothing is truly deleted); **price changes** (just tell the GPT the new
 price — it updates in place on the same page and link, effective immediately; no new listing — Q1);
-**marking a piece sold** (toggling it unavailable in an edit *previews* as a draft until she publishes —
-for an instant takedown she uses Archive; a real purchase marks it sold automatically — G16/#8a); and the
+**marking a piece sold** (toggling it unavailable is **immediate**, like a price change — it shows as
+sold but stays on the page; for removing it from the shop entirely she uses Archive; a real purchase
+marks it sold automatically — breadth G2 / G16); and the
 **status meanings** (live / draft / live·edits-pending / archived). Keep her warm voice + reassurance; no
 API/CSS detail (that lives in `GPT_SETUP.md` / this doc).
 
@@ -3386,6 +3563,18 @@ third-party calls):**
     `refunded` (verify via `listOrders` / the order row); a **partial** refund logs but does **not**
     change status; a duplicate `charge.refunded` delivery is de-duped by the existing idempotency claim
     (no error, no double-write). (Requires `charge.refunded` enabled on the Stripe webhook endpoint.)
+23. **Mark-sold is immediate on a published piece (breadth G2):** on a PUBLISHED product, `editProduct
+    {available:false}` (GPT or admin) → the live row flips to sold **immediately** (no draft staged, no
+    preview, no publish step); `/shop` + the product page show it sold at once; the response carries
+    `availability_updated:true` and admin shows "Availability change is live now — nothing to publish"
+    with **no** Publish button; `editProduct {available:true}` re-lists it the same way. On an
+    UNPUBLISHED draft, `available` still applies to live columns directly (nothing live yet). Confirm an
+    availability-only change does NOT set "edits pending."
+24. **Per-type create validation is extensible (breadth G1b):** a `miniature` create enforces exactly the
+    current rules (≥1 hero + ≥5 gallery + thumbnail + the required scalar fields); an unknown/new
+    `product_type` falls back to the `miniature` ruleset (never un-validated). Confirm the `miniature`
+    error messages/behaviour are byte-identical to today (no regression), and that adding a hypothetical
+    `PRODUCT_TYPE_RULES` entry would change only that type's minimums.
 
 ---
 
@@ -3657,13 +3846,11 @@ promotion-code edge case) — not for routine checks.
   the full `images` array (G14), and a removed photo's R2 object lingers (harmless); the preview page's
   cart-button visual treatment (disable / "preview only") is a Part 3 design-slice call — only the
   analytics-skip is wired now (G13).
-- **Known edge (3rd Gap A #8b — noted, not blocking):** a *stale* `available:true` in a pending draft
-  could, on publish, re-raise a piece that sold (the purchase webhook wrote `available:false` to the
-  live columns while the draft sat). It's narrow (requires staging an availability edit, then a sale,
-  then publishing the stale draft) and the everyday paths are unaffected: `archiveProduct` is the instant
-  takedown, and a real purchase always writes live. A correct auto-fix is timestamp-aware (only apply a
-  draft's `available` if staged after the last sale) — deferred to v1.1 to avoid a naive "sold always
-  wins" clamp that would block legitimate re-listing. For now: documented; use Archive for takedown.
+- **Resolved by breadth G2 (was 3rd Gap A #8b):** the prior known-edge — a *stale* `available:true` in a
+  pending draft re-raising a sold piece on publish — **no longer applies on a published row**, because
+  `available` is now applied LIVE immediately and never staged into the draft (it can't sit stale).
+  `available` only flows through the draft on a still-*unpublished* product, where there's no live row to
+  contradict. So the timestamp-aware clamp is no longer needed; Archive remains the instant full takedown.
 - **Admin polish (breadth pass — noted, not blocking):** (a) after **unarchive**, the editor doesn't
   re-open to the piece, so resurfacing an archived *draft* then publishing it is a two-step (find →
   re-open → publish) — acceptable for v1, a one-call convenience later. (b) `openEditor` shows the
