@@ -1,13 +1,20 @@
-> ⚠️ **SUPERSEDED by `v1_5_5_IMPLEMENT.md`** (4th Gap Review A folded — price-rotation ordering fix,
-> Studio-note split, D1 media-by-link `uploadImage`, D2 `charge.refunded`, + anchors/notes + the Product
-> North Star lens). Kept for history; **do not build from this file.**
-
 # v1.5.0 — AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-**Version**: v1.5.4
+**Version**: v1.5.5
 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the
 v1.5 design pass. Functionality first; design second.
-**Revision driven by**: **three passes of Gap Review A**, each assessed against the live repo. *Pass 1*
+**Revision driven by**: **four passes of Gap Review A**, each assessed against the live repo. *Pass 4*
+(`v1_5_4_GAP_REVIEW_A.md`) — the first pass with **no build-breaking compile/logic error** and all
+landmines confirmed holding. It surfaced **one real code bug** — price rotation deactivated the old
+Stripe Price *before* creating the new one, so a mid-rotation Stripe failure could leave a live product
+pointing at an inactive Price (unbuyable); now reordered to create→write→deactivate-best-effort (#2).
+**One doc bug** — the Phase 10b Studio note conflated an INSERT (fires the AFTER-INSERT trigger) with a
+flag-flip UPDATE (does **not** fire it → a published-but-no-Stripe zombie); now split (#3). **One scope
+decision (D1)** — "upload a photo by chat" was asserted but unbuildable (no `uploadImage` Action was
+defined, and `/api/upload` is multipart-only, which a Custom GPT Action can't drive); resolved to a
+**URL-based `uploadImage`** (Em shares a Drive/direct link; the server fetches it). **One fold (D2)** —
+a `charge.refunded` webhook branch so order status reflects dashboard refunds. Plus the `refunded`
+blind-spot doc, the create slug-provenance + MP4 anchors, and small UX/GPT notes. *Pass 1*
 (`v1_5_1_GAP_REVIEW_A.md`): its four "blockers" proved to be doc-hardening, not bugs — every
 load-bearing CURRENT block is now **quoted** (the Stripe trigger + `CREATE TRIGGER`, the `product.js`
 handler, `syncProductToStripe`), the real gaps fixed (coupon system-code collision, draft-price edit,
@@ -25,8 +32,8 @@ the re-price journey changed from "new product" to **same-product Stripe-price r
 slug/URL/SEO); plus create-insert allow-listing, coupon-list pagination, a `getProduct` `preview_url`,
 and the "archived" status vocabulary. v1.5.1 re-merged the build + spec; the v1.5.0–3 files remain history.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) · **this doc only** —
-do NOT read the superseded `v1_5_0_*` / `v1_5_1_*` / `v1_5_2_*` / `v1_5_3_*` files; their content is folded in here.
-**Supersedes (history — do not build from them)**: `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`,
+do NOT read the superseded `v1_5_0_*` / `v1_5_1_*` / `v1_5_2_*` / `v1_5_3_*` / `v1_5_4_*` files; their content is folded in here.
+**Supersedes (history — do not build from them)**: `v1_5_4_IMPLEMENT.md`, `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`,
 `v1_5_1_IMPLEMENT.md`, `v1_5_0_IMPLEMENT.md`, `v1_5_0_BUILD_STORE_MGMT.md`.
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the
@@ -34,6 +41,19 @@ do NOT read the superseded `v1_5_0_*` / `v1_5_1_*` / `v1_5_2_*` / `v1_5_3_*` fil
 > If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never
 > guess. Everything here is a confirmed decision (no "we could X or Y"); if a builder hits a
 > decision-shaped question, that's a plan bug → stop, surface to Sean, fix the plan, continue.
+
+> ## ⭐ Product North Star (the lens for every decision and every gap review)
+> **Minimize the owner's friction to manage her entire digital product — the site, the store, and her
+> sales — by offloading the work to her Custom GPT.** Em runs everything by chatting with the GPT
+> (OpenAI web / iOS / Android); the GPT should be able to do anything a capable agent (e.g. Claude Code
+> armed with skills + MCPs) could do on her behalf. **Judge every feature, gap, and trade-off against
+> this**, not against whether the existing docs are internally consistent: the question is always
+> "does this let Em do the thing by chat, with the least friction?" When a capability is asserted but
+> can't actually be driven by the GPT (as the photo-upload path was before v1.5.5), that's a real gap —
+> name it, and either build the by-chat path or state the honest limit on the page. The one structural
+> limit to respect: a Custom GPT **Action** sends JSON and cannot forward a file a user pastes into the
+> ChatGPT thread (and Code Interpreter has no network) — so media arrives by **link** (the GPT fetches
+> a Drive/direct URL), and the GPT asks for a link when a photo is pasted directly.
 
 ---
 
@@ -128,8 +148,9 @@ from `stripe_price_id`). By making the three checkout *identity* fields **frozen
 set once, pushed to Stripe at publish, never edited — editing marketing/SEO copy **never touches
 Stripe**, so the catalog can't go stale. `price` is the one Stripe-bound field that can still change
 after publish: because a Stripe **Price object is itself immutable**, a price change *rotates* it
-(deactivate the old, create a new one on the same product) — which also keeps the catalog current (the
-old Price is `active:false`, the product always charges its live Price). The fallbacks mean Em only
+(create a new Price on the same product, point the product at it, then deactivate the old one) — which
+also keeps the catalog current (the product always charges its live Price; the retired Price is
+`active:false`). The fallbacks mean Em only
 authors checkout copy when she wants it to differ from the page copy.
 
 ## 1.2 The GPT sets every value
@@ -147,9 +168,10 @@ field in all three tiers** from her intent + photos, then either presents them f
   objects.)
 - **After publish:** the checkout *identity* fields (`checkout_name` / `checkout_description` /
   `checkout_image`) + `sku` are **frozen**. **`price` is not frozen — it rotates** (Q1): a price change
-  on a published product deactivates the old Stripe Price and creates a new one on the *same* Stripe
-  product (same slug / URL / page / SEO), updating `stripe_price_id`; the change applies to the live
-  columns immediately. To run a *temporary* discount → a coupon (1.5), which leaves the list price
+  on a published product creates a new Stripe Price on the *same* Stripe product (same slug / URL /
+  page / SEO), points `stripe_price_id` at it, then deactivates the old Price (the order matters — see
+  Phase 3.4 / 4th Gap A #2); the change applies to the live columns immediately. To run a *temporary*
+  discount → a coupon (1.5), which leaves the list price
   intact; a permanent re-price is the rotation above.
 - **Marketing/SEO edits never call Stripe.** (The only post-publish Stripe write from an edit is the
   price rotation; checkout identity + the product object are untouched.)
@@ -181,8 +203,13 @@ CMS behaviour; it's also the footage that sells the piece).
 
 **The two flows, step by step.**
 
-*Create (new product):* (1) Owner: "add this piece…" + photos. (2) GPT drafts every field (all three
-tiers, 1.1) → `createProduct`. (3) Saved **unpublished**, **no Stripe object yet**; the response
+*Create (new product):* (1) Owner: "add this piece…" and shares the photos as a **link** — a Google
+Drive "anyone with the link" share, or any direct file URL (D1: a Custom GPT Action can't receive a
+file pasted into the chat, so the GPT asks for a link if she pastes one). (1a) For each photo/video the
+GPT calls **`uploadImage({url, slug, role})`**; the server fetches the link, runs it through the
+Cloudinary→R2 pipeline, and returns the CDN `url`. (2) GPT drafts every field (all three tiers, 1.1),
+placing the returned URLs in `images[]`/`thumbnail`/`checkout_image`/`seo_thumbnail`/`media[]` →
+`createProduct`. (3) Saved **unpublished**, **no Stripe object yet**; the response
 carries a `preview_url`. (4) GPT: "Here's your preview: <preview_url> — exactly how shoppers will see
 it. Tap **Publish** when it looks right." (5) Owner opens it (no login), reviews, taps **Publish** (or
 tells the GPT "publish"). (6) Publish creates the Stripe product + price, flips `is_published=true`,
@@ -248,8 +275,10 @@ The GPT's knowledge + instructions are the **most prominent brand surface.** If 
 wrong or clunky enough that DIY beats it. Authored in Phase 9 (knowledge = `assets/docs/gpt/*`;
 instructions + schema = `GPT_SETUP.md`). It must understand: every field by tier (1.1); the
 create/edit→preview→publish flow; the preview-handoff language; coupon semantics; confirm-vs-expedite;
-plain-language errors; price changes (rotate in place — Q1); discarding staged edits (Q2); and what it
-does **not** do (edit the frozen checkout identity fields after publish; touch `is_test`).
+plain-language errors; price changes (rotate in place — Q1); discarding staged edits (Q2);
+**media-by-link** (Em shares a Drive/direct link → `uploadImage`; a pasted file can't be forwarded, so
+ask for a link — D1); and what it does **not** do (edit the frozen checkout identity fields after
+publish; touch `is_test`).
 
 ## 1.8 Environments & the owner's independence
 
@@ -285,13 +314,19 @@ After v1.5 the GPT's Actions are:
   `active:false`) and `unarchiveProduct` (bring it back). "Delete / take down" **always means archive**,
   never a hard delete (1.12). A published price change is **not** a new product — `editProduct {price}`
   rotates the Stripe Price in place (same slug / URL / page — Q1).
-- **Media:** `uploadImage` (roles incl. the new `checkout_image`, `seo_thumbnail`); the create/edit
-  `media` array sets the page's optional MP4 / YouTube (renders in order, hides when absent).
+- **Media:** `uploadImage({url, slug, role})` — Em shares a photo/video as a **link** (Google Drive
+  "anyone with the link", or a direct file URL) and the server fetches it; roles incl. the new
+  `checkout_image` (1:1) + `seo_thumbnail` (1.91:1); videos pass `skip_transform:true`. A file pasted
+  directly into the chat can't be forwarded by an Action → the GPT asks for a link (D1 / North Star).
+  The create/edit `media` array sets the page's optional MP4 / YouTube (renders in order, hides when absent).
 - **Discounts:** `createCoupon` (Coupon + Promotion Code), `listCoupons`, `deactivateCoupon` (end a
   sale anytime) — all scoped to owner-tagged coupons so system codes are never touched (1.5).
 - **Orders:** `listOrders`; `markShipped` (emails the buyer; confirm first). *(Already shipped in
   v1.4.9 — the GPT schema + instructions exist; v1.5 adds nothing on the order side.)*
-- **Refunds:** guided only — Em does them in the Stripe dashboard (no Action in v1).
+- **Refunds:** guided only — Em issues them in the Stripe dashboard (no GPT Action in v1.5; a
+  GPT-initiated refund is a v1.1 thesis item). A **full** dashboard refund now flips the order to
+  `refunded` automatically via the `charge.refunded` webhook branch (D2 / Phase 4.7), so the order
+  status the GPT reports stays truthful.
 
 *Decided:* `product_type` **is** editable (not Stripe-frozen — 1.2). Coupons are **create + list +
 deactivate**, owner-tagged so system codes stay untouched (1.5). **Dynamic product media** is **in**
@@ -716,6 +751,14 @@ function liveUrl(request: Request, slug: string): string {
 }
 ```
 
+> **Origin assumption (4th Gap A #10 — recorded, not a bug).** Both helpers derive the host from
+> `new URL(request.url).origin`, which is what makes "relay the link, never hardcode the domain" (3rd
+> Gap A #10) work across prod **and** the dev preview. This relies on `request.url` carrying the
+> **public** origin on this deployment — true here: the store is reached on its custom domain in
+> production and on the `*.vercel.app` preview host in test, and Vercel passes that public host through
+> to the function's `request.url` (it is *not* an internal proxy hostname). Phase 11 #3 asserts the
+> returned `preview_url` host == the host the request came in on, so the premise is tested, not assumed.
+
 **3.2 — GET: preview-by-token branch + public `is_published` guards.**
 
 CURRENT (38–44):
@@ -934,6 +977,21 @@ NEW:
 }
 ```
 
+> **`slug`/`sku` provenance — why the allow-list captures them (4th Gap A #4, anchor).** `CREATE_FIELDS`
+> picks `slug`/`sku` **from `product`**, and the generation code upstream (unchanged, **above** this
+> insert) assigns the generated slug back **onto `product`**, so the pick captures it:
+> ```ts
+> // api/products.ts 158–163 (CURRENT — runs before the allow-list pick):
+> const title = String(product.title).trim();
+> const slug =
+>   typeof product.slug === 'string' && product.slug.trim()
+>     ? product.slug.trim()
+>     : title.toLowerCase().replace(/ /g, '-');
+> product.slug = slug;   // ← lands on `product`, so CREATE_FIELDS' pick of 'slug' captures it
+> ```
+> `sku` is **not** auto-generated (it's caller-supplied or absent — never in the `required` list), so the
+> allow-list captures it when present and the NOT-NULL/unique `slug` is always set. No required file-open.
+
 **3.4 — PUT: edit stages copy/SEO into `draft` (published rows) or updates live columns (unpublished
 drafts); `price` rotates in place on a published row (Q1).** Full-function replacement.
 
@@ -1104,10 +1162,20 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Price rotation (Q1): a real price change rotates the Stripe Price (deactivate old, create new on
-    // the SAME product) and applies to the LIVE columns immediately. Reuses the proven logic from the
-    // pre-v1.5 PUT (current products.ts:258-275). A price needs no preview, so it never stages.
+    // Price rotation (Q1): a real price change rotates the Stripe Price on the SAME product and applies
+    // to the LIVE columns immediately (a price needs no preview, so it never stages).
+    //
+    // ORDER MATTERS (4th Gap A #2): create-new → write-DB → deactivate-old (best-effort). The naive
+    // "deactivate old, then create new" is a real bug: if `prices.create` throws after the deactivate
+    // succeeds, the handler 502s WITHOUT writing the DB, so `stripe_price_id` still points at the
+    // now-INACTIVE old Price — Stripe rejects an inactive Price in a new Checkout Session, so the live
+    // product is silently UNBUYABLE until a later rotation happens to succeed. By creating first and
+    // only deactivating after the DB commit, every failure path leaves a buyable product (old
+    // active+referenced before the commit, or new active+referenced after it). The old Price is never
+    // referenced once the DB points at the new one, so its deactivation is non-fatal cleanup. (This
+    // intentionally diverges from the pre-v1.5 PUT ordering — the prior approach is not presumed best.)
     const liveUpdate: Record<string, unknown> = {};
+    let oldPriceIdToDeactivate: string | null = null;
     if (
       updates.price !== undefined &&
       updates.price !== (current as Record<string, unknown>).price
@@ -1117,15 +1185,15 @@ export async function PUT(request: Request) {
       }
       if (current.stripe_product_id && current.stripe_price_id) {
         try {
-          await stripe.prices.update(current.stripe_price_id as string, { active: false });
           const newPrice = await stripe.prices.create({
             product: current.stripe_product_id as string,
             unit_amount: updates.price as number,
             currency: 'usd',
           });
           liveUpdate.stripe_price_id = newPrice.id;
+          oldPriceIdToDeactivate = current.stripe_price_id as string; // deactivate AFTER the DB commit
         } catch (err) {
-          console.error('Stripe price rotation failed:', err);
+          console.error('Stripe price rotation failed (DB untouched; old price still active):', err);
           return jsonResponse(request, { error: 'Failed to update the price in Stripe' }, 502);
         }
       }
@@ -1156,6 +1224,15 @@ export async function PUT(request: Request) {
     if (error) {
       console.error('Product update failed:', error.message);
       return jsonResponse(request, { error: error.message }, 400);
+    }
+    // The DB now points at the new (active) Price — deactivate the old one as cleanup. Best-effort:
+    // a failure here is harmless (the old Price is no longer referenced) and must NOT fail the request.
+    if (oldPriceIdToDeactivate) {
+      try {
+        await stripe.prices.update(oldPriceIdToDeactivate, { active: false });
+      } catch (err) {
+        console.error('Old price deactivate failed (harmless — DB points at the new active price):', err);
+      }
     }
     return jsonResponse(request, {
       success: true,
@@ -1752,7 +1829,71 @@ NEW (also require published + non-archived — `.is(col, null)` for the timestam
 
 > No other change to `product-feed.ts`. The CSV builder, headers, and caching are untouched.
 
-## Phase 5 — `api/upload.ts` (two new image roles + their crops)
+## Phase 4.7 — `api/webhook.ts` (reflect dashboard refunds — D2 / 4th Gap A #9)
+
+`orders.status` enumerates `refunded`, and §1.10 says refunds are *guided* (Em issues them in the Stripe
+dashboard). But the webhook only handles `checkout.session.completed` (everything else is a logged
+no-op, current line 60), so a dashboard refund **never** flips the Supabase order — the `refunded`
+status is unreachable and "order status" silently lies. Add a `charge.refunded` branch **before** the
+no-op guard (no new function — `webhook.ts` is already deployed). It runs *after* the existing
+idempotency claim (so a refund event is claimed + de-duped like any other), looks up the order(s) by the
+charge's payment intent, and sets `status='refunded'` on a **full** refund (a partial refund is logged,
+not status-changed — the enum has no partial state; flag a `partially_refunded` value for v1.1).
+
+CURRENT (the no-op guard for non-checkout events, 60–63):
+```ts
+  if (event.type !== 'checkout.session.completed') {
+    console.log(`Webhook event ${event.id} (${event.type}) recorded, no-op handler`);
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers });
+  }
+```
+NEW (handle `charge.refunded` first, then keep the existing no-op for everything else):
+```ts
+  if (event.type === 'charge.refunded') {
+    try {
+      const charge = event.data.object as Stripe.Charge;
+      const piId = typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : charge.payment_intent?.id ?? null;
+      const fullyRefunded = charge.amount_refunded >= charge.amount;
+      if (piId && fullyRefunded) {
+        const { error: refundErr } = await supabase
+          .from('orders')
+          .update({ status: 'refunded' })
+          .eq('stripe_payment_intent', piId);
+        if (refundErr) {
+          console.error(`Refund status update failed for ${event.id} (PI ${piId}):`, refundErr);
+        } else {
+          console.log(`Order(s) marked refunded (${event.id}): PI ${piId}`);
+        }
+      } else {
+        console.log(`charge.refunded ${event.id}: partial or no PI (refunded ${charge.amount_refunded}/${charge.amount}) — no status change`);
+      }
+    } catch (err) {
+      // Claim already inserted; never 5xx (would trigger a Stripe retry we'd then no-op).
+      console.error(`Refund handler error after claim for ${event.id} (returning 200):`, err);
+    }
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers });
+  }
+
+  if (event.type !== 'checkout.session.completed') {
+    console.log(`Webhook event ${event.id} (${event.type}) recorded, no-op handler`);
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers });
+  }
+```
+
+> **Stripe Dashboard / event wiring:** `charge.refunded` must be enabled on the webhook endpoint in the
+> Stripe Dashboard (it isn't part of `checkout.session.*`). One-line operator add; note it in
+> `STORE_ADMINISTRATION.md`. `Stripe.Charge` is already covered by the imported `Stripe` types — no new
+> import. The match is by `stripe_payment_intent` (set on every order row at checkout, webhook.ts:161),
+> which uniquely keys the order(s) in a Stripe mode, so no `is_test` filter is needed.
+
+## Phase 5 — `api/upload.ts` (URL-intake for the GPT + two new image roles + their crops)
+
+This phase does three things: (1) **D1 / 4th Gap A #1** — add a JSON/URL intake path so the Custom GPT
+can upload media (Actions send JSON, not multipart, and can't forward a pasted file → Em shares a
+Drive/direct link and the server fetches it); (2) the two new image roles (`checkout_image`,
+`seo_thumbnail`) + their crops; (3) quote the existing MP4 leg so the cold builder needn't open the file.
 
 CURRENT (52–53):
 ```ts
@@ -1764,6 +1905,143 @@ NEW:
 const ROLE_PATTERN =
   /^(hero|thumbnail|gallery-(0[1-9]|1[0-5])|video-0[1-5]|detail-0[1-5]|gif-0[1-5]|checkout_image|seo_thumbnail)$/;
 ```
+
+**Add the Drive/URL normalizer helper** (a Google Drive *share* link returns an HTML page, not the file
+— rewrite the common share forms to the direct-download form; leave any other URL untouched).
+CURRENT (the `sha1Hex` helper, 69–74 — anchor; the new function goes right after it):
+```ts
+async function sha1Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+```
+NEW (append after `sha1Hex`):
+```ts
+// Google Drive "share" URLs (…/file/d/<id>/view, …/open?id=<id>, …/uc?id=<id>) serve an HTML page,
+// not the bytes. Rewrite them to the direct-download form. Any non-Drive URL passes through unchanged.
+// NOTE: very large Drive files (videos > ~25 MB) hit Google's virus-scan interstitial and return HTML,
+// not the file — the content-type check in POST catches that and returns a friendly "share as a direct
+// link" error. Em's typical product clips are small; flag a confirm-token follow-up for v1.1 if needed.
+function normalizeMediaUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    if (u.hostname !== 'drive.google.com') return raw;
+    const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+    const id = pathMatch?.[1] ?? u.searchParams.get('id');
+    return id ? `https://drive.google.com/uc?export=download&id=${id}` : raw;
+  } catch {
+    return raw; // not a parseable URL — let the fetch fail with the friendly error
+  }
+}
+```
+
+**Add the JSON/URL intake path** so the GPT can upload by link. Resolve the input into a `File` from
+EITHER a JSON body (`{url, slug, role, skip_transform}` — the GPT/agent path) OR the existing multipart
+form (admin UI drag-drop, curl); both converge on the **same** `file`/`slug`/`role`/`skipTransformField`
+locals, so the entire Cloudinary→R2 pipeline below is unchanged for every caller.
+CURRENT (the multipart parse at the top of `POST`, 85–105):
+```ts
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return jsonResponse(request, { error: 'Invalid multipart form' }, 400);
+  }
+
+  const file = formData.get('file');
+  const slugField = formData.get('slug');
+  const roleField = formData.get('role');
+  const skipTransformField = formData.get('skip_transform');
+
+  if (!(file instanceof File) || typeof slugField !== 'string' || typeof roleField !== 'string') {
+    return jsonResponse(request, { error: 'Missing file, slug, or role' }, 400);
+  }
+
+  const slug = slugField.trim();
+  const role = roleField.trim();
+  if (!slug || !role) {
+    return jsonResponse(request, { error: 'Missing file, slug, or role' }, 400);
+  }
+```
+NEW:
+```ts
+  // D1 / 4th Gap A #1 — dual intake. JSON {url,...} = the Custom GPT path (Actions are JSON-only and
+  // can't forward a pasted file); multipart = admin UI / curl. Both yield a `File` for the pipeline.
+  let file: File;
+  let slug: string;
+  let role: string;
+  let skipTransformField: string | null = null;
+
+  if ((request.headers.get('content-type') ?? '').includes('application/json')) {
+    let body: { url?: unknown; slug?: unknown; role?: unknown; skip_transform?: unknown };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return jsonResponse(request, { error: 'Invalid JSON body' }, 400);
+    }
+    if (typeof body.url !== 'string' || typeof body.slug !== 'string' || typeof body.role !== 'string') {
+      return jsonResponse(request, { error: 'Missing url, slug, or role' }, 400);
+    }
+    let mediaRes: Response;
+    try {
+      mediaRes = await fetch(normalizeMediaUrl(body.url.trim()), { redirect: 'follow' });
+    } catch {
+      return jsonResponse(request, { error: 'Could not fetch that media link' }, 400);
+    }
+    if (!mediaRes.ok) {
+      return jsonResponse(
+        request,
+        { error: `That link isn't directly downloadable (HTTP ${mediaRes.status}). Share it as "anyone with the link," or give me a direct file URL.` },
+        400,
+      );
+    }
+    const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (!ALLOWED_MIME.has(fetchedType)) {
+      return jsonResponse(
+        request,
+        { error: `That link didn't return an allowed image/video (got "${fetchedType || 'unknown'}") — it may be a share page, not the file itself. Share it as "anyone with the link," or send a direct file URL.` },
+        400,
+      );
+    }
+    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
+    slug = body.slug.trim();
+    role = body.role.trim();
+    skipTransformField = body.skip_transform === true || body.skip_transform === 'true' ? 'true' : null;
+  } else {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return jsonResponse(request, { error: 'Invalid multipart form' }, 400);
+    }
+    const fileField = formData.get('file');
+    const slugField = formData.get('slug');
+    const roleField = formData.get('role');
+    const stf = formData.get('skip_transform');
+    skipTransformField = typeof stf === 'string' ? stf : null;
+    if (!(fileField instanceof File) || typeof slugField !== 'string' || typeof roleField !== 'string') {
+      return jsonResponse(request, { error: 'Missing file, slug, or role' }, 400);
+    }
+    file = fileField;
+    slug = slugField.trim();
+    role = roleField.trim();
+  }
+
+  if (!slug || !role) {
+    return jsonResponse(request, { error: 'Missing file, slug, or role' }, 400);
+  }
+```
+
+> **Pipeline unchanged below.** Everything after this point still reads `file.type` / `file.size` /
+> `await file.arrayBuffer()` and `skipTransformField`, so the role check, the `ALLOWED_MIME` re-check
+> (a defensive double-check; the JSON path already validated the fetched type), the 10 MB image / 50 MB
+> video size cap (now applied to the **fetched** bytes via `file.size`), the Cloudinary transform, and
+> the R2 `PutObjectCommand` need **no edit**. A `File` built from a `Buffer` reports `.size ===
+> bytes.length`, so the size cap protects the URL path too. `File` is a Node global on the Vercel
+> runtime (`request.formData()` already returns `File` instances).
 
 CURRENT (170–172):
 ```ts
@@ -1784,12 +2062,27 @@ NEW:
 > preview). These store in their own scalar columns, so they bypass the `images[]` hero/gallery
 > min-count validation in `products.ts` — no change there.
 
-> **Video upload already works (Gap A #6) — no code needed here for MP4.** `upload.ts` already accepts
-> `video/mp4` + `video/webm` (`ALLOWED_MIME`), allows a 50 MB cap for video, parses `skip_transform`,
-> and passes any non-image straight to R2 (`shouldTransform = isImageMime && !skipTransform`). So an MP4
-> at role `video-0x` uploads as-is regardless of `skip_transform`. Phase 5 adds **only** the two image
-> roles + their crops. (The GPT MEDIA instruction keeps `skip_transform=true` for consistency with the
-> existing convention — a harmless no-op for video.)
+> **Video (MP4) is handled by the same code — anchored, not assumed (4th Gap A #5).** The MP4 leg is
+> the **existing** `upload.ts` logic (no new transform code); quoting the anchors so the cold builder
+> needn't open the file:
+> ```ts
+> const ALLOWED_MIME = new Set([             // upload.ts 34–41
+>   'image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm',
+> ]);
+> const isVideo = file.type.startsWith('video/');                       // 118
+> const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;        // 119
+> if (file.size > maxSize) { /* 400 "File too large" */ }              // 120–126
+> const skipTransform = typeof skipTransformField === 'string' && skipTransformField === 'true'; // 128–129
+> const isImageMime = file.type.startsWith('image/') && file.type !== 'image/gif';               // 130
+> const shouldTransform = isImageMime && !skipTransform;               // 131
+> // else-branch (199–203): non-image passes straight through —
+> //   finalBuffer = Buffer.from(await file.arrayBuffer()); contentType = file.type;
+> //   extension = MIME_TO_EXT[file.type] ?? 'bin';
+> ```
+> So an MP4 at role `video-0x` is never Cloudinary-transformed (`shouldTransform=false`) and streams
+> as-is to R2, at a 50 MB cap, **whether it arrives by multipart or by the new URL path** (the dual
+> intake above feeds the identical pipeline). Phase 5's only *new transform code* is the two image roles
+> + their crops. (The GPT MEDIA instruction keeps `skip_transform=true` for video — a harmless no-op.)
 
 ## Phase 6 — `vercel.json` (clean routes for publish + coupon → `products.ts`, no new function)
 
@@ -2246,6 +2539,9 @@ function renderPublishPanel(body, id) {
   const panel = $('publish-panel');
   if (!panel) return;
   const previewUrl = body.preview_url;
+  // There's only something to publish when a draft exists (a new product, or staged edits) — both
+  // return a preview_url. A price-only change goes live immediately and stages nothing (4th Gap A #7).
+  const publishable = !!previewUrl;
   panel.classList.remove('hidden');
   panel.innerHTML = '';
   const p = document.createElement('p');
@@ -2253,23 +2549,30 @@ function renderPublishPanel(body, id) {
   if (previewUrl) {
     p.innerHTML =
       'Preview how it looks: <a href="' + previewUrl + '" target="_blank" rel="noopener">open preview</a> — then publish when it looks right.';
+  } else if (body.price_updated) {
+    // Price-only change: live now, nothing staged → say so, and show NO Publish button (4th Gap A #7).
+    p.textContent = 'Price change is live now — nothing else to publish.';
   } else {
-    p.textContent = 'Saved. Publish when ready.';
+    p.textContent = 'Saved.';
   }
   panel.appendChild(p);
-  // Q1: a price change on a published product goes live immediately (price isn't part of the preview).
-  if (body.price_updated) {
+  // Q1: when a price change rides ALONGSIDE staged copy edits, add the "price already live" detail
+  // (the copy still needs publishing). For a price-ONLY change the line above already covers it.
+  if (body.price_updated && previewUrl) {
     const note = document.createElement('p');
     note.style.margin = '0 0 8px';
     note.textContent = 'Price change is live now (price updates immediately; it isn’t part of the draft preview).';
     panel.appendChild(note);
   }
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'primary';
-  btn.textContent = 'Publish now';
-  btn.addEventListener('click', () => publishProduct(id, btn));
-  panel.appendChild(btn);
+  // Publish button only when there's a draft to publish — never for a price-only (already-live) change.
+  if (publishable) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary';
+    btn.textContent = 'Publish now';
+    btn.addEventListener('click', () => publishProduct(id, btn));
+    panel.appendChild(btn);
+  }
   // Q2: when edits are STAGED on a published product, offer to discard them (the inverse of publish).
   // Not shown for a brand-new draft (no staged overlay) or a price-only change (nothing staged).
   if (body.staged) {
@@ -2729,12 +3032,31 @@ note after the new paths below). Then after the `/api/products` `post` block, ad
           schema: { type: string }
       responses:
         '200': { description: "The product (full row, incl. is_published + any staged draft), plus preview_url when a preview_token exists (3rd Gap A #10 — relay this link; do not build a URL by hand)." }
+  /api/upload:
+    post:
+      operationId: uploadImage
+      summary: "Put a photo or video onto the store's CDN and get back its URL — call this for every image/video BEFORE createProduct/editProduct, then put the returned url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Em sends media as a LINK (a Google Drive 'anyone with the link' share, or any direct file URL) and the server fetches it. If she pastes a photo straight into the chat, you can't forward the file — ask her for a shareable link instead."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, slug, role]
+              properties:
+                url: { type: string, description: "A link to the image/video — a Google Drive share link ('anyone with the link') or a direct file URL. The server downloads it." }
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the file on the CDN." }
+                role: { type: string, description: "What this media is: hero, thumbnail, gallery-01..15, detail-01..05, video-01..05, checkout_image (Stripe 1:1), or seo_thumbnail (1.91:1 OG card)." }
+                skip_transform: { type: boolean, description: "true for videos and GIFs (uploaded as-is, no crop). Leave off / false for photos so they're cropped + web-optimized." }
+      responses:
+        '200': { description: "Uploaded; returns { url, filename }. Use url verbatim in the product fields." }
+        '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
 ```
 
 Also add `checkout_name`, `checkout_description`, `checkout_image`, `seo_thumbnail`, and the **`media`
 array** (same shape as in `editProduct` above) to the `createProduct` request schema (so the GPT
-drafts them too), and update the `uploadImage` `role` description to include `checkout_image,
-seo_thumbnail`.
+drafts them too). The `uploadImage` `role` description above already includes `checkout_image` +
+`seo_thumbnail`.
 
 > `getProduct` is `GET /api/products/by-slug/{slug}` — a `vercel.json` rewrite to the existing
 > authorized `GET /api/products?slug=` (which already returns the row **live or draft**). No new
@@ -2770,7 +3092,7 @@ By default, confirm the drafted fields with her before saving (read back the key
 1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id. A row may carry a `draft` object — those are edits previewed but NOT yet live; the top-level fields are what shoppers see right now, so never report `draft` values as the live copy.
 2. Call editProduct with the id and only the fields she's changing. On a published product, copy/SEO changes are STAGED as a draft (the live page is untouched until publish); a PRICE change is different — it rotates the Stripe price and goes live IMMEDIATELY (same product, same URL — no publish step needed). The checkout_* identity fields (checkout_name / checkout_description / checkout_image) are frozen once published; PRICE is not (Q1).
 3. Always hand back the preview link the same way as step 6 above. Never tell her an edit is live until it's published. If she changes her mind about staged edits, call discardEdits with the id — it scraps the pending draft and leaves the live page exactly as it was (the inverse of publish). (A price change isn't staged, so discardEdits won't undo it — to revert a price, set it back with editProduct.)
-4. PHOTOS (2nd Gap A G14): to add / remove / reorder photos, getProduct, adjust the FULL `images` array (and `thumbnail` if needed), and resend it via editProduct — there's no per-photo command, so always send the complete desired array. (A removed photo's file lingers on the CDN; harmless.)
+4. PHOTOS (2nd Gap A G14): to ADD a photo, first get it onto the CDN with uploadImage (see "ADDING PHOTOS & MEDIA" below) to get its url, then put that url in the FULL `images` array; to remove / reorder, just adjust the array. Either way getProduct first, send the COMPLETE desired `images` array (and `thumbnail` if needed) via editProduct — there's no per-photo command. (A removed photo's file lingers on the CDN; harmless.)
 
 == REMOVING / RE-PRICING A PIECE ==
 To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE (2nd Gap A G16). Marking a published piece sold/unavailable via editProduct {available:false} instead STAGES a draft, so it won't take effect until you publish — so DON'T just say "preview staged" and stop: either offer to publish it right away ("want me to make the sold status live now?") or, if she wants it gone from the shop immediately, use archiveProduct. (A real purchase still flips a piece to sold automatically.) To change a published price (Q1): just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
@@ -2780,16 +3102,21 @@ The preview link is the real review surface — she can't picture changes from c
 To RE-SHOW a preview she lost (2nd Gap A G9; 3rd Gap A #10): getProduct by slug. If there are pending edits (or it's still a draft) it returns a ready-to-share `preview_url` — hand her THAT exact link; it's already correct for wherever the store is running, so never hand-build the URL or assume the production domain. If getProduct returns no `preview_url`/`preview_token`, it's fully live with nothing pending — give the plain product page link from the create/publish response. (Don't make a no-op edit to "regenerate" a link — that would stage an empty draft.)
 
 == COUPONS ==
-Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons. To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
+Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons. To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
+
+== ADDING PHOTOS & MEDIA (by link) ==
+You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. For EACH photo or video, call uploadImage({ url: <her link>, slug: <product slug>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
+- If she pastes a photo directly into the chat: say you can't grab a pasted file, and ask her to share it as a Google Drive "anyone with the link" link (or any direct image URL) so you can add it.
+- If uploadImage returns a 400 ("not directly downloadable" / "looks like a share page"): the link is a Drive PREVIEW page, not the file, or it isn't shared publicly — ask her to set the share to "anyone with the link," or to paste a direct file URL, then retry.
 
 == MEDIA (optional video on the page) ==
-Most product videos are short MP4 clips. The flow: (1) upload the MP4 with uploadImage (role video-01..05, skip_transform=true) — it goes to the CDN just like a photo; (2) ALWAYS ask her how this particular clip should behave — it's case-by-case, never assume:
+Most product videos are short MP4 clips. The flow: (1) upload the MP4 with uploadImage({url, slug, role: video-01..05, skip_transform:true}) — share-link in, CDN url out, just like a photo; (2) ALWAYS ask her how this particular clip should behave — it's case-by-case, never assume:
 - "Should it play on its own and loop silently, with no buttons (like a GIF)?" → { "type":"video", "url":"<cdn mp4>", "autoplay":true, "loop":true }
 - "Or show a play button she presses (with sound)?" → { "type":"video", "url":"<cdn mp4>" }  (that's the default: play button, sound on, no autoplay). She can also give a still image to show before it plays → add "poster":"<url>".
 Set these per clip. Multiple MP4s are fine (they render in the order given). Leave media empty/omitted for no video — the section just hides. We don't use GIFs (an MP4 looks better and is smaller; convert a GIF with ffmpeg if she has one).
 YouTube is supported but RARE — only if she specifically has a YouTube link (she isn't building that kind of channel): { "type":"youtube", "url":"<link>" }. MP4s always render before any YouTube.
 
-Product rules: never create without showing the preview; never set a price different from what she said; never proceed with fewer than 7 photos; price is editable anytime — on a published product a price change rotates in place and goes live immediately (same product/URL), so there's no "new product" dance; the checkout_* identity fields freeze at first publish; for a TEMPORARY sale create a coupon (leaves the list price intact); staged edits can be scrapped with discardEdits; to take a piece down, archiveProduct (never delete); on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
+Product rules: never create without showing the preview; never set a price different from what she said; never proceed with fewer than 7 photos; media comes in as a LINK (Drive "anyone with the link" or a direct URL) — you can't take a file pasted into the chat, so ask for a link, and always run it through uploadImage to get the real CDN url (never invent one); price is editable anytime — on a published product a price change rotates in place and goes live immediately (same product/URL), so there's no "new product" dance; the checkout_* identity fields freeze at first publish; for a TEMPORARY sale create a coupon (leaves the list price intact); staged edits can be scrapped with discardEdits; to take a piece down, archiveProduct (never delete); on 409 (slug or coupon code taken) suggest a new title/code; on 400 tell her exactly which field is missing in plain language; on 401 stop and say "the connection key needs Sean's attention."
 ```
 
 CURRENT (26):
@@ -2943,20 +3270,29 @@ for an instant takedown she uses Archive; a real purchase marks it sold automati
 **status meanings** (live / draft / live·edits-pending / archived). Keep her warm voice + reassurance; no
 API/CSS detail (that lives in `GPT_SETUP.md` / this doc).
 
-**Operator note (2nd Gap A G8 — for Sean; also add to Phase 10's `EVERLASTINGS_STORE.md` data-flow).** A
-product row created directly in **Supabase Studio** now defaults to `is_published=false`, so it's a
-**draft** — the INSERT trigger skips it (no Stripe object). Publish it from the **admin panel** (load it
-→ **Publish now**), not by hand-flipping `is_published` in Studio. Hand-setting `is_published=true` in
-Studio *does* fire the trigger and create Stripe, but it **bypasses `handlePublish`** (no checkout-field
-validation; `published_at` stays null) — so don't: it sidesteps the draft→publish gate. Studio stays a
-fine place to inspect/patch a row; product *publishing* goes through admin or the GPT.
+**Operator note (2nd Gap A G8 + 4th Gap A #3 — for Sean; also add to Phase 10's `EVERLASTINGS_STORE.md`
+data-flow).** A product row created directly in **Supabase Studio** now defaults to `is_published=false`,
+so it's a **draft** — the INSERT trigger skips it (no Stripe object). **Never publish from Studio** —
+use the **admin panel** (load it → **Publish now**) or the GPT. The two Studio shortcuts both fail, in
+*different* ways, because the trigger is `AFTER INSERT` only:
+- **(a) Studio INSERT with `is_published=true`** *does* fire the AFTER-INSERT trigger and create Stripe,
+  but it **bypasses `handlePublish`** (no checkout-field validation; `published_at` stays null) — so it
+  sidesteps the draft→publish gate. Don't.
+- **(b) Studio UPDATE flipping an existing draft's `is_published` false→true** is an **UPDATE**, which
+  does **not** fire the AFTER-INSERT trigger at all → the row goes "published" with **no Stripe Price**.
+  It passes the new RLS (`is_published=true AND archived_at IS NULL`) but `main.js` hides it (no
+  `stripe_price_id`) → an invisible, unbuyable **published-but-no-Stripe zombie**. Don't.
+
+Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes through the admin panel or
+the GPT, both of which run `handlePublish` (validation + inline `syncProductToStripe`).
 
 ## Phase 11 — Verify + test
 
 **Static (before deploy):**
 - `npx tsc --noEmit -p tsconfig.json` → clean.
-- Function count unchanged (publish / coupon / archive / discard are rewrites, not files):
-  `ls api/*.ts` = 11.
+- Function count unchanged (publish / coupon / archive / discard are `?_action=` rewrites, not files;
+  the `uploadImage` URL branch edits the existing `upload.ts`, and the `charge.refunded` branch edits the
+  existing `webhook.ts` — neither adds a file): `ls api/*.ts` = 11.
 - `vercel.json` is valid JSON; the new `?_action=` rewrites present (incl. `/api/products/discard`).
 
 **Live (dev preview — point any GPT/curl at the preview; `is_test=true`, no real money; SSO off for
@@ -3029,6 +3365,27 @@ third-party calls):**
 18. **No publishing an archived piece (breadth pass):** publishing via a *stale* preview link (or by id)
     for an archived product → **409** "resurface it first" (no split state where Stripe goes active while
     `archived_at` is set). Unarchive, then publish → works.
+19. **Rotation stays buyable on a Stripe failure (4th Gap A #2):** simulate `stripe.prices.create`
+    throwing mid-rotation (e.g. a bad key / forced error on a test product) → the request 502s, the DB is
+    **untouched** (`price` + `stripe_price_id` unchanged), and the product **remains buyable** at its old
+    price (its referenced Price is still `active`). On the success path, confirm the *old* Price ends
+    `active:false` **after** the DB points at the new one, and that an old-Price-deactivate failure (if it
+    occurs) does **not** fail the request (the product is buyable at the new price regardless).
+20. **Upload by URL — the GPT path (D1 / 4th Gap A #1):** `POST /api/upload` with a JSON body
+    `{url, slug, role}` pointing at a public **image** URL → 200 `{url, filename}`; the file lands on R2
+    (transformed/cropped per role) and the returned URL works in `images[]`. Same with an **MP4** URL +
+    `role: video-01`, `skip_transform: true` → streams as-is (no transform), 200. The **multipart** path
+    (admin UI / curl) still works unchanged.
+21. **Upload by URL — failure messaging (D1):** a Google Drive **share-page** link (`…/file/d/<id>/view`)
+    → normalized to `uc?export=download&id=<id>` and fetched; a link that returns HTML / a non-allowed
+    type → **400** with the "share as a direct link" message (the GPT relays it); an over-cap file
+    (image > 10 MB / video > 50 MB) once fetched → **400** "File too large"; a JSON body missing
+    `url`/`slug`/`role` → **400**.
+22. **Refund reflects in order status (D2 / 4th Gap A #9):** on a **test** order, issue a **full** refund
+    from the Stripe dashboard → the `charge.refunded` event arrives and the order's `status` flips to
+    `refunded` (verify via `listOrders` / the order row); a **partial** refund logs but does **not**
+    change status; a duplicate `charge.refunded` delivery is de-duped by the existing idempotency claim
+    (no error, no double-write). (Requires `charge.refunded` enabled on the Stripe webhook endpoint.)
 
 ---
 
@@ -3315,3 +3672,12 @@ promotion-code edge case) — not for routine checks.
   open. (c) Optional bulletproofing: re-`pick(DRAFTABLE)` the `draft` at publish-apply so a *Studio
   hand-edit* of the `draft` jsonb can't inject a system column — negligible (Studio access = service-role
   already), so deferred.
+- **Known edge (4th Gap A #6 — noted, not blocking):** concurrent **first-publish** can duplicate a
+  Stripe product. `syncProductToStripe` idempotency is read-then-write (skip if `stripe_product_id`
+  exists), so two near-simultaneous first-publishes — e.g. Em taps the preview-page **Publish** *and*
+  tells the GPT "publish" at the same moment, or a client retry — can both read `null` and both create a
+  Stripe product; the row keeps whichever id wrote last, leaving one orphaned (manual cleanup). The
+  preview button's `disabled=true` covers the everyday double-tap; the button+GPT race is rare. A correct
+  hardening claims the publish atomically before the Stripe create (a conditional update with a row-count
+  check, or a Postgres advisory lock on the id) — not a naive reorder, which would reintroduce a
+  published-with-no-Stripe window. Deferred to v1.1.

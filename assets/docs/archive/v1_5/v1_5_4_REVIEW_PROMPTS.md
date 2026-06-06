@@ -1,3 +1,6 @@
+> ⚠️ **SUPERSEDED by `v1_5_5_REVIEW_PROMPTS.md`** (adds the Product North Star review lens + the 4th-A
+> fold landmines; output targets `v1_5_5_GAP_REVIEW_*`). Kept for history; **use the v1.5.5 prompts.**
+
 # v1.5.x — Gap-review prompts (fresh instances)
 
 All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_4_IMPLEMENT.md`.
