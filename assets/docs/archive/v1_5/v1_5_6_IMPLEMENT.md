@@ -1345,9 +1345,13 @@ export async function PUT(request: Request) {
     // buildProductPayload emits both on every save) doesn't write or report a spurious update.
     if (
       updates.available !== undefined &&
-      typeof updates.available === 'boolean' &&
       updates.available !== (current as Record<string, unknown>).available
     ) {
+      // parity with the quantity guard below: reject a malformed value rather than silently ignoring it
+      // (the admin/GPT schemas type it boolean, so this only fires on a bad caller).
+      if (typeof updates.available !== 'boolean') {
+        return jsonResponse(request, { error: 'Availability must be true or false' }, 400);
+      }
       liveUpdate.available = updates.available;
     }
     if (
@@ -3335,7 +3339,7 @@ To RE-SHOW a preview she lost: getProduct by slug. If there are pending edits (o
 Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons — it tells you each code's discount, redemptions, expiry, AND whether it's store-wide or limited to specific pieces (store_wide / product_ids), so relay the scope too ("HOLIDAY20 — 20% off everything" vs "just the Lavender Wreath"). To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
 
 == REFUNDS & ORDER STATUS ==
-You can SEE order status (listOrders) but you do NOT have an Action to issue a refund — refunds happen in the Stripe dashboard, which she signs into for payouts anyway. When she asks to refund someone, WALK HER THROUGH IT in plain steps (Stripe → Payments → find the payment → Refund). Stripe changes its dashboard over time, so if you're not certain the steps are current, USE WEB SEARCH to confirm today's Stripe refund flow before you tell her — don't recite steps you're unsure about. Once she completes a FULL refund in Stripe, the order's status updates to "refunded" on its own (a webhook reflects it); a PARTIAL refund won't show in status — tell her to check Stripe for partial-refund history.
+You can SEE order status (listOrders) but you do NOT have an Action to issue a refund — refunds happen in the Stripe dashboard, which she signs into for payouts anyway. When she asks to refund someone, WALK HER THROUGH IT in plain steps (Stripe → Payments → find the payment → Refund). Stripe changes its dashboard over time, so if you're not certain the steps are current, USE WEB SEARCH to confirm today's Stripe refund flow before you tell her — don't recite steps you're unsure about. Once she completes a FULL refund in Stripe, the order's status updates to "refunded" on its own (a webhook reflects it); a PARTIAL refund won't show in status — tell her to check Stripe for partial-refund history. A refund does NOT put the piece back up for sale — if she refunded because the sale fell through and wants it listed again, offer to relist it: editProduct {available:true} (immediate, no publish step).
 
 == ADDING PHOTOS & MEDIA (by link) ==
 You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. She can paste SEVERAL links in one message — accept them all and loop uploadImage over each (don't make her send one per message). For EACH photo or video, call uploadImage({ url: <her link>, slug: <product slug>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
@@ -3538,6 +3542,13 @@ use the **admin panel** (load it → **Publish now**) or the GPT. The two Studio
 Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes through the admin panel or
 the GPT, both of which run `handlePublish` (validation + inline `syncProductToStripe`).
 
+> **Operator checklist step (for Sean; carry into `STORE_ADMINISTRATION.md`'s operator section as an
+> explicit line, not just a footnote).** In the Stripe Dashboard, enable the **`charge.refunded`** event
+> on the webhook endpoint **in BOTH test mode and live mode** (Stripe keeps the two endpoints separate).
+> Without it, the order-status "refunded" reflection (Phase 4.7) silently no-ops — and the refund test
+> (#22) runs in test mode, so the test-mode endpoint must have it or the gate can't pass. Do this once at
+> cutover.
+
 ## Phase 11 — Verify + test
 
 **Static (before deploy):**
@@ -3650,7 +3661,7 @@ third-party calls):**
     it — all live. Confirm both are **change-detected**: re-sending the *unchanged* `available`/`quantity`
     (as the admin's full payload does) does NOT report `*_updated` and does NOT set "edits pending." On an
     UNPUBLISHED draft, `available`/`quantity` still apply to live columns directly (nothing live yet);
-    reject `quantity` that isn't a non-negative integer → 400.
+    reject `quantity` that isn't a non-negative integer → 400, and a non-boolean `available` → 400.
 24. **Per-type create validation is extensible:** a `miniature` create enforces exactly the
     current rules (≥1 hero + ≥5 gallery + thumbnail + the required scalar fields); an unknown/new
     `product_type` falls back to the `miniature` ruleset (never un-validated). Confirm the `miniature`
