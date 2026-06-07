@@ -1152,7 +1152,12 @@ export async function PUT(request: Request) {
     // jsonb/array — a plain `!==` is a reference compare (always true) and would always-stage.
     // `available` + `quantity` are handled live above, so they're excluded here and never stage. (The
     // price/available/quantity scalar guards above correctly use plain `!==` — those three are scalars;
-    // only the draftable compare needs stringify.)
+    // only the draftable compare needs stringify.) KNOWN+ACCEPTED edge: `homepage_theme` is the one
+    // DRAFTABLE object whose JSON.stringify compare is key-ORDER sensitive — the admin re-parses the
+    // textarea (its key order) while Postgres jsonb returns normalized key order, so an UNCHANGED theme
+    // can spuriously stage a phantom theme draft. It's cosmetic (no data loss; self-corrects on
+    // publish/discard) and `homepage_theme` is a rarely-used advanced field the GPT never sets — not
+    // worth a canonicalizing deep-equal here.
     const existingDraft =
       current.draft && typeof current.draft === 'object'
         ? (current.draft as Record<string, unknown>)
