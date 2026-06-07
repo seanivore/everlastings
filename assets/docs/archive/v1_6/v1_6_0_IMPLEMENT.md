@@ -1,13 +1,18 @@
 # v1.5.0 — AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-> **SUPERSEDED — do not build from this.** This is the version the holistic Gap Review A loop closed on (9th pass = READY TO BUILD). Its 6 polish findings are folded into `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md`, which is the current living plan (now in the B/C review round). This file is kept as the A-trail record.
-
-**Version**: v1.5.9 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc only** — it supersedes all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass review trail lives in the `v1_5_*_GAP_REVIEW_*` files).
+**Version**: v1.6.0 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc only** — it supersedes all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration)** review round (charters: `v1_6_0_REVIEW_PROMPTS.md`; outputs: `v1_6_0_GAP_REVIEW_B.md` / `…_C.md`).
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the locator) and a **NEW** block. **Line numbers are hints; the quoted CURRENT text is the anchor.** If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never guess. Everything here is a confirmed decision (no "we could X or Y"); if a builder hits a decision-shaped question, that's a plan bug → stop, surface to Sean, fix the plan, continue.
 
 > ## ⭐ Product North Star (the lens for every decision and every gap review)
 > **Minimize the owner's friction to manage her entire digital product — the site, the store, and her sales — by offloading the work to her Custom GPT.** Em runs everything by chatting with the GPT (OpenAI web / iOS / Android); the GPT should be able to do anything a capable agent (e.g. Claude Code armed with skills + MCPs) could do on her behalf. **Judge every feature, gap, and trade-off against this**, not against whether the existing docs are internally consistent: the question is always "does this let Em do the thing by chat, with the least friction?" When a capability is asserted but can't actually be driven by the GPT (as the photo-upload path was before v1.5.5), that's a real gap — name it, and either build the by-chat path or state the honest limit on the page. The one structural limit to respect: a Custom GPT **Action** sends JSON and cannot forward a file a user pastes into the ChatGPT thread (and Code Interpreter has no network) — so media arrives by **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a photo is pasted directly.
+
+> ## Versioning & document flow (how this plan's version number moves)
+> The version tracks **which review phase the plan is in**, so a future reader knows what kind of changes each bump carries and where to look:
+> - **v1.5.x — the holistic Gap Review A loop (CLOSED).** Each v1.5.x was one cold A-pass folded; the loop ran 9 passes and closed at **v1.5.9 = READY TO BUILD**. The full A-trail lives in `assets/docs/archive/v1_5/` (`v1_5_*_IMPLEMENT.md` + `v1_5_*_GAP_REVIEW_A.md`).
+> - **v1.6.x — the B (fidelity) + C (integration) review round (CURRENT).** This `v1.6.0` is the v1.5.9 plan with the 9th-A polish folded; it lives in `assets/docs/archive/v1_6/`. B/C findings fold as **v1.6.1, v1.6.2, …** here. B + C run in **parallel** (orthogonal angles); a B/C pass that returns NEEDS-ANOTHER-PASS loops like A did.
+> - **v2.0.0 — execution (FUTURE, after B/C clear + Sean signs off).** At execution start, `EVERLASTINGS_STORE.md` is updated to the planned architecture (Phase 10); the build runs; a BUILD_REPORT captures expected/planned/actual. Post-build fix rounds are **v2.0.1, v2.0.2, …** — counting how many patch rounds reality required. The deep "zero-scaffolding as-built" cut (dropping the review framing this plan still carries) happens here, not before — B/C still benefit from seeing intent.
+> **What this plan carries vs. sheds:** through v1.6.x it KEEPS the byte-anchors (CURRENT/NEW locators), the deferred/out-of-scope **scope-boundary** notes (forward-facing — they stop a well-meaning executor from "fixing" an intentional cut), the tests, the phase numbers, and this North Star. It does NOT carry per-pass A-narration (that's in the `v1_5_*_GAP_REVIEW_A.md` archive). v2.0.0 sheds the remaining review framing.
 
 ---
 
@@ -830,7 +835,7 @@ NEW:
 }
 ```
 
-**Slug normalization (belt-and-suspenders).** The slug-generation block that runs **above** this insert is upgraded to normalize **both** a caller-supplied slug and the title-derived fallback into the same URL-safe, reconstructable handle — so a title with `'`/`&` ("Em's Lavender & Sage") can never yield a non-URL-safe or unreconstructable slug regardless of what the GPT/caller sends. (The GPT computes the identical form client-side per §9.2 "THE SLUG"; this is the server-side guarantee.) This also softens landmine #18's apostrophe/ampersand list-fallback at the source.
+**Slug normalization (belt-and-suspenders).** The slug-generation block that runs **above** this insert is upgraded to normalize **both** a caller-supplied slug and the title-derived fallback into the same URL-safe, reconstructable handle — so a title with `'`/`&` ("Em's Lavender & Sage") can never yield a non-URL-safe or unreconstructable slug regardless of what the GPT/caller sends. (The GPT computes the identical form client-side per §9.2 "THE SLUG"; this is the server-side guarantee.) This also removes the apostrophe/ampersand slug-divergence at the source (the case the §9.2 list-fallback handles).
 
 CURRENT (`api/products.ts` 158–163 — runs before the allow-list pick):
 ```ts
@@ -1986,6 +1991,26 @@ function normalizeMediaUrl(raw: string): string {
     return raw; // not a parseable URL — let the fetch fail with the friendly error
   }
 }
+
+// SSRF guard for the server-side media fetch (the JSON/by-link path). The route is already behind the
+// `authorize` gate and the response body is never echoed to the caller (only the stored R2 url is), and
+// Vercel serverless has no IMDS metadata endpoint — so severity is low — but the fetch still takes an
+// arbitrary owner-supplied URL, so we reject non-https and any host that is a literal loopback / private /
+// link-local IP before fetching. Drive-normalized and CDN links are all https public hosts → unaffected.
+// Accepted residual (low, auth-gated, body-never-echoed): a public host that DNS-resolves or 302-redirects
+// to a private IP. Closing that needs DNS resolution + manual-redirect re-checks — deferred to v1.1.
+function isPublicHttpUrl(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.protocol !== 'https:') return false;
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, ''); // strip [] from IPv6 literals
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return false;
+  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)) return false;        // loopback / private / link-local v4
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;                      // 172.16/12 private v4
+  // v6 checks gate on `:` (an IPv6 literal) so a public HOSTNAME starting fc/fd/fe (e.g. "fcdn.example.com") isn't blocked
+  if (host.includes(':') && (host === '::1' || /^(fc|fd|fe80)/.test(host))) return false; // loopback / ULA / link-local v6
+  return true;
+}
 ```
 
 **Add the JSON/URL intake path** so the GPT can upload by link. Resolve the input into a `File` from EITHER a JSON body (`{url, slug, role, skip_transform}` — the GPT/agent path) OR the existing multipart form (admin UI drag-drop, curl); both converge on the **same** `file`/`slug`/`role`/`skipTransformField` locals, so the entire Cloudinary→R2 pipeline below is unchanged for every caller. This block sits **after** the line-81 `authorize` gate (see Pre-flight), so the new server-side URL `fetch` is never reachable unauthenticated. CURRENT (the multipart parse at the top of `POST`, 85–105):
@@ -2036,9 +2061,14 @@ NEW:
     if (!ROLE_PATTERN.test(body.role.trim())) {
       return jsonResponse(request, { error: 'Invalid role' }, 400);
     }
+    // SSRF guard (see isPublicHttpUrl): https-only, no loopback/private/link-local hosts.
+    const safeUrl = normalizeMediaUrl(body.url.trim());
+    if (!isPublicHttpUrl(safeUrl)) {
+      return jsonResponse(request, { error: 'Media link must be a public https URL (no local or internal addresses).' }, 400);
+    }
     let mediaRes: Response;
     try {
-      mediaRes = await fetch(normalizeMediaUrl(body.url.trim()), { redirect: 'follow' });
+      mediaRes = await fetch(safeUrl, { redirect: 'follow' });
     } catch {
       return jsonResponse(request, { error: 'Could not fetch that media link' }, 400);
     }
@@ -3066,10 +3096,10 @@ Replace the **entire** CURRENT `/api/products` `post` block above with this **NE
                 care_instructions: { type: array, items: { type: string } }
                 shipping_details: { type: array, items: { type: string } }
                 product_type: { type: string, enum: [miniature] }
-                series: { type: string }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\"." }
                 available: { type: boolean }
                 quantity: { type: integer }
-                featured: { type: boolean }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel." }
                 artist_note: { type: string }
                 images:
                   type: array
@@ -3159,12 +3189,12 @@ Then after the `/api/products` `post` block, add a `get` (listProducts), a `put`
                 power_supply: { type: string }
                 care_instructions: { type: array, items: { type: string } }
                 shipping_details: { type: array, items: { type: string } }
-                series: { type: string }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\". Stages like copy on a published piece — publish to apply." }
                 product_type: { type: string, enum: [miniature] }
                 artist_note: { type: string }
                 quantity: { type: integer }
                 available: { type: boolean }
-                featured: { type: boolean }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel. Stages like copy on a published piece — publish to apply." }
                 thumbnail: { type: string }
                 thumbnail_alt: { type: string }
                 images: { type: array, items: { type: object, properties: { url: { type: string }, alt: { type: string } } } }
@@ -3363,8 +3393,8 @@ The slug is the product's URL handle (everlastingsbyemaline.com/product/<slug>) 
 By default, confirm the drafted fields with her before saving (read back the key ones in plain language). If she's said "just go ahead" / "you don't need to check with me" — for this piece or in general — EXPEDITE: skip the line-by-line confirmation and go straight to the preview. The preview page is the real review either way.
 
 == EDITING A PRODUCT ==
-1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id. If getProduct 404s — a title with an apostrophe or ampersand ("Em's Lavender & Sage") makes a slug you can't reliably reconstruct — call listProducts and match her wording against the titles, then use that row's id/slug. NEVER tell her "I couldn't find it" without listing first. A row may carry a `draft` object — those are edits previewed but NOT yet live; the top-level fields are what shoppers see right now, so never report `draft` values as the live copy. When a draft (or pending edits) exist, getProduct ALSO returns an `effective` object (= live + staged = exactly what the page becomes after publish) — use the top-level/live to report the CURRENT state to her, but when you EDIT, build your new values from `effective` so you don't wipe out edits that are already staged.
-2. Call editProduct with the id and only the fields she's changing. Three fields go LIVE IMMEDIATELY on a published product (no preview, no publish step): the PRICE (rotates the Stripe price in place — same product, same URL), AVAILABILITY (`available` — mark sold / back-in-stock), and STOCK QUANTITY (`quantity`). Everything else — copy, SEO, photos/media — is STAGED as a draft (the live page is untouched until publish). So for "mark it sold," "set the price to $X," or "we got 3 more in," just save and tell her it's done; for copy/photo edits, stage and hand back the preview link. The checkout_* identity fields (checkout_name / checkout_description / checkout_image) are frozen once published; price/availability/quantity are not.
+1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id. If getProduct 404s — a title with an apostrophe or ampersand ("Em's Lavender & Sage") makes a slug you can't reliably reconstruct — call listProducts and match her wording against the titles, then use that row's id/slug. NEVER tell her "I couldn't find it" without listing first. IMPORTANT after a listProducts match: before you EDIT (especially a full `images`/`media` array), call getProduct AGAIN with that row's EXACT slug — the 404 was just a slug-spelling miss, so the exact slug resolves it and gives you the full fields (and `effective` if anything is staged). listProducts gives you the live row and its `draft` separately but NOT the computed `effective` (live+staged), so editing an array straight off it could drop a staged change; getProduct-by-exact-slug returns `effective` directly. A row may carry a `draft` object — those are edits previewed but NOT yet live; the top-level fields are what shoppers see right now, so never report `draft` values as the live copy. When a draft (or pending edits) exist, getProduct ALSO returns an `effective` object (= live + staged = exactly what the page becomes after publish) — use the top-level/live to report the CURRENT state to her, but when you EDIT, build your new values from `effective` so you don't wipe out edits that are already staged.
+2. Call editProduct with the id and only the fields she's changing. Three fields go LIVE IMMEDIATELY on a published product (no preview, no publish step): the PRICE (rotates the Stripe price in place — same product, same URL), AVAILABILITY (`available` — mark sold / back-in-stock), and STOCK QUANTITY (`quantity`). Everything else — copy, SEO, photos/media — is STAGED as a draft (the live page is untouched until publish). So for "mark it sold," "set the price to $X," or "we got 3 more in," just save and tell her it's done; for copy/photo edits, stage and hand back the preview link. The checkout_* identity fields (checkout_name / checkout_description / checkout_image) are frozen once published; price/availability/quantity are not. Two more common asks map to fields, not actions: "feature this on the homepage" → `editProduct {featured:true}` (it shows in the homepage carousel; on a published piece it STAGES like other copy, so preview + publish to make it take effect — tell her that); "add it to the <name> collection" → `editProduct {series:"<name>"}` (the collection/series label shoppers filter by, e.g. "Portals to Peace").
 3. Always hand back the preview link the same way as step 6 above. Never tell her an edit is live until it's published. If she changes her mind about staged edits, call discardEdits with the id — it scraps the pending draft and leaves the live page exactly as it was (the inverse of publish). (A price change isn't staged, so discardEdits won't undo it — to revert a price, set it back with editProduct.)
    - HEADS-UP on a live-only change over OLD pending edits: a price/availability/quantity change goes live without touching any earlier staged copy edit. So if getProduct shows the piece STILL has a `draft` (pending edits from before) after you make a live change, mention it: "done — and note, you still have unpublished copy edits on this piece from earlier; want to preview and publish those too, or discard them?" Don't let a staged edit sit forgotten.
 4. PHOTOS: to ADD a photo, first get it onto the CDN with uploadImage (see "ADDING PHOTOS & MEDIA" below) to get its url, then put that url in the FULL `images` array; to remove / reorder, just adjust the array. Either way getProduct first, send the COMPLETE desired `images` array (and `thumbnail` if needed) via editProduct — there's no per-photo command. IMPORTANT when there are already pending edits: build the complete array from `effective.images` (the staged version), NOT the live top-level `images` — otherwise a second photo edit before publishing would silently drop the first one. Same for `media`. (A removed photo's file lingers on the CDN; harmless.)
@@ -3374,7 +3404,7 @@ To take a piece down, call archiveProduct (it leaves the shop but stays findable
 
 == PREVIEW & PUBLISHING ==
 The preview link is the real review surface — she can't picture changes from chat. If she says "publish" (or "make it live"), call publishProduct with the id. For a brand-new product, publishing is what creates the Stripe listing and makes it purchasable. After publish, the old preview link stops working (that's expected). If publish returns a 400 like "Cannot publish — Missing required fields: story_card" or "Minimum 5 gallery images required," translate the field names into plain language (story_card = the story, headline = the tagline) and tell her exactly what to add before it can go live — it means an earlier edit left the piece incomplete.
-To RE-SHOW a preview she lost: getProduct by slug. If there are pending edits (or it's still a draft) it returns a ready-to-share `preview_url` — hand her THAT exact link; it's already correct for wherever the store is running, so never hand-build the URL or assume the production domain. If getProduct returns no `preview_url`/`preview_token`, it's fully live with nothing pending — give the plain product page link from the create/publish response. (Don't make a no-op edit to "regenerate" a link — that would stage an empty draft.)
+To RE-SHOW a preview she lost: getProduct by slug. If there are pending edits (or it's still a draft) it returns a ready-to-share `preview_url` — hand her THAT exact link; it's already correct for wherever the store is running, so never hand-build the URL or assume the production domain. If getProduct returns no `preview_url`/`preview_token`, it's fully live with nothing pending — give the plain product page link from the create/publish response. (Don't make a no-op edit to "regenerate" a link — with live-compare change-detection a no-op edit stages nothing and returns `no_changes:true`; `getProduct` already hands back the current `preview_url`, so just call that.)
 
 == COUPONS ==
 Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons — it tells you each code's discount, redemptions, expiry, AND whether it's store-wide or limited to specific pieces (store_wide / product_ids), so relay the scope too ("HOLIDAY20 — 20% off everything" vs "just the Lavender Wreath"). To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
@@ -3484,12 +3514,55 @@ coupon.
 - **"Editing / marking sold (PUT)" (406–417)** — PUT stages a **draft** for copy/SEO (returns `preview_url`); publish applies it. **Three fields apply LIVE immediately** on a published product (no staging, no publish step): **price** (rotates the Stripe price in place — same product/URL), **availability** (`available`), and **stock quantity** (`quantity`); only the `checkout_*` identity fields are frozen after publish. Mark a piece sold with PUT `{available:false}` **only** — do NOT add `quantity:0` (a no-op for purchasability since `available:false` already blocks checkout, and it would just churn the live stock count). Restock with PUT `{quantity:N}`. All three take effect at once.
 - **API quick-reference table (425–432)** — add `publishProduct` (POST `/api/products/publish`), `listProducts` (GET `/api/products`), `getProduct` (GET `/api/products/by-slug/{slug}`), `createCoupon`/`listCoupons` (POST/GET `/api/coupons`), `deactivateCoupon` (POST `/api/coupons/deactivate`), and `archiveProduct`/`unarchiveProduct` (POST `/api/products/archive` · `/api/products/unarchive`).
 
+**CURRENT — `GPT_SETUP.md` Part 4, the three blocks to replace.** The block headers + structure are quoted below as **locators** (the long create-JSON body and per-flag headers are abbreviated with `…` — you're editing `GPT_SETUP.md` in place at the cited lines, so locate by the structure shown and apply the NEW direction; don't retype the full body). This is Sean's/Claude Code's curl path, not Em's GPT path, so a slip here doesn't touch chat-driving.
+
+CURRENT — Step 3 create (376–404):
+````md
+### Step 3 — Create product (use `?sync=true` for inline Stripe IDs)
+```bash
+curl -X POST "$BASE_URL/api/products?sync=true" \
+  -H "Authorization: Bearer $PRODUCT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ … product JSON … }'
+# → { "success": true, "product": {...}, "stripe_sync": { "success": true, "stripe_product_id": "prod_…", "stripe_price_id": "price_…" } }
+```
+The sync helper is idempotent: the Supabase DB webhook still fires after the inline path but sees the IDs already set and no-ops. On a **preview** the DB webhook points at production, so test-mode seeding will not auto-sync — **always use `?sync=true` on previews.**
+````
+→ NEW Step 3: drop `?sync=true` and the whole "DB webhook still fires / always use `?sync=true` on previews" trailer; create returns a **draft** (no `stripe_sync` block) with a `preview_url`; add a separate `POST /api/products/publish` `{id}` step (publish is what creates Stripe + goes live).
+
+CURRENT — Editing / marking sold PUT (406–417):
+````md
+### Editing / marking sold (PUT)
+```bash
+# Non-price fields:
+curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" … -d '{"headline": "Updated tagline", "featured": false}'
+# Price change (archives old Stripe price, creates new):
+curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" … -d '{"price": 29500}'
+# Mark sold (also happens automatically on purchase):
+curl -X PUT "$BASE_URL/api/products?id=PRODUCT_UUID" … -d '{"available": false, "quantity": 0}'
+```
+````
+→ NEW PUT: copy/SEO PUT **stages a draft** (returns `preview_url`; publish applies it); **price / available / quantity apply LIVE immediately** on a published product (no preview/publish); mark sold = `{available:false}` **only** (drop the `quantity:0` — it's a no-op for purchasability and churns the live count); restock = `{quantity:N}`.
+
+CURRENT — API quick-reference table (424–432):
+````md
+| Action         | Method | Endpoint                           |
+| -------------- | ------ | ---------------------------------- |
+| Create product | POST   | `/api/products` (add `?sync=true`) |
+| Update product | PUT    | `/api/products?id=UUID`            |
+| Get product    | GET    | `/api/products?slug=SLUG`          |
+| Upload image   | POST   | `/api/upload`                      |
+| List orders    | GET    | `/api/orders` (`?status=`, `?q=`)  |
+| Mark shipped   | PATCH  | `/api/orders/{id}`                 |
+````
+→ NEW table: drop the `?sync=true` from the Create row, and add the rows named in the bullet above (`publishProduct`, `listProducts`, `getProduct`, `createCoupon`/`listCoupons`/`deactivateCoupon`, `archiveProduct`/`unarchiveProduct`).
+
 ## Phase 10 — `assets/docs/EVERLASTINGS_STORE.md` (reflect the new architecture)
 
 **Additive** — products schema table: add `checkout_name`, `checkout_description`, `checkout_image`, `seo_thumbnail`, `is_published`, `published_at`, `draft (jsonb)`, `preview_token`, **`archived_at`**; add a **"Draft → Preview → Publish"** subsection (the model, the preview-token capability, Stripe-at-publish, frozen checkout fields, the `is_published` + `archived_at` RLS gate, the INSERT trigger now skips drafts) and an **"Archive"** note (remove = `archived_at` + Stripe `active:false`, reversible, no hard delete; the deferred `pg_cron` purge); note the new `?_action=` routes (publish / coupon / coupon_deactivate / archive / unarchive) + the `vercel.json` rewrites; note `media` jsonb now renders on the page (`populateMedia`); note the GPT gained edit / publish / coupon (create+list+ deactivate) / archive / media actions; note `/api/config` now returns `isTest` + `main.js` filters `is_test` (1.11).
 
 **REWRITE, do not append (these sections now state the OPPOSITE of v1.5; leaving them is mixed truth).** The sync model **inverts**: INSERT no longer creates Stripe (drafts skip it; Stripe is created **only at publish**). The PUT price-rotation is **kept** but **relocated** into the published-edit branch — a published price change rotates the Stripe Price in place. Rewrite each to the publish-time-sync model:
-- Glossary **"Supabase DB webhook"** (**63**) — clarify it's a **SQL trigger** (`notify_stripe_sync`, migration `…0003`), *not* a Studio setting, and it now **skips drafts** (fires only for published, non-test inserts). This is the line that first misled the cold review.
+- Glossary **"Supabase DB webhook"** (**63**) — clarify it's a **SQL trigger** (`notify_stripe_sync`, migration `…0003`), *not* a Studio setting, and it now **skips drafts** (fires only for published, non-test inserts).
 - **System diagram** — the **stripe-sync block (110–111)** (`POST /api/stripe-sync → create Stripe Product+Price (DB webhook + inline ?sync=true caller)`), the **`GET/POST/PUT /api/products` line (114)**, and **"DB Webhooks: on INSERT" (148)**: redraw to **INSERT → draft (no Stripe); Stripe created at publish**. *(Anchor correction: the old hint "105–107, 138–144" pointed at the wrong place — 103 is the `VERCEL SERVERLESS FUNCTIONS` header and 134–148 is the Supabase/R2 box; the actual INSERT→Stripe assertions are the three lines just named.)*
 - **Product-Creation data-flow** (**609–625**, esp. "(02) Supabase Database Webhook fires on INSERT") — INSERT → **draft** (no Stripe); Stripe is created at the publish action.
 - **AR #7 "Slug rules" (233–234)** + **AR #23 "Slug generated API-side before image upload" (285–286)** — replace the **old naive API-side** model (`title.toLowerCase().replaceAll(' ', '-')`, generated server-side) with v1.5's: the slug is **GPT-derived** (lowercase, ASCII-fold accents, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats), **required on create**, **server-normalized identically**, and photos upload under it **before** the row exists; the `set_slug` DB trigger is the **empty-input fallback only**. *(The "read-this-first" primer must not keep teaching the model the old API-side slug the code no longer uses.)*
@@ -3501,7 +3574,7 @@ coupon.
 
 ## Phase 10b — `assets/docs/STORE_ADMINISTRATION.md` (Em's plain how-to)
 
-The client-facing how-to (135 lines) still describes the pre-v1.5 world (no draft/preview/publish, no chat editing, no coupons-by-chat, a hard "delete"). For a version whose whole thesis is "she runs it by chat," her reference must match. Refresh it in plain, non-technical language: **create → preview → publish** (she taps Publish on the preview page, or tells the GPT "publish"); **editing by chat** (edits stage as a draft she previews, then publishes — the live page is untouched until then; she can also **discard** edits she previewed but doesn't want, leaving the live page as-is); **coupons** (start a sale, see what's running, end one on the spot); **archive / resurface** ("remove" takes a piece down but keeps it — she can bring it back; nothing is truly deleted); **price changes** (just tell the GPT the new price — it updates in place on the same page and link, effective immediately; no new listing); **marking a piece sold / changing stock** (marking it unavailable, or changing the quantity in stock, is **immediate** — like a price change, no preview/publish step; a sold piece shows as sold but stays on the page; for removing it from the shop entirely she uses Archive; a real purchase marks a piece sold automatically); **refunds** (she does these in the Stripe dashboard — the GPT can walk her through the current steps; only a *full* refund shows up back in the order status); **adding photos** (media comes in as a **link**: share the photo to Google Drive, set it to "anyone with the link," copy the link, paste it to the GPT — see the exact phone taps below); and the **status meanings** (live / draft / live·edits-pending / archived); and a brief **what the shop holds** note — it's set up for her **miniatures** right now, and adding a different *kind* of product (prints, storybooks, etc.) is a future project to set up together, not something the GPT can add on its own yet (so she isn't surprised if she asks the GPT for a "printable" and it can't). Keep her warm voice + reassurance; no API/CSS detail (that lives in `GPT_SETUP.md` / this doc).
+The client-facing how-to (135 lines) still describes the pre-v1.5 world (no draft/preview/publish, no chat editing, no coupons-by-chat, a hard "delete"). For a version whose whole thesis is "she runs it by chat," her reference must match. Refresh it in plain, non-technical language: **create → preview → publish** (she taps Publish on the preview page, or tells the GPT "publish"); **editing by chat** (edits stage as a draft she previews, then publishes — the live page is untouched until then; she can also **discard** edits she previewed but doesn't want, leaving the live page as-is); **coupons** (start a sale, see what's running, end one on the spot); **archive / resurface** ("remove" takes a piece down but keeps it — she can bring it back; nothing is truly deleted); **price changes** (just tell the GPT the new price — it updates in place on the same page and link, effective immediately; no new listing); **marking a piece sold / changing stock** (marking it unavailable, or changing the quantity in stock, is **immediate** — like a price change, no preview/publish step; a sold piece shows as sold but stays on the page; for removing it from the shop entirely she uses Archive; a real purchase marks a piece sold automatically); **refunds** (she does these in the Stripe dashboard — the GPT can walk her through the current steps; only a *full* refund shows up back in the order status); **adding photos** (media comes in as a **link**: share the photo to Google Drive, set it to "anyone with the link," copy the link, paste it to the GPT — see the exact phone taps below); and the **status meanings** (live / draft / live·edits-pending / archived); and a brief **what the shop holds** note — it's set up for her **miniatures** right now, and adding a different *kind* of product (prints, storybooks, etc.) is a future project to set up together, not something the GPT can add on its own yet (so she isn't surprised if she asks the GPT for a "printable" and it can't); and a plain **"what the GPT handles vs. what we set up together"** line so the boundary is explicit — the GPT manages her **products, photos, prices, sales, and orders** (everything about the pieces themselves and what's for sale), while the **look of the site itself** (the homepage design/mood, the hero, which pieces are themed where beyond the simple "feature on the homepage" toggle, and the static pages) is a **"set up with Sean"** job, not a chat change — so "change the homepage mood / redo the front page" gets "let's set that up together," not a vague attempt. Keep her warm voice + reassurance; no API/CSS detail (that lives in `GPT_SETUP.md` / this doc).
 
 > **Photo-by-link — the literal phone taps (put these in `STORE_ADMINISTRATION.md`).** This is the one
 > real friction point, so spell it out, don't just describe the concept:
