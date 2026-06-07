@@ -1,4 +1,4 @@
-# v1.5.0 — AI Store Management + Design — IMPLEMENT (exclusively executable)
+# AI Store Management + Design — IMPLEMENT (exclusively executable)
 
 **Version**: v1.6.0 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc only** — it supersedes all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration)** review round (charters: `v1_6_0_REVIEW_PROMPTS.md`; outputs: `v1_6_0_GAP_REVIEW_B.md` / `…_C.md`).
 
@@ -3866,7 +3866,11 @@ Entry/landing sizing sanity pass; replace the product-page Rickroll placeholder 
 
 # Gap-review & validation plan
 
-The gap-review gate — angles **A / B / C**, with **A first** (cold / out-of-repo, the holistic self-containment + completeness pass) — runs against this doc + `EVERLASTINGS_STORE.md`. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_5_5_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate). Fold each round → bump the doc → re-run A until a fresh pass finds nothing load-bearing, then B + C, then Sean approves and a fresh agent executes on the dev preview.
+The gap-review gate runs angles **A / B / C** against this doc + `EVERLASTINGS_STORE.md`, **reviewing the entire executable plan (Parts 1–3, every phase)** — not just the functionality phases. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_6_0_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate).
+
+- **A — cold / out-of-repo (holistic self-containment + completeness). CLOSED.** Ran 9 passes (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`), each folded → v1.5.2 … v1.5.9; the 9th returned **READY TO BUILD**. Its 6 polish findings are folded into this v1.6.0.
+- **B (fidelity) + C (integration) — in repo, run in PARALLEL (CURRENT round).** Orthogonal angles. Fold both → bump the doc (v1.6.1, v1.6.2, …); re-run an angle only if it finds something load-bearing.
+- Both clean → **Sean approves** → a fresh agent executes on the dev preview (the **v2.0.0** build).
 
 ---
 
