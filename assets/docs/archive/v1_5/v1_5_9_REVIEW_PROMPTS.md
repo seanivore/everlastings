@@ -1,8 +1,6 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
-> **SUPERSEDED by `v1_5_9_REVIEW_PROMPTS.md` (targets `v1_5_9_IMPLEMENT.md`, landmines 7–31). History only.**
-
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_8_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_9_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
 > **The product North Star is: minimize the owner's friction to manage her entire digital product — the
@@ -19,7 +17,7 @@ All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_
 > **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
 > finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
-> **A has run seven times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
+> **A has run eight times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
 > (`v1_5_2_GAP_REVIEW_A.md`, 16 incl. one real blocker G1) → v1.5.3; pass 3 (`v1_5_3_GAP_REVIEW_A.md`,
 > 10, no code-breaking logic bug; +discard Q2 + price-rotation Q1) → v1.5.4; pass 4
 > (`v1_5_4_GAP_REVIEW_A.md`, **no build-breaking error, landmines held**) → v1.5.5: one real code bug
@@ -54,24 +52,38 @@ All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_
 > `createProduct` schema is **quoted verbatim** (single locate-and-replace). (RANK 6/7) the STORE primer's
 > **slug ARs #7/#23** + the **system-diagram stripe-sync block** are added to Phase 10, and every Phase 10
 > line hint is **re-anchored** to the reflowed STORE. (RANK 8) the `product_type` enum is **narrowed to
-> `[miniature]`** (printable/storybook deferred). **This is the re-run of A against v1.5.8.** Landmines
-> 7–28 below are the recent fixes/changes — confirm they hold; don't re-raise the originals.
+> `[miniature]`** (printable/storybook deferred).
+> Pass 8 (`v1_5_8_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow — no architecture gap, store fully
+> chat-drivable, all 28 landmines held**) → **v1.5.9**, folding one real data-loss regression + its chat
+> sibling + one anchor: (RANK 1) the 7th-A change-detect compared each draftable field against its
+> *effective* (staged-or-live) value, but the admin form is populated from the LIVE columns — so re-saving
+> a published row that already had a staged draft re-staged every staged field **with the live value**,
+> silently wiping Em's pending copy/SEO edits (data loss, reachable on any admin save of a GPT- or
+> admin-staged row). Fixed by comparing against the **LIVE column** (`current[k]`) so `draft` = exactly the
+> fields differing from live (re-sent live values never re-stage; staged values survive via the spread) +
+> the admin `openEditor` now **overlays the staged draft** (`eff = {...product, ...draft}`) so the editor
+> shows/builds on pending edits. (RANK 2) the same root cause on the chat path — `getProduct` now returns
+> an **`effective` view** (live + staged) and the GPT is told to build full arrays (`images`/`media`) from
+> `effective`, so a second pre-publish photo edit no longer drops the first. (RANK 3) `webhook.ts`'s
+> `import type Stripe from 'stripe'` is **anchored** (already present; `Stripe.Charge` needs no new import).
+> **This is the re-run of A against v1.5.9.** Landmines 7–30 below are the recent fixes/changes — confirm
+> they hold; don't re-raise the originals.
 
 > **Before this A-pass:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) runs against `v1_5_8_IMPLEMENT.md` to
+> integration/state-machine, **through the review lens above**) runs against `v1_5_9_IMPLEMENT.md` to
 > clear the obvious; cold A then does the thorough self-containment/completeness gate. (Subagents are
 > pre-gate breadth — never the gate itself; per DEV_RULES.)
 
 ## Sequencing (per Sean's gap-review flow)
 
-1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc (`v1_5_8_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing. Big-picture functionality gaps must surface here, before the detailed reviews.
+1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc (`v1_5_9_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing. Big-picture functionality gaps must surface here, before the detailed reviews.
 2. **B + C** (in repo) — run consecutively, fold both at once, re-run if either finds something load-bearing.
 3. All three clean → **Sean approves** → a fresh agent executes on the dev preview.
 
 ## What to hand each reviewer
 
-- **A:** `v1_5_8_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The architecture doc is what lets a cold reviewer judge *functionality completeness*, not just self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
-- **B / C:** the repo + `v1_5_8_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
+- **A:** `v1_5_9_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The architecture doc is what lets a cold reviewer judge *functionality completeness*, not just self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
+- **B / C:** the repo + `v1_5_9_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
 
@@ -102,9 +114,11 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 - **(#23 coupon owner-sale isolation is byte-anchored, v1.5.7) `listCoupons`/`deactivateCoupon` key on `pc.coupon?.metadata?.source === 'owner_sale'`** — the plan now QUOTES the three system coupon-create call sites (`cart.ts` tags the *promotion code* `source:'cart-recovery'`; `subscribe.ts` tags nothing; `_bootstrap/coupons.ts` creates the base coupons with no metadata) proving **no system coupon carries `owner_sale`** (6th Gap A RANK 2). Invariant: the bootstrap must never tag a coupon `owner_sale`.
 - **(#24 panel honesty on a live-only edit over a pending draft, v1.5.7) `renderPublishPanel`** now checks `body.product.draft`: a price/availability/quantity-only change that PRESERVES an earlier staged copy edit shows "…live now — but you still have edits pending" + the preview link + Publish/Discard, instead of "nothing to publish" (6th Gap A RANK 4) — so the panel never contradicts the list pill.
 - **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full visual styling still deferred to Part 3). **(v1.5.8: the disable now anchors the real `<button>` markup — `product.html:289-290`, both `<button type="button">` — so `btn.disabled` is provably sufficient, 7th Gap A RANK 3.)**
-- **(#26 draftable change-detection — the admin live-only path, v1.5.8) The published PUT value-compares each draftable key** before staging: a key is staged only when `JSON.stringify(updates[k]) !== JSON.stringify(effective(k))` where `effective` is the staged-draft value if present else the live column (plain `!==` is wrong — DRAFTABLE is mostly jsonb/array, a reference compare always-true). The admin's `buildProductPayload` re-sends the FULL payload every save, so without this an availability/price/quantity-only admin save would stage a **phantom no-op copy draft** and the panel would wrongly show "Preview · Publish/Discard" instead of "live now — nothing to publish" — i.e. #7 would fail on the admin path. (7th Gap A RANK 1.) Confirm a live-only admin save stages nothing (`hasDraftable=false`) while a genuine copy edit still stages and merges over any prior draft; Tests #6/#23 cover it.
+- **(#26 draftable change-detection compares against LIVE — revised v1.5.9) The published PUT value-compares each draftable key against the LIVE column** before staging: a key is staged only when `JSON.stringify(updates[k]) !== JSON.stringify(current[k])` (plain `!==` is wrong — DRAFTABLE is mostly jsonb/array, a reference compare always-true). Invariant: **`draft` = exactly the set of fields whose desired value differs from live.** The admin's `buildProductPayload` re-sends the FULL payload every save, so without change-detection an availability/price/quantity-only save stages a **phantom no-op copy draft** (#7 fails on the admin path). **v1.5.8 first compared against the *effective* (staged-or-live) value — that was wrong**: because the admin form is populated from live columns, re-saving a row with an existing staged draft re-staged the live value over the staged one and **wiped pending edits** (8th-A RANK 1). Comparing against LIVE fixes it: a re-sent live value never re-stages, and any staged field the caller didn't touch is preserved by the `{...existingDraft, ...draftable}` spread; it also self-prunes (editing a staged field back to live drops it). Confirm a live-only save stages nothing (`hasDraftable=false`), a genuine copy edit still stages + merges over a prior draft, and a re-save of a staged row preserves the draft byte-for-byte; Tests #6/#23/#27 cover it.
 - **(#27 edit-publish re-validates, v1.5.8) `handlePublish`'s edit-publish branch validates the MERGED row** (`{...row, ...draft}`) with the same `validateProductRules` before applying the draft to the live columns — so a staged draft that blanked `story_card`/`images` (admin clears a field → `… || null`) can't ship a malformed, purchasable live product. First-publish already did this (#22); edit-publish did NOT, and Test #25 covered only first-publish, so it would have shipped silently. New Test #26 exercises it (published → stage invalid draft → publish → 400, live row unchanged). (7th Gap A RANK 2 — "if you fix one thing.") Confirm both publish branches call the one shared validator.
 - **(#28 pg_net body is `jsonb`, anchored to the LATEST migration, v1.5.8) The Phase 1 `CREATE OR REPLACE notify_stripe_sync()` keeps `body := payload` (jsonb), NOT `payload::text`.** The function's true-current definition is the latest migration touching it (`20260502000001_fix_stripe_sync_pgnet_signature.sql`), which fixed `net.http_post(... body => text)` "does not exist" by switching to `body := payload`; the original `…0003` had the buggy `::text` cast. Our new migration runs AFTER `…0502`, so a `CREATE OR REPLACE` quoting the `…0003` body would silently RE-BREAK Stripe sync on every published, non-test INSERT. (In-house integration breadth pass.) Confirm Phase 1's preflight anchors `…0502` (not `…0003`) and the NEW body is `payload`, the only delta being the added `OR NEW.is_published = false` guard.
+- **(#29 both surfaces edit the STAGED state, not the live state, v1.5.9) The admin `openEditor` overlays the draft and `getProduct` returns an `effective` view.** `openEditor` builds `eff = {...product, ...(product.draft||{})}` and reads every DRAFTABLE form field from `eff` (the live-apply trio price/available/quantity + slug/id/type stay on `product`) so the editor SHOWS and BUILDS ON pending edits instead of the live copy. The authorized `getProduct` returns `effective` (= live + staged) alongside the unchanged live top-level + `draft`, and §9.2 tells the GPT to build full arrays (`images`/`media`) from `effective` so a second pre-publish edit extends the staged array rather than dropping it. Together with #26's live-compare, a cross-surface row (GPT-staged then admin-opened, or re-edited by chat) no longer loses work (8th-A RANK 1b + RANK 2). Invariant: the top-level/live fields are UNCHANGED (the GPT still reports live state correctly — never a staged value as "live"); `effective` is additive.
+- **(#30 webhook.ts Stripe import is anchored, already present, v1.5.9) `webhook.ts` opens with `import type Stripe from 'stripe';` (line 1) and already references the namespace** (`Stripe.Event`, `Stripe.Checkout.Session`, `Stripe.Product`), so the `charge.refunded` branch's `Stripe.Charge` needs **no new import** and `tsc --noEmit` stays clean (8th-A RANK 3 — was asserted, now byte-anchored). Confirm Phase 4.7 anchors the existing import rather than adding one.
 
 ---
 
@@ -112,7 +126,7 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-your only output is findings (write them to v1_5_8_GAP_REVIEW_A.md, or print the full file contents
+your only output is findings (write them to v1_5_9_GAP_REVIEW_A.md, or print the full file contents
 if you have no filesystem).
 
 THE REVIEW LENS (judge every gap against this, not against doc-internal consistency)
@@ -127,17 +141,19 @@ THE REVIEW LENS (judge every gap against this, not against doc-internal consiste
   URL); the GPT asks for a link when a file is pasted.
 
 CONTEXT
-- You are given TWO documents and NO repository: (1) v1_5_8_IMPLEMENT.md — a single living plan a
+- You are given TWO documents and NO repository: (1) v1_5_9_IMPLEMENT.md — a single living plan a
   FRESH agent will execute against the repo, then test on the dev preview; it is meant to be
   "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so
   the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the
   store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
-- This is the EIGHTH A-pass; the plan has absorbed seven prior ones. The 7th was NEEDS-ANOTHER-PASS but
-  NARROW (no architecture gap, store fully chat-drivable): it found TWO real code bugs — a phantom-draft
-  on the admin live-only PUT (RANK 1) and an unvalidated edit-publish branch (RANK 2) — plus
-  anchor/primer reconciliations and the enum narrowing; all are folded into v1.5.8. A subsequent in-house
-  breadth pass also caught a migration regression (a CREATE OR REPLACE that would resurrect a fixed pg_net
-  bug by anchoring a superseded migration) — folded as landmine #28. Landmines 7-28 are
+- This is the NINTH A-pass; the plan has absorbed eight prior ones. The 8th was NEEDS-ANOTHER-PASS but
+  NARROW (no architecture gap, store fully chat-drivable): it found one real **data-loss regression** that a
+  prior fold had introduced — the 7th-A change-detect compared a draftable field against its *effective*
+  (staged-or-live) value, but the admin form reads LIVE columns, so re-saving a row with a staged draft
+  re-staged the live value over the staged one and wiped pending edits (RANK 1) — plus the same root cause
+  on the chat path (the GPT rebuilding a full array from live, RANK 2) and one import anchor (RANK 3). All
+  folded into v1.5.9: change-detect now compares against LIVE; the admin `openEditor` overlays the draft;
+  `getProduct` returns an `effective` view; webhook.ts's Stripe import is anchored. Landmines 7-30 are
   the most recent fixes/changes — confirm they hold rather than re-raising the originals.
 - Landmines to respect (validate the plan against these, not your training data):
   1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
@@ -218,13 +234,17 @@ CONTEXT
      at the live price under the "not yet live" banner (6th-A RANK 5; full visual styling deferred to
      Part 3). (v1.5.8: the disable anchors the real <button> markup — product.html:289-290, both
      <button type="button"> — so btn.disabled is provably sufficient, 7th-A RANK 3.)
-  26. (v1.5.8) Draftable change-detection on the published PUT: a draftable key is staged only when
-     JSON.stringify(updates[k]) !== JSON.stringify(effective(k)) (effective = staged-draft value if present
-     else live column; plain !== is wrong — DRAFTABLE is mostly jsonb/array, reference-compare always true).
-     The admin's buildProductPayload re-sends the FULL payload every save, so without this an availability/
-     price/quantity-only admin save stages a PHANTOM no-op draft and the panel wrongly shows Publish/Discard
-     instead of "live now — nothing to publish" (i.e. #16 fails on the admin path). (7th-A RANK 1.) Confirm
-     a live-only admin save stages nothing while a real copy edit still stages + merges over any prior draft.
+  26. (revised v1.5.9) Draftable change-detection compares against LIVE: a draftable key is staged only when
+     JSON.stringify(updates[k]) !== JSON.stringify(current[k]) (current[k] = the live column; plain !== is
+     wrong — DRAFTABLE is mostly jsonb/array, reference-compare always true). Invariant: draft = exactly the
+     fields differing from live. The admin's buildProductPayload re-sends the FULL payload every save, so
+     without change-detection an availability/price/quantity-only save stages a PHANTOM no-op draft (#16 fails
+     on the admin path). v1.5.8 first compared against the EFFECTIVE (staged-or-live) value — that was wrong:
+     the admin form reads live columns, so re-saving a row with a staged draft re-staged the live value over
+     the staged one and WIPED pending edits (8th-A RANK 1). Live-compare fixes it (re-sent live never
+     re-stages; untouched staged values survive via the {...existingDraft, ...draftable} spread; self-prunes).
+     Confirm a live-only save stages nothing, a real copy edit still stages + merges over a prior draft, and a
+     re-save of a staged row preserves the draft byte-for-byte.
   27. (v1.5.8) Edit-publish re-validates: handlePublish's edit-publish branch validates the MERGED row
      ({...row, ...draft}) with the same validateProductRules before applying the draft to live columns — so
      a staged draft that blanked story_card/images can't ship a malformed, purchasable live product. #22
@@ -238,6 +258,18 @@ CONTEXT
      re-break Stripe sync on every published non-test INSERT. Confirm the preflight anchors ...0502 and the
      NEW body is payload, the only delta being the added OR NEW.is_published = false guard. (In-house
      integration breadth pass.)
+  29. (v1.5.9) Both surfaces edit the STAGED state, not the live state: the admin openEditor builds
+     eff = {...product, ...(product.draft||{})} and reads every DRAFTABLE form field from eff (live-apply
+     trio price/available/quantity + slug/id/type stay on product) so the editor shows/builds on pending
+     edits; and the authorized getProduct returns an effective view (= live + staged) alongside the UNCHANGED
+     live top-level + draft, with §9.2 telling the GPT to build full arrays (images/media) from effective so
+     a second pre-publish edit extends the staged array instead of dropping it (8th-A RANK 1b + RANK 2).
+     Invariant: top-level/live fields are unchanged (GPT still reports live correctly, never staged-as-live);
+     effective is additive. Together with #26's live-compare this closes the cross-surface data-loss path.
+  30. (v1.5.9) webhook.ts Stripe import anchored, already present: webhook.ts opens with
+     import type Stripe from 'stripe'; (line 1) and already uses Stripe.Event/Checkout.Session/Product, so
+     charge.refunded's Stripe.Charge needs NO new import and tsc --noEmit stays clean (8th-A RANK 3 — was
+     asserted, now byte-anchored). Confirm Phase 4.7 anchors the existing import rather than adding one.
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
 1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a
@@ -269,7 +301,7 @@ beats "coupons look incomplete."
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_8_GAP_REVIEW_B.md).
+output findings only (write them to v1_5_9_GAP_REVIEW_B.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
 her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
@@ -278,7 +310,7 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- v1_5_8_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
+- v1_5_9_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
   repo, then test on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block;
   the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — so
   treat a CURRENT line-ref there as a locator to confirm, not a hard byte match.
@@ -336,7 +368,7 @@ OUTPUT
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_8_GAP_REVIEW_C.md).
+output findings only (write them to v1_5_9_GAP_REVIEW_C.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
 store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
@@ -345,7 +377,7 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_5_8_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
+- Read EVERLASTINGS_STORE.md FIRST, then v1_5_9_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
   repo and test on the dev preview.
 - Landmines (validate against reality, not training data):
   1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,

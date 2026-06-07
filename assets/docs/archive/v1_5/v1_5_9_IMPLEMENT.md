@@ -1,8 +1,6 @@
 # v1.5.0 — AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-> **SUPERSEDED by `v1_5_9_IMPLEMENT.md` (8th Gap Review A folded — RANK 1 staged-state data-loss regression fix: live-compare change-detect + admin `openEditor` draft overlay; RANK 2 getProduct `effective` view for the GPT; RANK 3 webhook.ts Stripe-import anchor). History only; do not build from this file.**
-
-**Version**: v1.5.8 (driven by: 7th Gap Review A — narrow) **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass. Functionality first; design second. **Revision history**: hardened through seven cold Gap-Review-A passes + two in-house subagent breadth passes, each adjudicated against the live repo and folded. The accumulated decisions are stated inline below as plain current-state (no pass-by-pass narration); the full review trail lives in the superseded `v1_5_1…v1_5_7_IMPLEMENT.md` and the `v1_5_*_GAP_REVIEW_*` files. Net feature set: GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with value-level change-detection so a live-only edit never stages a phantom draft**; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) · **this doc only** — do NOT read the superseded `v1_5_0_*` … `v1_5_7_*` files; their content is folded in here. **Supersedes (history — do not build from them)**: `v1_5_7_IMPLEMENT.md`, `v1_5_6_IMPLEMENT.md`, `v1_5_5_IMPLEMENT.md`, `v1_5_4_IMPLEMENT.md`, `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`, `v1_5_1_IMPLEMENT.md`, `v1_5_0_IMPLEMENT.md`, `v1_5_0_BUILD_STORE_MGMT.md`.
+**Version**: v1.5.9 (driven by: 8th Gap Review A — narrow) **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass. Functionality first; design second. **Revision history**: hardened through eight cold Gap-Review-A passes + in-house subagent breadth passes, each adjudicated against the live repo and folded. The accumulated decisions are stated inline below as plain current-state (no pass-by-pass narration); the full review trail lives in the superseded `v1_5_1…v1_5_8_IMPLEMENT.md` and the `v1_5_*_GAP_REVIEW_*` files. Net feature set: GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) · **this doc only** — do NOT read the superseded `v1_5_0_*` … `v1_5_8_*` files; their content is folded in here. **Supersedes (history — do not build from them)**: `v1_5_8_IMPLEMENT.md`, `v1_5_7_IMPLEMENT.md`, `v1_5_6_IMPLEMENT.md`, `v1_5_5_IMPLEMENT.md`, `v1_5_4_IMPLEMENT.md`, `v1_5_3_IMPLEMENT.md`, `v1_5_2_IMPLEMENT.md`, `v1_5_1_IMPLEMENT.md`, `v1_5_0_IMPLEMENT.md`, `v1_5_0_BUILD_STORE_MGMT.md`.
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the locator) and a **NEW** block. **Line numbers are hints; the quoted CURRENT text is the anchor.** If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never guess. Everything here is a confirmed decision (no "we could X or Y"); if a builder hits a decision-shaped question, that's a plan bug → stop, surface to Sean, fix the plan, continue.
 
@@ -562,7 +560,7 @@ CURRENT (slug return, 51–57):
     if (!data) return jsonResponse(request, { error: 'Product not found' }, 404);
     return jsonResponse(request, data);
 ```
-NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays it instead of string-building a host; public callers never reach here with a token):
+NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays it instead of string-building a host — AND an `effective` view so the GPT/admin edits the STAGED state, not the live one. The top-level stays LIVE [the GPT keeps reporting current state correctly and never calls a staged value "live" — Landmine #21 family]; `effective` = live + staged = what the page becomes after publish, so a second pre-publish edit of a full array [`images`/`media`] builds from the staged array instead of dropping it [the 8th-A RANK 2 fix]. Public callers never reach here with a token/draft):
 ```ts
     const { data, error } = await query.maybeSingle();
     if (error) {
@@ -570,10 +568,15 @@ NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays i
       return jsonResponse(request, { error: 'Failed to load product' }, 500);
     }
     if (!data) return jsonResponse(request, { error: 'Product not found' }, 404);
-    if (isAuthorized && data.preview_token) {
+    if (isAuthorized && (data.preview_token || data.draft)) {
+      const draftObj =
+        data.draft && typeof data.draft === 'object' ? (data.draft as Record<string, unknown>) : {};
       return jsonResponse(request, {
         ...data,
-        preview_url: previewUrl(request, String(data.slug), String(data.preview_token)),
+        effective: { ...(data as Record<string, unknown>), ...draftObj },
+        ...(data.preview_token
+          ? { preview_url: previewUrl(request, String(data.slug), String(data.preview_token)) }
+          : {}),
       });
     }
     return jsonResponse(request, data);
@@ -1130,31 +1133,36 @@ export async function PUT(request: Request) {
       liveUpdate.quantity = updates.quantity;
     }
 
-    // Stage copy/SEO edits — but ONLY the ones that genuinely CHANGE. The admin's buildProductPayload
-    // (admin.js) re-sends the FULL payload (every DRAFTABLE field) on EVERY save, so a presence-only
-    // pick would stage a no-op copy draft on an availability/price/quantity-only save (e.g. "mark it
-    // sold" from the admin) — rotating preview_token and making the panel show "Preview … Publish/
-    // Discard" instead of "<X> change is live now — nothing to publish" (breaks Landmine #16; fails
-    // Test #23/#6 on the admin path). So value-compare each draftable key against its currently-
-    // EFFECTIVE value (the staged draft value if one exists, else the live column) and keep only the
-    // keys that differ. JSON.stringify because DRAFTABLE is mostly jsonb/array — a plain `!==` is a
-    // reference compare (always true) and would always-stage. `available` + `quantity` are handled live
-    // above, so they're excluded here and never stage. (The price/available/quantity scalar guards above
-    // correctly use plain `!==` — those three are scalars; only the draftable compare needs stringify.)
+    // Stage copy/SEO edits — but ONLY the ones that genuinely differ from what's LIVE. The admin's
+    // buildProductPayload (admin.js) re-sends the FULL payload (every DRAFTABLE field) on EVERY save,
+    // so a presence-only pick would stage a no-op copy draft on an availability/price/quantity-only
+    // save (e.g. "mark it sold" from the admin) — rotating preview_token and making the panel show
+    // "Preview … Publish/Discard" instead of "<X> change is live now — nothing to publish" (breaks
+    // Landmine #16; fails Test #23/#6 on the admin path). The invariant: `draft` is exactly the set of
+    // fields whose desired value differs from the LIVE column. So value-compare each draftable key
+    // against the live column `current[k]` (NOT against the staged value) and keep only the keys that
+    // differ. Comparing against LIVE is what makes a re-sent live value never re-stage: any staged
+    // field the caller didn't touch is preserved by the `{...existingDraft, ...draftable}` spread below
+    // — so re-saving a row that already has a staged draft can NOT clobber it with the live value
+    // (the 8th-A data-loss regression). It also self-prunes: editing a staged field back to its live
+    // value drops it from the draft. (Earlier this compared against the staged-or-live "effective"
+    // value, which re-staged the live value over a staged one when the form — populated from live
+    // columns — re-sent live; the openEditor overlay in Phase 8 now also feeds the staged value back,
+    // and live-compare makes that round-trip a no-op.) JSON.stringify because DRAFTABLE is mostly
+    // jsonb/array — a plain `!==` is a reference compare (always true) and would always-stage.
+    // `available` + `quantity` are handled live above, so they're excluded here and never stage. (The
+    // price/available/quantity scalar guards above correctly use plain `!==` — those three are scalars;
+    // only the draftable compare needs stringify.)
     const existingDraft =
       current.draft && typeof current.draft === 'object'
         ? (current.draft as Record<string, unknown>)
         : {};
-    const effectiveValue = (k: string): unknown =>
-      Object.prototype.hasOwnProperty.call(existingDraft, k)
-        ? existingDraft[k]
-        : (current as Record<string, unknown>)[k];
     const draftable = pick(
       DRAFTABLE.filter(
         (k) =>
           k !== 'available' &&
           k !== 'quantity' &&
-          JSON.stringify(updates[k]) !== JSON.stringify(effectiveValue(k)),
+          JSON.stringify(updates[k]) !== JSON.stringify((current as Record<string, unknown>)[k]),
       ),
     );
     const hasDraftable = Object.keys(draftable).length > 0;
@@ -1921,8 +1929,11 @@ NEW (handle `charge.refunded` first, then keep the existing no-op for everything
 > Stripe Dashboard (it isn't part of `checkout.session.*`) — **on BOTH the test-mode and live-mode
 > endpoints** (Stripe keeps them separate; test #22 runs on the dev preview = test mode, so without the
 > test-mode event enabled the refund test silently no-ops and the gate can't actually pass). One-line
-> operator add; note it in `STORE_ADMINISTRATION.md`. `Stripe.Charge` is already covered by the imported `Stripe` types — no new
-> import. The match is by `stripe_payment_intent` (set on every order row at checkout, webhook.ts:161),
+> operator add; note it in `STORE_ADMINISTRATION.md`. **`Stripe.Charge` needs no new import** — `webhook.ts`
+> already opens with `import type Stripe from 'stripe';` (line 1) and already references the namespace
+> (`Stripe.Event` for the verified event, `Stripe.Checkout.Session`, `Stripe.Product`), so `Stripe.Charge`
+> resolves against the same import and `tsc --noEmit` stays clean — no import edit, verified against the
+> live file. The match is by `stripe_payment_intent` (set on every order row at checkout, webhook.ts:161),
 > which uniquely keys the order(s) in a Stripe mode, so no `is_test` filter is needed.
 >
 > **Owner-facing honesty:** only a **full** refund flips the status. A **partial**
@@ -2534,21 +2545,110 @@ NEW:
     checkout_image: $('p-checkout-image').value.trim() || null,
 ```
 
-**8.6 — `assets/js/admin.js`: populate the new fields when editing.**
+**8.6 — `assets/js/admin.js`: overlay the staged draft + populate the new fields when editing.** This is the WHOLE `openEditor` populate body (it also folds in the `homepage_theme` + `media` lines that §8.10 used to patch separately — §8.10 now only adds the HTML field + the `buildProductPayload` media block). The change: read every DRAFTABLE field from an `eff = {...product, ...draft}` overlay so the editor SHOWS and BUILDS ON pending edits, while the three live-apply fields (price/available/quantity) + slug/id/type stay on the live `product`. Without this, re-opening a published row that already has a staged draft shows the LIVE copy and a full-payload re-save would have re-staged the live value over the staged one (the 8th-A data-loss regression) — the overlay feeds the staged values back, and §3.4's live-compare makes that round-trip a no-op.
 
-CURRENT (288–289):
+CURRENT (258–299, the full `openEditor` populate body):
 ```js
+function openEditor(productId) {
+  const product = productId ? state.products.find((p) => p.id === productId) : null;
+  state.editing = product || null;
+  setStatus('editor-status', '', 'info');
+  $('product-editor').classList.remove('hidden');
+  $('products-list').classList.add('hidden');
+  $('editor-heading').textContent = product ? `Edit: ${product.title}` : 'New Product';
+
+  $('p-id').value = product?.id ?? '';
+  $('p-title').value = product?.title ?? '';
+  $('p-slug').value = product?.slug ?? '';
+  $('p-slug').disabled = !!product;
+  $('p-headline').value = product?.headline ?? '';
+  $('p-story').value = product?.story_card ?? '';
+  $('p-description').value = product?.description ?? '';
+  $('p-features').value = arrayToLines(product?.features);
+  $('p-price').value = typeof product?.price === 'number' ? centsToDollars(product.price) : '';
+  $('p-quantity').value = product?.quantity ?? 1;
+  $('p-type').value = product?.product_type ?? 'miniature';
+  $('p-dimensions').value = product?.dimensions ?? '';
+  $('p-weight').value = product?.weight ?? '';
+  $('p-power').value = product?.power_supply ?? '';
+  $('p-materials').value = arrayToLines(product?.materials);
+  $('p-care').value = arrayToLines(product?.care_instructions);
+  $('p-shipping').value = arrayToLines(product?.shipping_details);
+  $('p-series').value = product?.series ?? '';
+  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
+  $('p-available').checked = product?.available !== false;
+  $('p-featured').checked = !!product?.featured;
+  $('p-artist-note').value = product?.artist_note ?? '';
   $('p-seo-title').value = product?.seo_title ?? '';
   $('p-seo-description').value = product?.seo_description ?? '';
+  $('p-thumbnail').value = product?.thumbnail ?? '';
+  $('p-thumbnail-alt').value = product?.thumbnail_alt ?? '';
+
+  const imgList = $('p-images');
+  imgList.innerHTML = '';
+  if (Array.isArray(product?.images) && product.images.length) {
+    for (const img of product.images) addImageRow(img.url || '', img.alt || '');
+  } else {
+    addImageRow('', '');
+  }
 ```
-NEW:
+NEW (add `eff`; draftable reads from `eff`; live-apply trio + slug/id/type from `product`; new `seo_thumbnail`/`checkout_*`/`media` fields, all from `eff`):
 ```js
-  $('p-seo-title').value = product?.seo_title ?? '';
-  $('p-seo-description').value = product?.seo_description ?? '';
-  $('p-seo-thumbnail').value = product?.seo_thumbnail ?? '';
-  $('p-checkout-name').value = product?.checkout_name ?? '';
-  $('p-checkout-description').value = product?.checkout_description ?? '';
-  $('p-checkout-image').value = product?.checkout_image ?? '';
+function openEditor(productId) {
+  const product = productId ? state.products.find((p) => p.id === productId) : null;
+  state.editing = product || null;
+  // Overlay any staged draft so the editor SHOWS and BUILDS ON pending edits (a published row may carry
+  // copy/SEO/photo edits staged by the GPT or a prior admin save — Landmines #14/#30). `draft` only ever
+  // holds DRAFTABLE keys (api/products.ts §3.4), so `eff` == `product` for the live-apply trio and for
+  // anything with nothing staged: read price/available/quantity + slug/id/type from the live `product`,
+  // and every draftable copy/SEO/array field from `eff`. Paired with §3.4's live-compare change-detect,
+  // re-saving these staged values back is a no-op — they still differ from live, so the existingDraft
+  // spread preserves them; they are NOT re-clobbered with the live value (the 8th-A data-loss fix).
+  const eff = product ? { ...product, ...(product.draft || {}) } : null;
+  setStatus('editor-status', '', 'info');
+  $('product-editor').classList.remove('hidden');
+  $('products-list').classList.add('hidden');
+  $('editor-heading').textContent = product ? `Edit: ${product.title}` : 'New Product';
+
+  $('p-id').value = product?.id ?? '';
+  $('p-title').value = eff?.title ?? '';
+  $('p-slug').value = product?.slug ?? '';
+  $('p-slug').disabled = !!product;
+  $('p-headline').value = eff?.headline ?? '';
+  $('p-story').value = eff?.story_card ?? '';
+  $('p-description').value = eff?.description ?? '';
+  $('p-features').value = arrayToLines(eff?.features);
+  $('p-price').value = typeof product?.price === 'number' ? centsToDollars(product.price) : '';   // live-apply — show live
+  $('p-quantity').value = product?.quantity ?? 1;                                                  // live-apply — show live
+  $('p-type').value = product?.product_type ?? 'miniature';
+  $('p-dimensions').value = eff?.dimensions ?? '';
+  $('p-weight').value = eff?.weight ?? '';
+  $('p-power').value = eff?.power_supply ?? '';
+  $('p-materials').value = arrayToLines(eff?.materials);
+  $('p-care').value = arrayToLines(eff?.care_instructions);
+  $('p-shipping').value = arrayToLines(eff?.shipping_details);
+  $('p-series').value = eff?.series ?? '';
+  $('p-theme').value = eff?.homepage_theme ? JSON.stringify(eff.homepage_theme) : '';
+  $('p-media').value = eff?.media ? JSON.stringify(eff.media) : '';
+  $('p-available').checked = product?.available !== false;                                         // live-apply — show live
+  $('p-featured').checked = !!eff?.featured;
+  $('p-artist-note').value = eff?.artist_note ?? '';
+  $('p-seo-title').value = eff?.seo_title ?? '';
+  $('p-seo-description').value = eff?.seo_description ?? '';
+  $('p-seo-thumbnail').value = eff?.seo_thumbnail ?? '';
+  $('p-checkout-name').value = eff?.checkout_name ?? '';
+  $('p-checkout-description').value = eff?.checkout_description ?? '';
+  $('p-checkout-image').value = eff?.checkout_image ?? '';
+  $('p-thumbnail').value = eff?.thumbnail ?? '';
+  $('p-thumbnail-alt').value = eff?.thumbnail_alt ?? '';
+
+  const imgList = $('p-images');
+  imgList.innerHTML = '';
+  if (Array.isArray(eff?.images) && eff.images.length) {
+    for (const img of eff.images) addImageRow(img.url || '', img.alt || '');
+  } else {
+    addImageRow('', '');
+  }
 ```
 
 **8.7 — `assets/js/admin.js`: on save, show the preview + Publish panel.** (the anchor is widened to line 454 so it's explicit that `body` is the **parsed API response** `{ success, product, preview_url, preview_token }`, which is what `renderPublishPanel` reads — not the request payload.)
@@ -2768,15 +2868,7 @@ NEW:
   }
 ```
 
-`assets/js/admin.js` CURRENT (`openEditor`, 284):
-```js
-  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
-```
-NEW:
-```js
-  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
-  $('p-media').value = product?.media ? JSON.stringify(product.media) : '';
-```
+`assets/js/admin.js` `openEditor` media populate: handled by the consolidated §8.6 block above (it reads `$('p-media').value = eff?.media ? JSON.stringify(eff.media) : '';` alongside the theme line) — no separate edit here.
 
 **8.11 — `assets/js/admin.js`: archive / resurface (replaces the hard delete — 1.12).** The current admin "Delete" is a hard client-side row delete; v1.5 makes it a reversible **archive** + **resurface** via the new API routes — one safe path, no way to lose order history. The button keeps its id (`delete-product`); only its handler + label change (the static "Delete" is overwritten by `openEditor`, which only shows the button while editing).
 
@@ -3268,11 +3360,11 @@ The slug is the product's URL handle (everlastingsbyemaline.com/product/<slug>) 
 By default, confirm the drafted fields with her before saving (read back the key ones in plain language). If she's said "just go ahead" / "you don't need to check with me" — for this piece or in general — EXPEDITE: skip the line-by-line confirmation and go straight to the preview. The preview page is the real review either way.
 
 == EDITING A PRODUCT ==
-1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id. If getProduct 404s — a title with an apostrophe or ampersand ("Em's Lavender & Sage") makes a slug you can't reliably reconstruct — call listProducts and match her wording against the titles, then use that row's id/slug. NEVER tell her "I couldn't find it" without listing first. A row may carry a `draft` object — those are edits previewed but NOT yet live; the top-level fields are what shoppers see right now, so never report `draft` values as the live copy.
+1. Find it: when she names a specific piece, getProduct by its slug (returns it live or draft); to browse, listProducts (shows which are live vs draft). Either way you get the product + its id. If getProduct 404s — a title with an apostrophe or ampersand ("Em's Lavender & Sage") makes a slug you can't reliably reconstruct — call listProducts and match her wording against the titles, then use that row's id/slug. NEVER tell her "I couldn't find it" without listing first. A row may carry a `draft` object — those are edits previewed but NOT yet live; the top-level fields are what shoppers see right now, so never report `draft` values as the live copy. When a draft (or pending edits) exist, getProduct ALSO returns an `effective` object (= live + staged = exactly what the page becomes after publish) — use the top-level/live to report the CURRENT state to her, but when you EDIT, build your new values from `effective` so you don't wipe out edits that are already staged.
 2. Call editProduct with the id and only the fields she's changing. Three fields go LIVE IMMEDIATELY on a published product (no preview, no publish step): the PRICE (rotates the Stripe price in place — same product, same URL), AVAILABILITY (`available` — mark sold / back-in-stock), and STOCK QUANTITY (`quantity`). Everything else — copy, SEO, photos/media — is STAGED as a draft (the live page is untouched until publish). So for "mark it sold," "set the price to $X," or "we got 3 more in," just save and tell her it's done; for copy/photo edits, stage and hand back the preview link. The checkout_* identity fields (checkout_name / checkout_description / checkout_image) are frozen once published; price/availability/quantity are not.
 3. Always hand back the preview link the same way as step 6 above. Never tell her an edit is live until it's published. If she changes her mind about staged edits, call discardEdits with the id — it scraps the pending draft and leaves the live page exactly as it was (the inverse of publish). (A price change isn't staged, so discardEdits won't undo it — to revert a price, set it back with editProduct.)
    - HEADS-UP on a live-only change over OLD pending edits: a price/availability/quantity change goes live without touching any earlier staged copy edit. So if getProduct shows the piece STILL has a `draft` (pending edits from before) after you make a live change, mention it: "done — and note, you still have unpublished copy edits on this piece from earlier; want to preview and publish those too, or discard them?" Don't let a staged edit sit forgotten.
-4. PHOTOS: to ADD a photo, first get it onto the CDN with uploadImage (see "ADDING PHOTOS & MEDIA" below) to get its url, then put that url in the FULL `images` array; to remove / reorder, just adjust the array. Either way getProduct first, send the COMPLETE desired `images` array (and `thumbnail` if needed) via editProduct — there's no per-photo command. (A removed photo's file lingers on the CDN; harmless.)
+4. PHOTOS: to ADD a photo, first get it onto the CDN with uploadImage (see "ADDING PHOTOS & MEDIA" below) to get its url, then put that url in the FULL `images` array; to remove / reorder, just adjust the array. Either way getProduct first, send the COMPLETE desired `images` array (and `thumbnail` if needed) via editProduct — there's no per-photo command. IMPORTANT when there are already pending edits: build the complete array from `effective.images` (the staged version), NOT the live top-level `images` — otherwise a second photo edit before publishing would silently drop the first one. Same for `media`. (A removed photo's file lingers on the CDN; harmless.)
 
 == REMOVING / RE-PRICING A PIECE ==
 To take a piece down, call archiveProduct (it leaves the shop but stays findable — reversible with unarchiveProduct). There is NO delete. Prefer archiveProduct for "take it down / remove / hide it" — it is IMMEDIATE. Marking a published piece sold/unavailable via editProduct {available:false} is ALSO immediate now — like price, it goes live the moment you save (no preview, no publish step), so just tell her "done, it's marked sold" (it shows as sold but stays on the page). Use that for "mark it sold / out of stock"; use archiveProduct when she wants it GONE from the shop entirely. Changing STOCK is the same — editProduct {quantity:N} on a published piece goes live immediately too (no preview/publish), so "we got 3 more in" → {quantity:3}, done. (A real purchase still flips a piece to sold automatically.) To change a published price: just call editProduct with the new price — it rotates the Stripe price and goes live immediately on the SAME product (same page, same URL, same link she's already shared); there's no new product and no publish step. For a TEMPORARY discount rather than a permanent re-price, create a coupon instead (it leaves the list price intact).
@@ -3534,6 +3626,24 @@ Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes th
     old, well-formed copy; draft + preview_token still present so she can fix the draft and re-publish).
     Then fix the draft and publish → 200, live row updated. This is the branch Test #25 does NOT cover
     (it exercises first-publish only); without it the edit-publish hole ships silently.
+27. **Re-opening a staged product in the admin and re-saving preserves the staged edits (RANK 1 data-loss
+    regression):** publish a well-formed product; stage a copy edit (e.g. `editProduct` sets a new
+    `headline`/`story_card` → a `draft` is written, live row untouched); then simulate the admin re-opening
+    it — `openEditor` populates the form from the `eff = {...product, ...draft}` overlay, so the form shows
+    the **staged** copy — and **Save** with no further change (the admin's `buildProductPayload` re-sends the
+    FULL payload, now carrying the staged values). Assert: the `draft` is **byte-identical** to before (the
+    staged headline survives — NOT reverted to live), the live row is unchanged, and the preview still shows
+    the staged copy. Then repeat the re-save while ALSO changing only `available` → same result (staged copy
+    preserved) plus the availability applies live. Without the live-compare (§3.4) + the overlay (§8.6) this
+    save silently clobbers the staged copy with the live value — the gap #5b/#14/#26 never exercise (none
+    re-opens a staged row and re-saves).
+28. **The GPT can build on its own staged array edit (RANK 2):** on a published product, `editProduct`
+    stages a new `images` array (draft holds it); then, **before publishing**, getProduct → assert it
+    returns an `effective` block whose `images` is the staged array (and the top-level `images` is still the
+    live array); `editProduct` again with a COMPLETE `images` array built from `effective.images` (e.g. add
+    one more photo). Assert the resulting staged `images` contains **both** the first and second edits — the
+    earlier staged change is not dropped. Same for `media`. (Confirms callers edit the staged state via
+    `effective`, not the live top-level.)
 
 ---
 
