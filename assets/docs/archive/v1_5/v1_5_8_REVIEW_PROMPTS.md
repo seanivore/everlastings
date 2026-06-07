@@ -1,8 +1,6 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
-> **SUPERSEDED by `v1_5_8_REVIEW_PROMPTS.md` (7th Gap Review A folded → v1.5.8). History only.**
-
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_7_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_8_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
 > **The product North Star is: minimize the owner's friction to manage her entire digital product — the
@@ -19,7 +17,7 @@ All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_
 > **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
 > finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
-> **A has run six times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
+> **A has run seven times.** Pass 1 (`v1_5_1_GAP_REVIEW_A.md`, 22 findings) → v1.5.2; pass 2
 > (`v1_5_2_GAP_REVIEW_A.md`, 16 incl. one real blocker G1) → v1.5.3; pass 3 (`v1_5_3_GAP_REVIEW_A.md`,
 > 10, no code-breaking logic bug; +discard Q2 + price-rotation Q1) → v1.5.4; pass 4
 > (`v1_5_4_GAP_REVIEW_A.md`, **no build-breaking error, landmines held**) → v1.5.5: one real code bug
@@ -39,25 +37,39 @@ All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_
 > now re-validates** with the same `validateProductRules` create uses (extracted to module scope) so an
 > edit can't ship a malformed product. (RANK 4) the publish panel surfaces a **preserved pending draft**
 > on a live-only edit. (RANK 5) preview Buy/cart controls **disabled ("Preview only")**. (RANK 6) the
-> webhook idempotency-claim block + an admin `state.client` grep hard-gate are now quoted. **This is the
-> re-run of A against v1.5.7.** Landmines 7–25 below are the recent fixes/changes — confirm they hold;
-> don't re-raise the originals.
+> webhook idempotency-claim block + an admin `state.client` grep hard-gate are now quoted.
+> Pass 7 (`v1_5_7_GAP_REVIEW_A.md`, **NEEDS ANOTHER PASS but narrow — no architecture gap, store fully
+> chat-drivable**) → **v1.5.8**, folding two real code bugs + anchors/primer fixes: (RANK 1) the
+> published-PUT staged a **phantom copy draft** on an availability/price/quantity-only admin save (the
+> admin's `buildProductPayload` re-sends the full payload; the draftable pick was presence-only) — fixed
+> with **value-level change-detection** (`JSON.stringify` vs the effective draft-or-live value), so a
+> live-only edit stages nothing and the panel says "live now — nothing to publish." (RANK 2) **edit-publish
+> now re-validates** the merged row with the same `validateProductRules` — first-publish already did, but
+> the edit-publish branch applied the draft unvalidated (and Test #25 missed it), so a draft that blanked
+> `story_card`/`images` could ship a malformed live product; new Test #26 covers it. (RANK 3) the
+> preview-disable now **anchors the real `<button>` markup** (`product.html:289-290`). (RANK 4) the upload
+> auth gate (`upload.ts:81`) is anchored **before** the new server-side URL fetch. (RANK 5) the NEW
+> `createProduct` schema is **quoted verbatim** (single locate-and-replace). (RANK 6/7) the STORE primer's
+> **slug ARs #7/#23** + the **system-diagram stripe-sync block** are added to Phase 10, and every Phase 10
+> line hint is **re-anchored** to the reflowed STORE. (RANK 8) the `product_type` enum is **narrowed to
+> `[miniature]`** (printable/storybook deferred). **This is the re-run of A against v1.5.8.** Landmines
+> 7–27 below are the recent fixes/changes — confirm they hold; don't re-raise the originals.
 
 > **Before this A-pass:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) runs against `v1_5_7_IMPLEMENT.md` to
+> integration/state-machine, **through the review lens above**) runs against `v1_5_8_IMPLEMENT.md` to
 > clear the obvious; cold A then does the thorough self-containment/completeness gate. (Subagents are
 > pre-gate breadth — never the gate itself; per DEV_RULES.)
 
 ## Sequencing (per Sean's gap-review flow)
 
-1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc (`v1_5_7_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing. Big-picture functionality gaps must surface here, before the detailed reviews.
+1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc (`v1_5_8_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing. Big-picture functionality gaps must surface here, before the detailed reviews.
 2. **B + C** (in repo) — run consecutively, fold both at once, re-run if either finds something load-bearing.
 3. All three clean → **Sean approves** → a fresh agent executes on the dev preview.
 
 ## What to hand each reviewer
 
-- **A:** `v1_5_7_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The architecture doc is what lets a cold reviewer judge *functionality completeness*, not just self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
-- **B / C:** the repo + `v1_5_7_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
+- **A:** `v1_5_8_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The architecture doc is what lets a cold reviewer judge *functionality completeness*, not just self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
+- **B / C:** the repo + `v1_5_8_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
 
@@ -84,10 +96,12 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 - **(refunds-by-chat, v1.5.6) Refunds stay in the Stripe dashboard** (no refund Action in v1.5) — the GPT WALKS Em through the current dashboard steps and **uses web search to confirm the steps** as Stripe's UI drifts. This requires the GPT's **web-browsing capability ENABLED** (it was OFF before — a `GPT_SETUP.md` config requirement). A FULL refund reflects via `charge.refunded`; partial does not. (5th Gap A #6.)
 - **(`uploadImage` roles, v1.5.6) `ROLE_PATTERN` is extended** in Phase 5 to include `checkout_image` and `seo_thumbnail` (the two NEW v1.5 roles) alongside `hero|thumbnail|gallery-NN|video-0N|detail-0N|gif-0N` — both the multipart and URL-intake guards use it, and the new transform crops handle those two roles. The GPT may also send **several media links in one message** (it loops `uploadImage`). (5th Gap A #10 + lens note.)
 - **(#21 slug — derive once + server-normalize, v1.5.7) The `slug` is GPT-supplied, not system-filled.** The `createProduct` schema marks `slug` **required** AND the GPT computes it for every `uploadImage` call (photos upload before the row exists) — so any prose saying "the system handles slug / never set it" is the false half (6th Gap A RANK 1, now fixed). The plan instructs the GPT to **derive the slug ONCE** from the title (lowercase, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats) and reuse the SAME string for uploads + create; and `products.ts` runs a server-side `slugify` on both the caller-supplied and title-derived slug so it's always URL-safe + reconstructable (also softens the #18 apostrophe/ampersand fallback at the source). Confirm no surviving "system handles slug, never set" in any GPT-facing NEW block, and that `slug` stays required in the schema.
-- **(#22 first-publish re-validates, v1.5.7) `handlePublish`'s first-publish branch re-runs the SAME per-type rules as create** via a shared module-scope `validateProductRules` (extracted from the inline create checks) BEFORE the Stripe create — so an edit that blanked `story_card`/`images` on an unpublished draft can't ship a malformed product (6th Gap A RANK 3). Confirm create and publish call the one shared validator (no divergent copies) and the function count still reads 11/12 (it's a helper, not an endpoint).
+- **(#22 first-publish re-validates, v1.5.7) `handlePublish`'s first-publish branch re-runs the SAME per-type rules as create** via a shared module-scope `validateProductRules` (extracted from the inline create checks) BEFORE the Stripe create — so an edit that blanked `story_card`/`images` on an unpublished draft can't ship a malformed product (6th Gap A RANK 3). Confirm create and publish call the one shared validator (no divergent copies) and the function count still reads 11/12 (it's a helper, not an endpoint). **(v1.5.8: edit-publish ALSO re-validates — see #27; the two branches together close the malformed-product hole.)**
 - **(#23 coupon owner-sale isolation is byte-anchored, v1.5.7) `listCoupons`/`deactivateCoupon` key on `pc.coupon?.metadata?.source === 'owner_sale'`** — the plan now QUOTES the three system coupon-create call sites (`cart.ts` tags the *promotion code* `source:'cart-recovery'`; `subscribe.ts` tags nothing; `_bootstrap/coupons.ts` creates the base coupons with no metadata) proving **no system coupon carries `owner_sale`** (6th Gap A RANK 2). Invariant: the bootstrap must never tag a coupon `owner_sale`.
 - **(#24 panel honesty on a live-only edit over a pending draft, v1.5.7) `renderPublishPanel`** now checks `body.product.draft`: a price/availability/quantity-only change that PRESERVES an earlier staged copy edit shows "…live now — but you still have edits pending" + the preview link + Publish/Discard, instead of "nothing to publish" (6th Gap A RANK 4) — so the panel never contradicts the list pill.
-- **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full visual styling still deferred to Part 3).
+- **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full visual styling still deferred to Part 3). **(v1.5.8: the disable now anchors the real `<button>` markup — `product.html:289-290`, both `<button type="button">` — so `btn.disabled` is provably sufficient, 7th Gap A RANK 3.)**
+- **(#26 draftable change-detection — the admin live-only path, v1.5.8) The published PUT value-compares each draftable key** before staging: a key is staged only when `JSON.stringify(updates[k]) !== JSON.stringify(effective(k))` where `effective` is the staged-draft value if present else the live column (plain `!==` is wrong — DRAFTABLE is mostly jsonb/array, a reference compare always-true). The admin's `buildProductPayload` re-sends the FULL payload every save, so without this an availability/price/quantity-only admin save would stage a **phantom no-op copy draft** and the panel would wrongly show "Preview · Publish/Discard" instead of "live now — nothing to publish" — i.e. #7 would fail on the admin path. (7th Gap A RANK 1.) Confirm a live-only admin save stages nothing (`hasDraftable=false`) while a genuine copy edit still stages and merges over any prior draft; Tests #6/#23 cover it.
+- **(#27 edit-publish re-validates, v1.5.8) `handlePublish`'s edit-publish branch validates the MERGED row** (`{...row, ...draft}`) with the same `validateProductRules` before applying the draft to the live columns — so a staged draft that blanked `story_card`/`images` (admin clears a field → `… || null`) can't ship a malformed, purchasable live product. First-publish already did this (#22); edit-publish did NOT, and Test #25 covered only first-publish, so it would have shipped silently. New Test #26 exercises it (published → stage invalid draft → publish → 400, live row unchanged). (7th Gap A RANK 2 — "if you fix one thing.") Confirm both publish branches call the one shared validator.
 
 ---
 
@@ -95,7 +109,7 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-your only output is findings (write them to v1_5_7_GAP_REVIEW_A.md, or print the full file contents
+your only output is findings (write them to v1_5_8_GAP_REVIEW_A.md, or print the full file contents
 if you have no filesystem).
 
 THE REVIEW LENS (judge every gap against this, not against doc-internal consistency)
@@ -110,15 +124,16 @@ THE REVIEW LENS (judge every gap against this, not against doc-internal consiste
   URL); the GPT asks for a link when a file is pasted.
 
 CONTEXT
-- You are given TWO documents and NO repository: (1) v1_5_7_IMPLEMENT.md — a single living plan a
+- You are given TWO documents and NO repository: (1) v1_5_8_IMPLEMENT.md — a single living plan a
   FRESH agent will execute against the repo, then test on the dev preview; it is meant to be
   "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so
   the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the
   store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
-- This is the SEVENTH A-pass; the plan has absorbed six prior ones. The 6th was NEEDS-ANOTHER-PASS but
-  NARROW (doc/instruction reconciliation + two correctness anchors, no architecture gap, all 20 prior
-  landmines held). Landmines 7-25 are the most recent fixes/changes — confirm they hold rather than
-  re-raising the originals.
+- This is the EIGHTH A-pass; the plan has absorbed seven prior ones. The 7th was NEEDS-ANOTHER-PASS but
+  NARROW (no architecture gap, store fully chat-drivable): it found TWO real code bugs — a phantom-draft
+  on the admin live-only PUT (RANK 1) and an unvalidated edit-publish branch (RANK 2) — plus
+  anchor/primer reconciliations and the enum narrowing; all are folded into v1.5.8. Landmines 7-27 are
+  the most recent fixes/changes — confirm they hold rather than re-raising the originals.
 - Landmines to respect (validate the plan against these, not your training data):
   1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
      objects — a SQL TRIGGER, not a Studio webhook, and AFTER INSERT ONLY (a flag-flip UPDATE doesn't
@@ -196,7 +211,21 @@ CONTEXT
   25. (v1.5.7) Preview Buy disabled: on a preview load (previewToken present) the product page disables +
      relabels the cart/buy controls "Preview only" so an EDIT preview of a PUBLISHED product can't transact
      at the live price under the "not yet live" banner (6th-A RANK 5; full visual styling deferred to
-     Part 3).
+     Part 3). (v1.5.8: the disable anchors the real <button> markup — product.html:289-290, both
+     <button type="button"> — so btn.disabled is provably sufficient, 7th-A RANK 3.)
+  26. (v1.5.8) Draftable change-detection on the published PUT: a draftable key is staged only when
+     JSON.stringify(updates[k]) !== JSON.stringify(effective(k)) (effective = staged-draft value if present
+     else live column; plain !== is wrong — DRAFTABLE is mostly jsonb/array, reference-compare always true).
+     The admin's buildProductPayload re-sends the FULL payload every save, so without this an availability/
+     price/quantity-only admin save stages a PHANTOM no-op draft and the panel wrongly shows Publish/Discard
+     instead of "live now — nothing to publish" (i.e. #16 fails on the admin path). (7th-A RANK 1.) Confirm
+     a live-only admin save stages nothing while a real copy edit still stages + merges over any prior draft.
+  27. (v1.5.8) Edit-publish re-validates: handlePublish's edit-publish branch validates the MERGED row
+     ({...row, ...draft}) with the same validateProductRules before applying the draft to live columns — so
+     a staged draft that blanked story_card/images can't ship a malformed, purchasable live product. #22
+     (first-publish) already did this; edit-publish did NOT and Test #25 covered only first-publish, so it
+     would have shipped silently; new Test #26 covers it (7th-A RANK 2 — "if you fix one thing"). Both
+     publish branches call the one shared validator.
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
 1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a
@@ -228,7 +257,7 @@ beats "coupons look incomplete."
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_7_GAP_REVIEW_B.md).
+output findings only (write them to v1_5_8_GAP_REVIEW_B.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
 her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
@@ -237,7 +266,7 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- v1_5_7_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
+- v1_5_8_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
   repo, then test on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block;
   the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — so
   treat a CURRENT line-ref there as a locator to confirm, not a hard byte match.
@@ -295,7 +324,7 @@ OUTPUT
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_5_7_GAP_REVIEW_C.md).
+output findings only (write them to v1_5_8_GAP_REVIEW_C.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
 store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
@@ -304,7 +333,7 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_5_7_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
+- Read EVERLASTINGS_STORE.md FIRST, then v1_5_8_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
   repo and test on the dev preview.
 - Landmines (validate against reality, not training data):
   1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,
