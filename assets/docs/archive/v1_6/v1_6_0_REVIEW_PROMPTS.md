@@ -295,11 +295,33 @@ CONTEXT
      price is no longer frozen — confirm.
   8. (G2) Phase 1's migration contains the DO-block that RAISEs on a leftover qual='true' products SELECT
      policy — confirm it's valid PL/pgSQL and queries pg_policies correctly.
-  9. (v1.6.0 folds #31-36) Confirm the 6 newly-folded items are PRESENT and well-formed: the Phase 5
-     isPublicHttpUrl SSRF guard (syntactically sound, runs before the fetch, references only the new
-     helper); the §9.2 effective-fallback instruction; the featured/series schema descriptions in BOTH
-     createProduct + editProduct; the Phase 10b site-vs-store boundary line; the Phase 9.5 verbatim curl
-     CURRENT blocks; the corrected §9.2 no-op rationale. (Details in landmines #31-36 above.)
+  9. (v1.6.0 folds #31-36) Confirm the 6 newly-folded items are PRESENT and well-formed — full detail:
+     31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...)
+         and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal
+         loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16,
+         ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. Confirm the guard
+         exists, is syntactically sound, runs before the fetch, references only the new helper, and does
+         NOT block legit Drive/CDN links. (Accepted residual, deferred v1.1: a public host that
+         DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no Vercel IMDS.)
+     32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 →
+         listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get
+         `effective` before any images/media array edit (listProducts returns the live row + its draft
+         separately but NOT the computed effective = live+staged). Confirm present + consistent with #29.
+     33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on
+         featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps
+         "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection"
+         → {series:"<name>"}, both STAGE on a published piece. Confirm present in BOTH schemas.
+     34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line —
+         GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming
+         beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change.
+         Confirm the boundary line is in the Phase 10b spec.
+     35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create,
+         the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this
+         is the agent/curl path — Sean/Claude Code — NOT Em's GPT path). Confirm the CURRENT blocks are
+         quoted + the NEW direction is clear.
+     36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty
+         draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct
+         returns the current preview_url. Confirm the corrected rationale.
 
 ANGLE B — fidelity. Open every file the plan edits and verify:
 - Every CURRENT block matches the working tree BYTE-FOR-BYTE (whitespace, line content). Line numbers
@@ -368,7 +390,32 @@ CONTEXT
      upload for legit Drive/CDN links; the effective-fallback (#32) must close the last array-loss edge on
      the getProduct-404 path (re-getProduct by exact slug); featured/series (#33) must actually be triggerable
      by "feature this"/"add to <collection>"; the Phase 10b boundary (#34) must set Em's expectation that
-     homepage composition is a set-up-with-Sean job. (Details in landmines #31-36 above.)
+     homepage composition is a set-up-with-Sean job. Full detail:
+     31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...)
+         and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal
+         loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16,
+         ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. The guard must NOT
+         break the by-link upload for legit Drive/CDN links. (Accepted residual, deferred v1.1: a public
+         host that DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no IMDS.)
+     32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 →
+         listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get
+         `effective` before any images/media array edit (listProducts returns the live row + its draft
+         separately but NOT the computed effective = live+staged), closing the last array-loss edge in the
+         #26/#29 class. Confirm consistent with #29.
+     33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on
+         featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps
+         "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection"
+         → {series:"<name>"}, both STAGE on a published piece. Must be genuinely triggerable by chat.
+     34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line —
+         GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming
+         beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change.
+         The honest limit (homepage composition isn't chat-drivable by decision) must be stated to Em.
+     35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create,
+         the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this
+         is the agent/curl path — Sean/Claude Code — NOT Em's GPT path).
+     36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty
+         draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct
+         returns the current preview_url.
 
 ANGLE C — integration / system fit (through the lens). Hunt for gaps where an edit is locally correct
 but breaks the wider system OR a by-chat capability:
