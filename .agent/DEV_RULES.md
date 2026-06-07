@@ -1,10 +1,6 @@
 # Development Protocols
 
-**Version**: v4.0.1
-**Last Updated**: 2026-06-05
-**Changes**: v4.0.1 — added the *Markdown-table width* convention (≤ ~100 cols, else grouped bullets). v4.0.0 — Strategic restructure. Re-centers the doc on the two things that make this workflow work — planning to **exclusively executable** and proving it with **fresh-instance gap review** — and cuts boilerplate that buried the signal (Common Pitfalls, Agent Documentation Standards, the enterprise parallel-dev essay, the research/testing/commit templates). New: the *subagent-pass vs fresh-instance-gate* distinction, the reviewer **access→perspective** model, the gate framed as non-waivable + ego-safe, and an IMPLEMENT template that stops seeding tiny version-milestone BUILDs.
-**Purpose**: How we plan and build with agentic tools. Read THE CORE first; the rest is the machinery and reference.
-**Syncing**: One canonical copy, propagated to every project via `filemgmt` (see § *Syncing*).
+**Version**: v4.0.2 **Last Updated**: 2026-06-07 **Changes**: v4.0.2 — added the *prose soft-wrap* convention (one logical line per paragraph; never hard-wrap; never reflow inside fences/tables). v4.0.1 — added the *Markdown-table width* convention (≤ ~100 cols, else grouped bullets). v4.0.0 — Strategic restructure. Re-centers the doc on the two things that make this workflow work — planning to **exclusively executable** and proving it with **fresh-instance gap review** — and cuts boilerplate that buried the signal (Common Pitfalls, Agent Documentation Standards, the enterprise parallel-dev essay, the research/testing/commit templates). New: the *subagent-pass vs fresh-instance-gate* distinction, the reviewer **access→perspective** model, the gate framed as non-waivable + ego-safe, and an IMPLEMENT template that stops seeding tiny version-milestone BUILDs. **Purpose**: How we plan and build with agentic tools. Read THE CORE first; the rest is the machinery and reference. **Syncing**: One canonical copy, propagated to every project via `filemgmt` (see § *Syncing*).
 
 ---
 
@@ -141,8 +137,7 @@ When a BUILD surfaces a gap/bug — even one affecting the next sequential track
 IMPLEMENT hands the executing orchestrator a starting point for parallel work so it doesn't design it cold — the operational answer to the Orchestration Paradox:
 - **Subagent groupings** per phase: what runs in parallel, what dependencies sequence it, what context each subagent needs.
 - **Boundaries of delegation:** what the orchestrator does NOT delegate (gate decisions, branch state, commit cadence, escalation, verification reads).
-- **Placeholders as decouplers:** strict `<!-- PLACEHOLDER: ... -->` conventions sever cross-team dependencies (frontend builds against a placeholder while backend builds the real thing).
-Treat groupings as a starting point, not a contract.
+- **Placeholders as decouplers:** strict `<!-- PLACEHOLDER: ... -->` conventions sever cross-team dependencies (frontend builds against a placeholder while backend builds the real thing). Treat groupings as a starting point, not a contract.
 
 ---
 
@@ -296,6 +291,7 @@ After step 3, `dev` and `main` are at the same commit. The dev→main ff-merge m
 - **Drift:** fix protocol drift you hit (whether or not you caused it); if unsure it's drift, confirm with the human first.
 - **Research:** verify current docs while planning — never ship training-data recall as fact. Business-grade research only → `.agent/RESEARCH_PROTOCOL.md`.
 - **Markdown tables ≤ ~100 cols.** Keep a table's total rendered width under ~100 monospace characters (any number of columns within that budget); past it, rows wrap and become unreadable in editors (and paste badly into Thot). If the data won't fit, drop the table for **grouped bullets** (one sub-list per row) — never a wider table. *Exception:* a doc read **only** by agents (e.g. a frozen BUILD) may keep a wider table when it genuinely conveys structure better than bullets — never in human-facing docs (IMPLEMENT, README, FEEDBACK, PROJECT_NAME).
+- **Prose soft-wraps; never hard-wrap a paragraph.** Write each paragraph/bullet as **one logical line** and let the editor wrap to the window — do not insert manual line breaks mid-paragraph. A single newline renders as a space, so hard-wrapping changes nothing visible but multiplies physical lines, and these docs get cited by line number constantly: a hard-wrapped paragraph spans many numbered lines, so a human pointing at "line 76" (the block) and an agent pointing at "line 81" (a sentence inside it) are both right about *different* lines — soft-wrapped, the whole paragraph is one number and they agree. **Never reflow inside a fenced ` ``` ` code block or a table** — those carry significant newlines / column alignment and *are* the anchors (the byte-exact CURRENT/NEW quotes). Reflowing prose is always safe; touching a fence or table is never. (Claude Code's doc output hard-wraps prose by habit — strip it.)
 - **Testing:** the BUILD carries the verification plan; the orchestrator records results in the BUILD_REPORT.
 - **Syncing:** one canonical copy → every project via `filemgmt -f ~/Development -r <path>/.agent/DEV_RULES.md` (new shared files: `-a`). `.agent/PROJECT_LESSONS.md` is per-project, not synced.
 

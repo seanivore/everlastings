@@ -1,8 +1,6 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
-All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_7_IMPLEMENT.md`.
-Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per
-pass** (no context contamination). Reviewers change **nothing** — output is findings only.
+All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_7_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
 > **The product North Star is: minimize the owner's friction to manage her entire digital product — the
@@ -50,127 +48,44 @@ pass** (no context contamination). Reviewers change **nothing** — output is fi
 
 ## Sequencing (per Sean's gap-review flow)
 
-1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc
-   (`v1_5_7_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing.
-   Big-picture functionality gaps must surface here, before the detailed reviews.
-2. **B + C** (in repo) — run consecutively, fold both at once, re-run if either finds something
-   load-bearing.
+1. **A first** (cold / out-of-repo — the holistic gate). Fold findings → bump the doc (`v1_5_7_IMPLEMENT.md`…) → **re-run A** until a fresh A pass finds nothing load-bearing. Big-picture functionality gaps must surface here, before the detailed reviews.
+2. **B + C** (in repo) — run consecutively, fold both at once, re-run if either finds something load-bearing.
 3. All three clean → **Sean approves** → a fresh agent executes on the dev preview.
 
 ## What to hand each reviewer
 
-- **A:** `v1_5_7_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The
-  architecture doc is what lets a cold reviewer judge *functionality completeness*, not just
-  self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens +
-  landmines are **inlined in each prompt block below** — no separate paste needed.
+- **A:** `v1_5_7_IMPLEMENT.md` **+ `assets/docs/EVERLASTINGS_STORE.md`** — and **no repo**. (The architecture doc is what lets a cold reviewer judge *functionality completeness*, not just self-containment. Paste both into a non-Claude tool or a no-filesystem session.) The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
 - **B / C:** the repo + `v1_5_7_IMPLEMENT.md`; **C** also reads `EVERLASTINGS_STORE.md` first.
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
 
-These are inlined verbatim into each prompt block below. Items 7–21 are the most recent fixes/changes —
-confirm they hold rather than re-flagging.
+These are inlined verbatim into each prompt block below. Items 7–21 are the most recent fixes/changes — confirm they hold rather than re-flagging.
 
-- The Postgres **INSERT trigger** `notify_stripe_sync` (`supabase/migrations/20260421000003_*`)
-  auto-creates Stripe objects — it is a **SQL trigger, not a Supabase Studio webhook**, and it is
-  **AFTER INSERT only** (a flag-flip UPDATE does NOT fire it); drafts must skip it (Phase 1) and Stripe
-  is created **only at publish**.
-- Public reads go via the **anon client + RLS**, not the API → hiding drafts/archived is the RLS change
-  (Phase 1); **`is_test` is filtered in `main.js`** (Phase 4.5), *not* by RLS; **preview reads go
-  through the service-role API** (Phase 3.2 / Phase 7), never the anon client. Client identities are
-  anchored in the pre-flight: `products.ts` + `checkout.ts` = service-role (`SUPABASE_SECRET_KEY`),
-  `product-feed.ts` = anon (`SUPABASE_PUBLISHABLE_KEY`), admin reads/archives via the service-role API.
-- **Stripe-lock (Q1):** the checkout *identity* fields (`checkout_name`/`checkout_description`/
-  `checkout_image`) + `sku` are frozen after publish; **`price` ROTATES in place** — but the **order is
-  load-bearing (4th Gap A #2): create the new Price → write the DB → deactivate the old Price
-  best-effort.** A draft's `price`/`checkout_*` are freely editable until first publish.
-- **Archive, never hard-delete:** "remove" = `archived_at` + Stripe `active:false` (reversible);
-  archived rows are hidden everywhere public; order history is FK-protected (no `ON DELETE CASCADE`).
-- **No new functions** — publish / coupon / archive / **discard** are `?_action=` rewrites; the
-  `uploadImage` URL branch edits the existing `upload.ts`; the `charge.refunded` branch edits the
-  existing `webhook.ts`; the purge is `pg_cron`; the Vercel Hobby cap is **11/12**.
+- The Postgres **INSERT trigger** `notify_stripe_sync` (`supabase/migrations/20260421000003_*`) auto-creates Stripe objects — it is a **SQL trigger, not a Supabase Studio webhook**, and it is **AFTER INSERT only** (a flag-flip UPDATE does NOT fire it); drafts must skip it (Phase 1) and Stripe is created **only at publish**.
+- Public reads go via the **anon client + RLS**, not the API → hiding drafts/archived is the RLS change (Phase 1); **`is_test` is filtered in `main.js`** (Phase 4.5), *not* by RLS; **preview reads go through the service-role API** (Phase 3.2 / Phase 7), never the anon client. Client identities are anchored in the pre-flight: `products.ts` + `checkout.ts` = service-role (`SUPABASE_SECRET_KEY`), `product-feed.ts` = anon (`SUPABASE_PUBLISHABLE_KEY`), admin reads/archives via the service-role API.
+- **Stripe-lock (Q1):** the checkout *identity* fields (`checkout_name`/`checkout_description`/ `checkout_image`) + `sku` are frozen after publish; **`price` ROTATES in place** — but the **order is load-bearing (4th Gap A #2): create the new Price → write the DB → deactivate the old Price best-effort.** A draft's `price`/`checkout_*` are freely editable until first publish.
+- **Archive, never hard-delete:** "remove" = `archived_at` + Stripe `active:false` (reversible); archived rows are hidden everywhere public; order history is FK-protected (no `ON DELETE CASCADE`).
+- **No new functions** — publish / coupon / archive / **discard** are `?_action=` rewrites; the `uploadImage` URL branch edits the existing `upload.ts`; the `charge.refunded` branch edits the existing `webhook.ts`; the purge is `pg_cron`; the Vercel Hobby cap is **11/12**.
 - **`is_test`** is never user-editable; every new read/write stays scoped to `isTest`.
-- **(G1, confirm it holds)** the published-edit **frozen-field guard rejects only a CHANGED frozen
-  value, not mere presence** — the admin always re-sends `checkout_*` (and `price`); `price` is excluded
-  from the guard (it rotates). The admin-published-edit path must be tested.
-- **(G2, confirm it holds)** the RLS swap is name-keyed and carries a **self-checking guard** — the
-  migration RAISEs if any `products` SELECT policy still has `qual = 'true'`.
-- **(Q2) Discard exists:** `?_action=discard` clears `draft` + `preview_token` on a published row;
-  **auth-only** (no token path); GPT `discardEdits`, admin "Discard pending edits" button.
-- **(allow-list) Create is allow-listed:** the create insert is built from an explicit field allow-list;
-  system columns can't be injected. The **normalized `slug` is set onto `product` upstream** (see the
-  slug landmine #21) so the allow-list captures it; `slug` IS in `CREATE_FIELDS` (the GPT supplies it).
-  **`sku` is DB-generated** (`sku text UNIQUE NOT NULL DEFAULT ('EVE-'||substr(uuid,1,8))`, initial
-  schema) → it is **deliberately NOT in `CREATE_FIELDS`** (allow-listing a caller `sku` would risk a
-  UNIQUE collision); the GPT `createProduct` schema has no `sku` either. (5th Gap A #4.)
-- **(preview_url) `getProduct` returns an origin-correct `preview_url`** from `new URL(request.url).origin`
-  when a `preview_token` exists; the GPT relays that link (never hardcodes a host). The origin premise is
-  recorded + tested (4th Gap A #10).
-- **(coupons) `listCoupons` auto-paginates** (`for await` over `promotionCodes.list`, scan-capped) so
-  owner sales aren't truncated; the `owner_sale` filter still excludes cart-recovery/newsletter codes. A
-  **product-scoped** coupon needs a PUBLISHED product (a draft has no `stripe_product_id`) — the GPT is
-  told (4th Gap A #8).
-- **(D1 — media-by-link, NEW) `uploadImage` takes a JSON `{url, slug, role, skip_transform}`** and the
-  server fetches the URL (a Drive share link is normalized to direct-download), validates mime/size, and
-  runs the SAME Cloudinary→R2 pipeline as the multipart path. The `/api/upload` Action now EXISTS in the
-  Phase 9 schema. A file pasted into chat can't be forwarded → the GPT asks for a link. Confirm this is
-  genuinely by-chat-driveable.
-- **(D2 — refunds, NEW) `webhook.ts` handles `charge.refunded`** (before the no-op guard, after the
-  idempotency claim) → sets `orders.status='refunded'` on a FULL refund, matched by
-  `stripe_payment_intent`; partial logs only. Requires `charge.refunded` enabled on the Stripe endpoint.
-- **(#3, NEW) The Studio operator note** splits the two failure modes: a Studio INSERT with
-  `is_published=true` fires the trigger but bypasses `handlePublish`; a Studio UPDATE flag-flip does NOT
-  fire the AFTER-INSERT trigger → a published-but-no-Stripe zombie. Never publish from Studio.
-- **(#7) Admin live-only edit** shows "<X> change is live now — nothing to publish" and **no** Publish
-  button (a price / availability / quantity-only change stages nothing).
-- **(THREE live-apply fields, v1.5.6) `price`, `available`, AND `quantity` apply LIVE immediately** on a
-  published row (no preview/publish) — all three gate purchasability (`checkout.ts:79`
-  `available !== true || (quantity ?? 0) < 1`), and `available` is also flipped live by a real purchase
-  (`webhook.ts:128`), so staging any of them is an oversell/stale-stock trap. All three are **change-detected** (`updates.x !== current.x`) so a
-  no-op admin re-send doesn't write or report a spurious update; all three are excluded from the draft
-  staging filter on the published branch. Everything else stages. `quantity`-live is latent today (only
-  qty-1 `miniature` exists) but prevents the trap for a future multi-qty `product_type`. (5th Gap A
-  #1/#2/#8.) The plan must say this consistently across §1.3, the PUT, §9.2, §9.5, §10b, and the admin
-  panel — confirm no surface still says `available`/`quantity` "stages until publish."
-- **(getProduct fallback, v1.5.6) If `getProduct` 404s** (a title with an apostrophe/ampersand makes a
-  slug the GPT can't reconstruct), the GPT must fall back to `listProducts` and match by title — never
-  report "not found" without listing first. (5th Gap A #3.)
-- **(refunds-by-chat, v1.5.6) Refunds stay in the Stripe dashboard** (no refund Action in v1.5) — the GPT
-  WALKS Em through the current dashboard steps and **uses web search to confirm the steps** as Stripe's UI
-  drifts. This requires the GPT's **web-browsing capability ENABLED** (it was OFF before — a `GPT_SETUP.md`
-  config requirement). A FULL refund reflects via `charge.refunded`; partial does not. (5th Gap A #6.)
-- **(`uploadImage` roles, v1.5.6) `ROLE_PATTERN` is extended** in Phase 5 to include `checkout_image` and
-  `seo_thumbnail` (the two NEW v1.5 roles) alongside `hero|thumbnail|gallery-NN|video-0N|detail-0N|gif-0N`
-  — both the multipart and URL-intake guards use it, and the new transform crops handle those two roles.
-  The GPT may also send **several media links in one message** (it loops `uploadImage`). (5th Gap A #10 +
-  lens note.)
-- **(#21 slug — derive once + server-normalize, v1.5.7) The `slug` is GPT-supplied, not system-filled.**
-  The `createProduct` schema marks `slug` **required** AND the GPT computes it for every `uploadImage`
-  call (photos upload before the row exists) — so any prose saying "the system handles slug / never set
-  it" is the false half (6th Gap A RANK 1, now fixed). The plan instructs the GPT to **derive the slug
-  ONCE** from the title (lowercase, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats) and reuse the
-  SAME string for uploads + create; and `products.ts` runs a server-side `slugify` on both the
-  caller-supplied and title-derived slug so it's always URL-safe + reconstructable (also softens the #18
-  apostrophe/ampersand fallback at the source). Confirm no surviving "system handles slug, never set" in
-  any GPT-facing NEW block, and that `slug` stays required in the schema.
-- **(#22 first-publish re-validates, v1.5.7) `handlePublish`'s first-publish branch re-runs the SAME
-  per-type rules as create** via a shared module-scope `validateProductRules` (extracted from the inline
-  create checks) BEFORE the Stripe create — so an edit that blanked `story_card`/`images` on an
-  unpublished draft can't ship a malformed product (6th Gap A RANK 3). Confirm create and publish call the
-  one shared validator (no divergent copies) and the function count still reads 11/12 (it's a helper, not
-  an endpoint).
-- **(#23 coupon owner-sale isolation is byte-anchored, v1.5.7) `listCoupons`/`deactivateCoupon` key on
-  `pc.coupon?.metadata?.source === 'owner_sale'`** — the plan now QUOTES the three system coupon-create
-  call sites (`cart.ts` tags the *promotion code* `source:'cart-recovery'`; `subscribe.ts` tags nothing;
-  `_bootstrap/coupons.ts` creates the base coupons with no metadata) proving **no system coupon carries
-  `owner_sale`** (6th Gap A RANK 2). Invariant: the bootstrap must never tag a coupon `owner_sale`.
-- **(#24 panel honesty on a live-only edit over a pending draft, v1.5.7) `renderPublishPanel`** now checks
-  `body.product.draft`: a price/availability/quantity-only change that PRESERVES an earlier staged copy
-  edit shows "…live now — but you still have edits pending" + the preview link + Publish/Discard, instead
-  of "nothing to publish" (6th Gap A RANK 4) — so the panel never contradicts the list pill.
-- **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page
-  disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product
-  can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full
-  visual styling still deferred to Part 3).
+- **(G1, confirm it holds)** the published-edit **frozen-field guard rejects only a CHANGED frozen value, not mere presence** — the admin always re-sends `checkout_*` (and `price`); `price` is excluded from the guard (it rotates). The admin-published-edit path must be tested.
+- **(G2, confirm it holds)** the RLS swap is name-keyed and carries a **self-checking guard** — the migration RAISEs if any `products` SELECT policy still has `qual = 'true'`.
+- **(Q2) Discard exists:** `?_action=discard` clears `draft` + `preview_token` on a published row; **auth-only** (no token path); GPT `discardEdits`, admin "Discard pending edits" button.
+- **(allow-list) Create is allow-listed:** the create insert is built from an explicit field allow-list; system columns can't be injected. The **normalized `slug` is set onto `product` upstream** (see the slug landmine #21) so the allow-list captures it; `slug` IS in `CREATE_FIELDS` (the GPT supplies it). **`sku` is DB-generated** (`sku text UNIQUE NOT NULL DEFAULT ('EVE-'||substr(uuid,1,8))`, initial schema) → it is **deliberately NOT in `CREATE_FIELDS`** (allow-listing a caller `sku` would risk a UNIQUE collision); the GPT `createProduct` schema has no `sku` either. (5th Gap A #4.)
+- **(preview_url) `getProduct` returns an origin-correct `preview_url`** from `new URL(request.url).origin` when a `preview_token` exists; the GPT relays that link (never hardcodes a host). The origin premise is recorded + tested (4th Gap A #10).
+- **(coupons) `listCoupons` auto-paginates** (`for await` over `promotionCodes.list`, scan-capped) so owner sales aren't truncated; the `owner_sale` filter still excludes cart-recovery/newsletter codes. A **product-scoped** coupon needs a PUBLISHED product (a draft has no `stripe_product_id`) — the GPT is told (4th Gap A #8).
+- **(D1 — media-by-link, NEW) `uploadImage` takes a JSON `{url, slug, role, skip_transform}`** and the server fetches the URL (a Drive share link is normalized to direct-download), validates mime/size, and runs the SAME Cloudinary→R2 pipeline as the multipart path. The `/api/upload` Action now EXISTS in the Phase 9 schema. A file pasted into chat can't be forwarded → the GPT asks for a link. Confirm this is genuinely by-chat-driveable.
+- **(D2 — refunds, NEW) `webhook.ts` handles `charge.refunded`** (before the no-op guard, after the idempotency claim) → sets `orders.status='refunded'` on a FULL refund, matched by `stripe_payment_intent`; partial logs only. Requires `charge.refunded` enabled on the Stripe endpoint.
+- **(#3, NEW) The Studio operator note** splits the two failure modes: a Studio INSERT with `is_published=true` fires the trigger but bypasses `handlePublish`; a Studio UPDATE flag-flip does NOT fire the AFTER-INSERT trigger → a published-but-no-Stripe zombie. Never publish from Studio.
+- **(#7) Admin live-only edit** shows "<X> change is live now — nothing to publish" and **no** Publish button (a price / availability / quantity-only change stages nothing).
+- **(THREE live-apply fields, v1.5.6) `price`, `available`, AND `quantity` apply LIVE immediately** on a published row (no preview/publish) — all three gate purchasability (`checkout.ts:79` `available !== true || (quantity ?? 0) < 1`), and `available` is also flipped live by a real purchase (`webhook.ts:128`), so staging any of them is an oversell/stale-stock trap. All three are **change-detected** (`updates.x !== current.x`) so a no-op admin re-send doesn't write or report a spurious update; all three are excluded from the draft staging filter on the published branch. Everything else stages. `quantity`-live is latent today (only qty-1 `miniature` exists) but prevents the trap for a future multi-qty `product_type`. (5th Gap A #1/#2/#8.) The plan must say this consistently across §1.3, the PUT, §9.2, §9.5, §10b, and the admin panel — confirm no surface still says `available`/`quantity` "stages until publish."
+- **(getProduct fallback, v1.5.6) If `getProduct` 404s** (a title with an apostrophe/ampersand makes a slug the GPT can't reconstruct), the GPT must fall back to `listProducts` and match by title — never report "not found" without listing first. (5th Gap A #3.)
+- **(refunds-by-chat, v1.5.6) Refunds stay in the Stripe dashboard** (no refund Action in v1.5) — the GPT WALKS Em through the current dashboard steps and **uses web search to confirm the steps** as Stripe's UI drifts. This requires the GPT's **web-browsing capability ENABLED** (it was OFF before — a `GPT_SETUP.md` config requirement). A FULL refund reflects via `charge.refunded`; partial does not. (5th Gap A #6.)
+- **(`uploadImage` roles, v1.5.6) `ROLE_PATTERN` is extended** in Phase 5 to include `checkout_image` and `seo_thumbnail` (the two NEW v1.5 roles) alongside `hero|thumbnail|gallery-NN|video-0N|detail-0N|gif-0N` — both the multipart and URL-intake guards use it, and the new transform crops handle those two roles. The GPT may also send **several media links in one message** (it loops `uploadImage`). (5th Gap A #10 + lens note.)
+- **(#21 slug — derive once + server-normalize, v1.5.7) The `slug` is GPT-supplied, not system-filled.** The `createProduct` schema marks `slug` **required** AND the GPT computes it for every `uploadImage` call (photos upload before the row exists) — so any prose saying "the system handles slug / never set it" is the false half (6th Gap A RANK 1, now fixed). The plan instructs the GPT to **derive the slug ONCE** from the title (lowercase, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats) and reuse the SAME string for uploads + create; and `products.ts` runs a server-side `slugify` on both the caller-supplied and title-derived slug so it's always URL-safe + reconstructable (also softens the #18 apostrophe/ampersand fallback at the source). Confirm no surviving "system handles slug, never set" in any GPT-facing NEW block, and that `slug` stays required in the schema.
+- **(#22 first-publish re-validates, v1.5.7) `handlePublish`'s first-publish branch re-runs the SAME per-type rules as create** via a shared module-scope `validateProductRules` (extracted from the inline create checks) BEFORE the Stripe create — so an edit that blanked `story_card`/`images` on an unpublished draft can't ship a malformed product (6th Gap A RANK 3). Confirm create and publish call the one shared validator (no divergent copies) and the function count still reads 11/12 (it's a helper, not an endpoint).
+- **(#23 coupon owner-sale isolation is byte-anchored, v1.5.7) `listCoupons`/`deactivateCoupon` key on `pc.coupon?.metadata?.source === 'owner_sale'`** — the plan now QUOTES the three system coupon-create call sites (`cart.ts` tags the *promotion code* `source:'cart-recovery'`; `subscribe.ts` tags nothing; `_bootstrap/coupons.ts` creates the base coupons with no metadata) proving **no system coupon carries `owner_sale`** (6th Gap A RANK 2). Invariant: the bootstrap must never tag a coupon `owner_sale`.
+- **(#24 panel honesty on a live-only edit over a pending draft, v1.5.7) `renderPublishPanel`** now checks `body.product.draft`: a price/availability/quantity-only change that PRESERVES an earlier staged copy edit shows "…live now — but you still have edits pending" + the preview link + Publish/Discard, instead of "nothing to publish" (6th Gap A RANK 4) — so the panel never contradicts the list pill.
+- **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full visual styling still deferred to Part 3).
 
 ---
 

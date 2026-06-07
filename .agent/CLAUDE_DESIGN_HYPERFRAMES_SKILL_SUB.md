@@ -218,11 +218,9 @@ The skeleton pre-wires **2 shader transitions at key moments** and **hard cuts e
 
 ### Three transition types
 
-**Hard cut (default -- most scenes use this):**
-No transition code needed. Scene N disappears, scene N+1 appears. The entrance animations on the new scene do all the visual work. This is the professional default.
+**Hard cut (default -- most scenes use this):** No transition code needed. Scene N disappears, scene N+1 appears. The entrance animations on the new scene do all the visual work. This is the professional default.
 
-**Shader transition (2-3 per video -- hero/climax/CTA moments):**
-Pre-wired in the skeleton at key positions. HyperShader captures both scenes as textures and composites them pixel-by-pixel via WebGL.
+**Shader transition (2-3 per video -- hero/climax/CTA moments):** Pre-wired in the skeleton at key positions. HyperShader captures both scenes as textures and composites them pixel-by-pixel via WebGL.
 
 **When to use shaders vs hard cuts:**
 
@@ -496,9 +494,7 @@ Opens the HyperFrames Studio at `http://localhost:3002` with frame-accurate scru
 This project was drafted in Claude Design. To polish animations, timing, and pacing:
 
 ```bash
-npx skills add heygen-com/hyperframes   # install HyperFrames skills (one-time)
-npx hyperframes lint                     # verify structure (should pass with zero errors)
-npx hyperframes preview                  # open the studio for live feedback
+npx skills add heygen-com/hyperframes   # install HyperFrames skills (one-time) npx hyperframes lint                     # verify structure (should pass with zero errors) npx hyperframes preview                  # open the studio for live feedback
 ```
 
 Then open in Claude Code and iterate:

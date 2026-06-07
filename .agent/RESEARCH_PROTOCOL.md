@@ -1,9 +1,6 @@
 # Research Protocol
 
-**Version**: 1.0.0
-**Last Updated**: 2026-04-27
-**Purpose**: Standardize how research-heavy projects flow from open questions → defensible plans → polished deliverables (business plans, strategy docs, technical implementation guides).
-**Syncing**: Sync any updates via `filemgmt` (see § *Syncing This Document*).
+**Version**: 1.0.0 **Last Updated**: 2026-04-27 **Purpose**: Standardize how research-heavy projects flow from open questions → defensible plans → polished deliverables (business plans, strategy docs, technical implementation guides). **Syncing**: Sync any updates via `filemgmt` (see § *Syncing This Document*).
 
 ---
 

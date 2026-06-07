@@ -1,16 +1,14 @@
 # Mobile & Tablet Design Best Practices 
 
-**CONTENT**: 2026 iOS, iPadOS Viewport Design Specification 
-**MEASUREMENTS**: All measurements are approximate or have implied flex room 
-**DOCUMENT**: Update this document to perfect it over time 
+**CONTENT**: 2026 iOS, iPadOS Viewport Design Specification **MEASUREMENTS**: All measurements are approximate or have implied flex room **DOCUMENT**: Update this document to perfect it over time
 
 ## About Mobile-First Designs 
 
-* **The way 'mobile-first' is used colloquially is often not actually mobile-first** 
+* **The way 'mobile-first' is used colloquially is often not actually mobile-first**
   
-  - Button hover states and planned but can't be seen on mobile 
-  - Layout doesn't feel intentional for the portrait aspect ratio 
-  - Landscape isn't considered thoroughly, etc. 
+  - Button hover states and planned but can't be seen on mobile
+  - Layout doesn't feel intentional for the portrait aspect ratio
+  - Landscape isn't considered thoroughly, etc.
 
 ---
 
@@ -18,22 +16,22 @@
 
 ### Measurements 
 
-  + The 2026 web mobile viewport 
+  + The 2026 web mobile viewport
     - 393px x 852px CSS pixels 
     - Or around 375px x 812px 
-  + From top: 
+  + From top:
     - Status bar = 54px 
     - Navigation bar = 96px, excluding search bar 
-  + From bottom: 
+  + From bottom:
     - Home indicator = 21px
     - Tab bar = 83px 
-  + From left and right = 16px margins 
+  + From left and right = 16px margins
 
 ![iOS Viewport Measurement Diagram](/.agent/apple-ui-design/ios-viewport-measurements.jpeg)
 
 ### Navigation 
 
-  + Tabs at the bottom of the viewport 
+  + Tabs at the bottom of the viewport
     - No more than 5 tabs 
 
 ### Thinking Visually  
@@ -44,7 +42,7 @@
     + MEDIOCRE: Horizontal scrolling row of pie charts 
     + AMAZING: Don't plan the desktop layout first at all 
 
-  2. Using landscape must FEEL intentional so the viewer intuits 
+  2. Using landscape must FEEL intentional so the viewer intuits
     + User knows they're clicking through to more formal or comprehensive content
       - Consider onscreen UI prompting user to turn device, only visible if they didn't
       - UI disappears quickly in case they don't want to 
@@ -59,7 +57,7 @@
       - Content dipping just a bit below fold? Make it smaller, and then add an animation so that as you scroll down the padding above the content expands MUCH slower than the scroll so that you end with a layout with nice whitespace expanded padding 
       - Then the next animation phase, as you add details below the subject, the subject now slowly shrinks as you scroll down so that it can stay in the frame with the content even longer than it otherwise would 
 
-  4. Use proper format of images 
+  4. Use proper format of images
     + Make sure all designs use high-density, vector-based assets 
       - Only fallback to @3x images if that is the only option 
       - Note that @3x images account for a device pixel ratio (DPR) and maintains sharpness on retina screens
@@ -68,14 +66,14 @@
 
 ## iPad Standard
 
-  + Two navigation options for both portrait and landscape oriented device screens. 
+  + Two navigation options for both portrait and landscape oriented device screens.
 
 ### iPad Sidebar vs. Tab Bar Navigation
 
-  + **Sidebar** 
+  + **Sidebar**
     - Can display many items for efficient navigation, including room to allow users to customize sidebar items, or to include actions like adding, drag and drop, etc. 
 
-  + **Tab Bar** 
+  + **Tab Bar**
     - Maintains screen state so user can quickly move between tabs; less room so primarily used to support navigation between high-level sections (tabs) 
 
 ![iPad Illustrated Navigation Options](/.agent/apple-ui-design/art-ipad-navigation.jpeg)
@@ -125,7 +123,7 @@
 
 ![iPad Sidebar Portrait Measurement Diagram](/.agent/apple-ui-design/ipados-sidebar-portrait-expand-hidden.jpeg)
 
-  1. Landscape Mode with collapsing/expanding sidebar 
+  1. Landscape Mode with collapsing/expanding sidebar
 
     + Measurements 
       - 1024px wide and 768px tall
@@ -149,17 +147,17 @@
 
 ### iPad Tab Bar Navigation 
 
-  + Measurements 
+  + Measurements
     - 768px wide and 1024px tall (portrait)
-  + From top: 
+  + From top:
     - Status bar = 24px tall 
     - Window grabber = 24px height, excluding search bar 
-  + From bottom: 
+  + From bottom:
     - Tab bar height = 65px 
     - Home indicator = 19.5px tall, lies on top of tab bar 
-  + Left and right side margins = 24px wide 
+  + Left and right side margins = 24px wide
 
-  + Tabs at bottom of viewport 
+  + Tabs at bottom of viewport
     - No more than 8 tabs 
 
 ![iPad Tab Bar Measurement Diagram](/.agent/apple-ui-design/ipados-tab-bar-landscape-portrait.jpeg)
@@ -172,13 +170,13 @@
 
 * **Default behavior for a Mac app with a sidebar navigation is an expanded sidebar**
 
-  + Measurements 
+  + Measurements
     - Screen size used is 1440px wide and 900px tall 
-  + From top: 
+  + From top:
     - Navigation bar = 52px tall 
     - Sidebar icon = 31px wide and 22px tall 
     - Left expanded sidebar is 200px wide 
-  + Left and right margin = 20px wide  
+  + Left and right margin = 20px wide
 
 * **Collapsed sidebar view**
 

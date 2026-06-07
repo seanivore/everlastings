@@ -1,8 +1,6 @@
 # Everlastings by Emaline — Brand Guide
 
-**Created**: 2026-03-16
-**Updated**: 2026-04-09
-**Source**: Consolidated from v0 brand docs, v1 planning, client input
+**Created**: 2026-03-16 **Updated**: 2026-04-09 **Source**: Consolidated from v0 brand docs, v1 planning, client input
 
 ---
 
@@ -10,7 +8,7 @@
 
 Everlastings by Emaline creates miniature sanctuaries — handcrafted havens where loss transforms into something you can hold, where memory becomes miniature magic, and where tiny worlds offer quiet beauty, soft wonder, and the feeling of being home. Born from a personal ritual of processing grief through art, each piece carries the intention of transformation, healing, and hope.
 
-**100-Characters**: 
+**100-Characters**:
   - Handcrafted miniature worlds of quiet beauty, transforming loss into healing & hope.
   - Healing through art, on miniature world at a time.
   - Get lost in a tiny world filled with soft magic that feels like holding home in your hands.
@@ -27,8 +25,7 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
   > For those who need more than this world gives.
   > For those who believe in Elsewhere.
 
-  **Mission Statement:**
-  Everlastings by Emaline exists to create havens of beauty and quiet wonder for those who need a reminder that there is still magic in the world.
+  **Mission Statement:** Everlastings by Emaline exists to create havens of beauty and quiet wonder for those who need a reminder that there is still magic in the world.
 
 ---
 
@@ -250,10 +247,9 @@ Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before uplo
 
 ## Logo
 
-I got the SVG file and started create quite a large variety of versions and sizes, primarily in .jpg or .wepb and you can find them all here. Let me know if there are any to create specifically or to adjust. 
+I got the SVG file and started create quite a large variety of versions and sizes, primarily in .jpg or .wepb and you can find them all here. Let me know if there are any to create specifically or to adjust.
 
-`assets/brand/favicon/`
-`assets/brand/logo/`
+`assets/brand/favicon/` `assets/brand/logo/`
 
 ### Specs
 
@@ -271,7 +267,7 @@ I got the SVG file and started create quite a large variety of versions and size
 
   The Everlastings by Emaline logo was intentionally designed to represent the heart of the work: creating small places of peace in a world that often feels overwhelming.
 
-  The silhouette of the woman is inspired by mid-century illustration styles from the 1950s. That era evokes a sense of nostalgia, warmth, and timeless storytelling. Qualities that are deeply woven into the miniature worlds I create. 
+  The silhouette of the woman is inspired by mid-century illustration styles from the 1950s. That era evokes a sense of nostalgia, warmth, and timeless storytelling. Qualities that are deeply woven into the miniature worlds I create.
 
   The figure is elegant but simple, meant to feel both classic and approachable, like a character stepping out of an old storybook. She is slightly bent forward, holding a tiny house gently in her cupped hands.
 
