@@ -53,7 +53,7 @@ All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_
 > **slug ARs #7/#23** + the **system-diagram stripe-sync block** are added to Phase 10, and every Phase 10
 > line hint is **re-anchored** to the reflowed STORE. (RANK 8) the `product_type` enum is **narrowed to
 > `[miniature]`** (printable/storybook deferred). **This is the re-run of A against v1.5.8.** Landmines
-> 7–27 below are the recent fixes/changes — confirm they hold; don't re-raise the originals.
+> 7–28 below are the recent fixes/changes — confirm they hold; don't re-raise the originals.
 
 > **Before this A-pass:** a fast in-house **subagent breadth pass** (owner-journey completeness +
 > integration/state-machine, **through the review lens above**) runs against `v1_5_8_IMPLEMENT.md` to
@@ -102,6 +102,7 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 - **(#25 preview Buy disabled, v1.5.7) On a preview load (`previewToken` present)** the product page disables + relabels the cart/buy controls "Preview only" — so an EDIT preview of a *published* product can't transact at the live price under the "Draft preview — not yet live" banner (6th Gap A RANK 5; full visual styling still deferred to Part 3). **(v1.5.8: the disable now anchors the real `<button>` markup — `product.html:289-290`, both `<button type="button">` — so `btn.disabled` is provably sufficient, 7th Gap A RANK 3.)**
 - **(#26 draftable change-detection — the admin live-only path, v1.5.8) The published PUT value-compares each draftable key** before staging: a key is staged only when `JSON.stringify(updates[k]) !== JSON.stringify(effective(k))` where `effective` is the staged-draft value if present else the live column (plain `!==` is wrong — DRAFTABLE is mostly jsonb/array, a reference compare always-true). The admin's `buildProductPayload` re-sends the FULL payload every save, so without this an availability/price/quantity-only admin save would stage a **phantom no-op copy draft** and the panel would wrongly show "Preview · Publish/Discard" instead of "live now — nothing to publish" — i.e. #7 would fail on the admin path. (7th Gap A RANK 1.) Confirm a live-only admin save stages nothing (`hasDraftable=false`) while a genuine copy edit still stages and merges over any prior draft; Tests #6/#23 cover it.
 - **(#27 edit-publish re-validates, v1.5.8) `handlePublish`'s edit-publish branch validates the MERGED row** (`{...row, ...draft}`) with the same `validateProductRules` before applying the draft to the live columns — so a staged draft that blanked `story_card`/`images` (admin clears a field → `… || null`) can't ship a malformed, purchasable live product. First-publish already did this (#22); edit-publish did NOT, and Test #25 covered only first-publish, so it would have shipped silently. New Test #26 exercises it (published → stage invalid draft → publish → 400, live row unchanged). (7th Gap A RANK 2 — "if you fix one thing.") Confirm both publish branches call the one shared validator.
+- **(#28 pg_net body is `jsonb`, anchored to the LATEST migration, v1.5.8) The Phase 1 `CREATE OR REPLACE notify_stripe_sync()` keeps `body := payload` (jsonb), NOT `payload::text`.** The function's true-current definition is the latest migration touching it (`20260502000001_fix_stripe_sync_pgnet_signature.sql`), which fixed `net.http_post(... body => text)` "does not exist" by switching to `body := payload`; the original `…0003` had the buggy `::text` cast. Our new migration runs AFTER `…0502`, so a `CREATE OR REPLACE` quoting the `…0003` body would silently RE-BREAK Stripe sync on every published, non-test INSERT. (In-house integration breadth pass.) Confirm Phase 1's preflight anchors `…0502` (not `…0003`) and the NEW body is `payload`, the only delta being the added `OR NEW.is_published = false` guard.
 
 ---
 
@@ -132,7 +133,9 @@ CONTEXT
 - This is the EIGHTH A-pass; the plan has absorbed seven prior ones. The 7th was NEEDS-ANOTHER-PASS but
   NARROW (no architecture gap, store fully chat-drivable): it found TWO real code bugs — a phantom-draft
   on the admin live-only PUT (RANK 1) and an unvalidated edit-publish branch (RANK 2) — plus
-  anchor/primer reconciliations and the enum narrowing; all are folded into v1.5.8. Landmines 7-27 are
+  anchor/primer reconciliations and the enum narrowing; all are folded into v1.5.8. A subsequent in-house
+  breadth pass also caught a migration regression (a CREATE OR REPLACE that would resurrect a fixed pg_net
+  bug by anchoring a superseded migration) — folded as landmine #28. Landmines 7-28 are
   the most recent fixes/changes — confirm they hold rather than re-raising the originals.
 - Landmines to respect (validate the plan against these, not your training data):
   1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
@@ -226,6 +229,13 @@ CONTEXT
      (first-publish) already did this; edit-publish did NOT and Test #25 covered only first-publish, so it
      would have shipped silently; new Test #26 covers it (7th-A RANK 2 — "if you fix one thing"). Both
      publish branches call the one shared validator.
+  28. (v1.5.8) pg_net body stays jsonb, anchored to the LATEST migration: Phase 1's CREATE OR REPLACE
+     notify_stripe_sync() keeps body := payload (jsonb), NOT payload::text. The true-current definition is
+     20260502000001 (which fixed net.http_post body => text "does not exist" by switching to payload), not
+     the original ...0003. Our new migration runs after ...0502, so quoting the ...0003 body would silently
+     re-break Stripe sync on every published non-test INSERT. Confirm the preflight anchors ...0502 and the
+     NEW body is payload, the only delta being the added OR NEW.is_published = false guard. (In-house
+     integration breadth pass.)
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
 1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a

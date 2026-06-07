@@ -198,19 +198,23 @@ A Stripe product that has a price **cannot be hard-deleted** — Stripe keeps a 
 ## Phase 1 — Migration (new file)
 
 > **Anti-fragility quote the live trigger before replacing it.** The migration below
-> `CREATE OR REPLACE`s `notify_stripe_sync()`. First confirm the working tree's
-> `supabase/migrations/20260421000003_stripe_sync_webhook.sql` currently contains **exactly** this
-> function + trigger — the replacement changes only the one guard line, and the trigger is
-> `AFTER INSERT` **only** (so the publish-time `UPDATE` can never re-fire it → no double Stripe create):
+> `CREATE OR REPLACE`s `notify_stripe_sync()`. **The function's TRUE current definition is the LATEST
+> migration that touches it — `supabase/migrations/20260502000001_fix_stripe_sync_pgnet_signature.sql`
+> — NOT the original `…0003`.** `…0502` fixed a real pg_net bug: `net.http_post` wants `body` as **`jsonb`**,
+> so it changed `body := payload::text` → `body := payload` (the `::text` cast threw "function
+> net.http_post(... body => text ...) does not exist" on every non-test INSERT). Confirm the working tree's
+> live function equals the block below; the replacement's **only** delta is the added
+> `OR NEW.is_published = false` guard — it must **keep `body := payload`** (do NOT resurrect the `::text`
+> cast). The `AFTER INSERT` trigger itself was created in `…0003` and `…0502` did not re-create it, so it
+> persists unchanged — `…0502` only `CREATE OR REPLACE`d the function (and our NEW migration does the same):
 >
 > ```sql
-> -- CURRENT (live) — supabase/migrations/20260421000003_stripe_sync_webhook.sql
+> -- CURRENT (live) — function body from supabase/migrations/20260502000001_fix_stripe_sync_pgnet_signature.sql
 > CREATE OR REPLACE FUNCTION notify_stripe_sync()
 > RETURNS TRIGGER AS $$
 > DECLARE
 >   payload jsonb;
 > BEGIN
->   -- Skip test inserts entirely — they never trigger Stripe sync
 >   IF NEW.is_test = true THEN
 >     RETURN NEW;
 >   END IF;
@@ -220,21 +224,21 @@ A Stripe product that has a price **cannot be hard-deleted** — Stripe keeps a 
 >   );
 >   PERFORM net.http_post(
 >     url := 'https://everlastingsbyemaline.com/api/stripe-sync',
->     body := payload::text,
+>     body := payload,
 >     headers := '{"Content-Type": "application/json"}'::jsonb
 >   );
 >   RETURN NEW;
 > END;
 > $$ LANGUAGE plpgsql;
 >
-> CREATE TRIGGER notify_stripe_sync_on_insert
->   AFTER INSERT ON products
->   FOR EACH ROW
->   EXECUTE FUNCTION notify_stripe_sync();
+> -- The trigger (from …0003, unchanged — quoted for context; do NOT re-create it):
+> -- CREATE TRIGGER notify_stripe_sync_on_insert
+> --   AFTER INSERT ON products FOR EACH ROW EXECUTE FUNCTION notify_stripe_sync();
 > ```
 >
 > If it differs, STOP and reconcile — the NEW body must equal the above **plus**
-> `OR NEW.is_published = false`. We do **not** touch `CREATE TRIGGER` (it stays INSERT-only).
+> `OR NEW.is_published = false`, still with `body := payload`. We do **not** touch `CREATE TRIGGER`
+> (it stays INSERT-only, so the publish-time `UPDATE` can never re-fire it → no double Stripe create).
 
 Create `supabase/migrations/20260605000001_v1_5_draft_publish.sql`:
 
@@ -317,7 +321,7 @@ BEGIN
 
   PERFORM net.http_post(
     url := 'https://everlastingsbyemaline.com/api/stripe-sync',
-    body := payload::text,
+    body := payload,  -- jsonb, NOT payload::text — preserves the 20260502000001 pg_net fix
     headers := '{"Content-Type": "application/json"}'::jsonb
   );
 
@@ -3016,7 +3020,22 @@ Then after the `/api/products` `post` block, add a `get` (listProducts), a `put`
               schema:
                 type: object
                 properties:
-                  products: { type: array, items: { type: object } }
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      description: "A product row. Read these to find a piece, report its status, and scope a coupon: id (UUID — pass to editProduct/publishProduct/archiveProduct/createCoupon), slug, title, price (cents), available, quantity, is_published, archived_at, draft (non-null = edits pending), stripe_product_id (needed to scope a coupon to ONE piece — only present once published)."
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        price: { type: integer }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        is_published: { type: boolean }
+                        archived_at: { type: string }
+                        draft: { type: object }
+                        stripe_product_id: { type: string }
     put:
       operationId: editProduct
       summary: Stage edits to a product. On a published product, copy/SEO changes go to a draft for preview (publishing applies them); a PRICE change rotates the Stripe price and goes live immediately (same product, same URL). The checkout_* identity fields cannot change on a published product. For a temporary discount, create a coupon instead.
@@ -3264,7 +3283,7 @@ To RE-SHOW a preview she lost: getProduct by slug. If there are pending edits (o
 Translate her wish into createCoupon params: "20% off everything until New Year's" → type=percent, value=20, expires_at=<unix>. Dollars→cents for amount and min_amount ($5 off → type=amount, value=500). Optional: a code she wants (else Stripe makes one), product scope (Stripe product IDs from listProducts), minimum order amount, redemption cap. A PRODUCT-SCOPED coupon only works on a PUBLISHED product — a draft has no Stripe product id yet (its stripe_product_id is empty in listProducts), so "20% off the Lavender Wreath" while it's still a draft can't be scoped; publish it first, or make the coupon store-wide. NEVER promise buy-one-get-one / "buy N" — Stripe can't do it natively. Read the final code back to her. To show her running sales, call listCoupons — it tells you each code's discount, redemptions, expiry, AND whether it's store-wide or limited to specific pieces (store_wide / product_ids), so relay the scope too ("HOLIDAY20 — 20% off everything" vs "just the Lavender Wreath"). To END a sale on the spot, call deactivateCoupon with the code — it stops immediately (she can still set expires_at at creation if she wants it to auto-end).
 
 == REFUNDS & ORDER STATUS ==
-You can SEE order status (listOrders) but you do NOT have an Action to issue a refund — refunds happen in the Stripe dashboard, which she signs into for payouts anyway. When she asks to refund someone, WALK HER THROUGH IT in plain steps (Stripe → Payments → find the payment → Refund). Stripe changes its dashboard over time, so if you're not certain the steps are current, USE WEB SEARCH to confirm today's Stripe refund flow before you tell her — don't recite steps you're unsure about. Once she completes a FULL refund in Stripe, the order's status updates to "refunded" on its own (a webhook reflects it); a PARTIAL refund won't show in status — tell her to check Stripe for partial-refund history. A refund does NOT put the piece back up for sale — if she refunded because the sale fell through and wants it listed again, offer to relist it: getProduct first to check its state, then if it's still published-but-sold, editProduct {available:true} (immediate, no publish step); if she'd ARCHIVED it after the sale, unarchiveProduct instead (available:true won't resurface an archived piece).
+You can SEE order status (listOrders) but you do NOT have an Action to issue a refund — refunds happen in the Stripe dashboard, which she signs into for payouts anyway. When she asks to refund someone, WALK HER THROUGH IT in plain steps (Stripe → Payments → find the payment → Refund). Stripe changes its dashboard over time, so if you're not certain the steps are current, USE WEB SEARCH to confirm today's Stripe refund flow before you tell her — don't recite steps you're unsure about. Once she completes a FULL refund in Stripe, the order's status updates to "refunded" on its own (a webhook reflects it); a PARTIAL refund won't show in status — tell her to check Stripe for partial-refund history. A refund does NOT put the piece back up for sale — if she refunded because the sale fell through and wants it listed again, offer to relist it: getProduct first to check its state, then if it's still published-but-sold, editProduct {available:true} (immediate, no publish step); if she'd ARCHIVED it after the sale, unarchiveProduct instead (available:true won't resurface an archived piece). For SALES TOTALS / REVENUE / PAYOUTS (not order status), those live in the Stripe dashboard too — point her there rather than trying to tally them yourself; you can see individual orders via listOrders, but Stripe is the source of truth for money.
 
 == ADDING PHOTOS & MEDIA (by link) ==
 You can't receive a file she pastes straight into the chat — a GPT Action only sends text. So media comes in as a LINK: a Google Drive "anyone with the link" share, or any direct file URL. She can paste SEVERAL links in one message — accept them all and loop uploadImage over each (don't make her send one per message). For EACH photo or video, call uploadImage({ url: <her link>, slug: <the slug you derived from the title — see "THE SLUG" above; the SAME string you'll pass to createProduct>, role: <hero | gallery-01..15 | thumbnail | detail-01..05 | video-01..05 | checkout_image | seo_thumbnail> }); it returns a CDN { url }. Put that url into the product fields (images[], thumbnail, checkout_image, seo_thumbnail, or media[]) — never invent or reuse a URL. For photos leave skip_transform off (they get cropped + optimized); for videos and GIFs pass skip_transform=true.
