@@ -11,19 +11,13 @@
 > (Code Interpreter has no network), so **media arrives by link** (the GPT fetches a Drive/direct URL),
 > and the GPT asks for a link when a file is pasted.
 
-**Created**: 2026-03-16
-**Updated**: 2026-06-05 — **v1.4.9 BUILT + VERIFIED LIVE** on the dev preview (`v1_4_9_BUILD_REPORT.md`): the full buy→order→merchant-email→admin-ship→buyer-tracking-email loop works end-to-end (checkout repaired — the real bug was `phone_number_collection` forcing an unsatisfiable phone field). Launch to-dos: re-enable preview SSO (Sean), Custom GPT setup, content placeholders, C5 cutover. **Next: v1.5.0** — AI store-management (GPT edit + draft/preview/publish + coupons + admin unify), then design; single living plan at `archive/v1_5/v1_5_5_IMPLEMENT.md`. _(Per-version build history lives in the `archive/v1_4/` + `archive/v1_5/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_
-**Version**: v1.4.9
-**Status**: Tracks A/B/C **built and verified end-to-end on the dev preview** (`v1_4_9_BUILD_REPORT.md`) — checkout repaired (single-phase), order→merchant-email→admin-ship→buyer-tracking-email loop confirmed. Pre-launch tasks remain (re-enable preview SSO; Custom GPT setup; content placeholders; C5 cutover). **v1.5.0 in planning** (AI store-management then design — single living plan `archive/v1_5/v1_5_5_IMPLEMENT.md`, in the gap-review gate). Preview-only; not yet launched.
-**Build Guide** (current, exclusively-executable):
+**Created**: 2026-03-16 **Updated**: 2026-06-05 — **v1.4.9 BUILT + VERIFIED LIVE** on the dev preview (`v1_4_9_BUILD_REPORT.md`): the full buy→order→merchant-email→admin-ship→buyer-tracking-email loop works end-to-end (checkout repaired — the real bug was `phone_number_collection` forcing an unsatisfiable phone field). Launch to-dos: re-enable preview SSO (Sean), Custom GPT setup, content placeholders, C5 cutover. **Next: v1.5.0** — AI store-management (GPT edit + draft/preview/publish + coupons + admin unify), then design; single living plan at `archive/v1_5/v1_5_5_IMPLEMENT.md`. _(Per-version build history lives in the `archive/v1_4/` + `archive/v1_5/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_ **Version**: v1.4.9 **Status**: Tracks A/B/C **built and verified end-to-end on the dev preview** (`v1_4_9_BUILD_REPORT.md`) — checkout repaired (single-phase), order→merchant-email→admin-ship→buyer-tracking-email loop confirmed. Pre-launch tasks remain (re-enable preview SSO; Custom GPT setup; content placeholders; C5 cutover). **v1.5.0 in planning** (AI store-management then design — single living plan `archive/v1_5/v1_5_5_IMPLEMENT.md`, in the gap-review gate). Preview-only; not yet launched. **Build Guide** (current, exclusively-executable):
   - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` retained in the same folder for history)
   - `assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md` — what actually shipped in v1.4.9 + deviations (phone-collection removal, `friendlyPaymentError`, the two launch findings)
-  - `assets/docs/archive/v1_5/v1_5_5_IMPLEMENT.md` — **next**: AI store-management (GPT edit + draft/preview/publish + coupons + admin unify) then design; the single living, exclusively-executable plan (build + spec merged; v1_5_0…v1_5_4 superseded). Reviews: `v1_5_5_REVIEW_PROMPTS.md`
-**Operating docs** (living; how the store is run day-to-day):
+  - `assets/docs/archive/v1_5/v1_5_5_IMPLEMENT.md` — **next**: AI store-management (GPT edit + draft/preview/publish + coupons + admin unify) then design; the single living, exclusively-executable plan (build + spec merged; v1_5_0…v1_5_4 superseded). Reviews: `v1_5_5_REVIEW_PROMPTS.md` **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
-  - `assets/docs/gpt/` — curated Custom-GPT Knowledge uploads (`voice-guide.md`, `product-reference.md`)
-**History** (archived; not required reading):
+  - `assets/docs/gpt/` — curated Custom-GPT Knowledge uploads (`voice-guide.md`, `product-reference.md`) **History** (archived; not required reading):
   - `assets/docs/archive/v1_4/v1_4_5_C_IMPLEMENT.md` — Track C wiring (C1–C5); `v1_4_5_C_SESSION_REPORT.md` — the 5-round checkout saga + Sean's launch punch list
   - `assets/docs/archive/v1_4/v1_4_4_IMPLEMENT_UPDATES.md` — consolidated changes v1.4.3 → v1.4.5
 
@@ -912,18 +906,18 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
 | 11  | PRODUCT_API_KEY | Rotate if exposed                                                                                       |
 | 12  | DMARC policy    | Launch with p=none; upgrade if clean send history or monthly volume > 1,000                             |
 
-  1. Traffic keeps it alive; Pro tier ($25/mo) doesn't pause — consider built in ping every few days or daily 
+  1. Traffic keeps it alive; Pro tier ($25/mo) doesn't pause — consider built in ping every few days or daily
   2. Paid tier ($20/mo for 50k) when monthly volume crosses ~2,500
   3. Pay-as-you-go ($0.05/label) when monthly volume crosses 25
   4. Re-verify after any Stripe account change
   5. Unlikely to hit cap on normal site; enough traffic to require upgrade is a lot
   6. Pro tier ($20/mo) when bandwidth or function volume approaches caps
-  7. Maintain auto renew 
+  7. Maintain auto renew
   8. Check catalog health in Meta Commerce Manager monthly
   9. Update Vercel Production scope after rotation
   10. Not an env var; lives only in a password manager. Rotate via Studio > Settings > Database > Reset database password if ever exposed
   11. `PRODUCT_API_KEY` rotation: generate **three distinct** values with `openssl rand -hex 32` (one per scope — leaked Preview/Dev key must not unlock Production). For each scope: `vercel env rm PRODUCT_API_KEY <scope> --yes` then `printf 'NEWVAL' | vercel env add PRODUCT_API_KEY <scope> --sensitive` — but **omit `--sensitive` on the Development scope** (Vercel rejects it with `sensitive_not_allowed_on_development`). For Preview-dev, pass the branch: `vercel env add PRODUCT_API_KEY preview dev --sensitive`. After rotation: update `.env.local` to the new Development value, redeploy Production (empty commit on `main` or "Redeploy" in dashboard), verify Production with a runtime curl (`HTTP/2 400` from `POST /api/products` with empty body = auth passed), then update Em's Custom GPT Action with the new Production value.
-  12. Upgrade TXT record to `p=quarantine` or `p=reject` to tighten email delivery 
+  12. Upgrade TXT record to `p=quarantine` or `p=reject` to tighten email delivery
 
 **First-month warm-up checklist** (2026-05-ish):
 
@@ -938,15 +932,15 @@ Free-tier services have caps and auto-pause behavior. This is the operational ch
 All outbound transactional email routes through Resend (sending) and all reply/inbound email routes through Google Workspace (receiving). Resend cannot receive email directly — replies to our `From:` address land in Emy's Google Workspace inbox via configured aliases.
 
 **Google Workspace aliases** (all route to inbox within User space created for 'Sean Horvath'):
-  + `admin@everlastingsbyemaline.com` — master admin address used for login of services 
+  + `admin@everlastingsbyemaline.com` — master admin address used for login of services
   + `sunkeeper@everlastingsbyemaline.com` — used as `RESEND_FROM_EMAIL` for emails from Resend
-  + `hello@everlastingsbyemaline.com` — set as the *reply-to* email `RESEND_REPLY_TO_EMAIL` in Resend emails 
+  + `hello@everlastingsbyemaline.com` — set as the *reply-to* email `RESEND_REPLY_TO_EMAIL` in Resend emails
   + `orders@everlastingsbyemaline.com` — potential future segmentation for order-specific notifications
   + `shipping@everlastingsbyemaline.com` — potential future segmentation for tracking/shipping notifications
   
 *Note: Resend currently uses the same domain that Google Workspaces uses for email, this means that a "reply to" address is REQUIRED. Any replies sent from users directly to the email address from outgoing Resend email will not be received. Without upgrading to have a second custom domain used just for direct replies, we would need to set up a subdomain, e.g. `m.everlastingsbyemaline.com` for outgoing and incoming Resend emails. As of no there does not seem reason to need incoming emails; this only currently seems necessary if there was a high volume of replies from customers directly to our emails and back-and-forth email conversations.*
 
-**Resend domain setup**: `everlastingsbyemaline.com` (apex) verified 
+**Resend domain setup**: `everlastingsbyemaline.com` (apex) verified
 
 **Post-v1 roadmap (`assets/docs/archive/v2_0/`)** — exploratory planning for post-launch "eliminate manual ops work" wave, theme-grouped:
 
