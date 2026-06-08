@@ -52,7 +52,7 @@ Every product field belongs to one of three tiers. The GPT generates **all** of 
 
 **Derived (GPT-computed from the title, then immutable):** `slug` — the GPT computes the URL-safe form of the title **once** (lowercase, spaces→`-`, strip anything not `[a-z0-9-]`, collapse repeat hyphens) and reuses that **same** string for every `uploadImage` call *and* `createProduct` (the photos upload before the row exists, so the GPT must own the slug at upload time; that's why it's a **required** field on the create schema). The server normalizes it again identically on create (belt-and-suspenders — see §3.3), so a title with `'`/`&` can never yield a non-URL-safe or unreconstructable slug. After create it is **immutable** (rejected by both PUT branches). The GPT never *invents* a slug — it derives it.
 
-**System-filled (never set by GPT or owner):** `sku`, the Stripe IDs, the photo CDN URLs, the SEO fields, and the v1.5 machinery below. *(`homepage_theme` is **admin/owner-editable** via the admin panel and is draftable — but the GPT doesn't author it; its `editProduct` schema omits it.)*
+**System-filled (never set by GPT or owner):** `sku`, the Stripe IDs, the photo CDN URLs, and the v1.5 machinery below. *(`homepage_theme` is **admin/owner-editable** via the admin panel and is draftable — but the GPT doesn't author it; its `editProduct` schema omits it.)*
 
 **System (draft/publish machinery, new columns):** `is_published` (bool, default false), `published_at` (timestamptz), `draft` (jsonb overlay), `preview_token` (text, unique), `archived_at` (timestamptz; null = active, set = archived/removed — 1.12).
 
