@@ -1032,17 +1032,16 @@ select:focus {
 /* ============================================================
    D6 — "Firelight" ambient glow (warm bloom from all four edges; honors reduced-motion).
    ============================================================ */
-:root { --glow-color: 212, 175, 122; --glow-intensity: 0.45; } /* warm firelight default; page JS may override */
+:root { --glow-color: 212, 175, 122; --glow-intensity: 0.5; } /* warm firelight default; page JS may override */
 .firelight-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  /* Edge-frame bloom: warm light hugs all four viewport edges and fades well before the centre,
+     mimicking a window-frame glow — the centre stays clear (no full-page wash). Per-page JS varies
+     --glow-color so each page's frame reads a different brand hue. Most visible over dark sections. */
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(120% 80% at 50% 110%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(80% 120% at -10% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(80% 120% at 110% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%);
+    radial-gradient(95% 28% at 50% 0%,   rgba(var(--glow-color), var(--glow-intensity)), transparent 70%),
+    radial-gradient(95% 28% at 50% 100%, rgba(var(--glow-color), var(--glow-intensity)), transparent 70%),
+    radial-gradient(28% 95% at 0% 50%,   rgba(var(--glow-color), var(--glow-intensity)), transparent 70%),
+    radial-gradient(28% 95% at 100% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 70%);
   animation: glow-breathe 14s ease-in-out infinite; }
-.firelight-glow::before { content: ""; position: absolute; inset: -20%;
-  background: conic-gradient(from 0deg, transparent, rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)), transparent 60%);
-  animation: glow-rotate 40s linear infinite; }
-@keyframes glow-breathe { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
-@keyframes glow-rotate  { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .firelight-glow, .firelight-glow::before { animation: none; } }
+@keyframes glow-breathe { 0%,100% { opacity: .82; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .firelight-glow { animation: none; } }

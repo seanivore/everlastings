@@ -281,7 +281,14 @@ document.addEventListener('DOMContentLoaded', () => {
     glow.setAttribute('aria-hidden', 'true');
     document.body.prepend(glow);
   }
-  // optional per-page tint (brand palette); the warm-gold default lives in :root.
-  const glowTint = { '/shop': '155, 107, 158' /* amethyst */ }[location.pathname.replace(/\/$/, '')];
+  // optional per-page tint (brand palette); the warm-gold firelight default lives in :root.
+  // Each page's edge-frame reads a different brand hue; the homepage + product pages keep the warm
+  // default (per-piece accent is deferred — D6). Tune these hues freely.
+  const glowTint = {
+    '/shop': '155, 107, 158',       // amethyst
+    '/about': '27, 58, 82',         // deep star blue
+    '/commissions': '74, 25, 66',   // deep plum
+    '/contact': '27, 58, 82',       // deep star blue
+  }[location.pathname.replace(/\/$/, '')];
   if (glowTint) document.documentElement.style.setProperty('--glow-color', glowTint);
 });
