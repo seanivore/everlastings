@@ -13,6 +13,7 @@ async function initConfig() {
     SUPABASE_PUBLISHABLE_KEY = config.supabasePublishableKey;
     STRIPE_PUBLISHABLE_KEY = config.publishableKey;
     META_PIXEL_ID = config.metaPixelId;
+    window._isTest = config.isTest === true;   // 1.11 — prod=false, preview=true
     window._supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     window._stripePublishableKey = STRIPE_PUBLISHABLE_KEY;
   } catch (err) {
@@ -54,7 +55,9 @@ async function getProductBySlug(slug) {
   // Public reads exclude rows that aren't checkout-ready (no stripe_price_id).
   // This naturally hides integration-test cruft (itest-*) without blocking
   // placeholder products that intentionally have is_test=true during launch prep.
-  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).not('stripe_price_id', 'is', null).maybeSingle();
+  // Public column projection — keep in sync with what product.js/shop.js/homepage.js render.
+  // Add a new public column here or it silently won't load; never list draft/preview_token/is_test.
+  const { data, error } = await supabase.from('products').select('id, sku, slug, title, headline, story_card, description, features, price, dimensions, weight, materials, power_supply, care_instructions, shipping_details, product_type, series, available, quantity, featured, images, thumbnail, thumbnail_alt, media, seo_title, seo_description, seo_thumbnail, artist_note, stripe_price_id, homepage_theme, created_at').eq('slug', slug).eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null).maybeSingle();
   if (error) {
     console.error('Failed to fetch product:', error.message);
     return null;
@@ -66,7 +69,9 @@ async function getProducts(options = {}) {
   const supabase = getSupabase();
   if (!supabase) return [];
   // Public reads exclude rows that aren't checkout-ready (no stripe_price_id).
-  let query = supabase.from('products').select('*').not('stripe_price_id', 'is', null);
+  // Public column projection — keep in sync with what product.js/shop.js/homepage.js render.
+  // Add a new public column here or it silently won't load; never list draft/preview_token/is_test.
+  let query = supabase.from('products').select('id, sku, slug, title, headline, story_card, description, features, price, dimensions, weight, materials, power_supply, care_instructions, shipping_details, product_type, series, available, quantity, featured, images, thumbnail, thumbnail_alt, media, seo_title, seo_description, seo_thumbnail, artist_note, stripe_price_id, homepage_theme, created_at').eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null);
   if (options.available !== undefined) query = query.eq('available', options.available);
   if (options.featured) query = query.eq('featured', true);
   if (options.series) query = query.eq('series', options.series);
@@ -269,4 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (stored) {
     try { applyConsent(JSON.parse(stored)); } catch {}
   }
+  // Firelight ambient glow — inject once, sits behind content.
+  if (!document.querySelector('.firelight-glow')) {
+    const glow = document.createElement('div');
+    glow.className = 'firelight-glow';
+    glow.setAttribute('aria-hidden', 'true');
+    document.body.prepend(glow);
+  }
+  // optional per-page tint (brand palette); the warm-gold default lives in :root.
+  const glowTint = { '/shop': '155, 107, 158' /* amethyst */ }[location.pathname.replace(/\/$/, '')];
+  if (glowTint) document.documentElement.style.setProperty('--glow-color', glowTint);
 });
