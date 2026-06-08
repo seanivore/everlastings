@@ -1,6 +1,6 @@
-# ADDENDUM · TESTING — v1.6.1
+# ADDENDUM · TESTING — v1.6.2
 
-**Parent:** `v1_6_1_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Pairs with:** `v1_6_1_ADDENDUM_DESIGN.md`. This doc is the full verification plan — **functionality and design are tested the same way**, on the dev preview, on production-grade placeholder assets (no real content required). It absorbs the parent's former "Phase 11 — Verify + test" (now a pointer) and adds the design + media matrix.
+**Parent:** `v1_6_2_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Pairs with:** `v1_6_2_ADDENDUM_DESIGN.md`. This doc is the full verification plan — **functionality and design are tested the same way**, on the dev preview, on production-grade placeholder assets (no real content required). It absorbs the parent's former "Phase 11 — Verify + test" (now a pointer) and adds the design + media matrix.
 
 > **Test on Vercel preview URLs, never localhost.** Point any GPT/curl at the dev preview; `is_test=true`, no real money; SSO off for third-party calls during testing.
 
@@ -42,6 +42,7 @@
 26. **Edit-publish can't ship a malformed product either:** take an already-**published**, well-formed product; `editProduct` it to blank `story_card` (or set `images:[]`) — this STAGES a `draft` (the live page is untouched); then `publishProduct` → **400** "Cannot publish — …" naming the missing fields (same `validateProductRules` messages), and the **live row is unchanged** (still the old, well-formed copy; draft + preview_token still present so she can fix the draft and re-publish). Then fix the draft and publish → 200, live row updated.
 27. **Re-opening a staged product in the admin and re-saving preserves the staged edits (staged-state data-loss):** publish a well-formed product; stage a copy edit (`editProduct` sets a new `headline`/`story_card` → a `draft` is written, live row untouched); then simulate the admin re-opening it — `openEditor` populates the form from the `eff = {...product, ...draft}` overlay, so the form shows the **staged** copy — and **Save** with no further change (the admin's `buildProductPayload` re-sends the FULL payload, now carrying the staged values). Assert: the `draft` is **byte-identical** to before (the staged headline survives — NOT reverted to live), the live row is unchanged, and the preview still shows the staged copy. Then repeat the re-save while ALSO changing only `available` → same result (staged copy preserved) plus the availability applies live.
 28. **The GPT can build on its own staged array edit:** on a published product, `editProduct` stages a new `images` array (draft holds it); then, **before publishing**, getProduct → assert it returns an `effective` block whose `images` is the staged array (and the top-level `images` is still the live array); `editProduct` again with a COMPLETE `images` array built from `effective.images` (e.g. add one more photo). Assert the resulting staged `images` contains **both** the first and second edits. Same for `media`.
+29. **Public reads never leak the publish capability (C1):** stage an edit on a *published* product so the row carries both a `draft` and a fresh `preview_token`. Unauthenticated, call `GET /api/products?slug=<it>` and `GET /api/products`, and load the live `/product/{slug}` page while watching the anon `getProductBySlug`/`getProducts` responses in the Network tab → **none** of those payloads contain `preview_token` or `draft` (nor `is_test`). The authorized API (Bearer) **still** returns them (admin/GPT need the staged state), and `product-feed.ts` (explicit columns) is unaffected. Because the token is no longer publicly readable, the "harvest a token → `POST /api/products/publish {token}`" attack has nothing to harvest.
 
 ---
 
@@ -54,15 +55,29 @@ Build placeholder products that exercise each, and confirm the product page rend
 
 | Variation | `media[]` shape | Expected render |
 |---|---|---|
-| GIF-like video | `{type:'video', autoplay:true, loop:true}` | plays itself, silent, **no controls**; intrinsic ratio (no black bars) |
+| GIF-like video | `{type:'video', autoplay:true, loop:true}` | plays itself, silent, **no controls**; intrinsic ratio (no black bars). **Reduce-motion:** no autoplay → paused poster + controls (D-6) |
 | Click-to-play video | `{type:'video'}` (default) | **controls shown**, sound available, no autoplay |
 | YouTube | `{type:'youtube', url}` | 16/9 embed, rendered **after** MP4s |
 | Images only | no `media` key | media section **hidden**; gallery/thumbs render |
 | No media at all | `media: []` / absent | media section **hidden**; page still complete |
 
+**T2.1a — Placeholder seed (zero-guesswork fixture set; D-8).** Seed these five products on the **dev preview** (`is_test=true`) via `createProduct`, each with the minimum valid `miniature` field set (title/headline/story_card/description/price/`product_type:miniature`/slug/`images` [≥1 hero + ≥5 gallery]/thumbnail — reuse the existing `test/…` placeholder images or generate abstract art through the pipeline per the parallel-design rule). Only `media` differs:
+
+| Slug | `media[]` | Exercises |
+|---|---|---|
+| `test-media-gifloop` | `[{ "type":"video", "url":"https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4", "autoplay":true, "loop":true, "controls":false }]` | GIF-like + reduced-motion fallback |
+| `test-media-clicktoplay` | `[{ "type":"video", "url":"https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4", "poster":"https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim.jpg" }]` | click-to-play |
+| `test-media-youtube` | `[{ "type":"youtube", "url":"https://youtu.be/aqz-KE-bpKQ" }]` | YouTube embed (after MP4s) |
+| `test-media-imagesonly` | *(omit `media` entirely)* | images-only → media section hidden |
+| `test-media-none` | `[]` | no media → media section hidden |
+
+- **Video URL** points directly at the already-live CDN hero mp4 (a real public MP4) — no invented URLs, no upload step needed for the fixture (upload-by-link is exercised separately in T1 #20/#21).
+- **YouTube id** `aqz-KE-bpKQ` is Blender's public-domain "Big Buck Bunny" (stable + embeddable); swap for any embeddable id if it ever 404s. NOT the old Rickroll placeholder (removed by Phase 7.2).
+- After the matrix passes, archive the five `test-media-*` fixtures (they're scaffolding, not catalog).
+
 ### T2.2 — Layout + components (placeholders)
 - **Two-column (D1/D2):** product page + shop show two columns on desktop (≥768px), single column on mobile; the bug (permanent single column) is gone.
-- **Product page order (D2):** desktop = gallery → story → media (left) / sticky card + details (right, card stays in view on scroll); mobile = gallery → card → story → media → details. `product.js` still populates all `data-*` targets after the moves.
+- **Product page order (D2):** desktop = gallery → story → media (left) / a sticky **aside** = the buy card with details **directly beneath it** (right); the aside holds through gallery+story and **releases at the media row**. Mobile = gallery → aside (card + details) → story → media. The BUY card precedes the media in DOM/reading/focus order (D-2 a11y). `product.js` still populates all `data-*` targets after the moves.
 - **Story card (D3):** reads as body copy (not display-serif italic); blockquote framing intact.
 - **Filters (D4):** the three groups are collapsible `<details>` dropdowns matching the site; **every `data-shop-filter`/`data-shop-sort` hook still works** (filtering + sort unchanged); the sort `<select>` is unchanged.
 - **Density (D5):** at 1280–1440px, cart/checkout/cards don't push critical content below the fold. RENDER-TUNE.
@@ -72,7 +87,7 @@ Build placeholder products that exercise each, and confirm the product page rend
 - **Hero (D7):** the homepage hero plays the CDN mp4 (autoplay, muted, loop, inline); the `.hero__spotlight` drifts subtly; title/CTA stay legible over the moving video; the poster shows before load. RENDER-TUNE the overlay/spotlight strength + the exploration options.
 
 ### T2.4 — Accessibility + cross-cutting
-- **`prefers-reduced-motion`:** glow + hero spotlight animations stop; the hero shows the **poster image** (no video); nothing essential is motion-only.
+- **`prefers-reduced-motion`:** glow + hero spotlight animations stop; the hero shows the **poster image** (no video); and a **GIF-like product video does not autoplay — it falls back to a paused poster + controls** (D-6, click-to-play behavior); a normal click-to-play clip is unchanged; nothing essential is motion-only.
 - **Mobile:** hero autoplay degrades gracefully (poster acceptable until interaction); filters usable; layouts stack correctly.
 - **No regressions:** lightbox, cart, checkout, related-products still work after the layout moves.
 

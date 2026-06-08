@@ -1,6 +1,6 @@
 # AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-**Version**: v1.6.1 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc and its same-version addendums** (`v1_6_1_ADDENDUM_DESIGN.md`, `v1_6_1_ADDENDUM_TESTING.md`) — together they supersede all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration) + D (holistic design-correctness)** review round (charters: `v1_6_1_REVIEW_PROMPTS.md`; outputs: `v1_6_1_GAP_REVIEW_B.md` / `…_C.md` / `…_D.md`). **v1.6.1** then pushed design to exclusively-executable, split design + testing into addendums, and folded the in-house breadth-pass fixes.
+**Version**: v1.6.2 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc and its same-version addendums** (`v1_6_2_ADDENDUM_DESIGN.md`, `v1_6_2_ADDENDUM_TESTING.md`) — together they supersede all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration) + D (holistic design-correctness)** review round (charters: `v1_6_2_REVIEW_PROMPTS.md`; outputs: `v1_6_1_GAP_REVIEW_B.md` / `…_C.md` / `…_D.md`). **v1.6.1** then pushed design to exclusively-executable, split design + testing into addendums, and folded the in-house breadth-pass fixes. **v1.6.2** folds the first parallel **B + C + D** round (findings: `v1_6_1_GAP_REVIEW_B.md` / `…_C.md` / `…_D.md`) — B1 single-`/api/upload` + verbatim createProduct CURRENT; C1 public column-safety (`publicView` + explicit `main.js` columns); the hero-spotlight cascade fix (replace in-page rule); the product aside (details under the buy card); component-scoped density; inline-`gap` removed; reduced-motion product video. The **narrow re-pass** then writes `v1_6_2_GAP_REVIEW_*`.
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the locator) and a **NEW** block. **Line numbers are hints; the quoted CURRENT text is the anchor.** If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never guess. Everything here is a confirmed decision (no "we could X or Y"); if a builder hits a decision-shaped question, that's a plan bug → stop, surface to Sean, fix the plan, continue.
 
@@ -15,7 +15,7 @@
 > **What this plan carries vs. sheds:** through v1.6.x it KEEPS the byte-anchors (CURRENT/NEW locators), the deferred/out-of-scope **scope-boundary** notes (forward-facing — they stop a well-meaning executor from "fixing" an intentional cut), the tests, the phase numbers, and this North Star. It does NOT carry per-pass A-narration (that's in the `v1_5_*_GAP_REVIEW_A.md` archive). v2.0.0 sheds the remaining review framing.
 
 > ## Build documents (one task: this IMPLEMENT + its addendums)
-> The build is this `IMPLEMENT.md` **plus its addendums**, all carried at the **same version** and bumped in lockstep: `v1_6_1_ADDENDUM_DESIGN.md` (the presentation layer) and `v1_6_1_ADDENDUM_TESTING.md` (the full verification plan). **All addendums are always part of the build and of every gap review** — a reviewer ingests this doc *and* every addendum. **Design is built and validated exactly like functionality:** the spec leaves the builder no discovery/decision (concrete CURRENT/NEW blocks or stated defaults), then gets a test+feedback pass on the dev preview; render-dependent aesthetics ship with a default + a render-tune note (never frozen-no-feedback). **No real content is needed to build or test** — everything runs on production-grade placeholders that mimic the GPT-validated real-asset specs; the client adds real content by chat after handoff.
+> The build is this `IMPLEMENT.md` **plus its addendums**, all carried at the **same version** and bumped in lockstep: `v1_6_2_ADDENDUM_DESIGN.md` (the presentation layer) and `v1_6_2_ADDENDUM_TESTING.md` (the full verification plan). **All addendums are always part of the build and of every gap review** — a reviewer ingests this doc *and* every addendum. **Design is built and validated exactly like functionality:** the spec leaves the builder no discovery/decision (concrete CURRENT/NEW blocks or stated defaults), then gets a test+feedback pass on the dev preview; render-dependent aesthetics ship with a default + a render-tune note (never frozen-no-feedback). **No real content is needed to build or test** — everything runs on production-grade placeholders that mimic the GPT-validated real-asset specs; the client adds real content by chat after handoff.
 
 ---
 
@@ -117,7 +117,7 @@ So **every change — new product or edit — passes the same review gate**: not
 - **Unify:** admin create/edit go through the **same draft → preview → publish** path as the GPT. One safety path everywhere (matters once Em is on her own after the support window).
 - **Status (Sean's "Page Status" ask):** the admin product list shows **Live / Draft** and **"edits pending"** when a published row has a staged `draft` (Phase 8.8).
 - **Archive, not delete (1.12):** the admin "Delete" becomes **Archive** (removes from the store, reversible) + **Resurface**; the list gains an "archived" pill + filter. No hard delete from the UI (Phase 8).
-- **Vibe (light brand pass):** not a redesign — apply the site tokens, comfortable spacing, on-brand type/colour so it doesn't feel like a debug screen. *(The deeper visual restyle stays in `v1_6_1_ADDENDUM_DESIGN.md` / a later slice; the status + draft/publish wiring is functionality and ships here.)*
+- **Vibe (light brand pass):** not a redesign — apply the site tokens, comfortable spacing, on-brand type/colour so it doesn't feel like a debug screen. *(The deeper visual restyle stays in `v1_6_2_ADDENDUM_DESIGN.md` / a later slice; the status + draft/publish wiring is functionality and ships here.)*
 
 ## 1.7 GPT understanding — author early, evolve (brand-critical)
 
@@ -185,7 +185,7 @@ A Stripe product that has a price **cannot be hard-deleted** — Stripe keeps a 
 - `assets/js/admin.js` — `dollarsToCents` (**46–50 — `Math.round(num*100)`**) + `centsToDollars` (**52–55 — `(cents/100).toFixed(2)`**); `state.client` = publishable-key + session (**109–111 — an *authenticated*-role client, RLS-bound**); `authHeader` (213–216 — the Bearer-JWT helper that publish
   + archive reuse; it **exists**); `loadProducts` (**218–222 — reads via `fetch('/api/products', {authHeader})`, i.e. the service-role API, NOT `state.client`**); `renderProductList` (235–256); `openEditor` SEO lines (288–289) + price populate (**274 — `centsToDollars(product.price)`**); `buildProductPayload` SEO lines (407–408) **and `price` at 394** (always emitted — the root of the published-edit-400 bug); `onSaveProduct` `body = await res.json()` (**454**) + status line (461–462) + the edit PUT (440–446 — sends the full payload); `onDeleteProduct` (470–485 — the hard delete Phase 8 replaces with archive **via `fetch('/api/products/archive', {authHeader})`, also the API not `state.client`**).
 - `admin/index.html` — `.pill` styles (68–70); SEO row (156–159); upload-role `<select>` (204–206); `form-actions` (218–223).
-- `assets/docs/GPT_SETUP.md` — status note (16, 26); Instructions (97–124); schema `version` (133), `createProduct` block (167–213), curl Step 3 + PUT (376–417), quick-ref (425–432); orders schema + instructions **already present** (231–283, 109–114).
+- `assets/docs/GPT_SETUP.md` — status note (16, 26); Instructions (97–124); schema `version` (133), `createProduct` block (167–230), curl Step 3 + PUT (376–417), quick-ref (425–432); orders schema + instructions **already present** (231–283, 109–114).
 - `assets/docs/gpt/product-reference.md` — "system fills these" (31–33); "Before you create" (64).
 - `assets/docs/STORE_ADMINISTRATION.md` — Em's plain how-to (refreshed in Phase 10b).
 
@@ -491,6 +491,16 @@ function liveUrl(request: Request, slug: string): string {
 
 **3.2 — GET: preview-by-token branch + public `is_published` guards.**
 
+**Public column-safety (C1).** Add this module-level helper near `jsonResponse` (27–32). It strips the v1.5 capability/internal columns so a public read can never expose them; the two **unauthorized** GET returns (slug + list) below pass their rows through it. Authorized callers (admin/GPT/key), the preview-by-token branch, and the explicit-column `product-feed.ts` are all unaffected — they keep the full row (incl. `draft`/`preview_token`/`effective`). The GET-by-`id` branch already 401s the public, so it needs no strip.
+```ts
+// Public reads must never expose the publish capability (preview_token), the staged
+// draft, or the test flag. Strip them for unauthorized callers only.
+function publicView<T extends Record<string, unknown>>(row: T) {
+  const { draft, preview_token, is_test, ...pub } = row;
+  return pub;
+}
+```
+
 CURRENT (38–44):
 ```ts
 export async function GET(request: Request) {
@@ -570,7 +580,7 @@ CURRENT (slug return, 51–57):
     if (!data) return jsonResponse(request, { error: 'Product not found' }, 404);
     return jsonResponse(request, data);
 ```
-NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays it instead of string-building a host — AND an `effective` view so the GPT/admin edits the STAGED state, not the live one. The top-level stays LIVE [the GPT keeps reporting current state correctly and never calls a staged value "live"]; `effective` = live + staged = what the page becomes after publish, so a second pre-publish edit of a full array [`images`/`media`] builds from the staged array instead of dropping it. Public callers never reach here with a token/draft):
+NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays it instead of string-building a host — AND an `effective` view so the GPT/admin edits the STAGED state, not the live one. The top-level stays LIVE [the GPT keeps reporting current state correctly and never calls a staged value "live"]; `effective` = live + staged = what the page becomes after publish, so a second pre-publish edit of a full array [`images`/`media`] builds from the staged array instead of dropping it. Public (unauthorized) callers fall through to the column-stripped `publicView` return below — never the `effective`/token branch):
 ```ts
     const { data, error } = await query.maybeSingle();
     if (error) {
@@ -589,7 +599,7 @@ NEW (hand authorized callers an origin-correct `preview_url` so the GPT relays i
           : {}),
       });
     }
-    return jsonResponse(request, data);
+    return jsonResponse(request, isAuthorized ? data : publicView(data));
 ```
 
 CURRENT (list public filter, 82–86):
@@ -607,6 +617,17 @@ NEW (public branch also hides archived — 1.12):
   } else {
     listQuery = listQuery.eq('is_test', isTest);
   }
+```
+
+CURRENT (list return, 93):
+```ts
+  return jsonResponse(request, { products: data ?? [] });
+```
+NEW (strip the capability/internal columns for public callers; authorized callers keep full rows — C1):
+```ts
+  return jsonResponse(request, {
+    products: isAuthorized ? (data ?? []) : (data ?? []).map(publicView),
+  });
 ```
 
 **3.3 — POST: route `_action`, and make create insert a draft (no Stripe).**
@@ -1814,18 +1835,18 @@ CURRENT (`getProductBySlug`, 57):
 ```js
   const { data, error } = await supabase.from('products').select('*').eq('slug', slug).not('stripe_price_id', 'is', null).maybeSingle();
 ```
-NEW (also scope to this deployment's world):
+NEW (explicit public columns — never `draft`/`preview_token` (C1) — + scope to this deployment's world):
 ```js
-  const { data, error } = await supabase.from('products').select('*').eq('slug', slug).eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null).maybeSingle();
+  const { data, error } = await supabase.from('products').select('id, sku, slug, title, headline, story_card, description, features, price, dimensions, weight, materials, power_supply, care_instructions, shipping_details, product_type, series, available, quantity, featured, images, thumbnail, thumbnail_alt, media, seo_title, seo_description, seo_thumbnail, artist_note, stripe_price_id, homepage_theme, created_at').eq('slug', slug).eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null).maybeSingle();
 ```
 
 CURRENT (`getProducts`, 69):
 ```js
   let query = supabase.from('products').select('*').not('stripe_price_id', 'is', null);
 ```
-NEW:
+NEW (explicit public columns — never `draft`/`preview_token` (C1) — + scope to this deployment's world):
 ```js
-  let query = supabase.from('products').select('*').eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null);
+  let query = supabase.from('products').select('id, sku, slug, title, headline, story_card, description, features, price, dimensions, weight, materials, power_supply, care_instructions, shipping_details, product_type, series, available, quantity, featured, images, thumbnail, thumbnail_alt, media, seo_title, seo_description, seo_thumbnail, artist_note, stripe_price_id, homepage_theme, created_at').eq('is_test', window._isTest === true).not('stripe_price_id', 'is', null);
 ```
 
 > Safe because `isTest = VERCEL_ENV !== 'production'` is the deployment's own world — already what every
@@ -1840,6 +1861,17 @@ NEW:
 > the way there is for the server-side `product-feed.ts`. The existing `stripe_price_id IS NOT NULL`
 > filter already hides drafts (a draft has no Stripe price until publish); RLS hides archived. So the
 > explicit filter would be a redundant no-op here — deliberately omitted, not overlooked.
+>
+> **Explicit columns, not `select('*')` (C1).** Both reads now project an explicit public column list
+> (above) so the browser response can **never** carry `draft` or `preview_token` — the publish
+> capability must not sit in the Network tab of a live product page. Together with the server-side
+> `publicView()` strip (Phase 3.2), the leak is closed at every public read site. *A column-level
+> `REVOKE SELECT (draft, preview_token) FROM anon` was assessed as defense-in-depth and deliberately
+> NOT used: under Supabase's default **table-level** anon SELECT grant a column REVOKE is a silent
+> no-op (Postgres column REVOKE doesn't subtract from a table grant); making it bite would mean
+> revoking table SELECT and re-granting an explicit column allow-list — brittle, and Supabase can
+> re-grant on a schema reload. So C1 is fixed at the read sites (well-understood), not at the grant
+> layer (quiet/fragile).* Keep this list in sync if a new *public-render* column is ever added.
 
 ## Phase 4.6 — `api/product-feed.ts` (defense-in-depth on the public Meta catalog)
 
@@ -2391,6 +2423,7 @@ function mountPreviewBanner(product, token) {
 function populateMedia(p) {
   const container = document.querySelector('[data-product-media]');
   if (!container) return;
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const items = Array.isArray(p.media) ? p.media : [];
   if (!items.length) return; // stays hidden — media is optional
   const ordered = [...items].sort((a, b) => (a?.type === 'youtube' ? 1 : 0) - (b?.type === 'youtube' ? 1 : 0)); // MP4s first
@@ -2408,14 +2441,18 @@ function populateMedia(p) {
       // Per-clip behaviour — the GPT/admin sets these case-by-case. Two presets:
       //   GIF-like      : autoplay:true, loop:true → plays itself, silent, no buttons.
       //   click-to-play : default → she presses play; buttons shown; sound on.
-      v.autoplay = m.autoplay === true;
+      // D-6: a GIF-like clip is auto-playing motion, so honor prefers-reduced-motion —
+      // for those visitors it falls back to a paused, click-to-play video (poster + buttons).
+      const wantsAutoplay = m.autoplay === true;
+      v.autoplay = wantsAutoplay && !reduceMotion;
       v.loop = m.loop === true;
       if (v.autoplay) {
         v.muted = true;                    // browsers only allow muted autoplay
         v.controls = m.controls === true;  // GIF-like → no buttons unless asked
       } else {
         v.muted = m.muted === true;        // has sound unless she asks to mute
-        v.controls = m.controls !== false; // click-to-play → buttons shown
+        // click-to-play buttons; a reduced-motion'd GIF-like clip always gets them so it stays playable.
+        v.controls = wantsAutoplay ? true : (m.controls !== false);
       }
       if (m.alt) v.setAttribute('aria-label', m.alt);
       wrap.appendChild(v);
@@ -2478,7 +2515,7 @@ NEW (empty, hidden, data-bound container):
 <!-- v1.5: optional media (MP4 / YouTube) — product.js populateMedia fills it; hidden when none. -->
 <div class="product-gallery__media hidden" data-product-media></div>
 ```
-The media **CSS** (intrinsic-ratio video, 16/9 embed) + its placement in the reflow stay in `v1_6_1_ADDENDUM_DESIGN.md` (D3 + D2); the container above + `populateMedia` ship and are tested together (testing addendum T1 #9 / T2.1). The `hidden` class keeps it invisible until `populateMedia` finds items.
+The media **CSS** (intrinsic-ratio video, 16/9 embed) + its placement in the reflow stay in `v1_6_2_ADDENDUM_DESIGN.md` (D3 + D2); the container above + `populateMedia` ship and are tested together (testing addendum T1 #9 / T2.1). The `hidden` class keeps it invisible until `populateMedia` finds items.
 
 ## Phase 8 — Admin panel (new fields + draft/publish wiring + status column)
 
@@ -3020,7 +3057,7 @@ NEW:
   version: 1.2.0
 ```
 
-**CURRENT** `createProduct` block (`GPT_SETUP.md:167–213`, **verbatim** — the one structured schema edit, quoted in full so it's a clean locate-and-replace):
+**CURRENT** `createProduct` block (`GPT_SETUP.md:167–230`, **verbatim** — the one structured schema edit, quoted in full *through its `responses:` block* so it's a clean locate-and-replace):
 ```yaml
   /api/products:
     post:
@@ -3040,7 +3077,7 @@ NEW:
               required: [title, headline, story_card, description, price, product_type, slug, images, thumbnail]
               properties:
                 title: { type: string }
-                slug: { type: string, description: "URL-safe handle you derive from the title (lowercase, spaces→hyphens, strip anything not a-z0-9-, collapse repeats) and reuse for every uploadImage call. Required because photos upload before the row exists. The server normalizes it again; it's permanent after creation." }
+                slug: { type: string }
                 headline: { type: string }
                 story_card: { type: string }
                 description: { type: string }
@@ -3069,8 +3106,25 @@ NEW:
                 thumbnail: { type: string }
                 seo_title: { type: string }
                 seo_description: { type: string }
+      responses:
+        '200':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  product: { type: object }
+                  stripe_sync:
+                    type: object
+                    properties:
+                      success: { type: boolean }
+                      no_op: { type: boolean }
+                      stripe_product_id: { type: string }
+                      stripe_price_id: { type: string }
 ```
-Replace the **entire** CURRENT `/api/products` `post` block above with this **NEW** block, verbatim (single locate-and-replace — no hand-merge): the `sync` `summary` language + `sync` query `parameters` are dropped (create makes a **draft**, no Stripe), and the checkout / SEO / `media` draftable fields are merged into `properties` (the `media` array is the same 7-property shape as `editProduct` below). NEW:
+Replace the **entire** CURRENT `/api/products` `post` block above (`post:` through its `responses:`) with this **NEW** block, verbatim (single locate-and-replace — no hand-merge): the `sync` `summary` language + `sync` query `parameters` are dropped (create makes a **draft**, no Stripe), and the checkout / SEO / `media` draftable fields are merged into `properties` (the `media` array is the same 7-property shape as `editProduct` below). NEW:
 
 ```yaml
   /api/products:
@@ -3136,7 +3190,7 @@ Replace the **entire** CURRENT `/api/products` `post` block above with this **NE
         '200': { description: Draft created; returns preview_url. }
 ```
 
-Then after the `/api/products` `post` block, add a `get` (listProducts), a `put` (editProduct), and the two new paths:
+Then after the `/api/products` `post` block, add a `get` (listProducts) and a `put` (editProduct), then the new top-level paths — `/api/products/publish`, `/api/products/archive`, `/api/products/unarchive`, `/api/products/discard`, `/api/coupons`, `/api/coupons/deactivate`, `/api/products/by-slug/{slug}`, and a **rewritten** `/api/upload`. **The `/api/upload` in this block REPLACES the existing multipart `/api/upload` (`GPT_SETUP.md:137–166`) — delete that old block so the file ends with exactly ONE `/api/upload` (the JSON one below).** The legacy multipart schema took a binary `file`, which a GPT Action cannot send — the by-link JSON intake (Phase 5) is the only upload path that works by chat; leaving both creates a duplicate `paths` key + duplicate `operationId: uploadImage` that the importer rejects (or silently resolves last-wins, which can leave the dead multipart path winning).
 
 ```yaml
     get:
@@ -3356,6 +3410,13 @@ Then after the `/api/products` `post` block, add a `get` (listProducts), a `put`
         '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
 ```
 
+> **End state for `/api/upload`:** exactly one path — the JSON `uploadImage` directly above. The
+> pre-existing multipart `/api/upload` (`GPT_SETUP.md:137–166`, `file: { type: string, format:
+> binary }`) must be **deleted** in this same edit. Do not leave both — a duplicate `paths` key (and
+> duplicate `operationId: uploadImage`) is invalid OpenAPI, and if the old multipart block wins,
+> by-chat media upload silently breaks (a GPT Action can't send a binary file, so by-link is the only
+> path Em has).
+
 (The NEW `createProduct` block above already carries `checkout_name`/`checkout_description`/`checkout_image`/`seo_thumbnail` + the `media` array, so the GPT drafts them on create too; the `uploadImage` `role` description already includes `checkout_image` + `seo_thumbnail`.)
 
 > `getProduct` is `GET /api/products/by-slug/{slug}` — a `vercel.json` rewrite to the existing
@@ -3452,7 +3513,7 @@ NEW:
 **The system handles (never set):** `sku`, `stripe_product_id`/`stripe_price_id`, the photo CDN URLs, `homepage_theme`, and the draft/publish machinery.
 ```
 
-Also update the status note (16): drop the stale **`see archive/v1_5/v1_5_0_IMPLEMENT.md`** pointer (that file is superseded) and the "coming in v1.5.0" framing — edit / draft / publish / coupons / archive are specified here (this plan); keep "the GPT only ever sees the environment its Action points at." And fix the remaining **GIF** reference at **1C line 75** ("skip_transform=true for videos and GIFs") → just **videos** — GIFs are retired (see D3 in `v1_6_1_ADDENDUM_DESIGN.md`); MP4 is the path. (The other old GIF reference, instruction line 103, is already removed by the steps 3–6 replacement above.)
+Also update the status note (16): drop the stale **`see archive/v1_5/v1_5_0_IMPLEMENT.md`** pointer (that file is superseded) and the "coming in v1.5.0" framing — edit / draft / publish / coupons / archive are specified here (this plan); keep "the GPT only ever sees the environment its Action points at." And fix the remaining **GIF** reference at **1C line 75** ("skip_transform=true for videos and GIFs") → just **videos** — GIFs are retired (see D3 in `v1_6_2_ADDENDUM_DESIGN.md`); MP4 is the path. (The other old GIF reference, instruction line 103, is already removed by the steps 3–6 replacement above.)
 
 **9.3 — `assets/docs/gpt/product-reference.md` — mixed-truth repairs + the three tiers.**
 
@@ -3604,13 +3665,13 @@ Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes th
 
 ## Phase 11 — Verify + test
 
-> **Moved to `v1_6_1_ADDENDUM_TESTING.md`.** The full verification plan — the static checks, the 28 live functionality tests, and the design + media test matrix — lives in the testing addendum (same version; always part of this build and every gap review). Functionality and design are tested the same way, on the dev preview, on production-grade placeholders (no real content required).
+> **Moved to `v1_6_2_ADDENDUM_TESTING.md`.** The full verification plan — the static checks, the 28 live functionality tests, and the design + media test matrix — lives in the testing addendum (same version; always part of this build and every gap review). Functionality and design are tested the same way, on the dev preview, on production-grade placeholders (no real content required).
 
 ---
 
 # Part 3 — Design
 
-> **Moved to `v1_6_1_ADDENDUM_DESIGN.md`.** The presentation layer — the columns-bug fix, the product-page two-column + sticky layout, story-card + media CSS, shop-filter dropdowns, desktop density, the "Firelight" ambient glow, and the animated hero (assets already live on the CDN) — lives in the design addendum (same version; always part of this build and every gap review). Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, the GPT schema) stays in Part 2 above. Design is built and validated exactly like functionality (see `v1_6_1_ADDENDUM_TESTING.md`); render-tuned aesthetics ship with defaults + a render-tune pass. The broader interactive-homepage vision is the separate **v3.0.0** initiative (`assets/docs/archive/v3_0/`).
+> **Moved to `v1_6_2_ADDENDUM_DESIGN.md`.** The presentation layer — the columns-bug fix, the product-page two-column + sticky layout, story-card + media CSS, shop-filter dropdowns, desktop density, the "Firelight" ambient glow, and the animated hero (assets already live on the CDN) — lives in the design addendum (same version; always part of this build and every gap review). Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, the GPT schema) stays in Part 2 above. Design is built and validated exactly like functionality (see `v1_6_2_ADDENDUM_TESTING.md`); render-tuned aesthetics ship with defaults + a render-tune pass. The broader interactive-homepage vision is the separate **v3.0.0** initiative (`assets/docs/archive/v3_0/`).
 
 ---
 
@@ -3626,7 +3687,7 @@ Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes th
 
 # Gap-review & validation plan
 
-The gap-review gate runs angles **A / B / C** against this doc + its addendums (`v1_6_1_ADDENDUM_DESIGN.md`, `v1_6_1_ADDENDUM_TESTING.md`) + `EVERLASTINGS_STORE.md`, **reviewing the entire build — every phase and every addendum** — not just the functionality phases. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_6_1_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate).
+The gap-review gate runs angles **A / B / C** against this doc + its addendums (`v1_6_2_ADDENDUM_DESIGN.md`, `v1_6_2_ADDENDUM_TESTING.md`) + `EVERLASTINGS_STORE.md`, **reviewing the entire build — every phase and every addendum** — not just the functionality phases. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_6_2_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate).
 
 - **A — cold / out-of-repo (holistic self-containment + completeness). CLOSED.** Ran 9 passes (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`), each folded → v1.5.2 … v1.5.9; the 9th returned **READY TO BUILD**. Its 6 polish findings are folded into this v1.6.0.
 - **B (fidelity) + C (integration) — in repo, run in PARALLEL (CURRENT round).** Orthogonal angles. Fold both → bump the doc (v1.6.1, v1.6.2, …); re-run an angle only if it finds something load-bearing.
@@ -3636,8 +3697,8 @@ The gap-review gate runs angles **A / B / C** against this doc + its addendums (
 
 # Open items
 
-- **Hero (D7, `v1_6_1_ADDENDUM_DESIGN.md`)** — specced; the mp4 + poster are **live on the CDN**. Richer treatment options (frosted panel / Hyperframe / spotlight tuning) are a design-test-phase call, not a blocker.
-- **Render-tune (not blockers, all in `v1_6_1_ADDENDUM_DESIGN.md`):** story-card exact size (D3); glow palette + intensity (D6); desktop density (D5); product-page sticky behaviour + `.product-details` spacing after the reflow (D2); hero spotlight/overlay strength (D7).
+- **Hero (D7, `v1_6_2_ADDENDUM_DESIGN.md`)** — specced; the mp4 + poster are **live on the CDN**. Richer treatment options (frosted panel / Hyperframe / spotlight tuning) are a design-test-phase call, not a blocker.
+- **Render-tune (not blockers, all in `v1_6_2_ADDENDUM_DESIGN.md`):** story-card exact size (D3); glow palette + intensity (D6); desktop density (D5); product-page sticky behaviour + `.product-details` spacing after the reflow (D2); hero spotlight/overlay strength (D7).
 - **Deferred (post-launch, data-gated):** enable the `pg_cron` archive/draft **purge** (Phase 1 ships it commented) once active-list size warrants it; an optional admin **"hide archived"** filter (the archived pill already ships, 8.8).
 - **Known limitations (noted, not blocking):** no granular per-photo edit — the GPT resends the full `images` array, and a removed photo's R2 object lingers (harmless). The preview page's cart/buy controls are now **disabled + relabeled "Preview only"** on a preview load (so an edit-preview of a published piece can't transact at the live price under the "not yet live" banner); only the full **visual** treatment (styling of that disabled state) remains a design-addendum styling call.
 - **Resolved (`available` + `quantity` now apply live):** the prior known-edge — a *stale* `available:true` in a pending draft re-raising a sold piece on publish — **no longer applies on a published row**, because `available` is now applied LIVE immediately and never staged into the draft (it can't sit stale). `available` only flows through the draft on a still-*unpublished* product, where there's no live row to contradict. So the timestamp-aware clamp is no longer needed; Archive remains the instant full takedown.
