@@ -13,12 +13,24 @@ Testing **Everlastings AI Production Assistant "The Sunkeeper"** for all product
 
 Across these six test posts are a variety of images and videos. These have been assigned to each post so that the functionality of the dynamic page media display settings is working properly. 
 
-  1. The Lantern Keepers Cottage: **1 YouTube** — proves a pure-embed page.
-  2. The Reading Hour: **1 Looping MP4** — set to auto-play, loop, on silent, with no buttons, like a GIF, but smaller filesize.
-  3. First Snow, Stillwood: **1 click-to-play MP4 & 1 Poster** — the poster still image along with a video showing controls and playing sound.
-  4. The Tide Library: **2 MP4 Types** — with one GIF-like and one click-to-play, it will prove that multiple clips render in order.
-  5. The Clockmaker's Window: **1 MP4 & 1 YouTube** — proves mixed page where the MP4 renders before YouTube.
-  6. The Night Train: **Gallery Images Only** — with no video or other images, it proves the media section hides cleanly.
+  1. The Lantern Keepers Cottage: 
+     - **1 YouTube** 
+     - Proves a pure-embed page
+  2. The Reading Hour: 
+     - **1 Looping MP4** 
+     - Set to auto-play, loop, on silent, with no buttons, like a GIF, but smaller filesize.
+  3. First Snow, Stillwood: 
+     - **1 click-to-play MP4 & 1 Poster** 
+     - The poster still image along with a video showing controls and playing sound.
+  4. The Tide Library: 
+     - **2 MP4 Types** 
+     - With one GIF-like and one click-to-play, it will prove that multiple clips render in order.
+  5. The Clockmaker's Window: 
+     - **1 MP4 & 1 YouTube** 
+     - Proves mixed page where the MP4 renders before YouTube.
+  6. The Night Train: 
+     - **Gallery Images Only** 
+     - With no video or other images, it proves the media section hides cleanly.
 
 ### Scope 
 
