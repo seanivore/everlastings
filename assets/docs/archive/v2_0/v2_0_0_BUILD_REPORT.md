@@ -79,9 +79,9 @@ Verified live (Claude-in-Chrome), desktop + mobile:
 - **Mobile (<768px)** — product layout single-columns gallery→aside→story→media; hamburger nav. ✓
 - **Console** — no errors across homepage / shop / product. ✓
 
-**Design feedback applied (D6 glow):** Sean's pass found the glow reading as a full-page wash; retuned to an **edge-frame bloom** (hugs all four viewport edges, clear centre, per-page brand hues) — commit `b19bb34`. New CSS confirmed live; **final glow aesthetic awaits Sean's eye** (the `z-index:-1` glow under-renders in agent screenshots).
+**Design feedback applied (D6 glow → fireplace):** two feedback rounds. The edge-frame still read too wide; rebuilt (from web research — subagent) into a **thin fireplace-flicker rim**: `inset` box-shadow band hugging all four viewport edges, irregular opacity/blur flicker + `@property` oklch fire-colour cycling (red→orange→amber→gold), per-page random fire temperature, a barely-there vignette backing, reduced-motion = steady. Layered **on top** (`z-index:9998`, `pointer-events:none`, rim-only) so it frames the viewport consistently on every page without obscuring content (verified: buy card still clickable; `getAnimations()` confirms flicker + colour cycle run; no console errors). Commits `b19bb34`→`f18dcdb`. **Intensity / flicker-speed / band-thickness remain Sean's final aesthetic tune.** (Deferred enhancement found in research: SVG `feTurbulence` for organic flame-edge writhe — heavier, optional.)
 
-**Pre-existing (out of scope, noted):** the `Shop` nav item's dropdown indicator has rendered oddly since the first build (a pre-existing `nav-dropdown`, untouched by v2.0).
+**Shop nav (pre-existing — now FIXED):** the Shop dropdown trigger showed a stray mark because `.site-nav` (flex) had no `align-items`, so the `.nav-dropdown` span stretched full-height and "Shop" sat high. Added `align-items:center` (+ inline-flex centering on `.nav-dropdown`); verified the nav baseline is now even (Shop top == Home top). Dropdown hover unchanged.
 
 ---
 
