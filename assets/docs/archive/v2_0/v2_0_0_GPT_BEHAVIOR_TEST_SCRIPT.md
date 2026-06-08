@@ -1,36 +1,42 @@
-# The Sunkeeper — chat behavior test script
+# The Sunkeeper — behavior test + portfolio recording runbook
 
-**Purpose.** A walk-through to exercise *every* behavior of the Custom GPT by chatting with it the way Em would — so you can confirm what each capability should do and catch anything that misbehaves. This is the human-facing companion to the engineering checks in `v2_0_0_ADDENDUM_TESTING.md` (which cover render/API/state-machine); this doc is "say this, expect that."
+**Two jobs in one doc.** It exercises *every* GPT behavior (so you catch anything that misbehaves), and it's ordered as a **recording runbook** for a cohesive portfolio piece: a chat-managed store → the real storefront → checkout → chat-managed fulfillment. Paste-ready content means you never compose on camera. (Engineering-level checks live in `v2_0_0_ADDENDUM_TESTING.md`; this is "say this, expect that.")
 
-**Where to run it.** With the GPT's Action pointed at the **dev preview** (the `servers:` URL = the `…-git-dev-…vercel.app` host) + the **Preview**-scoped `PRODUCT_API_KEY` (the `.env.local` value), Vercel SSO off. Everything the GPT touches there is automatically `is_test=true` and lives only on the preview — it can never reach the live site, so test freely. **Clean up at the end** (archive the throwaways).
+**Where to run it.** GPT's Action pointed at the **dev preview** (the `servers:` URL = the `…-git-dev-…vercel.app` host) + the **Preview**-scoped `PRODUCT_API_KEY` (the `.env.local` value), Vercel SSO off. Everything the GPT touches is automatically `is_test=true` and lives only on the preview — never the live site. So you can clear products, run checkout with a test card, and send shipping emails freely.
 
 **Two real-world cautions even in test:**
-- **`markShipped` actually sends an email.** On the preview it emails whatever address is on the test order — use a test order whose email is *yours*.
-- **Refunds happen in Stripe test mode.** The GPT can't issue them; it walks you through the Stripe dashboard (test mode shows test payments).
-
-**How to read each item:** **Say** = paste/type this to the GPT. **Expect** = what it should do (and what to verify). Check the box when it behaves.
+- **`markShipped` actually sends an email** to the address on the order — use a test order whose email is *yours*.
+- **Checkout uses the Stripe test card** `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP (preview = Stripe test mode — no real money).
 
 ---
 
-## Paste-ready test content
+## Before you hit record — assets to gather
 
-*So you're never composing on camera. Each piece has a casual **opening line** (paste to start a create), a **"details" block** to paste when the GPT asks for more, the **specs**, and **finished copy**. The best thing to capture is the GPT turning the raw details into copy in Em's voice — so prefer pasting the opening line + details and letting it write. The finished copy is there for the edit tests and for when you want to move fast.*
+Pull these from your archive into one folder so the recording flows. Reuse freely for the coverage pieces; give the 2–3 you'll feature on camera their own distinct sets so they look real.
 
-**Photos (every create needs 7):** at least 1 hero + 5 gallery + a thumbnail. Reuse the preview's existing `test/…` placeholder images, drop 7 direct image URLs, or share one Google Drive "anyone with the link" folder. (The create *enforces* the 7 — that's also test C1.)
+**Per piece: 7 images** (the create *enforces* this) — 1 hero + 5 gallery + 1 thumbnail. The hero image can double as the thumbnail, so ~6 distinct images each is enough. Any abstract/cozy art works.
 
-**A real video link for the media tests (K):** `https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4` — a real public MP4, hand it to the GPT as the clip.
+**Video:** you already have one real public MP4 — `https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4`. **Reuse it for every MP4 slot below**, or drop your own. **Posters** = any image. **YouTube:** pick one calm, embeddable clip you like (ambient/nature) for the two pieces that use it — that's the "rare" path, test-only; you needn't feature those in the final cut.
 
-### Piece 1 — The Lantern Keeper's Cottage · *Portals to Peace · $268 · qty 1 · featured*
+**Media coverage across the six** (this is the point — it proves the page shows *only* the media present, and every playback mode):
+- **1 · The Lantern Keeper's Cottage** — *images only, no video* → proves the media section hides cleanly.
+- **2 · The Reading Hour** — *one GIF-like MP4* (autoplay, loops, silent, no buttons).
+- **3 · First Snow, Stillwood** — *one click-to-play MP4 + a poster still* (controls, sound).
+- **4 · The Tide Library** — *two MP4s* (one GIF-like + one click-to-play) → proves multiple clips render in order.
+- **5 · The Clockmaker's Window** — *one MP4 + one YouTube* (mixed) → proves MP4s render before YouTube.
+- **6 · The Night Train** — *YouTube only* → proves a pure-embed page (coverage; optional to feature).
 
-**Opening line:**
-> I want to add a new piece — The Lantern Keeper's Cottage. It's a little stone cottage at dusk with one window that glows, $268.
+---
 
-**Details (paste when it asks):**
-> It's a tiny stone cottage at the end of a path you almost didn't take, the evening gone to slate. One window lit warm and gold, ivy down the chimney, and a small lantern left burning by the door for whoever's still out walking. It's about keeping a light on for the people you love. Warm LED with three settings, USB-C. Hand-placed moss and dried lavender.
+## Paste-ready content — the six pieces
 
-**Specs:** dimensions `7" W x 6" D x 9" H` · weight `2.2 lbs` · materials: stone resin, reclaimed wood, LED, natural moss, dried lavender · power: USB-C (adapter included) · care: dust with a soft brush; keep out of direct sun · shipping: ships in 3–5 business days, insured · quantity 1 · featured yes.
+*Best on camera: paste the **opening line + details** and let the GPT write the headline/story in Em's voice — that raw→poetic moment is the hero shot. The **finished copy** is your fallback and your source for the edit tests. When it asks about video, tell it the behavior in plain words (e.g. "loop it silently with no buttons") — it sets the flags.*
 
-**Finished copy (for edits / speed):**
+### 1 · The Lantern Keeper's Cottage — *Portals to Peace · $268 · qty 1 · featured · images only*
+**Opening:** I want to add a new piece — The Lantern Keeper's Cottage. A little stone cottage at dusk with one window that glows, $268.
+**Details:** It's a tiny stone cottage at the end of a path you almost didn't take, the evening gone to slate. One window lit warm and gold, ivy down the chimney, and a small lantern left burning by the door for whoever's still out walking. It's about keeping a light on for the people you love. Warm LED with three settings, USB-C. Hand-placed moss and dried lavender.
+**Specs:** `7" W x 6" D x 9" H` · `2.2 lbs` · stone resin, reclaimed wood, LED, natural moss, dried lavender · USB-C (adapter included) · care: dust with a soft brush, keep out of direct sun · ships 3–5 business days, insured · qty 1 · featured.
+**Finished copy:**
 - **headline:** A light left burning by the door
 - **description:** A miniature stone cottage at dusk, its one window kept warm and gold. Hand-set with moss and dried lavender and lit by a three-setting glow — a small, steady reminder of a light left on for you.
 - **features:** Warm LED glow with three settings, from candle-low to full gold · Hand-placed natural moss and dried lavender · Stone-resin cottage with reclaimed-wood timbers · A working lantern by the door, lit from within · USB-C powered (adapter included)
@@ -43,17 +49,12 @@
   >
   > Keep it where you'll see it last thing at night — a reminder that being waited for is its own kind of shelter.
 
-### Piece 2 — The Reading Hour · *Book Nooks · $185 · qty 1*
-
-**Opening line:**
-> Next one — The Reading Hour. It's a little book nook that tucks between the real books on your shelf, with a tiny lamp that actually lights up. $185.
-
-**Details (paste when it asks):**
-> It's that pocket of late afternoon when the light goes amber and the house holds its breath and you finally sit down with the book you've carried around all week. A worn reading chair, a stack of tiny cloth-bound books, a brass lamp the size of a thimble that truly glows. It slides between the spines on your shelf so it looks like a doorway into the bookcase. For the readers and the daydreamers.
-
-**Specs:** dimensions `9" H x 5.5" W x 2.5" D (slots between books)` · weight `1.4 lbs` · materials: basswood, miniature cloth-bound books, brass-finish lamp, LED, velvet · power: USB-C (adapter included) · care: dust gently; keep out of direct sun · shipping: 3–5 business days, insured · quantity 1 · featured no.
-
-**Finished copy (for edits / speed):**
+### 2 · The Reading Hour — *Book Nooks · $185 · qty 1 · one GIF-like MP4*
+**Opening:** Next — The Reading Hour. A little book nook that tucks between the real books on your shelf, with a tiny lamp that actually lights up. $185.
+**Details:** That pocket of late afternoon when the light goes amber and the house holds its breath and you finally sit with the book you've carried all week. A worn reading chair, a stack of tiny cloth-bound books, a brass lamp the size of a thimble that truly glows. It slides between the spines so it looks like a doorway into the bookcase. For the readers and the daydreamers.
+**Specs:** `9" H x 5.5" W x 2.5" D (slots between books)` · `1.4 lbs` · basswood, miniature cloth books, brass-finish lamp, LED, velvet · USB-C (adapter included) · care: dust gently, keep out of direct sun · ships 3–5 business days, insured · qty 1.
+**Video:** the MP4 → "make it loop silently with no buttons, like a little GIF of the lamp glowing."
+**Finished copy:**
 - **headline:** Where the afternoon goes quiet
 - **description:** A miniature reading nook that tucks between the books on your shelf, complete with a tiny lamp that glows — a doorway into the bookcase for anyone who keeps their reading hour close.
 - **features:** A brass-finish lamp that truly lights (warm LED) · Hand-bound miniature cloth books · Basswood reading chair with a velvet cushion · Sized to slot between the books on your shelf · USB-C powered (adapter included)
@@ -64,17 +65,12 @@
   >
   > Built in basswood and velvet, with hand-bound books and a warm LED you can leave on through the evening. For the ones who guard their reading hour like a candle in the wind.
 
-### Piece 3 — First Snow, Stillwood · *Seasonal · $295 · qty 1 · featured*
-
-**Opening line:**
-> And a seasonal one — First Snow, Stillwood. A tiny cabin in the woods the morning after the first snow, windows lit warm against the blue. $295.
-
-**Details (paste when it asks):**
-> The morning after the first real snow, when the whole world has gone soft and soundless and the only colour left is the warm light in the cabin windows. Snow on the pines, a thread of smoke from the chimney, one set of footprints to the door. It's about the particular peace of being snowed in with the people you'd choose. The light is dual-tone — cool blue-white over the snow, warm gold in the windows.
-
-**Specs:** dimensions `10" W x 7" D x 8" H` · weight `3.1 lbs` · materials: resin, reclaimed wood, faux snow, miniature pines, dual-tone LED · power: USB-C (adapter included) · care: dust gently with a soft brush; keep out of direct sun; keep dry · shipping: 3–5 business days, insured · quantity 1 · featured yes.
-
-**Finished copy (for edits / speed):**
+### 3 · First Snow, Stillwood — *Seasonal · $295 · qty 1 · featured · one click-to-play MP4 + poster*
+**Opening:** And a seasonal one — First Snow, Stillwood. A tiny cabin in the woods the morning after the first snow, windows lit warm against the blue. $295.
+**Details:** The morning after the first real snow, the whole world soft and soundless, the only colour the warm light in the cabin windows. Snow on the pines, a thread of smoke, one set of footprints to the door. It's the particular peace of being snowed in with the people you'd choose. Dual-tone light — cool blue-white over the snow, warm gold in the windows.
+**Specs:** `10" W x 7" D x 8" H` · `3.1 lbs` · resin, reclaimed wood, faux snow, miniature pines, dual-tone LED · USB-C (adapter included) · care: dust gently, keep out of direct sun, keep dry · ships 3–5 business days, insured · qty 1 · featured.
+**Video:** the MP4 → "give it a play button with sound, and use this still image before it plays" (hand it a poster image).
+**Finished copy:**
 - **headline:** The hush after the first snow
 - **description:** A miniature cabin in the woods the morning after the first snow, windows lit warm against the blue. Hand-dressed in snow and pines with a dual-tone glow — the hush of a snowed-in morning, kept all year.
 - **features:** Dual-tone LED — cool snow-light and warm window-gold at once · Hand-dressed faux snow and a stand of miniature pines · Resin cabin with reclaimed-wood detailing · A single trail of footprints to the door · USB-C powered (adapter included)
@@ -85,182 +81,99 @@
   >
   > Hand-built in resin and reclaimed wood, dressed in fresh snow and miniature pines, and lit by a dual-tone glow that holds the cold blue of the snow and the warm gold of the windows at once. The quiet after the first snow, kept for the whole year round.
 
-### Extra inputs used by specific tests
-- **Slug edge (D):** create a quick piece titled **"Em's Lavender & Sage"** — a pressed-flower shadow box, $96, qty 1, series Seasonal. (One line is enough; the point is the apostrophe + ampersand in the title.)
-- **Voice-only (N):** ask it to write fresh — *"Write me a story card for a piece called The Tide Library: a tiny lighthouse-keeper's desk where the sea comes in through the window."*
-- **Prepared edits:** new headline for Piece 1 → **"Someone left the light on for you"** · price changes used below ($289, $300) · restock qty → 3.
+### 4 · The Tide Library — *Story Lofts · $240 · qty 1 · two MP4s*
+**Opening:** Add The Tide Library — a tiny lighthouse-keeper's desk where the sea comes in through the window. $240.
+**Details:** The desk of a lighthouse keeper who reads more than he sleeps. Books stacked to a porthole window, and through the glass the sea is always coming in — green, then grey, then green again. A brass lamp, a half-written letter, a cup gone cold. For the people the ocean settles instead of stirs. Warm light at the desk, cool light at the window.
+**Specs:** `8" W x 6" D x 9" H` · `2.6 lbs` · resin, basswood, miniature books, brass-finish lamp, dual-tone LED · USB-C (adapter included) · care: dust gently, keep out of direct sun · ships 3–5 business days, insured · qty 1.
+**Video:** two MP4s → first: "loop it silently, no buttons — the sea through the window." second: "a play button with sound for the desk." (Confirm they render first-then-second on the page.)
+**Finished copy:**
+- **headline:** The sea, always coming in
+- **description:** A miniature lighthouse-keeper's desk, books stacked to a porthole window where the sea is forever arriving. A warm desk lamp and cool sea-light, for anyone the ocean settles.
+- **features:** Dual-tone LED — warm desk lamp, cool sea-light at the window · Books stacked to a brass-rimmed porthole · Hand-built resin and basswood desk · A half-written letter and a cup gone cold · USB-C powered (adapter included)
+- **story_card:**
+  > The Tide Library belongs to a keeper who reads more than he sleeps. The books have climbed the walls and reached the porthole window, and through the glass the sea is always coming in — green, then grey, then green again, and never once still.
+  >
+  > There's a brass lamp burning low over a half-written letter, a cup of tea gone cold beside it — the particular comfort of work you can set down and return to. Outside, the water does what it has always done. Inside, there's no hurry.
+  >
+  > Hand-built in resin and basswood, shelved with miniature books and lit by a dual glow — warm gold at the desk, cool blue at the window. For the ones the ocean settles instead of stirs.
+
+### 5 · The Clockmaker's Window — *Story Lofts · $310 · qty 1 · featured · MP4 + YouTube (mixed)*
+**Opening:** Next — The Clockmaker's Window. A tiny watchmaker's bench where it's always golden hour. $310.
+**Details:** A watchmaker's bench at the end of the day, when the low sun comes through the shop window and turns all the brass to honey. Gears laid out, a loupe, a hundred clock faces on the wall each telling a slightly different time. It's about slowing time down by paying attention to it. Warm, very golden, low light.
+**Specs:** `9" W x 6" D x 10" H` · `3.0 lbs` · resin, brass-finish gears, miniature clock faces, reclaimed wood, LED · USB-C (adapter included) · care: dust gently with a soft brush, keep out of direct sun · ships 3–5 business days, insured · qty 1 · featured.
+**Video:** one MP4 → "a play button for the gears," **and** one YouTube link → "and here's a YouTube clip too." (Confirm the MP4 renders *before* the YouTube embed.)
+**Finished copy:**
+- **headline:** Where it's always golden hour
+- **description:** A miniature watchmaker's bench bathed in late-afternoon gold, a hundred small clocks on the wall each keeping its own time. For anyone trying to slow the hours down.
+- **features:** Warm LED tuned to a low golden-hour glow · A wall of miniature clock faces, each set a little differently · Hand-laid brass-finish gears and a watchmaker's loupe · Resin and reclaimed-wood bench · USB-C powered (adapter included)
+- **story_card:**
+  > At the end of the day the low sun finds the clockmaker's window and turns the whole bench to honey — every gear, every spring, every small brass tool gone warm and gold.
+  >
+  > On the wall, a hundred clock faces keep a hundred slightly different times, because the clockmaker long ago stopped believing in just one. Here, time is something you tend, not something that chases you. The loupe waits; the kettle's on.
+  >
+  > Hand-built in resin and reclaimed wood, laid with brass-finish gears and lit to a low golden glow. For anyone trying, gently, to slow the hours down.
+
+### 6 · The Night Train — *Limited Edition · $220 · qty 1 · YouTube only*
+**Opening:** And The Night Train — a tiny lit platform with the last train pulling in at night. $220.
+**Details:** A small country railway platform, late, the last train of the night just arriving with its windows lit. One lamp on the platform, a bench, someone waiting. It's about arrivals — the people who wait up for you. Warm platform lamp and train windows, everything else dark and blue.
+**Specs:** `11" W x 5" D x 7" H` · `2.8 lbs` · resin, reclaimed wood, miniature train, LED · USB-C (adapter included) · care: dust gently, keep out of direct sun · ships 3–5 business days, insured · qty 1.
+**Video:** YouTube only → "just add this YouTube clip, no other video." (Confirm the page shows the embed and nothing else.)
+**Finished copy:**
+- **headline:** The last train, and someone waiting
+- **description:** A miniature platform at night, the last train arriving with its windows lit and one person waiting on the bench. For the people who wait up for you.
+- **features:** Warm LED platform lamp and lit train windows · Hand-built miniature train and country platform · A single bench, and someone waiting · Resin and reclaimed-wood build · USB-C powered (adapter included)
+- **story_card:**
+  > It's late at the little country platform, the kind with one lamp and a single bench, and the last train of the night is just pulling in — its windows lit warm and gold against all that blue dark.
+  >
+  > Someone is waiting on the bench. They always are; that's the whole point of a last train. There's nothing here but the lamp, the cooling rails, and the small certainty of an arrival.
+  >
+  > Hand-built in resin and reclaimed wood, lit so the platform lamp and the train windows glow against the night. For the people who wait up — and the ones glad to be waited for.
+
+**Extra inputs:**
+- **Slug edge:** a quick piece titled **"Em's Lavender & Sage"** (a pressed-flower shadow box, $96, qty 1, Seasonal) — the point is the apostrophe + ampersand.
+- **Prepared edits:** Piece 1 new headline → **"Someone left the light on for you"**; price changes $289 / $300; restock qty → 3.
 
 ---
 
-## A. Create → preview → publish (the happy path) — *Piece 1*
+# The recording run (in order)
 
-- [ ] **A1 — Full create.**
-  **Say:** Piece 1's **opening line**, then its **details** when asked.
-  **Expect:** asks for the rest conversationally (story, features, photos…); never asks for "slug," "cents," or anything technical. Speaks dollars, never `26800`. Writes the headline/story in Em's voice (warm, poetic).
-- [ ] **A2 — Photos by link (required set).** Give it **7 photo links**.
-  **Expect:** uploads each via the upload action, then creates. Hands back a **preview link**, framed as "exactly how shoppers will see it — tap Publish there or tell me 'publish.'" It's a **draft** (not live).
-- [ ] **A3 — Open the preview.** Open the link.
-  **Expect:** the page renders with the photos/copy; URL carries a `preview` token; it is **not** in the public shop yet.
-- [ ] **A4 — Publish.**
-  **Say:** "publish"
-  **Expect:** publishes; says it's live + purchasable (this creates the Stripe listing). The old preview link stops working (expected).
+## Clip 1 — "A whole store, run by chat" (GPT screen)
 
-## B. Confirm vs. expedite — *creates Pieces 2 & 3*
+- [ ] **R1 · Recon.** "Show me everything that's live in the shop right now." → it calls **listProducts** and reads back the current placeholder pieces. *(Good opening beat: the GPT can see the store.)*
+- [ ] **R2 · Clear the placeholders.** "These are all old test pieces with placeholder images — take them all down." → it **archives each** (loops `archiveProduct`). Verify they leave the shop. Nice line to say on camera: it's *archive, not delete* — reversible, nothing is ever destroyed. *(If it's slow at bulk, name a few or say "archive every product that's currently live.")*
+- [ ] **R3 · Add the first piece, live.** Paste Piece 1's **opening line**, then its **details** when asked; give 7 photos; open the preview it returns; say **"publish."** **Expect:** it writes the copy in Em's voice, never exposes slug/cents/jargon, speaks dollars, hands a **preview link** (a draft), and publishing makes it live + purchasable (creates the Stripe listing). **This is your hero sequence — raw words in, a finished product page out.**
+- [ ] **R4 · Add the rest (2–6).** Work through Pieces 2–6 — mix "let it write" with pasting finished copy to keep pace. For each, give photos and, when asked, the **video behavior** in plain words (see each piece). This is where the **media variants** get proven:
+  - 2 GIF-like MP4 · 3 click-to-play MP4 + poster · 4 two MP4s in order · 5 MP4-then-YouTube · 6 YouTube only · 1 images-only.
+- [ ] **R5 · The slug edge (optional, great detail).** Create **"Em's Lavender & Sage"**, then later say "edit the Lavender Sage piece, set it to $110." **Expect:** if the direct lookup misses, it **lists and matches your wording** rather than saying "couldn't find it."
+- [ ] **R6 · A few edits, live vs. staged.** "Set The Lantern Keeper's Cottage to $289" → **live immediately**. "Mark The Tide Library sold" → **live**. "We made 3 more of the Reading Hour" → **live** (qty 3). "Change the Cottage headline to 'Someone left the light on for you'" → **stages** a draft + preview link → "publish that." **Expect:** price/availability/quantity apply instantly; copy stages until you publish.
+- [ ] **R7 · The lingering-draft heads-up (the subtle one).** Stage a copy edit on a piece (don't publish), then "set its price to $300." **Expect:** the price goes live **and** it flags you still have unpublished copy edits — offers to publish or discard. *(Verify it actually mentions the leftover draft.)*
+- [ ] **R8 · A coupon.** "Make a code for 20% off everything this weekend." → it creates it and reads the code back. Then "what sales are running?" → lists code + scope. *(Try "buy-one-get-one?" → it should decline; Stripe can't do buy-N.)*
+- [ ] **R9 · Show the result.** "What's live now?" → **listProducts** shows the real, finished store. Clean transition point to the website.
 
-- [ ] **B1 — Default confirms.** Start creating **Piece 2** (opening line + details).
-  **Expect:** before saving, it reads back the key fields plainly and waits for your OK. Approve it, add photos, publish.
-- [ ] **B2 — Expedite.**
-  **Say:** "From now on just go ahead — you don't need to check each field with me." Then create **Piece 3** (opening line + details + photos).
-  **Expect:** skips the line-by-line confirmation and goes straight to the preview.
+## Clip 2 — "The storefront" (website)
 
-## C. Photo handling & failures
+- [ ] **R10 · The shop.** Open the dev-preview site. Show the shop full of the new pieces — real images, the featured carousel, the collections.
+- [ ] **R11 · Media variants rendering.** Open a few product pages to show the dynamic media: the **Reading Hour** auto-looping silently, **First Snow** click-to-play with its poster, **The Tide Library** with two clips, **The Clockmaker's Window** (MP4 then YouTube), **The Night Train** (embed only), and **the Cottage** with no media section at all. *(This is the "it shows only what's there" proof.)*
+- [ ] **R12 · Checkout.** Buy 1–2 pieces with the Stripe test card `4242 4242 4242 4242` (any future expiry/CVC/ZIP). Complete the purchase through to the `/complete` page. *(Use an email that's yours — you'll ship to it next.)*
 
-- [ ] **C1 — Too few gallery shots.** Try to create with only 3 photos.
-  **Expect:** says plainly it needs 1 hero + 5 gallery + a thumbnail (7 minimum) and asks for more angles — does **not** silently retry or create a broken product.
-- [ ] **C2 — Pasted file (not a link).** Paste an image straight into the chat.
-  **Expect:** says it can't use a pasted file and asks for a Drive "anyone with the link" link or a direct URL.
-- [ ] **C3 — Bad/private link.** Give a Drive link that isn't shared publicly (or a Drive *preview page* URL).
-  **Expect:** relays that the link wasn't downloadable; asks you to set "anyone with the link" or paste a direct URL, then retry.
-- [ ] **C4 — Large video.** Give a Drive link to a video over ~25 MB.
-  **Expect:** if it fails, asks for a direct host (Dropbox `?dl=1` or a CDN link) instead of a Drive share.
+## Clip 3 — "Fulfillment, by chat" (GPT screen)
 
-## D. Slug edge cases (apostrophe / ampersand)
-
-- [ ] **D1 — Tricky title create.** Create **"Em's Lavender & Sage"** (see Extra inputs).
-  **Expect:** it works (photos + product land together). Note the handle becomes `ems-lavender-sage`.
-- [ ] **D2 — Find it again later.**
-  **Say:** "Edit the Lavender Sage piece — set the price to $110."
-  **Expect:** if a direct lookup misses, it **lists products, matches your wording, then re-finds the exact piece** — never "I couldn't find it" without listing first. Then makes the change.
-
-## E. Editing — what stages vs. what goes live — *Piece 1*
-
-- [ ] **E1 — Copy edit STAGES.**
-  **Say:** "Change the headline on The Lantern Keeper's Cottage to 'Someone left the light on for you.'"
-  **Expect:** stages a draft and hands back a **preview link**; says it isn't live until you publish. The live page is unchanged until then.
-- [ ] **E2 — Price is LIVE.**
-  **Say:** "Set The Lantern Keeper's Cottage to $289."
-  **Expect:** applies immediately (no preview/publish), same product/URL; just says it's done. Speaks dollars.
-- [ ] **E3 — Mark sold is LIVE.**
-  **Say:** "Mark the Lantern Keeper's Cottage as sold."
-  **Expect:** applies immediately; says it's done (shows sold but stays on the page).
-- [ ] **E4 — Restock is LIVE.**
-  **Say:** "Actually we made 3 more of those."
-  **Expect:** sets quantity to 3 immediately; says it's done.
-- [ ] **E5 — Publish the staged copy edit.** After E1, **Say:** "Publish that headline change."
-  **Expect:** the staged headline goes live.
-
-## F. Featured & collection mapping — *Piece 2*
-
-- [ ] **F1 — Feature on homepage.**
-  **Say:** "Feature The Reading Hour on the homepage."
-  **Expect:** sets `featured`; since it's published, **stages** it and tells you to preview + publish to make it show in the carousel.
-- [ ] **F2 — Add to a collection.**
-  **Say:** "Add The Reading Hour to the Portals to Peace collection too."
-  **Expect:** sets the series; stages on a published piece (preview + publish).
-
-## G. Discard edits + the "lingering draft" heads-up — *Piece 2*
-
-- [ ] **G1 — Discard staged edits.** Stage a copy edit on Piece 2 (don't publish), then **Say:** "Actually, never mind — undo that change."
-  **Expect:** discards the pending draft; the live page is left exactly as it was.
-- [ ] **G2 — Heads-up on a live change over old staged edits.** Stage a copy edit on Piece 2 (don't publish). Then **Say:** "Set the price to $200."
-  **Expect:** makes the price change live, **and** flags that you still have unpublished copy edits from earlier — offers to preview+publish or discard them. *(This is the easy-to-miss one — verify it actually mentions the lingering draft.)*
-
-## H. Re-show a lost preview
-
-- [ ] **H1 — Ask for the link again.** After staging an edit, **Say:** "Can you send me that preview link again?"
-  **Expect:** returns the existing preview link (does **not** make a pointless no-op edit to "regenerate" one).
-
-## I. Archive / unarchive (there is no delete) — *Piece 3*
-
-- [ ] **I1 — Take down.**
-  **Say:** "Take First Snow, Stillwood down for now — it's out of season."
-  **Expect:** archives it (gone from the shop, still findable); says it's reversible.
-- [ ] **I2 — "Delete" still archives.**
-  **Say:** "Actually just delete it."
-  **Expect:** explains there's no hard delete and that it's archived (not destroyed) — does not claim to delete.
-- [ ] **I3 — Bring it back.**
-  **Say:** "Put First Snow back up."
-  **Expect:** unarchives it.
-
-## J. Coupons
-
-- [ ] **J1 — Percent, store-wide, with expiry.**
-  **Say:** "Make a code for 20% off everything until New Year's."
-  **Expect:** creates a percent coupon with an expiry; reads the final code back.
-- [ ] **J2 — Fixed amount.**
-  **Say:** "And one for $15 off."
-  **Expect:** amount-off coupon (handles dollars→cents itself); reads the code back.
-- [ ] **J3 — Product-scoped needs published.** Try scoping a coupon to a **draft** piece (stage a new draft first, don't publish).
-  **Expect:** explains a product-specific discount needs the piece published first (a draft has no Stripe id) — or offers store-wide instead.
-- [ ] **J4 — No BOGO.**
-  **Say:** "Can you do buy-one-get-one-free?"
-  **Expect:** says that isn't possible (Stripe can't do buy-N natively) — doesn't promise it.
-- [ ] **J5 — List running sales.**
-  **Say:** "What sales are running right now?"
-  **Expect:** lists each code, the discount, and its **scope** (store-wide vs. specific pieces).
-- [ ] **J6 — End one now.**
-  **Say:** "End the 20% one."
-  **Expect:** deactivates that code immediately.
-
-## K. Media (optional page video) — *Piece 2*
-
-- [ ] **K1 — Asks how each clip behaves.** Give it the **real MP4 link** (top of this doc) for The Reading Hour.
-  **Expect:** uploads it, then **asks** whether it should autoplay + loop silently (GIF-like) or be click-to-play with sound (the default) — it never assumes.
-- [ ] **K2 — GIF-like.** Choose "loop silently, no buttons."
-  **Expect:** the clip on the page plays itself, silent, no controls.
-- [ ] **K3 — Click-to-play + poster.** Choose "play button with sound," offer a still image.
-  **Expect:** shows controls; uses your poster image before it plays.
-- [ ] **K4 — No media hides the section.** A product with no video (Piece 1).
-  **Expect:** the media section simply doesn't appear; the page is still complete.
-
-## L. Orders & fulfillment
-
-*(Use an existing test order on the preview, or make one $1 test purchase. The shipping email goes to the order's email — use one that's yours.)*
-
-- [ ] **L1 — What needs shipping.**
-  **Say:** "What orders need shipping?"
-  **Expect:** lists the awaiting-shipping orders plainly (who, what, address, total).
-- [ ] **L2 — Search.**
-  **Say:** "Did the order from [email] ship yet?"
-  **Expect:** searches and answers from the order data.
-- [ ] **L3 — Mark shipped (confirm-first + carrier normalize).**
-  **Say:** "Mark that one shipped — it went out with the post office, tracking 9400 1112 2233 4455 6677 88."
-  **Expect:** normalizes "post office" → USPS, then **confirms before sending**: "Mark <product> shipped via USPS <tracking> and email <buyer>?" — only on your yes does it mark shipped + email the buyer.
-- [ ] **L4 — Confirm the email fired.** After L3.
-  **Expect:** order flips to shipped; the buyer (your test email) gets the tracking email. *(If it ever says the email didn't send, that's the `email_sent:false` path → text Sean.)*
-
-## M. Refunds (guides, can't execute)
-
-- [ ] **M1 — Walk-through, not action.**
-  **Say:** "I need to refund the customer who bought The Reading Hour."
-  **Expect:** explains it can't issue refunds and walks you through the Stripe dashboard (Payments → find the payment → Refund); notes Stripe emails the buyer. *(With Web Browsing on, it may web-search to confirm Stripe's current steps — that's intended.)*
-- [ ] **M2 — Relist is separate.**
-  **Say:** "Now put that piece back up for sale."
-  **Expect:** clarifies a refund doesn't auto-relist; offers to set it available again (or unarchive if it was archived).
-
-## N. Voice
-
-- [ ] **N1 — Copy sounds like Em.**
-  **Say:** the **Voice-only** prompt (The Tide Library, see Extra inputs).
-  **Expect:** warm, poetic, sensory — not clinical or sales-y. No "sale/deal/discount/cute/perfect." Leads with emotion, then specifics. *(Cross-check against `voice-guide`.)*
-
-## O. Guardrails & errors
-
-- [ ] **O1 — Never her price.** Throughout: it never sets a price you didn't say.
-- [ ] **O2 — Never invents a URL/tracking.** It only uses CDN URLs the upload returns; never fabricates a tracking number or carrier.
-- [ ] **O3 — No tech leakage.** It doesn't surface API keys, server URLs, or jargon unless you explicitly ask.
-- [ ] **O4 — Missing-field on publish.** Publish a piece that's missing the story (stage an edit that clears it, or try an incomplete draft).
-  **Expect:** translates the error to plain language ("it still needs the story") and tells you exactly what to add.
-- [ ] **O5 — Key trouble (if it ever happens).** If it ever says **"the connection key needs Sean's attention,"** that's the auth (401) path — stop and tell Sean.
+- [ ] **R13 · Orders.** "What orders need shipping?" → **listOrders** reads back your fresh purchase(s) plainly (who, what, address, total).
+- [ ] **R14 · Ship it + close the loop.** "Mark that one shipped — it went out with the post office, tracking 9400 1112 2233 4455 6677 88." **Expect:** it normalizes "post office" → USPS, **confirms before sending** ("Mark <piece> shipped via USPS <tracking> and email <buyer>?"), then on your yes marks it shipped and the **buyer (you) gets the tracking email.** The full loop, by chat.
+- [ ] **R15 · Refund walk-through (optional).** "I need to refund the customer who bought The Reading Hour." **Expect:** it can't issue refunds — it walks you through the Stripe dashboard (and may web-search to confirm current steps), and notes a refund doesn't auto-relist.
 
 ---
 
-## Cleanup (after testing)
+## Guardrails to keep an eye on (any time, any clip)
+- Never sets a price you didn't say; never invents a URL, tracking number, or carrier.
+- Never surfaces API keys, server URLs, or jargon unless you ask.
+- On a publish that's missing a field, it translates the error to plain language ("it still needs the story").
+- If it ever says **"the connection key needs Sean's attention,"** that's the 401 path — stop and tell Sean.
 
-- [ ] Archive every throwaway product you created (`"take down …"`), or leave them — they're `is_test=true` and never reach the live site.
-- [ ] Deactivate any test coupons.
-- [ ] Note anything that misbehaved with the item code above (e.g. "G2 didn't mention the lingering draft") so it's easy to fix.
+## Cleanup (after recording)
+- Leave or archive the pieces — they're `is_test=true` and never reach the live site.
+- Deactivate any test coupons.
+- Jot anything that misbehaved against the R-number above so it's easy to fix.
 
 ## What "all green" means
-
-Every box checked = the GPT can run the whole store by chat: create→preview→publish, edit (knowing what's live vs. staged), coupons, archive, orders + shipping, and guide refunds — in Em's voice, without leaking anything technical or doing anything destructive. That's the product thesis: Em does it all by talking to The Sunkeeper.
+The run shows the whole thesis end-to-end: Em clears and restocks the shop, writes every product in her voice, prices/sells/features by chat, the storefront renders each media variant correctly, a real checkout completes, and she ships and closes the order — all without touching code, a dashboard, or anything technical. That's the portfolio story: **a store you run by talking to it.**
