@@ -1,6 +1,6 @@
 # v1.6.x — Gap-review prompts (B + C round; fresh instances)
 
-**Angle A is CLOSED** — the holistic out-of-repo loop ran 9 cold passes and the 9th (`assets/docs/archive/v1_5/v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD**; its 6 polish findings are folded into `v1_6_0_IMPLEMENT.md`. This round runs **B (fidelity)** and **C (integration)**, both against the **single living plan** `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per angle** (no context contamination). Reviewers change **nothing** — output is findings only.
+**Angle A is CLOSED** — the holistic out-of-repo loop ran 9 cold passes and the 9th (`assets/docs/archive/v1_5/v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD**; its 6 polish findings are folded into `v1_6_0_IMPLEMENT.md`. This round runs **B (fidelity)** and **C (integration)**, both against the build = `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md` **plus its same-version addendums** `v1_6_0_ADDENDUM_DESIGN.md` (presentation) + `v1_6_0_ADDENDUM_TESTING.md` (verification). **The three are one build; every addendum is always in scope** — review them together. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per angle** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
 > **The product North Star is: minimize the owner's friction to manage her entire digital product — the
@@ -32,7 +32,7 @@
 
 ## What to hand each reviewer
 
-- **B / C:** the repo + `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md`; **C** also reads `assets/docs/EVERLASTINGS_STORE.md` first. The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
+- **B / C:** the repo + `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md` + **both addendums** (`v1_6_0_ADDENDUM_DESIGN.md`, `v1_6_0_ADDENDUM_TESTING.md`); **C** also reads `assets/docs/EVERLASTINGS_STORE.md` first. **Rule: all addendums are always part of the build and of every gap review** — hand the reviewer the IMPLEMENT and every addendum. The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
 - (A is closed; its cold/out-of-repo charter is preserved below for the record but is not part of this round.)
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
@@ -268,10 +268,15 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- v1_6_0_IMPLEMENT.md (Part 2) is an exclusively-executable build a FRESH agent will apply to THIS
-  repo, then test on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block;
-  the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — so
-  treat a CURRENT line-ref there as a locator to confirm, not a hard byte match.
+- The build is v1_6_0_IMPLEMENT.md (Part 2 functionality) PLUS its addendums — v1_6_0_ADDENDUM_DESIGN.md
+  (presentation: CSS/markup, with CURRENT/NEW blocks) and v1_6_0_ADDENDUM_TESTING.md (the full verification
+  plan). A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every CODE edit quotes
+  a CURRENT block (locator) + a NEW block; the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT
+  byte-anchored (the plan says so) — treat a CURRENT line-ref there as a locator to confirm, not a hard byte
+  match. BYTE-CHECK THE DESIGN ADDENDUM'S "DECIDED" CURRENT BLOCKS TOO, same fidelity bar as Part 2:
+  D1 (product.html:162, shop.html:164), D3 (styles.css .story-card 929-935), D4 (shop.html filter fieldsets
+  183-206). Render-tuned sections (D5 density, D6 glow, D7 hero) ship a default + a render-tune note — judge
+  whether the default is concrete enough that the builder never guesses, not whether it is the final value.
 - Landmines (validate against the repo, not training data):
   1. The INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER (not a Studio
      webhook), AFTER INSERT only; confirm the plan's quoted CURRENT trigger matches and the only change
@@ -362,8 +367,13 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_6_0_IMPLEMENT.md. A FRESH agent will apply Part 2 to this
-  repo and test on the dev preview.
+- Read EVERLASTINGS_STORE.md FIRST, then v1_6_0_IMPLEMENT.md AND its addendums (v1_6_0_ADDENDUM_DESIGN.md,
+  v1_6_0_ADDENDUM_TESTING.md). A FRESH agent applies the WHOLE build to this repo and tests on the dev
+  preview. DESIGN INTEGRATION IS IN SCOPE: the D2 product-layout HTML moves run AFTER parent Phase 7.2's
+  media-container swap (confirm the ordering + that `product.js` data-* population still works after the
+  moves); the hero (D7) references CDN assets that are LIVE (https://cdn.everlastingsbyemaline.com/hero-bg-anim/);
+  the D6 glow is injected once by main.js on every page (must not break any page or block interaction);
+  the D4 filter dropdowns MUST keep every data-shop-filter / data-shop-sort hook so shop.js still filters.
 - Landmines (validate against reality, not training data):
   1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,
      AFTER INSERT only; drafts skip it; Stripe created only at publish.

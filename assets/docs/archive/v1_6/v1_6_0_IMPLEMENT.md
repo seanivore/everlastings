@@ -1,6 +1,6 @@
 # AI Store Management + Design — IMPLEMENT (exclusively executable)
 
-**Version**: v1.6.0 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc only** — it supersedes all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration)** review round (charters: `v1_6_0_REVIEW_PROMPTS.md`; outputs: `v1_6_0_GAP_REVIEW_B.md` / `…_C.md`).
+**Version**: v1.6.0 **Initiative**: AI store-management functionality (the store managed entirely through chat) + the v1.5 design pass — functionality first, design second. **Net feature set:** GPT/admin create→preview→publish with a real preview link; edit stages a draft (publish XOR discard) **with live-compare change-detection so `draft` holds exactly the fields differing from live — a live-only edit never stages a phantom draft, and a re-save of staged values never clobbers them**; the admin editor + the GPT both **edit the staged state** (admin `openEditor` overlays `draft`; getProduct returns an `effective` view) so neither surface loses pending edits; **price**, the **sold flag**, and **stock quantity** apply live immediately while copy/SEO stage; same-product Stripe-price rotation; coupons (create/list/deactivate, owner-isolated); archive (reversible, never hard-delete); media-by-link upload; `charge.refunded` order-status reflection; strict `is_test` isolation; and an extensible per-`product_type` create ruleset **re-validated at BOTH first-publish and edit-publish** (miniatures-only enum for now). Everything folds into existing functions (no new Vercel function). **Required reading**: `assets/docs/EVERLASTINGS_STORE.md` (architecture) + **this doc and its same-version addendums** (`v1_6_0_ADDENDUM_DESIGN.md`, `v1_6_0_ADDENDUM_TESTING.md`) — together they supersede all earlier `v1_5_*_IMPLEMENT.md` and `v1_5_0_BUILD_STORE_MGMT.md` (history; do not build from them; the per-pass A-review trail lives in the `v1_5_*_GAP_REVIEW_A.md` files). **Driven by:** the 9th Gap Review A (`v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD** — the holistic A-loop is **closed at v1.5.9** (9 cold passes); this v1.6.0 folds that pass's 6 polish findings and opens the **B (fidelity) + C (integration)** review round (charters: `v1_6_0_REVIEW_PROMPTS.md`; outputs: `v1_6_0_GAP_REVIEW_B.md` / `…_C.md`).
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the locator) and a **NEW** block. **Line numbers are hints; the quoted CURRENT text is the anchor.** If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never guess. Everything here is a confirmed decision (no "we could X or Y"); if a builder hits a decision-shaped question, that's a plan bug → stop, surface to Sean, fix the plan, continue.
 
@@ -13,6 +13,9 @@
 > - **v1.6.x — the B (fidelity) + C (integration) review round (CURRENT).** This `v1.6.0` is the v1.5.9 plan with the 9th-A polish folded; it lives in `assets/docs/archive/v1_6/`. B/C findings fold as **v1.6.1, v1.6.2, …** here. B + C run in **parallel** (orthogonal angles); a B/C pass that returns NEEDS-ANOTHER-PASS loops like A did.
 > - **v2.0.0 — execution (FUTURE, after B/C clear + Sean signs off).** At execution start, `EVERLASTINGS_STORE.md` is updated to the planned architecture (Phase 10); the build runs; a BUILD_REPORT captures expected/planned/actual. Post-build fix rounds are **v2.0.1, v2.0.2, …** — counting how many patch rounds reality required. The deep "zero-scaffolding as-built" cut (dropping the review framing this plan still carries) happens here, not before — B/C still benefit from seeing intent.
 > **What this plan carries vs. sheds:** through v1.6.x it KEEPS the byte-anchors (CURRENT/NEW locators), the deferred/out-of-scope **scope-boundary** notes (forward-facing — they stop a well-meaning executor from "fixing" an intentional cut), the tests, the phase numbers, and this North Star. It does NOT carry per-pass A-narration (that's in the `v1_5_*_GAP_REVIEW_A.md` archive). v2.0.0 sheds the remaining review framing.
+
+> ## Build documents (one task: this IMPLEMENT + its addendums)
+> The build is this `IMPLEMENT.md` **plus its addendums**, all carried at the **same version** and bumped in lockstep: `v1_6_0_ADDENDUM_DESIGN.md` (the presentation layer) and `v1_6_0_ADDENDUM_TESTING.md` (the full verification plan). **All addendums are always part of the build and of every gap review** — a reviewer ingests this doc *and* every addendum. **Design is built and validated exactly like functionality:** the spec leaves the builder no discovery/decision (concrete CURRENT/NEW blocks or stated defaults), then gets a test+feedback pass on the dev preview; render-dependent aesthetics ship with a default + a render-tune note (never frozen-no-feedback). **No real content is needed to build or test** — everything runs on production-grade placeholders that mimic the GPT-validated real-asset specs; the client adds real content by chat after handoff.
 
 ---
 
@@ -114,7 +117,7 @@ So **every change — new product or edit — passes the same review gate**: not
 - **Unify:** admin create/edit go through the **same draft → preview → publish** path as the GPT. One safety path everywhere (matters once Em is on her own after the support window).
 - **Status (Sean's "Page Status" ask):** the admin product list shows **Live / Draft** and **"edits pending"** when a published row has a staged `draft` (Phase 8.8).
 - **Archive, not delete (1.12):** the admin "Delete" becomes **Archive** (removes from the store, reversible) + **Resurface**; the list gains an "archived" pill + filter. No hard delete from the UI (Phase 8).
-- **Vibe (light brand pass):** not a redesign — apply the site tokens, comfortable spacing, on-brand type/colour so it doesn't feel like a debug screen. *(The deeper visual restyle stays in Part 3 / a later slice; the status + draft/publish wiring is functionality and ships here.)*
+- **Vibe (light brand pass):** not a redesign — apply the site tokens, comfortable spacing, on-brand type/colour so it doesn't feel like a debug screen. *(The deeper visual restyle stays in `v1_6_0_ADDENDUM_DESIGN.md` / a later slice; the status + draft/publish wiring is functionality and ships here.)*
 
 ## 1.7 GPT understanding — author early, evolve (brand-critical)
 
@@ -2443,7 +2446,7 @@ function youtubeId(url) {
 }
 ```
 
-**7.2 — `product.html`: the media container (functionality owns it, not the design slice).** `populateMedia` no-ops without a `[data-product-media]` target, so the container swap lives **here** in Phase 7 (not Part 3) — otherwise a functionality-only ship stores `media` but renders nothing and Phase 11 #9 can't pass. Replace the **static** `.product-gallery__media` block (placeholder video + GIF + Rickroll iframe) with an empty, hidden, data-bound container (this also drops the GIF + the placeholder embed). CURRENT (`product.html:235–258`, **verbatim** — so the swap is locate-and-replace, not locate-and-judge):
+**7.2 — `product.html`: the media container (functionality owns it, not the design slice).** `populateMedia` no-ops without a `[data-product-media]` target, so the container swap lives **here** in Phase 7 (not the design addendum) — otherwise a functionality-only ship stores `media` but renders nothing and Phase 11 #9 can't pass. Replace the **static** `.product-gallery__media` block (placeholder video + GIF + Rickroll iframe) with an empty, hidden, data-bound container (this also drops the GIF + the placeholder embed). CURRENT (`product.html:235–258`, **verbatim** — so the swap is locate-and-replace, not locate-and-judge):
 ```html
             <!-- Media examples (video, GIF, YouTube). Static for v1.4.5 — Track A hasn't shipped media-row fields yet. -->
             <div class="product-gallery__media" style="margin-top: var(--space-lg); display: grid; gap: var(--space-md); grid-template-columns: 1fr;">
@@ -2475,7 +2478,7 @@ NEW (empty, hidden, data-bound container):
 <!-- v1.5: optional media (MP4 / YouTube) — product.js populateMedia fills it; hidden when none. -->
 <div class="product-gallery__media hidden" data-product-media></div>
 ```
-The media **CSS** (intrinsic-ratio video, 16/9 embed) + its placement in the reflow stay in Part 3 §3.3 (design); the container above + `populateMedia` ship and are tested together (Phase 11 #9). The `hidden` class keeps it invisible until `populateMedia` finds items.
+The media **CSS** (intrinsic-ratio video, 16/9 embed) + its placement in the reflow stay in `v1_6_0_ADDENDUM_DESIGN.md` (D3 + D2); the container above + `populateMedia` ship and are tested together (testing addendum T1 #9 / T2.1). The `hidden` class keeps it invisible until `populateMedia` finds items.
 
 ## Phase 8 — Admin panel (new fields + draft/publish wiring + status column)
 
@@ -3449,7 +3452,7 @@ NEW:
 **The system handles (never set):** `sku`, `stripe_product_id`/`stripe_price_id`, the photo CDN URLs, `homepage_theme`, and the draft/publish machinery.
 ```
 
-Also update the status note (16): drop the stale **`see archive/v1_5/v1_5_0_IMPLEMENT.md`** pointer (that file is superseded) and the "coming in v1.5.0" framing — edit / draft / publish / coupons / archive are specified here (this plan); keep "the GPT only ever sees the environment its Action points at." And fix the remaining **GIF** reference at **1C line 75** ("skip_transform=true for videos and GIFs") → just **videos** — GIFs are retired (3.3); MP4 is the path. (The other old GIF reference, instruction line 103, is already removed by the steps 3–6 replacement above.)
+Also update the status note (16): drop the stale **`see archive/v1_5/v1_5_0_IMPLEMENT.md`** pointer (that file is superseded) and the "coming in v1.5.0" framing — edit / draft / publish / coupons / archive are specified here (this plan); keep "the GPT only ever sees the environment its Action points at." And fix the remaining **GIF** reference at **1C line 75** ("skip_transform=true for videos and GIFs") → just **videos** — GIFs are retired (see D3 in `v1_6_0_ADDENDUM_DESIGN.md`); MP4 is the path. (The other old GIF reference, instruction line 103, is already removed by the steps 3–6 replacement above.)
 
 **9.3 — `assets/docs/gpt/product-reference.md` — mixed-truth repairs + the three tiers.**
 
@@ -3601,256 +3604,13 @@ Bottom line: Studio is fine to inspect/patch a row; product *publishing* goes th
 
 ## Phase 11 — Verify + test
 
-**Static (before deploy):**
-- `npx tsc --noEmit -p tsconfig.json` → clean.
-- Function count unchanged (publish / coupon / archive / discard are `?_action=` rewrites, not files; the `uploadImage` URL branch edits the existing `upload.ts`, and the `charge.refunded` branch edits the existing `webhook.ts` — neither adds a file): `ls api/*.ts` = 11.
-- `vercel.json` is valid JSON; the new `?_action=` rewrites present (incl. `/api/products/discard`).
-
-**Live (dev preview — point any GPT/curl at the preview; `is_test=true`, no real money; SSO off for third-party calls):**
-1. **Create → draft:** `createProduct` → response has `preview_url`; product does **not** appear in `/shop` or via the anon client; no Stripe product yet; admin list shows a **draft** pill.
-2. **Preview:** open `preview_url` → renders with draft values + the "Draft preview" bar; and the preview fires **no** GA4/Pixel `view_item` and **no** cart-interest ping (an owner's preview loads must not pollute analytics).
-3. **Publish (new):** tap Publish (or `publishProduct`) → redirect to live `/product/{slug}`; appears in `/shop`; Stripe product + price exist; old preview link 404s; admin shows **live**.
-4. **List + status:** `listProducts` returns the product with `is_published`; admin shows the right pill (live / draft / live·edits-pending).
-5. **Edit (published) → draft — BOTH paths:** (a) **GPT** `editProduct` with only the changed fields → live page unchanged; admin shows **edits pending**; preview shows the change; publish → applies to live; Stripe catalog untouched. (b) **Admin** edits a published product's copy and clicks **Save draft** — `buildProductPayload` re-sends the *full* payload (incl. unchanged `price` + `checkout_*`) and it must **NOT** 400 (the frozen guard rejects only *changed* frozen fields); it stages a draft, the preview shows it, **Publish now** applies it. *This is the published-edit regression — exercise the admin-published-edit path, not just the GPT path.*
-6. **Stripe-lock + price rotation:** **changing a `checkout_*` identity field** on a **published** product (GPT or admin) → 400 "frozen after publish"; re-sending `checkout_*` **and `price` unchanged** (as the admin always does on every save) → **accepted, no 400** (the guard rejects only *changed* frozen fields, and the price round-trips to an identical integer via `Math.round`); **changing `price` on a published product** → **accepted + rotated, NOT 400**: a new active Stripe Price is created on the *same* product, the old Price flips `active:false`, `stripe_price_id` updates, the DB `price` updates immediately, and the response carries `price_updated:true` with **no draft staged** for a price-only change; the *same edits* on a **still-unpublished draft** → applied directly to live columns (returns a fresh preview).
-7. **Purchasability guard:** a draft cannot be reserved/checked out (reserve → unavailable; session → rejected).
-8. **Coupons:** percent + amount; store-wide + product-scoped; `min_amount`; `expires_at`; redeem the code at checkout (`applyPromotionCode`); duplicate code → 409; BOGO refused. **`listCoupons`** shows it active; **`deactivateCoupon`** ends it (the code then fails at checkout). **Isolation:** `listCoupons` returns only owner-created sales (a cart-recovery / newsletter code is **not** listed), and `deactivateCoupon` on such a system code → 403.
-9. **Media:** set `media` (an MP4 item + a YouTube item) via create/edit → the page renders the video (MP4 first), respects its aspect ratio, YouTube after; empty/absent `media` → the section stays hidden; no GIF element.
-10. **GPT behaviour:** drafts every tier; hands back the preview link with good language; picks coupon
-    params; lists/deactivates a sale; sets `media`; archives / resurfaces a piece; confirms-vs-expedites;
-    fails gracefully.
-11. **Archive (1.12):** `archiveProduct` (admin "Archive" or GPT) → the piece leaves
-    `/shop`, the product feed, and its `/product/{slug}` page (and can't be checked out); the Stripe
-    product flips `active:false`; admin shows the **archived** pill. `unarchiveProduct` reverses all of
-    it. No row is ever hard-deleted.
-12. **Strict test isolation (1.11):** `/api/config` returns `isTest`; on the **dev preview**
-    the shop shows the published *test* product (as in #3), but pointed at **production** that same test
-    row does **not** appear in `/shop` or on its page (prod shows only `is_test=false`).
-13. **Re-price rotation keeps identity:** change a published product's price by chat → its page
-    keeps the **same slug/URL**, and the new price shows on `/shop`, the product page, and at checkout
-    immediately; in Stripe the old Price is `active:false` and a new active Price exists on the **same**
-    product (no second product created, no publish step). A new Checkout Session charges the new price; a
-    session opened just before the change keeps its locked price (expected Stripe behaviour).
-14. **Discard a staged draft:** stage an edit on a published product (admin or GPT) → admin shows
-    **live · edits pending** + a **"Discard pending edits"** button. Discard (button or `discardEdits`)
-    → `draft` + `preview_token` cleared, the live page **unchanged**, the pill back to **live**, the old
-    preview link dead. `discardEdits` on an unpublished draft → friendly 400 ("nothing to discard"); on a
-    published row with no pending edits → idempotent success.
-15. **Create injection guard:** a `createProduct` body that also includes `is_published`,
-    `archived_at`, `published_at`, `draft`, or `stripe_product_id` → those are **ignored** (the row is an
-    unpublished draft with no Stripe ids); only allow-listed fields persist.
-16. **Coupon pagination:** `listCoupons` returns every owner-tagged sale even when many
-    system codes exist (no single-page truncation of real sales); the `owner_sale` filter still excludes
-    cart-recovery / newsletter codes.
-17. **Checkout never suggests a hidden product:** when a cart item is unavailable, the
-    reserve "related/alternatives" response (series-related + fallback) must contain **only** published,
-    non-archived, non-test rows — archive or unpublish a piece, then trigger the unavailable-item path,
-    and confirm it never appears as a suggested alternative (no dead/unbuyable links).
-18. **No publishing an archived piece:** publishing via a *stale* preview link (or by id)
-    for an archived product → **409** "resurface it first" (no split state where Stripe goes active while
-    `archived_at` is set). Unarchive, then publish → works.
-19. **Rotation stays buyable on a Stripe failure:** simulate `stripe.prices.create`
-    throwing mid-rotation (e.g. a bad key / forced error on a test product) → the request 502s, the DB is
-    **untouched** (`price` + `stripe_price_id` unchanged), and the product **remains buyable** at its old
-    price (its referenced Price is still `active`). On the success path, confirm the *old* Price ends
-    `active:false` **after** the DB points at the new one, and that an old-Price-deactivate failure (if it
-    occurs) does **not** fail the request (the product is buyable at the new price regardless).
-20. **Upload by URL — the GPT path:** `POST /api/upload` with a JSON body
-    `{url, slug, role}` pointing at a public **image** URL → 200 `{url, filename}`; the file lands on R2
-    (transformed/cropped per role) and the returned URL works in `images[]`. Same with an **MP4** URL +
-    `role: video-01`, `skip_transform: true` → streams as-is (no transform), 200. The **multipart** path
-    (admin UI / curl) still works unchanged.
-21. **Upload by URL — failure messaging:** a Google Drive **share-page** link (`…/file/d/<id>/view`)
-    → normalized to `uc?export=download&id=<id>` and fetched; a link that returns HTML / a non-allowed
-    type → **400** with the "share as a direct link" message (the GPT relays it); an over-cap file
-    (image > 10 MB / video > 50 MB) once fetched → **400** "File too large"; a JSON body missing
-    `url`/`slug`/`role` → **400**.
-22. **Refund reflects in order status:** on a **test** order, issue a **full** refund
-    from the Stripe dashboard → the `charge.refunded` event arrives and the order's `status` flips to
-    `refunded` (verify via `listOrders` / the order row); a **partial** refund logs but does **not**
-    change status; a duplicate `charge.refunded` delivery is de-duped by the existing idempotency claim
-    (no error, no double-write). (Requires `charge.refunded` enabled on the Stripe webhook endpoint —
-    on **both** the test-mode and live-mode endpoints; this test runs in test mode, so the test-mode
-    endpoint must have the event or it silently no-ops.)
-23. **Mark-sold + restock are immediate on a published piece:** on a PUBLISHED product, `editProduct
-    {available:false}` (GPT or admin) → the live row flips to sold **immediately** (no draft staged, no
-    preview, no publish step); `/shop` + the product page show it sold at once; the response carries
-    `availability_updated:true` and admin shows "Availability change is live now — nothing to publish"
-    with **no** Publish button; `editProduct {available:true}` re-lists it the same way. Likewise
-    `editProduct {quantity:N}` on a published row applies **immediately** (response `quantity_updated:true`,
-    no draft, no Publish button); `quantity:0` makes it unbuyable at checkout, a positive value restocks
-    it — all live. Confirm both are **change-detected**: re-sending the *unchanged* `available`/`quantity`
-    (as the admin's full payload does) does NOT report `*_updated` and does NOT set "edits pending." On an
-    UNPUBLISHED draft, `available`/`quantity` still apply to live columns directly (nothing live yet);
-    reject `quantity` that isn't a non-negative integer → 400, and a non-boolean `available` → 400.
-24. **Per-type create validation is extensible:** a `miniature` create enforces exactly the
-    current rules (≥1 hero + ≥5 gallery + thumbnail + the required scalar fields); an unknown/new
-    `product_type` falls back to the `miniature` ruleset (never un-validated). Confirm the `miniature`
-    error messages/behaviour match today (no regression — the same checks, now reported together via the
-    shared `validateProductRules`), and that adding a hypothetical `PRODUCT_TYPE_RULES` entry would
-    change only that type's minimums.
-25. **First-publish can't ship a malformed product:** create a valid unpublished draft, then
-    `editProduct` it into an invalid state (e.g. blank `story_card`, or set `images:[]`), then
-    `publishProduct` → **400** "Cannot publish — …" naming the missing fields/image minimums (same
-    messages as create, via the shared `validateProductRules`), and the product stays unpublished with
-    **no** Stripe object created. A well-formed draft still publishes 200 and creates the Stripe product.
-    Confirms create and first-publish are in lock-step (the edit path can't bypass create's rules).
-26. **Edit-publish can't ship a malformed product either:** take an already-**published**,
-    well-formed product; `editProduct` it to blank `story_card` (or set `images:[]`) — this STAGES a
-    `draft` (the live page is untouched); then `publishProduct` → **400** "Cannot publish — …" naming the
-    missing fields (same `validateProductRules` messages), and the **live row is unchanged** (still the
-    old, well-formed copy; draft + preview_token still present so she can fix the draft and re-publish).
-    Then fix the draft and publish → 200, live row updated. This is the branch Test #25 does NOT cover
-    (it exercises first-publish only); without it the edit-publish hole ships silently.
-27. **Re-opening a staged product in the admin and re-saving preserves the staged edits (staged-state
-    data-loss):** publish a well-formed product; stage a copy edit (e.g. `editProduct` sets a new
-    `headline`/`story_card` → a `draft` is written, live row untouched); then simulate the admin re-opening
-    it — `openEditor` populates the form from the `eff = {...product, ...draft}` overlay, so the form shows
-    the **staged** copy — and **Save** with no further change (the admin's `buildProductPayload` re-sends the
-    FULL payload, now carrying the staged values). Assert: the `draft` is **byte-identical** to before (the
-    staged headline survives — NOT reverted to live), the live row is unchanged, and the preview still shows
-    the staged copy. Then repeat the re-save while ALSO changing only `available` → same result (staged copy
-    preserved) plus the availability applies live. Without the live-compare (§3.4) + the overlay (§8.6) this
-    save silently clobbers the staged copy with the live value — a gap no prior test exercises (none
-    re-opens a staged row and re-saves).
-28. **The GPT can build on its own staged array edit:** on a published product, `editProduct`
-    stages a new `images` array (draft holds it); then, **before publishing**, getProduct → assert it
-    returns an `effective` block whose `images` is the staged array (and the top-level `images` is still the
-    live array); `editProduct` again with a COMPLETE `images` array built from `effective.images` (e.g. add
-    one more photo). Assert the resulting staged `images` contains **both** the first and second edits — the
-    earlier staged change is not dropped. Same for `media`. (Confirms callers edit the staged state via
-    `effective`, not the live top-level.)
+> **Moved to `v1_6_0_ADDENDUM_TESTING.md`.** The full verification plan — the static checks, the 28 live functionality tests, and the design + media test matrix — lives in the testing addendum (same version; always part of this build and every gap review). Functionality and design are tested the same way, on the dev preview, on production-grade placeholders (no real content required).
 
 ---
 
-# Part 3 — Design (push to executable where decided)
+# Part 3 — Design
 
-> Captured from `v1_5_0_FEEDBACK.md` + the product/shop page reads. The **two root-cause fixes (3.1)
-> are executable now**; the rest are decision-complete direction whose exact values get confirmed
-> against the live render. Hero + glow stay direction (Sean's hero spec pending).
-
-## 3.1 Two-column ROOT CAUSE — the "columns don't display" bug (EXECUTABLE)
-
-Both the product page and the shop set `grid-template-columns: 1fr` as an **inline style** on the layout div, which **overrides** the desktop two-column rule in the page's `<style>` block (inline beats a stylesheet selector). So both pages are permanently single-column on desktop. Fix = remove the inline `grid-template-columns` and let the `<style>` media-queries own it.
-
-`product.html` CURRENT (162):
-```html
-      <div class="product-layout" style="display: grid; gap: var(--space-2xl); grid-template-columns: 1fr; margin-top: var(--space-md);">
-```
-NEW:
-```html
-      <div class="product-layout" style="display: grid; gap: var(--space-2xl); margin-top: var(--space-md);">
-```
-
-`shop.html` CURRENT (164):
-```html
-        <div class="shop-layout" style="display: grid; gap: var(--space-xl); grid-template-columns: 1fr;">
-```
-NEW:
-```html
-        <div class="shop-layout" style="display: grid; gap: var(--space-xl);">
-```
-
-> The `<style>` blocks already define the desktop grids (`.product-layout` 1fr/360–400px at
-> ≥768/1024; `.shop-layout` 220–240px/1fr). The mobile default (single column) comes from CSS grid's
-> natural one-column flow when no `grid-template-columns` is set — confirm on the dev preview that
-> mobile still stacks (it should; a grid with no explicit columns is a single column).
-
-## 3.2 Product-page layout — restore the intended two-column + sticky (per FEEDBACK)
-
-This is the original two-column design that the 3.1 bug flattened, plus the element order from `v1_5_0_FEEDBACK.md`. Target:
-
-- **Left column:** featured image + clickable thumbnails → **story_card** → **MP4 video(s)** → YouTube (if any). All media optional except the featured image.
-- **Right column (sticky):** the buy **card** *and* the **details/features** section, so the BUY button + details follow the scroll.
-- **Mobile (one column):** featured images → **card** → story → media → details (card pulled up; not sticky).
-
-**Structure.** Make the blocks **direct children** of `.product-layout` (unwrap the current `.product-story` div, and move `.product-details` in from below the grid), and drive both layouts with `grid-template-areas` — that's what cleanly gives the desktop two-column *and* the mobile interleave where the card sits between images and story:
-
-```css
-.product-layout { display: grid; gap: var(--space-2xl); margin-top: var(--space-md);
-  grid-template-columns: 1fr;
-  grid-template-areas: "gallery" "card" "story" "media" "details"; }   /* mobile order */
-.product-layout > .product-gallery        { grid-area: gallery; }
-.product-layout > .product-sticky-card    { grid-area: card; }
-.product-layout > .story-card             { grid-area: story; }
-.product-layout > .product-gallery__media { grid-area: media; }
-.product-layout > .product-details        { grid-area: details; }
-@media (min-width: 768px) {
-  .product-layout { grid-template-columns: 1fr 380px;
-    grid-template-areas: "gallery card" "story card" "media details"; }
-  .product-layout > .product-sticky-card { align-self: start; } /* lets the existing sticky rule work in the grid */
-}
-```
-
-(The existing `.product-sticky-card { position: sticky; top: … }` at ≥768px, `styles.css:885–890`, supplies the stickiness — keep it.)
-
-**HTML moves** (string-anchored in the build): (1) unwrap `.product-story` so `.product-gallery` and `.story-card` are **direct children** of `.product-layout`; (2) lift `.product-gallery__media` out of `.product-gallery` to its own direct child **after** `.story-card`, order its children **video → YouTube**, and **delete the GIF `<img>`**; (3) move the `.product-details` section from below the grid to a direct child of `.product-layout`; (4) move `grid-template-columns` out of the inline style per 3.1. `product.js` targets data-attributes (`data-product-*`), so relocating the elements does **not** affect population.
-
-**Render check (not a blocker):** the sticky card keeps BUY in view down the page; details read well in the right column; the `.product-details` top margin/border may want trimming once it's in-column.
-
-## 3.3 Story card + media (executable)
-
-**Story card reads too small** because `.story-card` is the display serif, italic, at `--text-lg` (`styles.css:929–935`). Sean wants it to read like body copy:
-```css
-.story-card {
-  font-family: var(--font-body);
-  font-size: var(--text-lg);
-  line-height: var(--leading-loose);
-  color: var(--text-primary);
-  font-style: normal;
-}
-```
-(Keeps the blockquote framing — the `border-left` + `--color-cream` background are inline on the section; confirm the exact size on render.)
-
-**Media is data-driven** (Phase 7 `populateMedia` renders `p.media`; §1.1). The container swap (the static `.product-gallery__media` placeholder → an empty `[data-product-media]` div) **moved to Phase 7.2** (functionality, not the design slice), so it ships + is tested with `populateMedia`. What stays here (design) is the media **CSS** — MP4 respects its intrinsic ratio (no forced 16/9 black bars); YouTube embeds get 16/9:
-```css
-.product-gallery__media { display: grid; gap: var(--space-md); }
-.product-media__item video { width: 100%; height: auto; display: block; border-radius: var(--radius-md); }
-.product-media__item--embed { aspect-ratio: 16 / 9; }
-.product-media__item--embed iframe { width: 100%; height: 100%; border: 0; border-radius: var(--radius-md); }
-```
-**GIFs are out** — an MP4 `<video loop muted playsinline>` looks better and is smaller; convert with `ffmpeg -i input.gif -movflags +faststart -pix_fmt yuv420p output.mp4`. (The `gif-0[1-5]` upload roles in `ROLE_PATTERN` can be retired in a follow-up; harmless if left.)
-
-## 3.4 Shop filters → compact dropdowns (direction)
-
-After 3.1 the filters live in a real sidebar again. Sean wants them **compact** (dropdowns / `<details>`) instead of the always-open checkbox fieldsets (`shop.html:184–206`). Keep the `data-shop-filter` / `data-shop-sort` hooks so `shop.js` is untouched. (Design slice.)
-
-## 3.5 Desktop density (direction)
-
-Scale sizing down so cart / checkout / cards don't push content below the fold on desktop at smaller widths.
-
-## 3.6 Glow — "Firelight" ambient glow (planned; executable — tune colours on render)
-
-Decided last session: a warm bloom seeping inward from all four viewport edges (ref `assets/docs/archive/images/everlastings-website-red-glow.jpg` — strongest on the right there; we intensify + even it out). Fog-like: subtle scale "breathing", opacity drift, slow **clockwise** travel. One CSS custom property `--glow-color` is the only colour control; `--glow-intensity` tunes strength. Honors `prefers-reduced-motion`.
-
-**Build.** One fixed, non-interactive overlay behind content (add once per page — in the template before `</body>`, or inject from `main.js`):
-
-```css
-:root { --glow-color: 74, 25, 66; --glow-intensity: 0.5; } /* RGB triplet; page JS overrides */
-.firelight-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(120% 80% at 50% -10%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(120% 80% at 50% 110%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(80% 120% at -10% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
-    radial-gradient(80% 120% at 110% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%);
-  animation: glow-breathe 14s ease-in-out infinite; }
-.firelight-glow::before { content: ""; position: absolute; inset: -20%;
-  background: conic-gradient(from 0deg, transparent, rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)), transparent 60%);
-  animation: glow-rotate 40s linear infinite; }
-@keyframes glow-breathe { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
-@keyframes glow-rotate  { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .firelight-glow, .firelight-glow::before { animation: none; } }
-```
-
-Page content sits above it (the main wrapper gets `position: relative; z-index: 1` if needed). **Colour behaviour:** `main.js` sets `--glow-color` per context — page-themed, randomized across the gallery, and reflecting the featured / cart / checkout piece (seed the palette from `BRAND.md`). The exact RGB palette + intensity get **tuned against the live effect** (Sean's "palette-first") — that's the one render step; the mechanism above is the plan. Deferred: a per-product `accent_color` column feeding `--glow-color`.
-
-## 3.7 Hero (Open — Sean's spec pending)
-
-Animated layered homepage hero with Sean's video. Build path (CSS layering vs. Hyperframe) TBD — Sean writes a design spec after studying the glow ref. `.hero__media` already supports `<video>` (`styles.css:953–958`).
-
-## 3.8 Content-gated (revisit once real images/copy land)
-
-Entry/landing sizing sanity pass; replace the product-page Rickroll placeholder YouTube id (`product.html:252`) with real footage; a design feedback round once real imagery is in.
+> **Moved to `v1_6_0_ADDENDUM_DESIGN.md`.** The presentation layer — the columns-bug fix, the product-page two-column + sticky layout, story-card + media CSS, shop-filter dropdowns, desktop density, the "Firelight" ambient glow, and the animated hero (assets already live on the CDN) — lives in the design addendum (same version; always part of this build and every gap review). Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, the GPT schema) stays in Part 2 above. Design is built and validated exactly like functionality (see `v1_6_0_ADDENDUM_TESTING.md`); render-tuned aesthetics ship with defaults + a render-tune pass. The broader interactive-homepage vision is the separate **v3.0.0** initiative (`assets/docs/archive/v3_0/`).
 
 ---
 
@@ -3866,7 +3626,7 @@ Entry/landing sizing sanity pass; replace the product-page Rickroll placeholder 
 
 # Gap-review & validation plan
 
-The gap-review gate runs angles **A / B / C** against this doc + `EVERLASTINGS_STORE.md`, **reviewing the entire executable plan (Parts 1–3, every phase)** — not just the functionality phases. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_6_0_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate).
+The gap-review gate runs angles **A / B / C** against this doc + its addendums (`v1_6_0_ADDENDUM_DESIGN.md`, `v1_6_0_ADDENDUM_TESTING.md`) + `EVERLASTINGS_STORE.md`, **reviewing the entire build — every phase and every addendum** — not just the functionality phases. The full process, sequencing, the reviewer landmines, and the per-angle prompts live in the single source **`v1_6_0_REVIEW_PROMPTS.md`** (adapted from `.agent/DEV_RULES.md` §gap-gate).
 
 - **A — cold / out-of-repo (holistic self-containment + completeness). CLOSED.** Ran 9 passes (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`), each folded → v1.5.2 … v1.5.9; the 9th returned **READY TO BUILD**. Its 6 polish findings are folded into this v1.6.0.
 - **B (fidelity) + C (integration) — in repo, run in PARALLEL (CURRENT round).** Orthogonal angles. Fold both → bump the doc (v1.6.1, v1.6.2, …); re-run an angle only if it finds something load-bearing.
@@ -3876,10 +3636,10 @@ The gap-review gate runs angles **A / B / C** against this doc + `EVERLASTINGS_S
 
 # Open items
 
-- **Hero spec (3.7)** — Sean to write (CSS vs. Hyperframe); ignore until then.
-- **Render-tune (not blockers):** story-card exact size (3.3); glow palette + intensity (3.6); product-page sticky behaviour + `.product-details` spacing after the reflow (3.2).
+- **Hero (D7, `v1_6_0_ADDENDUM_DESIGN.md`)** — specced; the mp4 + poster are **live on the CDN**. Richer treatment options (frosted panel / Hyperframe / spotlight tuning) are a design-test-phase call, not a blocker.
+- **Render-tune (not blockers, all in `v1_6_0_ADDENDUM_DESIGN.md`):** story-card exact size (D3); glow palette + intensity (D6); desktop density (D5); product-page sticky behaviour + `.product-details` spacing after the reflow (D2); hero spotlight/overlay strength (D7).
 - **Deferred (post-launch, data-gated):** enable the `pg_cron` archive/draft **purge** (Phase 1 ships it commented) once active-list size warrants it; an optional admin **"hide archived"** filter (the archived pill already ships, 8.8).
-- **Known limitations (noted, not blocking):** no granular per-photo edit — the GPT resends the full `images` array, and a removed photo's R2 object lingers (harmless). The preview page's cart/buy controls are now **disabled + relabeled "Preview only"** on a preview load (so an edit-preview of a published piece can't transact at the live price under the "not yet live" banner); only the full **visual** treatment (styling of that disabled state) remains a Part 3 design-slice call.
+- **Known limitations (noted, not blocking):** no granular per-photo edit — the GPT resends the full `images` array, and a removed photo's R2 object lingers (harmless). The preview page's cart/buy controls are now **disabled + relabeled "Preview only"** on a preview load (so an edit-preview of a published piece can't transact at the live price under the "not yet live" banner); only the full **visual** treatment (styling of that disabled state) remains a design-addendum styling call.
 - **Resolved (`available` + `quantity` now apply live):** the prior known-edge — a *stale* `available:true` in a pending draft re-raising a sold piece on publish — **no longer applies on a published row**, because `available` is now applied LIVE immediately and never staged into the draft (it can't sit stale). `available` only flows through the draft on a still-*unpublished* product, where there's no live row to contradict. So the timestamp-aware clamp is no longer needed; Archive remains the instant full takedown.
 - **Resolved proactively (`quantity` made live before it could bite):** `quantity` gates purchasability identically to `available` (`checkout.ts:79` `(quantity ?? 0) < 1`), so staging it would reintroduce the same oversell/stale-stock trap once a **multi-quantity** `product_type` (e.g. `printable`/ `storybook`) ships. It's **latent today** (only the qty-1 `miniature` type exists, where `available` does the work and the webhook only flips `available:false` — it does **not** yet decrement `quantity`), but `quantity` is applied LIVE on edit alongside `available` now, so the next product-type add can't silently ship the staging trap. (Owner decision, v1.5.6.)
 - **Deferred (wire when a multi-qty `product_type` ships):** the purchase webhook (`webhook.ts:128`) currently sets `available:false` but does **not** decrement `quantity` — fine while every product is qty-1. When a multi-quantity type ships, the webhook must decrement `quantity` per purchased line and set `available:false` when it hits 0; until then a multi-qty piece's stock count wouldn't fall on its own. Out of scope for v1.5 (no multi-qty type exists yet); flagged so it's wired with the first one.
