@@ -73,6 +73,97 @@ Across these six test posts are a variety of images and videos. These have been 
 
 ---
 
+## Workflow
+
+### Clip 1 — "A whole store, run by chat" (GPT screen)
+
+  + [ ] **R1 · Recon.** 
+    - "Show me everything that's live in the shop right now." 
+    - → it calls **listProducts** and reads back the current placeholder pieces. 
+    - *(Good opening beat: the GPT can see the store.)*
+
+  + [ ] **R2 · Clear the placeholders.** 
+    - "These are all old test pieces with placeholder images — take them all down." 
+    - → it **archives each** (loops `archiveProduct`). Verify they leave the shop. 
+    - Nice line to say on camera: it's *archive, not delete* — reversible, nothing is ever destroyed. 
+    - *(If it's slow at bulk, name a few or say "archive every product that's currently live.")*
+
+  + [ ] **R3 · Add the first piece, live.** 
+    - Paste Piece 1's **opening line**, then its **details** when asked; give 7 photos; open the preview it returns; say **"publish."** 
+    - **Expect:** it writes the copy in Em's voice, never exposes slug/cents/jargon, speaks dollars 
+    - Hands a **preview link** (a draft), and publishing makes it live + purchasable (creates the Stripe listing). 
+    - **This is your hero sequence — raw words in, a finished product page out.**
+
+  + [ ] **R4 · Add the rest (2–6).** 
+    - Work through Pieces 2–6 — mix "let it write" with pasting finished copy to keep pace. 
+    - For each, give photos and, when asked, the **video behavior** in plain words (see each piece). 
+    - This is where the **media variants** get proven:
+    - 2 GIF-like MP4 · 3 click-to-play MP4 + poster · 4 two MP4s in order · 5 MP4-then-YouTube · 6 YouTube only · 1 images-only.
+
+  + [ ] **R5 · The slug edge (optional, great detail).** 
+    - Create **"Em's Lavender & Sage"**, then later say "edit the Lavender Sage piece, set it to $110." 
+    - **Expect:** if the direct lookup misses, it **lists and matches your wording** rather than saying "couldn't find it."
+
+  + [ ] **R6 · A few edits, live vs. staged.** 
+    - "Set The Lantern Keeper's Cottage to $289" 
+    - → **live immediately**. "Mark The Tide Library sold" 
+    - → **live**. "We made 3 more of the Reading Hour" 
+    - → **live** (qty 3). "Change the Cottage headline to 'Someone left the light on for you'" 
+    - → **stages** a draft + preview link → "publish that." 
+    - **Expect:** price/availability/quantity apply instantly; copy stages until you publish.
+
+  + [ ] **R7 · The lingering-draft heads-up (the subtle one).** 
+    - Stage a copy edit on a piece (don't publish), then "set its price to $300." 
+    - **Expect:** the price goes live **and** it flags you still have unpublished copy edits — offers to publish or discard. 
+    - *(Verify it actually mentions the leftover draft.)*
+
+  + [ ] **R8 · A coupon.** 
+    - "Make a code for 20% off everything this weekend." 
+    - → it creates it and reads the code back. Then "what sales are running?" 
+    - → lists code + scope. 
+    - *(Try "buy-one-get-one?" → it should decline; Stripe can't do buy-N.)*
+
+  + [ ] **R9 · Show the result.** 
+    - "What's live now?" → **listProducts** shows the real, finished store. 
+    - Clean transition point to the website.
+
+### Clip 2 — "The storefront" (website)
+
+  + [ ] **R10 · The shop.** 
+    - Open the dev-preview site. 
+    - Show the shop full of the new pieces — real images, the featured carousel, the collections.
+
+  + [ ] **R11 · Media variants rendering.** 
+    - Open a few product pages to show the dynamic media: the **Reading Hour** auto-looping silently 
+    - **First Snow** click-to-play with its poster, **The Tide Library** with two clips, 
+    - **The Clockmaker's Window** (MP4 then YouTube), **The Night Train** (embed only), 
+    - **the Cottage** with no media section at all. 
+    - *(This is the "it shows only what's there" proof.)*
+
+  + [ ] **R12 · Checkout.** 
+    - Buy 1–2 pieces with the Stripe test card `4242 4242 4242 4242` (any future expiry/CVC/ZIP). 
+    - Complete the purchase through to the `/complete` page. 
+    - *(Use an email that's yours — you'll ship to it next.)*
+
+### Clip 3 — "Fulfillment, by chat" (GPT screen)
+
+  + [ ] **R13 · Orders.** 
+    - "What orders need shipping?" 
+    - → **listOrders** reads back your fresh purchase(s) plainly (who, what, address, total).
+
+  + [ ] **R14 · Ship it + close the loop.** 
+    - "Mark that one shipped — it went out with the post office, tracking 9400 1112 2233 4455 6677 88." 
+    - **Expect:** it normalizes "post office" → USPS, **confirms before sending** 
+    - ("Mark <piece> shipped via USPS <tracking> and email <buyer>?"), 
+    - then on your yes marks it shipped and the **buyer (you) gets the tracking email.** 
+
+  + [ ] **R15 · Refund walk-through (optional).** 
+    - "I need to refund the customer who bought The Reading Hour." 
+    - **Expect:** it can't issue refunds — it walks you through the Stripe dashboard 
+    - (and may web-search to confirm current steps), and notes a refund doesn't auto-relist.
+
+---
+
 ## 1. The Lantern Keeper's Cottage
 
 ### Details 
@@ -348,35 +439,6 @@ A small country railway platform, late, the last train of the night just arrivin
 
   - Slug edge: a quick piece titled **"Em's Lavender & Sage"** (a pressed-flower shadow box, $96, qty 1, Seasonal) — the point is the apostrophe + ampersand.
   - Prepared edits: Piece 1 new headline → **"Someone left the light on for you"**; price changes $289 / $300; restock qty → 3.
-
----
-
-## Other Chat Tests
-
-### Clip 1 — "A whole store, run by chat" (GPT screen)
-
-- [ ] **R1 · Recon.** "Show me everything that's live in the shop right now." → it calls **listProducts** and reads back the current placeholder pieces. *(Good opening beat: the GPT can see the store.)*
-- [ ] **R2 · Clear the placeholders.** "These are all old test pieces with placeholder images — take them all down." → it **archives each** (loops `archiveProduct`). Verify they leave the shop. Nice line to say on camera: it's *archive, not delete* — reversible, nothing is ever destroyed. *(If it's slow at bulk, name a few or say "archive every product that's currently live.")*
-- [ ] **R3 · Add the first piece, live.** Paste Piece 1's **opening line**, then its **details** when asked; give 7 photos; open the preview it returns; say **"publish."** **Expect:** it writes the copy in Em's voice, never exposes slug/cents/jargon, speaks dollars, hands a **preview link** (a draft), and publishing makes it live + purchasable (creates the Stripe listing). **This is your hero sequence — raw words in, a finished product page out.**
-- [ ] **R4 · Add the rest (2–6).** Work through Pieces 2–6 — mix "let it write" with pasting finished copy to keep pace. For each, give photos and, when asked, the **video behavior** in plain words (see each piece). This is where the **media variants** get proven:
-  - 2 GIF-like MP4 · 3 click-to-play MP4 + poster · 4 two MP4s in order · 5 MP4-then-YouTube · 6 YouTube only · 1 images-only.
-- [ ] **R5 · The slug edge (optional, great detail).** Create **"Em's Lavender & Sage"**, then later say "edit the Lavender Sage piece, set it to $110." **Expect:** if the direct lookup misses, it **lists and matches your wording** rather than saying "couldn't find it."
-- [ ] **R6 · A few edits, live vs. staged.** "Set The Lantern Keeper's Cottage to $289" → **live immediately**. "Mark The Tide Library sold" → **live**. "We made 3 more of the Reading Hour" → **live** (qty 3). "Change the Cottage headline to 'Someone left the light on for you'" → **stages** a draft + preview link → "publish that." **Expect:** price/availability/quantity apply instantly; copy stages until you publish.
-- [ ] **R7 · The lingering-draft heads-up (the subtle one).** Stage a copy edit on a piece (don't publish), then "set its price to $300." **Expect:** the price goes live **and** it flags you still have unpublished copy edits — offers to publish or discard. *(Verify it actually mentions the leftover draft.)*
-- [ ] **R8 · A coupon.** "Make a code for 20% off everything this weekend." → it creates it and reads the code back. Then "what sales are running?" → lists code + scope. *(Try "buy-one-get-one?" → it should decline; Stripe can't do buy-N.)*
-- [ ] **R9 · Show the result.** "What's live now?" → **listProducts** shows the real, finished store. Clean transition point to the website.
-
-### Clip 2 — "The storefront" (website)
-
-- [ ] **R10 · The shop.** Open the dev-preview site. Show the shop full of the new pieces — real images, the featured carousel, the collections.
-- [ ] **R11 · Media variants rendering.** Open a few product pages to show the dynamic media: the **Reading Hour** auto-looping silently, **First Snow** click-to-play with its poster, **The Tide Library** with two clips, **The Clockmaker's Window** (MP4 then YouTube), **The Night Train** (embed only), and **the Cottage** with no media section at all. *(This is the "it shows only what's there" proof.)*
-- [ ] **R12 · Checkout.** Buy 1–2 pieces with the Stripe test card `4242 4242 4242 4242` (any future expiry/CVC/ZIP). Complete the purchase through to the `/complete` page. *(Use an email that's yours — you'll ship to it next.)*
-
-### Clip 3 — "Fulfillment, by chat" (GPT screen)
-
-- [ ] **R13 · Orders.** "What orders need shipping?" → **listOrders** reads back your fresh purchase(s) plainly (who, what, address, total).
-- [ ] **R14 · Ship it + close the loop.** "Mark that one shipped — it went out with the post office, tracking 9400 1112 2233 4455 6677 88." **Expect:** it normalizes "post office" → USPS, **confirms before sending** ("Mark <piece> shipped via USPS <tracking> and email <buyer>?"), then on your yes marks it shipped and the **buyer (you) gets the tracking email.** The full loop, by chat.
-- [ ] **R15 · Refund walk-through (optional).** "I need to refund the customer who bought The Reading Hour." **Expect:** it can't issue refunds — it walks you through the Stripe dashboard (and may web-search to confirm current steps), and notes a refund doesn't auto-relist.
 
 ---
 
