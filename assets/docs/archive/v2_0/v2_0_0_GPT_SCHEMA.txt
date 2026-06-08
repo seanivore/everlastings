@@ -1,0 +1,336 @@
+openapi: 3.1.0
+info:
+  title: Everlastings Store API
+  description: Create products, upload media, and fulfill orders on everlastingsbyemaline.com.
+  version: 1.2.0
+servers:
+  - url: https://everlastingsbyemaline.com
+paths:
+  /api/products:
+    post:
+      operationId: createProduct
+      summary: Create a new product as a draft (no Stripe yet). The response includes preview_url; publishProduct is what creates the Stripe listing and makes it live.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, headline, story_card, description, price, product_type, slug, images, thumbnail]
+              properties:
+                title: { type: string }
+                slug: { type: string, description: "URL-safe handle you derive from the title (lowercase, spaces→hyphens, strip anything not a-z0-9-, collapse repeats) and reuse for every uploadImage call. Required because photos upload before the row exists. The server normalizes it again; it's permanent after creation." }
+                headline: { type: string }
+                story_card: { type: string }
+                description: { type: string }
+                features: { type: array, items: { type: string } }
+                price: { type: integer, description: Price in cents. }
+                dimensions: { type: string }
+                weight: { type: string }
+                materials: { type: array, items: { type: string } }
+                power_supply: { type: string }
+                care_instructions: { type: array, items: { type: string } }
+                shipping_details: { type: array, items: { type: string } }
+                product_type: { type: string, enum: [miniature] }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\"." }
+                available: { type: boolean }
+                quantity: { type: integer }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel." }
+                artist_note: { type: string }
+                images:
+                  type: array
+                  items:
+                    type: object
+                    required: [url]
+                    properties:
+                      url: { type: string }
+                      alt: { type: string }
+                media:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, url]
+                    properties:
+                      type: { type: string, enum: [video, youtube], description: "video = an MP4 you uploaded (the usual); youtube = a YouTube link (rare)." }
+                      url: { type: string, description: "MP4 CDN URL (from uploadImage role video-0x) or a YouTube link." }
+                      alt: { type: string }
+                      loop: { type: boolean, description: "Replay automatically — true for a GIF-like clip." }
+                      autoplay: { type: boolean, description: "Start on its own (always silent — autoplay must be muted). true = GIF-like; false/omit = she presses play." }
+                      controls: { type: boolean, description: "Show play/volume buttons. true or omit = normal click-to-play; false = GIF-like, no buttons." }
+                      poster: { type: string, description: "Optional still-frame image URL shown before a click-to-play video starts." }
+                thumbnail: { type: string }
+                seo_title: { type: string }
+                seo_description: { type: string }
+                seo_thumbnail: { type: string }
+                checkout_name: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_description: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_image: { type: string, description: "Editable only before first publish (frozen after)." }
+      responses:
+        '200': { description: Draft created; returns preview_url. }
+    get:
+      operationId: listProducts
+      summary: List all products with their status (live, draft, live-with-edits-pending, or archived). Use this to find a product (and its id) before editing, and to tell Em what is live vs still a draft vs archived. Read is_published + draft + archived_at to report status.
+      responses:
+        '200':
+          description: Products list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      description: "A product row. Read these to find a piece, report its status, and scope a coupon: id (UUID — pass to editProduct/publishProduct/archiveProduct/createCoupon), slug, title, price (cents), available, quantity, is_published, archived_at, draft (non-null = edits pending), stripe_product_id (needed to scope a coupon to ONE piece — only present once published)."
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        price: { type: integer }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        is_published: { type: boolean }
+                        archived_at: { type: string }
+                        draft: { type: object }
+                        stripe_product_id: { type: string }
+    put:
+      operationId: editProduct
+      summary: Stage edits. On a published product, copy/SEO/photo changes stage a draft to preview (publish applies them); price, availability, and quantity apply live immediately (a price change rotates the Stripe price, same product/URL). checkout_* freeze after publish; for a temp discount, make a coupon.
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                headline: { type: string }
+                story_card: { type: string }
+                features: { type: array, items: { type: string } }
+                dimensions: { type: string }
+                weight: { type: string }
+                materials: { type: array, items: { type: string } }
+                power_supply: { type: string }
+                care_instructions: { type: array, items: { type: string } }
+                shipping_details: { type: array, items: { type: string } }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\". Stages like copy on a published piece — publish to apply." }
+                product_type: { type: string, enum: [miniature] }
+                artist_note: { type: string }
+                quantity: { type: integer }
+                available: { type: boolean }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel. Stages like copy on a published piece — publish to apply." }
+                thumbnail: { type: string }
+                thumbnail_alt: { type: string }
+                images: { type: array, items: { type: object, properties: { url: { type: string }, alt: { type: string } } } }
+                media:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, url]
+                    properties:
+                      type: { type: string, enum: [video, youtube], description: "video = an MP4 you uploaded (the usual); youtube = a YouTube link (rare)." }
+                      url: { type: string, description: "MP4 CDN URL (from uploadImage role video-0x) or a YouTube link." }
+                      alt: { type: string }
+                      loop: { type: boolean, description: "Replay automatically — true for a GIF-like clip." }
+                      autoplay: { type: boolean, description: "Start on its own (always silent — autoplay must be muted). true = GIF-like; false/omit = she presses play." }
+                      controls: { type: boolean, description: "Show play/volume buttons. true or omit = normal click-to-play; false = GIF-like, no buttons." }
+                      poster: { type: string, description: "Optional still-frame image URL shown before a click-to-play video starts." }
+                seo_title: { type: string }
+                seo_description: { type: string }
+                seo_thumbnail: { type: string }
+                price: { type: integer, description: "Price in CENTS — editable anytime. On a published product a change ROTATES the Stripe price and goes live immediately (same product/URL); no need to publish a price change." }
+                checkout_name: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_description: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_image: { type: string, description: "Editable only before first publish (frozen after)." }
+      responses:
+        '200': { description: Draft staged; returns preview_url. }
+  /api/products/publish:
+    post:
+      operationId: publishProduct
+      summary: Publish a product (or apply staged edits). For a new product this creates the Stripe product/price and makes it live.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Published; returns the live url. }
+  /api/products/archive:
+    post:
+      operationId: archiveProduct
+      summary: Remove a product from the store (reversible). Hides it from the shop + feed and archives it in Stripe; it stays findable and can be resurfaced. Use this to take a piece down — there is no hard delete.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Archived. }
+  /api/products/unarchive:
+    post:
+      operationId: unarchiveProduct
+      summary: Bring an archived product back into the store (reverses archiveProduct).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Resurfaced. }
+  /api/products/discard:
+    post:
+      operationId: discardEdits
+      summary: Scrap a published product's pending (staged) edits without publishing them — the inverse of publish. The live page is left exactly as it is. Use when she changes her mind about edits she previewed. Only for a published product with edits pending; to drop a brand-new draft, archive it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Pending edits discarded; the live product is unchanged. }
+  /api/coupons:
+    post:
+      operationId: createCoupon
+      summary: Create a discount — a Stripe Coupon plus a shareable Promotion Code. Percent or amount off; optional product scope, minimum order amount, expiry, redemption cap. No buy-N/BOGO.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, value]
+              properties:
+                type: { type: string, enum: [percent, amount], description: percent off, or a fixed amount off in CENTS. }
+                value: { type: number, description: "percent (1–100) or amount in cents (e.g. 500 = $5)." }
+                code: { type: string, description: The shareable code, e.g. HOLIDAY20. Optional — Stripe generates one if omitted. }
+                product_ids: { type: array, items: { type: string }, description: "Stripe product IDs (the stripe_product_id field from listProducts — NOT the Supabase id) to limit the discount to. Omit for store-wide." }
+                min_amount: { type: integer, description: Minimum order total in cents to qualify. Optional. }
+                expires_at: { type: integer, description: Unix timestamp when the code expires. Optional. }
+                max_redemptions: { type: integer, description: Max total redemptions. Optional. }
+      responses:
+        '200': { description: Coupon created; returns the code. }
+    get:
+      operationId: listCoupons
+      summary: List active discounts (codes, percent/amount off, redemptions, expiry) so you can tell Em what's running and end one.
+      responses:
+        '200': { description: Active coupons. }
+  /api/coupons/deactivate:
+    post:
+      operationId: deactivateCoupon
+      summary: End a discount now — deactivates the promotion code so it stops working. Existing orders keep their history.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: The shareable code to end, e.g. HOLIDAY20. }
+      responses:
+        '200': { description: Coupon deactivated. }
+  /api/products/by-slug/{slug}:
+    get:
+      operationId: getProduct
+      summary: Get ONE product (live or draft) by its slug, with full current values — use this when she names a specific piece, instead of listing everything. When the row has pending preview state it also returns a ready-to-share preview_url (origin-correct).
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "The product (full row, incl. is_published + any staged draft), plus preview_url when a preview_token exists (relay this link; do not build a URL by hand)." }
+  /api/upload:
+    post:
+      operationId: uploadImage
+      summary: "Upload a photo or video to the store's CDN and return its url; call it for every image/video before createProduct/editProduct, then put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, slug, role]
+              properties:
+                url: { type: string, description: "A link to the image/video — a Google Drive share link ('anyone with the link') or a direct file URL. The server downloads it." }
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the file on the CDN." }
+                role: { type: string, description: "What this media is: hero, thumbnail, gallery-01..15, detail-01..05, video-01..05, checkout_image (Stripe 1:1), or seo_thumbnail (1.91:1 OG card)." }
+                skip_transform: { type: boolean, description: "true for videos and GIFs (uploaded as-is, no crop). Leave off / false for photos so they're cropped + web-optimized." }
+      responses:
+        '200': { description: "Uploaded; returns { url, filename }. Use url verbatim in the product fields." }
+        '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
+  /api/orders:
+    get:
+      operationId: listOrders
+      summary: List orders for fulfillment. Optional status filter and free-text search.
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [needs_shipping, shipped] }
+          description: Filter to orders awaiting shipping or already shipped.
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search by order id, customer email, or tracking number.
+      responses:
+        '200':
+          description: Orders list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders: { type: array, items: { type: object } }
+  /api/orders/{id}:
+    patch:
+      operationId: markShipped
+      summary: Record a tracking number + carrier on an order and email the buyer automatically.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: The order UUID (from listOrders).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tracking_number, tracking_carrier]
+              properties:
+                tracking_number: { type: string }
+                tracking_carrier: { type: string, enum: [USPS, UPS, FedEx, DHL] }
+      responses:
+        '200':
+          description: Tracking recorded; buyer notified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  email_sent: { type: boolean }
