@@ -3,29 +3,14 @@
 **Angle A is CLOSED** — the holistic out-of-repo loop ran 9 cold passes and the 9th (`assets/docs/archive/v1_5/v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD**; its 6 polish findings are folded into `v1_6_1_IMPLEMENT.md`. This round runs **B (fidelity)** and **C (integration)**, both against the build = `assets/docs/archive/v1_6/v1_6_1_IMPLEMENT.md` **plus its same-version addendums** `v1_6_1_ADDENDUM_DESIGN.md` (presentation) + `v1_6_1_ADDENDUM_TESTING.md` (verification). **The three are one build; every addendum is always in scope** — review them together. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per angle** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
-> **The product North Star is: minimize the owner's friction to manage her entire digital product — the
-> site, the store, and her sales — by offloading the work to her Custom GPT.** Em runs everything by
-> chatting with the GPT (OpenAI web / iOS / Android); the GPT should be able to do anything a capable
-> agent (e.g. Claude Code with skills + MCPs) could do on her behalf. **Judge every gap against this**,
-> not against whether the two documents are internally consistent — a capability can read as "covered"
-> in the docs yet be undriveable by the GPT in practice (as the photo-upload path was before v1.5.5: it
-> was asserted, but `/api/upload` was multipart-only and no `uploadImage` Action existed, so Em could
-> not actually do it by chat). For each capability ask: **"can Em do this by chatting with the GPT, with
-> the least friction — and if not, does the plan say so honestly and give the lowest-friction path?"**
-> The one structural limit to hold reviewers to: a Custom GPT **Action** sends JSON and cannot forward a
-> file pasted into the ChatGPT thread (Code Interpreter has no network) — so media must arrive by
-> **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
-> finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
+> **The product North Star is: minimize the owner's friction to manage her entire digital product — the site, the store, and her sales — by offloading the work to her Custom GPT.** Em runs everything by chatting with the GPT (OpenAI web / iOS / Android); the GPT should be able to do anything a capable agent (e.g. Claude Code with skills + MCPs) could do on her behalf. **Judge every gap against this**, not against whether the two documents are internally consistent — a capability can read as "covered" in the docs yet be undriveable by the GPT in practice (as the photo-upload path was before v1.5.5: it was asserted, but `/api/upload` was multipart-only and no `uploadImage` Action existed, so Em could not actually do it by chat). For each capability ask: **"can Em do this by chatting with the GPT, with the least friction — and if not, does the plan say so honestly and give the lowest-friction path?"** The one structural limit to hold reviewers to: a Custom GPT **Action** sends JSON and cannot forward a file pasted into the ChatGPT thread (Code Interpreter has no network) — so media must arrive by **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
 > ## Review mandate — broader than the North Star (don't let the lens shrink the scope)
 > The North Star above is the **primary** lens for the *functionality* thesis — but it is **NOT** the filter for what counts as a gap. Every reviewer must ALSO catch, across the **whole build** (functionality + design + general feedback), anything **not truly exclusively-executable**, any **unvalidated assumption**, and any **design-correctness** failure — the **columns-bug class**: a spec that *applies* cleanly but *renders wrong or incomplete* (e.g. removing an inline style assuming a stylesheet rule takes over — does that rule exist and win the cascade?). The closed Angle-A READY verdict was **North-Star-scoped** (the store is chat-drivable); it did **not** certify whole-build executability or the design additions. **Caution:** do NOT re-litigate the *closed functionality A-loop's* settled polish (the 9th-A warned that re-looping it manufactures blockers) — this mandate targets the new design/general-feedback material and whole-build executability, not a re-run of A.
 
 > **Angle A ran 9 cold passes and is closed.** Passes 1–9 (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`) each came back NARROW and were folded → v1.5.2 … v1.5.9; convergence was narrowing but **non-monotonic** (a fold sometimes introduced the next finding — e.g. pass 8's data-loss bug came from pass 7's own effective-compare fix). The **9th pass returned READY TO BUILD**: no architecture gap, no missing chat capability, no data-loss regression; landmines 7–30 confirmed holding against quoted code. Its **6 polish findings are folded into `v1_6_1_IMPLEMENT.md`** and recorded as **landmines #31–36** below — B and C should confirm those hold, not re-litigate the closed A trail. The full per-pass detail lives in the `v1_5_*_GAP_REVIEW_A.md` archive.
 
-> **Before the B/C round:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) was run against `v1_6_1_IMPLEMENT.md` after
-> the 6-finding fold to confirm no fold introduced a regression (the non-monotonic trap). Subagents are
-> pre-gate breadth — never the gate itself; per DEV_RULES.
+> **Before the B/C round:** a fast in-house **subagent breadth pass** (owner-journey completeness + integration/state-machine, **through the review lens above**) was run against `v1_6_1_IMPLEMENT.md` after the 6-finding fold to confirm no fold introduced a regression (the non-monotonic trap). Subagents are pre-gate breadth — never the gate itself; per DEV_RULES.
 
 ## Sequencing (per Sean's gap-review flow)
 
@@ -86,172 +71,55 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 > **A is closed — do not run this round.** The charter below is preserved for the record (and for any future cold-A on a later initiative). It ran 9 times against `v1_5_*_IMPLEMENT.md`; the 9th (`v1_5_9_GAP_REVIEW_A.md`) returned READY TO BUILD and its 6 findings are folded into `v1_6_1_IMPLEMENT.md` (landmines #31–36). The active round is **B + C** below.
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-your only output is findings (write them to v1_5_9_GAP_REVIEW_A.md, or print the full file contents
-if you have no filesystem).
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything — your only output is findings (write them to v1_5_9_GAP_REVIEW_A.md, or print the full file contents if you have no filesystem).
 
 THE REVIEW LENS (judge every gap against this, not against doc-internal consistency)
-- North Star: minimize the owner's friction to manage her ENTIRE digital product — site, store, sales —
-  by offloading to her Custom GPT. Em does everything by chatting with the GPT (OpenAI web/iOS/Android);
-  the GPT should be able to do what a capable agent (Claude Code + skills/MCPs) could do for her.
-- For each capability ask "can Em do this by chat, with the least friction — and if not, does the plan
-  say so honestly with the lowest-friction path?" A capability that reads as covered in the docs but
-  can't actually be triggered by the GPT is a REAL gap.
-- Structural limit to hold the plan to: a Custom GPT Action sends JSON and CANNOT forward a file pasted
-  into the chat (Code Interpreter has no network) → media arrives by LINK (the GPT fetches a Drive/direct
-  URL); the GPT asks for a link when a file is pasted.
+- North Star: minimize the owner's friction to manage her ENTIRE digital product — site, store, sales — by offloading to her Custom GPT. Em does everything by chatting with the GPT (OpenAI web/iOS/Android); the GPT should be able to do what a capable agent (Claude Code + skills/MCPs) could do for her.
+- For each capability ask "can Em do this by chat, with the least friction — and if not, does the plan say so honestly with the lowest-friction path?" A capability that reads as covered in the docs but can't actually be triggered by the GPT is a REAL gap.
+- Structural limit to hold the plan to: a Custom GPT Action sends JSON and CANNOT forward a file pasted into the chat (Code Interpreter has no network) → media arrives by LINK (the GPT fetches a Drive/direct URL); the GPT asks for a link when a file is pasted.
 
 CONTEXT
-- You are given TWO documents and NO repository: (1) v1_5_9_IMPLEMENT.md — a single living plan a
-  FRESH agent will execute against the repo, then test on the dev preview; it is meant to be
-  "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so
-  the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the
-  store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
-- This is the NINTH A-pass; the plan has absorbed eight prior ones. The 8th was NEEDS-ANOTHER-PASS but
-  NARROW (no architecture gap, store fully chat-drivable): it found one real **data-loss regression** that a
-  prior fold had introduced — the 7th-A change-detect compared a draftable field against its *effective*
-  (staged-or-live) value, but the admin form reads LIVE columns, so re-saving a row with a staged draft
-  re-staged the live value over the staged one and wiped pending edits (RANK 1) — plus the same root cause
-  on the chat path (the GPT rebuilding a full array from live, RANK 2) and one import anchor (RANK 3). All
-  folded into v1.5.9: change-detect now compares against LIVE; the admin `openEditor` overlays the draft;
-  `getProduct` returns an `effective` view; webhook.ts's Stripe import is anchored. Landmines 7-30 are
-  the most recent fixes/changes — confirm they hold rather than re-raising the originals.
+- You are given TWO documents and NO repository: (1) v1_5_9_IMPLEMENT.md — a single living plan a FRESH agent will execute against the repo, then test on the dev preview; it is meant to be "exclusively executable" (it embeds the exact current code and exact replacement for every edit, so the builder only LOCATES and APPLIES — never DISCOVERS or DECIDES). (2) EVERLASTINGS_STORE.md — the store's architecture/state doc, so you can judge whether the plan covers everything the store needs.
+- This is the NINTH A-pass; the plan has absorbed eight prior ones. The 8th was NEEDS-ANOTHER-PASS but NARROW (no architecture gap, store fully chat-drivable): it found one real **data-loss regression** that a prior fold had introduced — the 7th-A change-detect compared a draftable field against its *effective* (staged-or-live) value, but the admin form reads LIVE columns, so re-saving a row with a staged draft re-staged the live value over the staged one and wiped pending edits (RANK 1) — plus the same root cause on the chat path (the GPT rebuilding a full array from live, RANK 2) and one import anchor (RANK 3). All folded into v1.5.9: change-detect now compares against LIVE; the admin `openEditor` overlays the draft; `getProduct` returns an `effective` view; webhook.ts's Stripe import is anchored. Landmines 7-30 are the most recent fixes/changes — confirm they hold rather than re-raising the originals.
+
 - Landmines to respect (validate the plan against these, not your training data):
-  1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe
-     objects — a SQL TRIGGER, not a Studio webhook, and AFTER INSERT ONLY (a flag-flip UPDATE doesn't
-     fire it); drafts must skip it and Stripe is created ONLY at publish.
-  2. Public reads go via the anon Supabase client + RLS, not the API. Hiding drafts/archived is the RLS
-     change; is_test is filtered in main.js (Phase 4.5), NOT by RLS; preview reads go through the
-     service-role API, never the anon client.
-  3. Stripe-lock: checkout_* identity + sku frozen after publish; PRICE ROTATES in place — and the ORDER
-     matters: create the new Price, write the DB, THEN deactivate the old Price (best-effort). Same
-     slug/URL; not a new product. A draft's price/checkout_* are editable until first publish.
-  4. Archive, never hard-delete: "remove" sets archived_at + Stripe active:false (reversible); archived
-     rows hidden everywhere public; order history FK-protected.
-  5. No new functions: publish/coupon/archive/discard are ?_action= rewrites; uploadImage's URL branch
-     and the charge.refunded branch edit EXISTING files; purge is pg_cron; cap 11/12.
+  1. The Postgres INSERT trigger notify_stripe_sync (migration 20260421000003) auto-creates Stripe objects — a SQL TRIGGER, not a Studio webhook, and AFTER INSERT ONLY (a flag-flip UPDATE doesn't fire it); drafts must skip it and Stripe is created ONLY at publish.
+  2. Public reads go via the anon Supabase client + RLS, not the API. Hiding drafts/archived is the RLS change; is_test is filtered in main.js (Phase 4.5), NOT by RLS; preview reads go through the service-role API, never the anon client.
+  3. Stripe-lock: checkout_* identity + sku frozen after publish; PRICE ROTATES in place — and the ORDER matters: create the new Price, write the DB, THEN deactivate the old Price (best-effort). Same slug/URL; not a new product. A draft's price/checkout_* are editable until first publish.
+  4. Archive, never hard-delete: "remove" sets archived_at + Stripe active:false (reversible); archived rows hidden everywhere public; order history FK-protected.
+  5. No new functions: publish/coupon/archive/discard are ?_action= rewrites; uploadImage's URL branch and the charge.refunded branch edit EXISTING files; purge is pg_cron; cap 11/12.
   6. is_test is never user-editable; every new read/write stays scoped to isTest.
-  7. (validate) The published-edit frozen-field guard rejects only a CHANGED frozen value, NOT presence;
-     price is excluded (it rotates). The admin-published-edit path is tested.
-  8. (validate) The RLS swap is name-keyed with a self-checking guard that RAISEs if any products SELECT
-     policy still has qual='true'.
-  9. (validate) Discard exists: ?_action=discard clears draft + preview_token on a published row,
-     auth-only; GPT discardEdits + admin button.
-  10. (validate) Create is allow-listed (system columns can't be injected); the GPT-supplied, server-
-     normalized slug lands on `product` so the allow-list captures it (slug IS in CREATE_FIELDS — see #21).
-     sku is DB-GENERATED (UNIQUE NOT NULL DEFAULT 'EVE-'||uuid8) → NOT in CREATE_FIELDS and not in the GPT
-     schema (a caller sku could collide). [5th-A corrected the prior "caller-supplied" claim.]
-  11. (validate) getProduct returns an origin-correct preview_url when a preview_token exists; the GPT
-     relays it rather than hardcoding a host.
-  12. (validate) listCoupons auto-paginates so owner sales aren't truncated; a product-scoped coupon
-     needs a PUBLISHED product (a draft has no stripe_product_id) and the GPT is told.
-  13. (NEW — D1) uploadImage takes JSON {url, slug, role, skip_transform}; the server fetches the URL
-     (Drive share link normalized to direct-download), validates mime/size, runs the same Cloudinary→R2
-     pipeline; the /api/upload Action exists in the schema; a pasted file → the GPT asks for a link.
-  14. (NEW — D2) webhook.ts handles charge.refunded → orders.status='refunded' on a full refund (matched
-     by stripe_payment_intent); partial logs only; requires the event enabled on the Stripe endpoint.
-  15. (NEW) The Studio note splits Studio-INSERT (fires trigger, bypasses handlePublish) vs Studio-UPDATE
-     flag-flip (doesn't fire the AFTER-INSERT trigger → published-but-no-Stripe zombie). Never publish
-     from Studio.
+  7. (validate) The published-edit frozen-field guard rejects only a CHANGED frozen value, NOT presence; price is excluded (it rotates). The admin-published-edit path is tested.
+  8. (validate) The RLS swap is name-keyed with a self-checking guard that RAISEs if any products SELECT policy still has qual='true'.
+  9. (validate) Discard exists: ?_action=discard clears draft + preview_token on a published row, auth-only; GPT discardEdits + admin button.
+  10. (validate) Create is allow-listed (system columns can't be injected); the GPT-supplied, server- normalized slug lands on `product` so the allow-list captures it (slug IS in CREATE_FIELDS — see #21). sku is DB-GENERATED (UNIQUE NOT NULL DEFAULT 'EVE-'||uuid8) → NOT in CREATE_FIELDS and not in the GPT schema (a caller sku could collide). [5th-A corrected the prior "caller-supplied" claim.]
+  11. (validate) getProduct returns an origin-correct preview_url when a preview_token exists; the GPT relays it rather than hardcoding a host.
+  12. (validate) listCoupons auto-paginates so owner sales aren't truncated; a product-scoped coupon needs a PUBLISHED product (a draft has no stripe_product_id) and the GPT is told.
+  13. (NEW — D1) uploadImage takes JSON {url, slug, role, skip_transform}; the server fetches the URL (Drive share link normalized to direct-download), validates mime/size, runs the same Cloudinary→R2 pipeline; the /api/upload Action exists in the schema; a pasted file → the GPT asks for a link.
+  14. (NEW — D2) webhook.ts handles charge.refunded → orders.status='refunded' on a full refund (matched by stripe_payment_intent); partial logs only; requires the event enabled on the Stripe endpoint.
+  15. (NEW) The Studio note splits Studio-INSERT (fires trigger, bypasses handlePublish) vs Studio-UPDATE flag-flip (doesn't fire the AFTER-INSERT trigger → published-but-no-Stripe zombie). Never publish from Studio.
   16. Admin live-only edit shows "<X> change is live now — nothing to publish" and no Publish button.
-  17. (v1.5.6) THREE fields apply LIVE immediately on a published row — price, available, AND quantity.
-     All three gate checkout (checkout.ts:79 available!==true || (quantity??0)<1); available is also
-     flipped by a real purchase (webhook.ts:128), so staging any is an oversell/stale-stock trap. (Note:
-     the webhook does NOT yet decrement quantity — qty-1 today; wire on the first multi-qty type.) All
-     three are CHANGE-DETECTED
-     (updates.x !== current.x) and excluded from the draft staging filter. Everything else stages. The
-     plan must say this consistently across §1.3 / PUT / §9.2 / §9.5 / §10b / admin panel — flag any
-     surface still saying available/quantity "stages until publish" (the 5th A's headline finding).
-  18. (v1.5.6) If getProduct 404s (apostrophe/ampersand titles make an unreconstructable slug), the GPT
-     falls back to listProducts and matches by title — never "not found" without listing first.
-  19. (v1.5.6) Refunds stay in Stripe (no refund Action) — the GPT walks Em through the dashboard steps
-     and uses WEB SEARCH to confirm current steps (Stripe UI drifts); this needs the GPT's web-browsing
-     capability ENABLED (a GPT_SETUP.md config requirement; it was off before). Full refund reflects via
-     charge.refunded; partial does not.
-  20. (v1.5.6) ROLE_PATTERN is extended to include checkout_image + seo_thumbnail (the two new v1.5 roles)
-     so uploadImage accepts them; the GPT may send several media links in one message (loops uploadImage).
-  21. (v1.5.7) slug is GPT-SUPPLIED, not system-filled: the createProduct schema marks slug REQUIRED and
-     the GPT computes it for every uploadImage (photos upload before the row exists), so any "system
-     handles slug / never set it" prose is the false half (6th-A RANK 1, fixed). The GPT derives the slug
-     ONCE (lowercase, spaces→-, strip non-[a-z0-9-], collapse repeats) and reuses it for uploads + create;
-     products.ts runs a server-side slugify on caller/derived slug so it's always URL-safe + reconstructable
-     (also softens #18). Confirm no surviving "system handles slug, never set" in any GPT-facing block, and
-     slug stays required in the schema.
-  22. (v1.5.7) First-publish re-validates: handlePublish's first-publish branch runs the SAME per-type rules
-     as create via a shared module-scope validateProductRules (extracted from the inline create checks),
-     before the Stripe create — so an edit that blanked story_card/images can't ship a malformed product
-     (6th-A RANK 3). One shared validator (no divergent copies); function count still 11/12.
-  23. (v1.5.7) Coupon owner-sale isolation is byte-anchored: listCoupons/deactivateCoupon key on
-     coupon.metadata.source==='owner_sale'; the plan QUOTES the three system coupon-create sites (cart.ts
-     tags the PROMO CODE 'cart-recovery'; subscribe.ts tags nothing; _bootstrap creates coupons with no
-     metadata) proving no system coupon carries owner_sale (6th-A RANK 2). Bootstrap must never tag a
-     coupon owner_sale.
-  24. (v1.5.7) Panel honesty: renderPublishPanel checks body.product.draft — a price/availability/quantity-
-     only change that PRESERVES an earlier staged copy edit shows "live now — but edits still pending" +
-     preview link + Publish/Discard, not "nothing to publish" (6th-A RANK 4); never contradicts the list
-     pill.
-  25. (v1.5.7) Preview Buy disabled: on a preview load (previewToken present) the product page disables +
-     relabels the cart/buy controls "Preview only" so an EDIT preview of a PUBLISHED product can't transact
-     at the live price under the "not yet live" banner (6th-A RANK 5; full visual styling deferred to
-     Part 3). (v1.5.8: the disable anchors the real <button> markup — product.html:289-290, both
-     <button type="button"> — so btn.disabled is provably sufficient, 7th-A RANK 3.)
-  26. (revised v1.5.9) Draftable change-detection compares against LIVE: a draftable key is staged only when
-     JSON.stringify(updates[k]) !== JSON.stringify(current[k]) (current[k] = the live column; plain !== is
-     wrong — DRAFTABLE is mostly jsonb/array, reference-compare always true). Invariant: draft = exactly the
-     fields differing from live. The admin's buildProductPayload re-sends the FULL payload every save, so
-     without change-detection an availability/price/quantity-only save stages a PHANTOM no-op draft (#16 fails
-     on the admin path). v1.5.8 first compared against the EFFECTIVE (staged-or-live) value — that was wrong:
-     the admin form reads live columns, so re-saving a row with a staged draft re-staged the live value over
-     the staged one and WIPED pending edits (8th-A RANK 1). Live-compare fixes it (re-sent live never
-     re-stages; untouched staged values survive via the {...existingDraft, ...draftable} spread; self-prunes).
-     Confirm a live-only save stages nothing, a real copy edit still stages + merges over a prior draft, and a
-     re-save of a staged row preserves the draft byte-for-byte.
-  27. (v1.5.8) Edit-publish re-validates: handlePublish's edit-publish branch validates the MERGED row
-     ({...row, ...draft}) with the same validateProductRules before applying the draft to live columns — so
-     a staged draft that blanked story_card/images can't ship a malformed, purchasable live product. #22
-     (first-publish) already did this; edit-publish did NOT and Test #25 covered only first-publish, so it
-     would have shipped silently; new Test #26 covers it (7th-A RANK 2 — "if you fix one thing"). Both
-     publish branches call the one shared validator.
-  28. (v1.5.8) pg_net body stays jsonb, anchored to the LATEST migration: Phase 1's CREATE OR REPLACE
-     notify_stripe_sync() keeps body := payload (jsonb), NOT payload::text. The true-current definition is
-     20260502000001 (which fixed net.http_post body => text "does not exist" by switching to payload), not
-     the original ...0003. Our new migration runs after ...0502, so quoting the ...0003 body would silently
-     re-break Stripe sync on every published non-test INSERT. Confirm the preflight anchors ...0502 and the
-     NEW body is payload, the only delta being the added OR NEW.is_published = false guard. (In-house
-     integration breadth pass.)
-  29. (v1.5.9) Both surfaces edit the STAGED state, not the live state: the admin openEditor builds
-     eff = {...product, ...(product.draft||{})} and reads every DRAFTABLE form field from eff (live-apply
-     trio price/available/quantity + slug/id/type stay on product) so the editor shows/builds on pending
-     edits; and the authorized getProduct returns an effective view (= live + staged) alongside the UNCHANGED
-     live top-level + draft, with §9.2 telling the GPT to build full arrays (images/media) from effective so
-     a second pre-publish edit extends the staged array instead of dropping it (8th-A RANK 1b + RANK 2).
-     Invariant: top-level/live fields are unchanged (GPT still reports live correctly, never staged-as-live);
-     effective is additive. Together with #26's live-compare this closes the cross-surface data-loss path.
-  30. (v1.5.9) webhook.ts Stripe import anchored, already present: webhook.ts opens with
-     import type Stripe from 'stripe'; (line 1) and already uses Stripe.Event/Checkout.Session/Product, so
-     charge.refunded's Stripe.Charge needs NO new import and tsc --noEmit stays clean (8th-A RANK 3 — was
-     asserted, now byte-anchored). Confirm Phase 4.7 anchors the existing import rather than adding one.
+  17. (v1.5.6) THREE fields apply LIVE immediately on a published row — price, available, AND quantity. All three gate checkout (checkout.ts:79 available!==true || (quantity??0)<1); available is also flipped by a real purchase (webhook.ts:128), so staging any is an oversell/stale-stock trap. (Note: the webhook does NOT yet decrement quantity — qty-1 today; wire on the first multi-qty type.) All three are CHANGE-DETECTED (updates.x !== current.x) and excluded from the draft staging filter. Everything else stages. The plan must say this consistently across §1.3 / PUT / §9.2 / §9.5 / §10b / admin panel — flag any surface still saying available/quantity "stages until publish" (the 5th A's headline finding).
+  18. (v1.5.6) If getProduct 404s (apostrophe/ampersand titles make an unreconstructable slug), the GPT falls back to listProducts and matches by title — never "not found" without listing first.
+  19. (v1.5.6) Refunds stay in Stripe (no refund Action) — the GPT walks Em through the dashboard steps and uses WEB SEARCH to confirm current steps (Stripe UI drifts); this needs the GPT's web-browsing capability ENABLED (a GPT_SETUP.md config requirement; it was off before). Full refund reflects via charge.refunded; partial does not.
+  20. (v1.5.6) ROLE_PATTERN is extended to include checkout_image + seo_thumbnail (the two new v1.5 roles) so uploadImage accepts them; the GPT may send several media links in one message (loops uploadImage).
+  21. (v1.5.7) slug is GPT-SUPPLIED, not system-filled: the createProduct schema marks slug REQUIRED and the GPT computes it for every uploadImage (photos upload before the row exists), so any "system handles slug / never set it" prose is the false half (6th-A RANK 1, fixed). The GPT derives the slug ONCE (lowercase, spaces→-, strip non-[a-z0-9-], collapse repeats) and reuses it for uploads + create; products.ts runs a server-side slugify on caller/derived slug so it's always URL-safe + reconstructable (also softens #18). Confirm no surviving "system handles slug, never set" in any GPT-facing block, and slug stays required in the schema.
+  22. (v1.5.7) First-publish re-validates: handlePublish's first-publish branch runs the SAME per-type rules as create via a shared module-scope validateProductRules (extracted from the inline create checks), before the Stripe create — so an edit that blanked story_card/images can't ship a malformed product (6th-A RANK 3). One shared validator (no divergent copies); function count still 11/12.
+  23. (v1.5.7) Coupon owner-sale isolation is byte-anchored: listCoupons/deactivateCoupon key on coupon.metadata.source==='owner_sale'; the plan QUOTES the three system coupon-create sites (cart.ts tags the PROMO CODE 'cart-recovery'; subscribe.ts tags nothing; _bootstrap creates coupons with no metadata) proving no system coupon carries owner_sale (6th-A RANK 2). Bootstrap must never tag a coupon owner_sale.
+  24. (v1.5.7) Panel honesty: renderPublishPanel checks body.product.draft — a price/availability/quantity- only change that PRESERVES an earlier staged copy edit shows "live now — but edits still pending" + preview link + Publish/Discard, not "nothing to publish" (6th-A RANK 4); never contradicts the list pill.
+  25. (v1.5.7) Preview Buy disabled: on a preview load (previewToken present) the product page disables + relabels the cart/buy controls "Preview only" so an EDIT preview of a PUBLISHED product can't transact at the live price under the "not yet live" banner (6th-A RANK 5; full visual styling deferred to Part 3). (v1.5.8: the disable anchors the real <button> markup — product.html:289-290, both <button type="button"> — so btn.disabled is provably sufficient, 7th-A RANK 3.)
+  26. (revised v1.5.9) Draftable change-detection compares against LIVE: a draftable key is staged only when JSON.stringify(updates[k]) !== JSON.stringify(current[k]) (current[k] = the live column; plain !== is wrong — DRAFTABLE is mostly jsonb/array, reference-compare always true). Invariant: draft = exactly the fields differing from live. The admin's buildProductPayload re-sends the FULL payload every save, so without change-detection an availability/price/quantity-only save stages a PHANTOM no-op draft (#16 fails on the admin path). v1.5.8 first compared against the EFFECTIVE (staged-or-live) value — that was wrong: the admin form reads live columns, so re-saving a row with a staged draft re-staged the live value over the staged one and WIPED pending edits (8th-A RANK 1). Live-compare fixes it (re-sent live never re-stages; untouched staged values survive via the {...existingDraft, ...draftable} spread; self-prunes). Confirm a live-only save stages nothing, a real copy edit still stages + merges over a prior draft, and a re-save of a staged row preserves the draft byte-for-byte.
+  27. (v1.5.8) Edit-publish re-validates: handlePublish's edit-publish branch validates the MERGED row ({...row, ...draft}) with the same validateProductRules before applying the draft to live columns — so a staged draft that blanked story_card/images can't ship a malformed, purchasable live product. #22 (first-publish) already did this; edit-publish did NOT and Test #25 covered only first-publish, so it would have shipped silently; new Test #26 covers it (7th-A RANK 2 — "if you fix one thing"). Both publish branches call the one shared validator.
+  28. (v1.5.8) pg_net body stays jsonb, anchored to the LATEST migration: Phase 1's CREATE OR REPLACE notify_stripe_sync() keeps body := payload (jsonb), NOT payload::text. The true-current definition is 20260502000001 (which fixed net.http_post body => text "does not exist" by switching to payload), not the original ...0003. Our new migration runs after ...0502, so quoting the ...0003 body would silently re-break Stripe sync on every published non-test INSERT. Confirm the preflight anchors ...0502 and the NEW body is payload, the only delta being the added OR NEW.is_published = false guard. (In-house integration breadth pass.)
+  29. (v1.5.9) Both surfaces edit the STAGED state, not the live state: the admin openEditor builds eff = {...product, ...(product.draft||{})} and reads every DRAFTABLE form field from eff (live-apply trio price/available/quantity + slug/id/type stay on product) so the editor shows/builds on pending edits; and the authorized getProduct returns an effective view (= live + staged) alongside the UNCHANGED live top-level + draft, with §9.2 telling the GPT to build full arrays (images/media) from effective so a second pre-publish edit extends the staged array instead of dropping it (8th-A RANK 1b + RANK 2). Invariant: top-level/live fields are unchanged (GPT still reports live correctly, never staged-as-live); effective is additive. Together with #26's live-compare this closes the cross-surface data-loss path.
+  30. (v1.5.9) webhook.ts Stripe import anchored, already present: webhook.ts opens with import type Stripe from 'stripe'; (line 1) and already uses Stripe.Event/Checkout.Session/Product, so charge.refunded's Stripe.Charge needs NO new import and tsc --noEmit stays clean (8th-A RANK 3 — was asserted, now byte-anchored). Confirm Phase 4.7 anchors the existing import rather than adding one.
 
 ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
-1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a
-   library's behaviour, or make a decision the plan didn't make for it.
-2. COMPLETENESS / ARCHITECTURE (the holistic pass, through THE REVIEW LENS): using EVERLASTINGS_STORE.md,
-   judge whether the plan lets the owner FULLY run the store BY CHAT. Cross-check the "Custom GPT
-   capability outline" (§1.10) against everything a non-technical owner needs end-to-end — create, find,
-   edit, preview, publish, re-price (in-place rotation), discard staged edits, sales/coupons,
-   archive/resurface, PHOTOS/MEDIA (by link — confirm uploadImage is genuinely driveable from chat,
-   including her likely "I pasted the photo" and "here's the Drive link" attempts), orders, status
-   visibility (incl. refunds now reflected). Stress the system design: the preview-token capability
-   model; the draft→publish state machine (create vs edit; publish vs discard; partial-publish / failure
-   recovery); the price-rotation invariant + its FAILURE ordering (a mid-rotation Stripe error must never
-   leave a live product unbuyable); the archive model; is_test integrity across the new columns/actions
-   AND the public main.js path (1.11); the 11/12 function cap; and whether the GPT knowledge makes it
-   genuinely helpful vs. clunky-enough-that-DIY-wins.
+1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a library's behaviour, or make a decision the plan didn't make for it.
+2. COMPLETENESS / ARCHITECTURE (the holistic pass, through THE REVIEW LENS): using EVERLASTINGS_STORE.md, judge whether the plan lets the owner FULLY run the store BY CHAT. Cross-check the "Custom GPT capability outline" (§1.10) against everything a non-technical owner needs end-to-end — create, find, edit, preview, publish, re-price (in-place rotation), discard staged edits, sales/coupons, archive/resurface, PHOTOS/MEDIA (by link — confirm uploadImage is genuinely driveable from chat, including her likely "I pasted the photo" and "here's the Drive link" attempts), orders, status visibility (incl. refunds now reflected). Stress the system design: the preview-token capability model; the draft→publish state machine (create vs edit; publish vs discard; partial-publish / failure recovery); the price-rotation invariant + its FAILURE ordering (a mid-rotation Stripe error must never leave a live product unbuyable); the archive model; is_test integrity across the new columns/actions AND the public main.js path (1.11); the 11/12 function cap; and whether the GPT knowledge makes it genuinely helpful vs. clunky-enough-that-DIY-wins.
 
 OUTPUT
-- A gap list RANKED by how likely each is to derail the build or leave a capability missing:
-  location (section/phase), what's wrong or missing, the concrete fix. Flag any capability that the GPT
-  can't actually drive by chat (the lens) even if the docs imply it's covered.
+- A gap list RANKED by how likely each is to derail the build or leave a capability missing: location (section/phase), what's wrong or missing, the concrete fix. Flag any capability that the GPT can't actually drive by chat (the lens) even if the docs imply it's covered.
 - The single most important "if you fix one thing" insight.
 - One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
 Be concrete: "§1.10 lists listProducts but no way for the GPT to deactivate a coupon she made"
@@ -261,95 +129,35 @@ beats "coupons look incomplete."
 ## Angle B — fidelity (repo)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_6_1_GAP_REVIEW_B.md).
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v1_6_1_GAP_REVIEW_B.md).
 
-THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
-her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
-CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — friction that breaks the
-"exclusively executable" promise. Remember the structural limit: a GPT Action is JSON-only and can't
-forward a pasted file, so media comes by URL.
+THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via her Custom GPT (which should match what an agent like Claude Code could do). The entire build guide being  planned is to be searched for gaps in being exclusively executable. Fidelity matters because a CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — friction that breaks the "exclusively executable" promise. Remember the structural limit: a GPT Action is JSON-only and can't forward a pasted file, so media comes by URL.
 
 CONTEXT
-- The build is v1_6_1_IMPLEMENT.md (Part 2 functionality) PLUS its addendums — v1_6_1_ADDENDUM_DESIGN.md
-  (presentation: CSS/markup, with CURRENT/NEW blocks) and v1_6_1_ADDENDUM_TESTING.md (the full verification
-  plan). A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every CODE edit quotes
-  a CURRENT block (locator) + a NEW block; the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT
-  byte-anchored (the plan says so) — treat a CURRENT line-ref there as a locator to confirm, not a hard byte
-  match. BYTE-CHECK THE DESIGN ADDENDUM'S "DECIDED" CURRENT BLOCKS TOO, same fidelity bar as Part 2:
-  D1 (product.html:162, shop.html:164), D3 (styles.css .story-card 929-935), D4 (shop.html filter fieldsets
-  183-206). Render-tuned sections (D5 density, D6 glow, D7 hero) ship a default + a render-tune note — judge
-  whether the default is concrete enough that the builder never guesses, not whether it is the final value.
+- The build is v1_6_1_IMPLEMENT.md (Part 2 functionality) PLUS its addendums — v1_6_1_ADDENDUM_DESIGN.md (presentation: CSS/markup, with CURRENT/NEW blocks) and v1_6_1_ADDENDUM_TESTING.md (the full verification plan). A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every CODE edit quotes a CURRENT block (locator) + a NEW block; the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT byte-anchored (the plan says so) — treat a CURRENT line-ref there as a locator to confirm, not a hard byte match. BYTE-CHECK THE DESIGN ADDENDUM'S "DECIDED" CURRENT BLOCKS TOO, same fidelity bar as Part 2: D1 (product.html:162, shop.html:164), D3 (styles.css .story-card 929-935), D4 (shop.html filter fieldsets 183-206). Render-tuned sections (D5 density, D6 glow, D7 hero) ship a default + a render-tune note — judge whether the default is concrete enough that the builder never guesses, not whether it is the final value.
+
 - Landmines (validate against the repo, not training data):
-  1. The INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER (not a Studio
-     webhook), AFTER INSERT only; confirm the plan's quoted CURRENT trigger matches and the only change
-     is the added guard line.
-  2. Public reads go via the anon client + RLS; is_test is filtered in main.js (Phase 4.5), not RLS;
-     preview reads go through the service-role API. Confirm the pre-flight's quoted client identities:
-     products.ts/checkout.ts = SUPABASE_SECRET_KEY (6-8 / 10-12); product-feed.ts = SUPABASE_PUBLISHABLE_KEY
-     (4-6); admin loadProducts (218-222) + onArchiveToggle via fetch('/api/products…'), not state.client.
-  3. Stripe-lock: checkout_* + sku frozen after publish; price ROTATES. Confirm Phase 3.4's published
-     branch removes price from FROZEN_AFTER_PUBLISH and runs the rotation in the ORDER the plan specifies:
-     create the new Price FIRST, write the DB, THEN deactivate the old Price in a best-effort try/catch
-     AFTER the DB commit (capturing oldPriceIdToDeactivate). A create failure must 502 with the DB
-     untouched (old price still active+referenced).
+  1. The INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER (not a Studio webhook), AFTER INSERT only; confirm the plan's quoted CURRENT trigger matches and the only change is the added guard line.
+  2. Public reads go via the anon client + RLS; is_test is filtered in main.js (Phase 4.5), not RLS; preview reads go through the service-role API. Confirm the pre-flight's quoted client identities: products.ts/checkout.ts = SUPABASE_SECRET_KEY (6-8 / 10-12); product-feed.ts = SUPABASE_PUBLISHABLE_KEY (4-6); admin loadProducts (218-222) + onArchiveToggle via fetch('/api/products…'), not state.client.
+  3. Stripe-lock: checkout_* + sku frozen after publish; price ROTATES. Confirm Phase 3.4's published branch removes price from FROZEN_AFTER_PUBLISH and runs the rotation in the ORDER the plan specifies: create the new Price FIRST, write the DB, THEN deactivate the old Price in a best-effort try/catch AFTER the DB commit (capturing oldPriceIdToDeactivate). A create failure must 502 with the DB untouched (old price still active+referenced).
   4. Archive = archived_at + Stripe active:false (reversible); no hard delete; order FK has no CASCADE.
-  5. No new api/*.ts files: publish/coupon/archive/discard are ?_action= rewrites; the uploadImage URL
-     branch edits upload.ts; the charge.refunded branch edits webhook.ts; purge is pg_cron; cap 11/12.
-     Confirm the new /api/products/discard rewrite + the action dispatch line, and the new /api/upload
-     Action path in the OpenAPI schema.
+  5. No new api/*.ts files: publish/coupon/archive/discard are ?_action= rewrites; the uploadImage URL branch edits upload.ts; the charge.refunded branch edits webhook.ts; purge is pg_cron; cap 11/12. Confirm the new /api/products/discard rewrite + the action dispatch line, and the new /api/upload Action path in the OpenAPI schema.
   6. is_test is never user-editable.
-  7. (G1) Phase 3.4's frozen guard compares updates[f] !== current[f] (CHANGE), not hasOwnProperty;
-     price is no longer frozen — confirm.
-  8. (G2) Phase 1's migration contains the DO-block that RAISEs on a leftover qual='true' products SELECT
-     policy — confirm it's valid PL/pgSQL and queries pg_policies correctly.
+  7. (G1) Phase 3.4's frozen guard compares updates[f] !== current[f] (CHANGE), not hasOwnProperty; price is no longer frozen — confirm.
+  8. (G2) Phase 1's migration contains the DO-block that RAISEs on a leftover qual='true' products SELECT policy — confirm it's valid PL/pgSQL and queries pg_policies correctly.
   9. (v1.6.0 folds #31-36) Confirm the 6 newly-folded items are PRESENT and well-formed — full detail:
-     31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...)
-         and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal
-         loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16,
-         ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. Confirm the guard
-         exists, is syntactically sound, runs before the fetch, references only the new helper, and does
-         NOT block legit Drive/CDN links. (Accepted residual, deferred v1.1: a public host that
-         DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no Vercel IMDS.)
-     32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 →
-         listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get
-         `effective` before any images/media array edit (listProducts returns the live row + its draft
-         separately but NOT the computed effective = live+staged). Confirm present + consistent with #29.
-     33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on
-         featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps
-         "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection"
-         → {series:"<name>"}, both STAGE on a published piece. Confirm present in BOTH schemas.
-     34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line —
-         GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming
-         beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change.
-         Confirm the boundary line is in the Phase 10b spec.
-     35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create,
-         the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this
-         is the agent/curl path — Sean/Claude Code — NOT Em's GPT path). Confirm the CURRENT blocks are
-         quoted + the NEW direction is clear.
-     36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty
-         draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct
-         returns the current preview_url. Confirm the corrected rationale.
+  31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...) and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. Confirm the guard exists, is syntactically sound, runs before the fetch, references only the new helper, and does NOT block legit Drive/CDN links. (Accepted residual, deferred v1.1: a public host that DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no Vercel IMDS.)
+  32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 → listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get `effective` before any images/media array edit (listProducts returns the live row + its draft separately but NOT the computed effective = live+staged). Confirm present + consistent with #29.
+  33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection" → {series:"<name>"}, both STAGE on a published piece. Confirm present in BOTH schemas.
+  34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line — GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change. Confirm the boundary line is in the Phase 10b spec.
+  35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create, the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this is the agent/curl path — Sean/Claude Code — NOT Em's GPT path). Confirm the CURRENT blocks are quoted + the NEW direction is clear.
+  36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct returns the current preview_url. Confirm the corrected rationale.
 
 ANGLE B — fidelity. Open every file the plan edits and verify:
-- Every CURRENT block matches the working tree BYTE-FOR-BYTE (whitespace, line content). Line numbers
-  are hints; the quoted text is the anchor — flag any CURRENT block that no longer matches. (The
-  product.html media block, the products.ts import cluster (1-5), the vercel.json rewrites array, the
-  admin price helpers, the product-feed query (19-22), the create insert / PUT current blocks, the
-  upload.ts multipart-parse block (85-105) + sha1Hex helper + ROLE_PATTERN + transform, and the
-  webhook.ts no-op guard (60-63) are quoted — confirm each.)
-- Every NEW block applies cleanly (no overlapping/ambiguous matches; imports resolve; the migration is
-  valid SQL incl. the DO-block guard; the OpenAPI YAML is well-formed incl. the discardEdits AND the new
-  uploadImage paths; vercel.json stays valid JSON). Confirm the price-rotation reorder, the upload.ts
-  dual-intake branch (+ normalizeMediaUrl helper, new File() from a fetched Buffer), and the
-  charge.refunded branch are syntactically sound and reference only existing helpers/types (stripe, pick,
-  previewUrl, isTest, the imported Stripe type, ALLOWED_MIME, MIME_TO_EXT).
-- The tsc-clean + 11/12-function claims hold (no new api/*.ts file; removed imports aren't still
-  referenced; added/used symbols resolve — randomUUID, the Stripe type, isTest, File global,
-  Stripe.Charge; the `import type Stripe from 'stripe'` does NOT collide with the lowercase `stripe`
-  instance; stripe.prices.* is USED by the PUT rotation; charge.payment_intent narrowing is handled).
-- The create allow-list (CREATE_FIELDS) references DRAFTABLE at request time (no TDZ), the slug lands on
-  `product` upstream so the allow-list captures it, and the for-await coupon pagination is valid SDK use.
+- Every CURRENT block matches the working tree BYTE-FOR-BYTE (whitespace, line content). Line numbers are hints; the quoted text is the anchor — flag any CURRENT block that no longer matches. (The product.html media block, the products.ts import cluster (1-5), the vercel.json rewrites array, the admin price helpers, the product-feed query (19-22), the create insert / PUT current blocks, the upload.ts multipart-parse block (85-105) + sha1Hex helper + ROLE_PATTERN + transform, and the webhook.ts no-op guard (60-63) are quoted — confirm each.)
+- Every NEW block applies cleanly (no overlapping/ambiguous matches; imports resolve; the migration is valid SQL incl. the DO-block guard; the OpenAPI YAML is well-formed incl. the discardEdits AND the new uploadImage paths; vercel.json stays valid JSON). Confirm the price-rotation reorder, the upload.ts dual-intake branch (+ normalizeMediaUrl helper, new File() from a fetched Buffer), and the charge.refunded branch are syntactically sound and reference only existing helpers/types (stripe, pick, previewUrl, isTest, the imported Stripe type, ALLOWED_MIME, MIME_TO_EXT).
+- The tsc-clean + 11/12-function claims hold (no new api/*.ts file; removed imports aren't still referenced; added/used symbols resolve — randomUUID, the Stripe type, isTest, File global, Stripe.Charge; the `import type Stripe from 'stripe'` does NOT collide with the lowercase `stripe` instance; stripe.prices.* is USED by the PUT rotation; charge.payment_intent narrowing is handled).
+- The create allow-list (CREATE_FIELDS) references DRAFTABLE at request time (no TDZ), the slug lands on `product` upstream so the allow-list captures it, and the for-await coupon pagination is valid SDK use.
 
 OUTPUT
 - Ranked list: location, the mismatch, the corrected anchor/fix.
@@ -360,110 +168,43 @@ OUTPUT
 ## Angle C — integration (repo + architecture)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_6_1_GAP_REVIEW_C.md).
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v1_6_1_GAP_REVIEW_C.md).
 
-THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
-store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
-Code (+ skills/MCPs) could. Hunt integration gaps THROUGH this lens: a locally-correct edit that, in the
-wider system, makes a by-chat capability fail or leak. Structural limit: a GPT Action is JSON-only and
-can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
+THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site, store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude Code (+ skills/MCPs) could. The entire build guide being planned is to be searched for gaps in being exclusively executable. Hunt integration gaps THROUGH this lens: a locally-correct edit that, in the wider system, makes a by-chat capability fail or leak. Structural limit: a GPT Action is JSON-only and can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link). 
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_6_1_IMPLEMENT.md AND its addendums (v1_6_1_ADDENDUM_DESIGN.md,
-  v1_6_1_ADDENDUM_TESTING.md). A FRESH agent applies the WHOLE build to this repo and tests on the dev
-  preview. DESIGN INTEGRATION IS IN SCOPE: the D2 product-layout HTML moves run AFTER parent Phase 7.2's
-  media-container swap (confirm the ordering + that `product.js` data-* population still works after the
-  moves); the hero (D7) references CDN assets that are LIVE (https://cdn.everlastingsbyemaline.com/hero-bg-anim/);
-  the D6 glow is injected once by main.js on every page (must not break any page or block interaction);
-  the D4 filter dropdowns MUST keep every data-shop-filter / data-shop-sort hook so shop.js still filters.
+- Read EVERLASTINGS_STORE.md FIRST, then v1_6_1_IMPLEMENT.md AND its addendums (v1_6_1_ADDENDUM_DESIGN.md, v1_6_1_ADDENDUM_TESTING.md). A FRESH agent applies the WHOLE build to this repo and tests on the dev preview. DESIGN INTEGRATION IS IN SCOPE: the D2 product-layout HTML moves run AFTER parent Phase 7.2's media-container swap (confirm the ordering + that `product.js` data-* population still works after the moves); the hero (D7) references CDN assets that are LIVE (https://cdn.everlastingsbyemaline.com/hero-bg-anim/); the D6 glow is injected once by main.js on every page (must not break any page or block interaction); the D4 filter dropdowns MUST keep every data-shop-filter / data-shop-sort hook so shop.js still filters.
+
 - Landmines (validate against reality, not training data):
-  1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook,
-     AFTER INSERT only; drafts skip it; Stripe created only at publish.
-  2. Public reads go via the anon client + RLS; is_test is filtered in main.js (Phase 4.5), not RLS;
-     preview reads go through the service-role API. (products.ts/checkout.ts = service-role;
-     product-feed.ts = anon, now also explicitly filtering is_published/archived_at; admin via the API.)
-  3. Stripe-lock: checkout_* + sku frozen after publish; PRICE rotates in place (new Price on the same
-     product; live immediately; same slug/URL) — and the rotation ORDER (create→write→deactivate) must
-     keep the product buyable through any single Stripe failure.
+  1. INSERT trigger notify_stripe_sync (migration 20260421000003) is a SQL TRIGGER, not a Studio webhook, AFTER INSERT only; drafts skip it; Stripe created only at publish.
+  2. Public reads go via the anon client + RLS; is_test is filtered in main.js (Phase 4.5), not RLS; preview reads go through the service-role API. (products.ts/checkout.ts = service-role; product-feed.ts = anon, now also explicitly filtering is_published/archived_at; admin via the API.)
+  3. Stripe-lock: checkout_* + sku frozen after publish; PRICE rotates in place (new Price on the same product; live immediately; same slug/URL) — and the rotation ORDER (create→write→deactivate) must keep the product buyable through any single Stripe failure.
   4. Archive = archived_at + Stripe active:false (reversible); hidden everywhere public; order FK-protected.
-  5. No new functions: publish/coupon/archive/discard are ?_action= rewrites; uploadImage's URL branch +
-     charge.refunded edit existing files; purge is pg_cron; cap 11/12.
+  5. No new functions: publish/coupon/archive/discard are ?_action= rewrites; uploadImage's URL branch + charge.refunded edit existing files; purge is pg_cron; cap 11/12.
   6. is_test is never user-editable.
-  7. (G1) The published-edit guard rejects only CHANGED frozen fields — the admin (re-sending the full
-     payload incl. unchanged checkout_* + price) edits a published product's copy without a 400; a price
-     CHANGE is accepted + rotated, not 400'd.
-  8. (G4/G5, already-handled — don't re-flag) product-feed.ts already filters .eq('is_test', false) and
-     now also .eq('is_published', true).is('archived_at', null); shop.js / homepage.js / product.js +
-     renderRelatedProducts all route through main.js getProducts/getProductBySlug.
+  7. (G1) The published-edit guard rejects only CHANGED frozen fields — the admin (re-sending the full payload incl. unchanged checkout_* + price) edits a published product's copy without a 400; a price CHANGE is accepted + rotated, not 400'd.
+  8. (G4/G5, already-handled — don't re-flag) product-feed.ts already filters .eq('is_test', false) and now also .eq('is_published', true).is('archived_at', null); shop.js / homepage.js / product.js + renderRelatedProducts all route through main.js getProducts/getProductBySlug.
   9. (NEW — D1) uploadImage URL branch reuses the same pipeline (multipart still works for admin/curl).
-  10. (NEW — D2) charge.refunded sets orders.status='refunded' on full refund, matched by
-     stripe_payment_intent.
-  11. (v1.6.0 folds #31-36) Through the by-chat lens: the SSRF guard (#31) must not break the by-link
-     upload for legit Drive/CDN links; the effective-fallback (#32) must close the last array-loss edge on
-     the getProduct-404 path (re-getProduct by exact slug); featured/series (#33) must actually be triggerable
-     by "feature this"/"add to <collection>"; the Phase 10b boundary (#34) must set Em's expectation that
-     homepage composition is a set-up-with-Sean job. Full detail:
-     31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...)
-         and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal
-         loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16,
-         ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. The guard must NOT
-         break the by-link upload for legit Drive/CDN links. (Accepted residual, deferred v1.1: a public
-         host that DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no IMDS.)
-     32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 →
-         listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get
-         `effective` before any images/media array edit (listProducts returns the live row + its draft
-         separately but NOT the computed effective = live+staged), closing the last array-loss edge in the
-         #26/#29 class. Confirm consistent with #29.
-     33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on
-         featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps
-         "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection"
-         → {series:"<name>"}, both STAGE on a published piece. Must be genuinely triggerable by chat.
-     34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line —
-         GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming
-         beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change.
-         The honest limit (homepage composition isn't chat-drivable by decision) must be stated to Em.
-     35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create,
-         the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this
-         is the agent/curl path — Sean/Claude Code — NOT Em's GPT path).
-     36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty
-         draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct
-         returns the current preview_url.
+  10. (NEW — D2) charge.refunded sets orders.status='refunded' on full refund, matched by stripe_payment_intent.
+  11. (v1.6.0 folds #31-36) Through the by-chat lens: the SSRF guard (#31) must not break the by-link upload for legit Drive/CDN links; the effective-fallback (#32) must close the last array-loss edge on the getProduct-404 path (re-getProduct by exact slug); featured/series (#33) must actually be triggerable by "feature this"/"add to <collection>"; the Phase 10b boundary (#34) must set Em's expectation that homepage composition is a set-up-with-Sean job. Full detail:
+  31. uploadImage SSRF guard: the Phase 5 JSON/by-link branch computes safeUrl = normalizeMediaUrl(...) and rejects via isPublicHttpUrl(safeUrl) BEFORE fetching — https-only, refusing literal loopback/private/link-local hosts (localhost, 127/8, 10/8, 172.16/12, 192.168/16, 169.254/16, ::1, fc/fd/fe80). Drive-normalized + CDN links are public https → unaffected. The guard must NOT break the by-link upload for legit Drive/CDN links. (Accepted residual, deferred v1.1: a public host that DNS-resolves/302-redirects to a private IP — auth-gated, body never echoed, no IMDS.)
+  32. effective survives the listProducts fallback: §9.2 EDITING step 1 — after a getProduct 404 → listProducts title-match, the GPT calls getProduct AGAIN with the matched row's EXACT slug to get `effective` before any images/media array edit (listProducts returns the live row + its draft separately but NOT the computed effective = live+staged), closing the last array-loss edge in the #26/#29 class. Confirm consistent with #29.
+  33. featured/series described + mapped: createProduct + editProduct schemas carry `description` on featured ("homepage carousel") and series ("collection shoppers filter by"); §9.2 EDITING maps "feature this on the homepage" → editProduct {featured:true} and "add to the <name> collection" → {series:"<name>"}, both STAGE on a published piece. Must be genuinely triggerable by chat.
+  34. site-vs-store boundary stated to Em: Phase 10b's STORE_ADMINISTRATION.md refresh draws the line — GPT handles products/photos/prices/sales/orders; the site's LOOK (homepage mood, hero, theming beyond the simple featured toggle, static pages) is a "set up with Sean" job, not a chat change. The honest limit (homepage composition isn't chat-drivable by decision) must be stated to Em.
+  35. curl Part 4 byte-quoted: Phase 9.5 quotes the CURRENT GPT_SETUP.md Part 4 blocks (Step 3 create, the PUT, the quick-ref table) verbatim so the edit is locate-and-replace, not reconstruct (this is the agent/curl path — Sean/Claude Code — NOT Em's GPT path).
+  36. stale no-op rationale fixed: §9.2 PREVIEW no longer says a no-op edit "would stage an empty draft" — with #26's live-compare a no-op stages NOTHING and returns no_changes:true; getProduct returns the current preview_url.
 
 ANGLE C — integration / system fit (through the lens). Hunt for gaps where an edit is locally correct
 but breaks the wider system OR a by-chat capability:
-- MEDIA-BY-CHAT END TO END (D1): can the GPT actually get Em's photo/MP4 onto the CDN from a chat? Trace
-  uploadImage({url,slug,role}) → server fetch (Drive normalization; non-direct link → friendly 400 the
-  GPT relays) → Cloudinary→R2 → the returned URL flowing into images[]/thumbnail/checkout_image/
-  seo_thumbnail/media[] → createProduct/editProduct. Confirm the multipart path (admin/curl) still works
-  and the dual intake feeds the SAME size/mime/transform logic (incl. the 50MB MP4 passthrough).
-- is_test scoping holds across every new read/write/action (preview, publish, coupon, archive, discard,
-  list, upload, refund) AND the public main.js path filters is_test (1.11) — prod shows only live,
-  non-test, non-archived rows; the dev preview still renders a published test product; the Meta feed
-  never emits a test/draft/archived row.
-- Price rotation integration (Q1 + ordering): after a published price change, checkout.ts charges the NEW
-  price; the old Price is active:false; a Session opened before the change keeps its locked price; the DB
-  price + stripe_price_id stay consistent; and a mid-rotation Stripe failure leaves the product buyable
-  (DB untouched, old price still active+referenced) — never a live row pointing at an inactive Price.
-- Refund integration (D2): a full dashboard refund → charge.refunded → orders.status='refunded' (the GPT
-  then reports it truthfully via listOrders); a duplicate event is de-duped by the existing idempotency
-  claim; a partial refund doesn't corrupt status. Confirm the branch sits before the no-op guard and
-  never 5xx's after the claim.
-- The admin path (G1 + #7): admin create AND edit of a PUBLISHED product go through the same draft→publish
-  gate and must NOT 400 on unchanged frozen fields; a price change rotates live + stages copy as a draft
-  in the same save; a price-ONLY change shows "live now — nothing to publish" and no Publish button.
-- Idempotency / state machine: re-publishing; publishing a draft with no changes; a stale/rotated
-  preview_token; edit staged then re-edited; discard (auth-only) then re-edit; archiving then unarchiving;
-  publishing an archived piece (409); Studio INSERT vs flag-flip UPDATE (the zombie case).
-- The RLS change vs. every reader (anon client, product-feed, homepage, checkout, admin, GPT) — does
-  anything that should see drafts/archived now can't, or vice-versa?
-- Coupon isolation: listCoupons/deactivateCoupon touch only owner_sale-tagged codes, never the system
-  cart-recovery/newsletter promotion codes (api/cart.ts, api/subscribe.ts); pagination still excludes
-  system codes; a product-scoped coupon on a draft (no stripe_product_id) is handled/guided.
-- Resource caps (11/12 functions), conventions (cleanUrls rewrites must drop .html; CORS per-route),
-  AR conflicts, and stale pointers (docs that still say "GPT can't edit" / "create auto-syncs Stripe" /
-  "adding a product makes it live immediately" / "price change = new product" / "upload by chat" /
-  "refunds don't reflect" after Phases 9–10b).
+- MEDIA-BY-CHAT END TO END (D1): can the GPT actually get Em's photo/MP4 onto the CDN from a chat? Trace uploadImage({url,slug,role}) → server fetch (Drive normalization; non-direct link → friendly 400 the GPT relays) → Cloudinary→R2 → the returned URL flowing into images[]/thumbnail/checkout_image/ seo_thumbnail/media[] → createProduct/editProduct. Confirm the multipart path (admin/curl) still works and the dual intake feeds the SAME size/mime/transform logic (incl. the 50MB MP4 passthrough).
+- is_test scoping holds across every new read/write/action (preview, publish, coupon, archive, discard, list, upload, refund) AND the public main.js path filters is_test (1.11) — prod shows only live, non-test, non-archived rows; the dev preview still renders a published test product; the Meta feed never emits a test/draft/archived row.
+- Price rotation integration (Q1 + ordering): after a published price change, checkout.ts charges the NEW price; the old Price is active:false; a Session opened before the change keeps its locked price; the DB price + stripe_price_id stay consistent; and a mid-rotation Stripe failure leaves the product buyable (DB untouched, old price still active+referenced) — never a live row pointing at an inactive Price.
+- Refund integration (D2): a full dashboard refund → charge.refunded → orders.status='refunded' (the GPT then reports it truthfully via listOrders); a duplicate event is de-duped by the existing idempotency claim; a partial refund doesn't corrupt status. Confirm the branch sits before the no-op guard and never 5xx's after the claim.
+- The admin path (G1 + #7): admin create AND edit of a PUBLISHED product go through the same draft→publish gate and must NOT 400 on unchanged frozen fields; a price change rotates live + stages copy as a draft in the same save; a price-ONLY change shows "live now — nothing to publish" and no Publish button.
+- Idempotency / state machine: re-publishing; publishing a draft with no changes; a stale/rotated preview_token; edit staged then re-edited; discard (auth-only) then re-edit; archiving then unarchiving; publishing an archived piece (409); Studio INSERT vs flag-flip UPDATE (the zombie case).
+- The RLS change vs. every reader (anon client, product-feed, homepage, checkout, admin, GPT) — does anything that should see drafts/archived now can't, or vice-versa?
+- Coupon isolation: listCoupons/deactivateCoupon touch only owner_sale-tagged codes, never the system cart-recovery/newsletter promotion codes (api/cart.ts, api/subscribe.ts); pagination still excludes system codes; a product-scoped coupon on a draft (no stripe_product_id) is handled/guided.
+- Resource caps (11/12 functions), conventions (cleanUrls rewrites must drop .html; CORS per-route), AR conflicts, and stale pointers (docs that still say "GPT can't edit" / "create auto-syncs Stripe" / "adding a product makes it live immediately" / "price change = new product" / "upload by chat" / "refunds don't reflect" after Phases 9–10b).
 
 OUTPUT
 - Ranked list: location, the integration risk, the concrete fix.
@@ -474,37 +215,19 @@ OUTPUT
 ## Angle D — holistic design correctness (repo + design intent)
 
 ```
-You are a senior engineer + designer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
-output findings only (write them to v1_6_1_GAP_REVIEW_D.md).
+You are a senior engineer + designer doing a pre-build gap review. Effort: maximum. Do NOT change anything — output findings only (write them to v1_6_1_GAP_REVIEW_D.md).
 
-THE REVIEW LENS: the North Star (minimize the owner's by-chat friction) is PRIMARY for functionality, but
-your job is BROADER — whole-build DESIGN CORRECTNESS + completeness + exclusive-executability. You are the
-HOLISTIC pass for the DESIGN material that the functionality A-loop never scrutinized. This is NOT a re-run
-of the closed functionality A-loop — do not re-litigate its settled polish.
+THE REVIEW LENS: the North Star (minimize the owner's by-chat friction) is PRIMARY for functionality, but your job is BROADER — whole-build DESIGN CORRECTNESS + completeness + exclusive-executability. You are the HOLISTIC pass for the DESIGN material that the functionality A-loop never scrutinized. This is NOT a re-run of the closed functionality A-loop — do not re-litigate its settled polish.
 
 CONTEXT
-- Read v1_6_1_ADDENDUM_DESIGN.md (the presentation spec) WITH the repo it edits — product.html, shop.html,
-  index.html, assets/css/styles.css, assets/js/{shop,main,product}.js — and the design intent it serves:
-  assets/docs/archive/v1_5/v1_5_0_FEEDBACK.md + the screenshots in assets/docs/archive/images/. Also skim
-  v1_6_1_IMPLEMENT.md (esp. Phase 7 / 7.2, which D2/D3 depend on) and v1_6_1_ADDENDUM_TESTING.md (Part T2).
+- Read v1_6_1_ADDENDUM_DESIGN.md (the presentation spec) WITH the repo it edits — product.html, shop.html, index.html, assets/css/styles.css, assets/js/{shop,main,product}.js — and the design intent it serves: assets/docs/archive/v1_5/v1_5_0_FEEDBACK.md + the screenshots in assets/docs/archive/images/. Also skim v1_6_1_IMPLEMENT.md (esp. Phase 7 / 7.2, which D2/D3 depend on) and v1_6_1_ADDENDUM_TESTING.md (Part T2).
 
 ANGLE D — holistic design correctness. Hunt for:
-1. THE COLUMNS-BUG CLASS: any spec that APPLIES cleanly but RENDERS WRONG or INCOMPLETE. For every CSS/markup
-   change, verify the rule it relies on EXISTS and WINS the cascade — quote it. (D1 removes an inline override:
-   does the desktop <style> rule that takes over exist? D2 ADDS grid-areas to product's EXISTING rule: any
-   conflicting/duplicate .product-layout declaration elsewhere? D6 glow z-index/stacking: does content sit
-   correctly relative to a z-index:-1 fixed overlay given the page backgrounds?)
-2. UNVALIDATED ASSUMPTIONS vs the real files: do referenced tokens/classes/selectors/elements exist with the
-   values the spec assumes? (D5 spacing tokens; D3 .product-media__item classes match populateMedia's output;
-   D7 .hero__spotlight exists; D6 main.js runs on every page; D4 .checkbox-label works inside <details>.)
-3. EXCLUSIVE-EXECUTABILITY: anywhere the builder would discover, decide, or guess (an unstated default; an
-   ambiguous move target). Render-tuned values (D5/D6/D7) ship a default + a render-tune note — judge whether
-   the default is concrete enough to apply with zero guesswork, not whether it's the final value.
-4. COMPLETENESS vs INTENT: does the executed spec achieve the design feedback + original intent across ALL
-   states — mobile/desktop, prefers-reduced-motion, empty/absent media, the disabled "Preview only" controls?
-   Anything in the feedback/screenshots the spec misses?
-5. DESIGN/FUNCTIONALITY OVERLAP: items that straddle the line (filters ↔ shop.js; glow injection JS; the
-   D2 ↔ Phase 7.2 ordering) — does the design change break functionality, or vice-versa?
+1. THE COLUMNS-BUG CLASS: any spec that APPLIES cleanly but RENDERS WRONG or INCOMPLETE. For every CSS/markup change, verify the rule it relies on EXISTS and WINS the cascade — quote it. (D1 removes an inline override: does the desktop <style> rule that takes over exist? D2 ADDS grid-areas to product's EXISTING rule: any conflicting/duplicate .product-layout declaration elsewhere? D6 glow z-index/stacking: does content sit correctly relative to a z-index:-1 fixed overlay given the page backgrounds?)
+2. UNVALIDATED ASSUMPTIONS vs the real files: do referenced tokens/classes/selectors/elements exist with the values the spec assumes? (D5 spacing tokens; D3 .product-media__item classes match populateMedia's output; D7 .hero__spotlight exists; D6 main.js runs on every page; D4 .checkbox-label works inside <details>.)
+3. EXCLUSIVE-EXECUTABILITY: anywhere the builder would discover, decide, or guess (an unstated default; an ambiguous move target). Render-tuned values (D5/D6/D7) ship a default + a render-tune note — judge whether the default is concrete enough to apply with zero guesswork, not whether it's the final value.
+4. COMPLETENESS vs INTENT: does the executed spec achieve the design feedback + original intent across ALL states — mobile/desktop, prefers-reduced-motion, empty/absent media, the disabled "Preview only" controls? Anything in the feedback/screenshots the spec misses?
+5. DESIGN/FUNCTIONALITY OVERLAP: items that straddle the line (filters ↔ shop.js; glow injection JS; the D2 ↔ Phase 7.2 ordering) — does the design change break functionality, or vice-versa?
 
 OUTPUT
 - Ranked list: location (D#, file:line), what's wrong / under-specified / would-render-wrong, the concrete fix.
