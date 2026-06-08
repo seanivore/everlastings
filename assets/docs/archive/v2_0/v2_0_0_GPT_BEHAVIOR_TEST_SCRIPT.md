@@ -1,12 +1,42 @@
-# The Sunkeeper — behavior test + portfolio recording runbook
+# AI Store Management Behavior Testing
 
-**Two jobs in one doc.** It exercises *every* GPT behavior (so you catch anything that misbehaves), and it's ordered as a **recording runbook** for a cohesive portfolio piece: a chat-managed store → the real storefront → checkout → chat-managed fulfillment. Paste-ready content means you never compose on camera. (Engineering-level checks live in `v2_0_0_ADDENDUM_TESTING.md`; this is "say this, expect that.")
+## Overview 
 
-**Where to run it.** GPT's Action pointed at the **dev preview** (the `servers:` URL = the `…-git-dev-…vercel.app` host) + the **Preview**-scoped `PRODUCT_API_KEY` (the `.env.local` value), Vercel SSO off. Everything the GPT touches is automatically `is_test=true` and lives only on the preview — never the live site. So you can clear products, run checkout with a test card, and send shipping emails freely.
+Testing **Everlastings AI Production Assistant "The Sunkeeper"** for all product and order management workflows, brand voice, and behavior adherence. 
 
-**Two real-world cautions even in test:**
-- **`markShipped` actually sends an email** to the address on the order — use a test order whose email is *yours*.
-- **Checkout uses the Stripe test card** `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP (preview = Stripe test mode — no real money).
+  1. Create and manage website products from chat
+  2. Purchase products created on website 
+  3. Look up order details from chat
+  4. Add tracking and send shipping confirmation from chat
+
+### Scope 
+
+  - Image workflow that crops, resizes, changes file type, and compresses
+  - Video workflow that asks how to present the MP4, looping or to play 
+  - Media handoff by Google Drive share link, added to CDN for website hosting
+  - Show AI walk-through covering all necessary product entry fields 
+  - Show AI helping to generate on-brand copy and SEO text that follows best practices
+  - Finish and AI provides user with preview link 
+  - User reviews at preview URL and then publishes from preview 
+  - Move to website to show homepage animation and layout 
+  - Shift to shop and find products that were just created with AI's help 
+  - Add products to cart and showcase the custom UI Stripe payment integration 
+  - Show email receipt about the website order 
+  - Move back to AI and get shipping information 
+  - Give AI a tracking number indicating package has been shipped 
+  - Show subsequent shipping confirmation email sent to user 
+  - Move through admin backend to show available standard usage 
+
+### When Testing 
+
+  - Use actual personal email for checkout shipping 
+  - Use Stripe debit card settings `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP
+
+### Set GPT To Live Store 
+
+  - Update the "Server" in the Custom GPT Settings to use actual website  
+  - Swap out the PRODUCT_API_KEY for production key 
+  - Vercel SSO can be turned back on 
 
 ---
 
@@ -16,15 +46,21 @@ Pull these from your archive into one folder so the recording flows. Reuse freel
 
 **Per piece: 7 images** (the create *enforces* this) — 1 hero + 5 gallery + 1 thumbnail. The hero image can double as the thumbnail, so ~6 distinct images each is enough. Any abstract/cozy art works.
 
-**Video:** you already have one real public MP4 — `https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4`. **Reuse it for every MP4 slot below**, or drop your own. **Posters** = any image. **YouTube:** pick one calm, embeddable clip you like (ambient/nature) for the two pieces that use it — that's the "rare" path, test-only; you needn't feature those in the final cut.
-
 **Media coverage across the six** (this is the point — it proves the page shows *only* the media present, and every playback mode):
-- **1 · The Lantern Keeper's Cottage** — *images only, no video* → proves the media section hides cleanly.
+- **1 · The Lantern Keeper's Cottage** *YouTube only* → proves a pure-embed page (coverage; optional to feature).
+    `https://drive.google.com/drive/folders/1kRlt_McprANI2Ku4b07k21Xh6y7ZB0T5?usp=sharing`
+    `https://youtu.be/6OT_uGu2vP4`
 - **2 · The Reading Hour** — *one GIF-like MP4* (autoplay, loops, silent, no buttons).
+    `https://drive.google.com/drive/folders/1xZi1tbrOAKuKE073V0s9sUzn2nfppFHH?usp=sharing`
 - **3 · First Snow, Stillwood** — *one click-to-play MP4 + a poster still* (controls, sound).
+    `https://drive.google.com/drive/folders/1Ufh0D7KYkxom8JyJMt4zf87m_KzPaxZA?usp=sharing`
 - **4 · The Tide Library** — *two MP4s* (one GIF-like + one click-to-play) → proves multiple clips render in order.
+    `https://drive.google.com/drive/folders/1PUU6ky34uEdGyGFoExgtIbmoQ2y2wE6N?usp=sharing`
 - **5 · The Clockmaker's Window** — *one MP4 + one YouTube* (mixed) → proves MP4s render before YouTube.
-- **6 · The Night Train** — *YouTube only* → proves a pure-embed page (coverage; optional to feature).
+    `https://drive.google.com/drive/folders/1Gh5HJ2vKpnnPNhbzCV__3N96J7O48XfD?usp=sharing`
+    `https://youtu.be/PCZR34lX-9w`
+- **6 · The Night Train** — *images only, no video* → proves the media section hides cleanly.
+    `https://drive.google.com/drive/folders/1Exd9d5QCmIEXh35zCCm0VlI9chn8ajhR?usp=sharing`
 
 ---
 
@@ -33,9 +69,21 @@ Pull these from your archive into one folder so the recording flows. Reuse freel
 *Best on camera: paste the **opening line + details** and let the GPT write the headline/story in Em's voice — that raw→poetic moment is the hero shot. The **finished copy** is your fallback and your source for the edit tests. When it asks about video, tell it the behavior in plain words (e.g. "loop it silently with no buttons") — it sets the flags.*
 
 ### 1 · The Lantern Keeper's Cottage — *Portals to Peace · $268 · qty 1 · featured · images only*
-**Opening:** I want to add a new piece — The Lantern Keeper's Cottage. A little stone cottage at dusk with one window that glows, $268.
-**Details:** It's a tiny stone cottage at the end of a path you almost didn't take, the evening gone to slate. One window lit warm and gold, ivy down the chimney, and a small lantern left burning by the door for whoever's still out walking. It's about keeping a light on for the people you love. Warm LED with three settings, USB-C. Hand-placed moss and dried lavender.
-**Specs:** `7" W x 6" D x 9" H` · `2.2 lbs` · stone resin, reclaimed wood, LED, natural moss, dried lavender · USB-C (adapter included) · care: dust with a soft brush, keep out of direct sun · ships 3–5 business days, insured · qty 1 · featured.
+**Opening:** 
+I want to add a new piece — The Lantern Keeper's Cottage. A little stone cottage at dusk with one window that glows, $268.
+
+**Details:** 
+It's a tiny stone cottage at the end of a path you almost didn't take, the evening gone to slate. One window lit warm and gold, ivy down the chimney, and a small lantern left burning by the door for whoever's still out walking. It's about keeping a light on for the people you love. Warm LED with three settings, USB-C. Hand-placed moss and dried lavender.
+
+**Specs:** 
+7" W x 6" D x 9" H 
+2.2 lbs 
+stone resin, reclaimed wood, LED, natural moss, dried lavender 
+USB-C (adapter included) 
+care: dust with a soft brush, keep out of direct sun 
+ships 3–5 business days, insured 
+qty 1 
+
 **Finished copy:**
 - **headline:** A light left burning by the door
 - **description:** A miniature stone cottage at dusk, its one window kept warm and gold. Hand-set with moss and dried lavender and lit by a three-setting glow — a small, steady reminder of a light left on for you.
