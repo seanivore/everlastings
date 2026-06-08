@@ -1046,7 +1046,11 @@ select:focus {
 @property --fc1 { syntax: '<color>'; inherits: false; initial-value: oklch(48% 0.19 35); }
 @property --fc2 { syntax: '<color>'; inherits: false; initial-value: oklch(60% 0.21 55); }
 @property --fc3 { syntax: '<color>'; inherits: false; initial-value: oklch(42% 0.18 28); }
-.firelight-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: var(--glow-intensity, 0.7); }
+/* On TOP of content (pointer-events:none) so the fire rim frames the viewport edges CONSISTENTLY on
+   every page — behind content (z-index:-1) it only showed through transparent sections. 9998 sits just
+   under the preview banner (product.js z-index:9999). The center never paints (rim-only), so content
+   stays fully visible + interactive. */
+.firelight-glow { position: fixed; inset: 0; z-index: 9998; pointer-events: none; opacity: var(--glow-intensity, 0.7); }
 .firelight-glow::before { content: ""; position: absolute; inset: 0;     /* barely-there dark edge backing (static) */
   background: radial-gradient(125% 125% at 50% 50%, transparent 70%, rgba(24, 10, 0, 0.12) 100%); }
 .firelight-glow::after { content: ""; position: absolute; inset: 0;      /* the fire rim: tight band + soft halo */
