@@ -274,15 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (stored) {
     try { applyConsent(JSON.parse(stored)); } catch {}
   }
-  // Firelight ambient glow — inject once, sits behind content.
+  // Firelight ambient glow — inject once; frames the viewport edges on top (pointer-events:none, rim-only).
   if (!document.querySelector('.firelight-glow')) {
     const glow = document.createElement('div');
     glow.className = 'firelight-glow';
     glow.setAttribute('aria-hidden', 'true');
     document.body.prepend(glow);
   }
-  // Firelight colour variety: nudge the whole flame palette warmer/cooler per page load so each page's
-  // fire reads a slightly different temperature (the rim still cycles red→orange→amber→gold either way).
-  const fireShift = Math.round(Math.random() * 50 - 20); // -20deg (deeper red) .. +30deg (toward gold)
-  document.documentElement.style.setProperty('--fire-hue-shift', fireShift + 'deg');
+  // Per-page variety: start each page's flame at a different point in its flicker cycle.
+  document.documentElement.style.setProperty('--fire-delay', (-(Math.random() * 3.4)).toFixed(2) + 's');
 });
