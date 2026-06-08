@@ -1,6 +1,6 @@
 # v1.6.x — Gap-review prompts (B + C round; fresh instances)
 
-**Angle A is CLOSED** — the holistic out-of-repo loop ran 9 cold passes and the 9th (`assets/docs/archive/v1_5/v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD**; its 6 polish findings are folded into `v1_6_0_IMPLEMENT.md`. This round runs **B (fidelity)** and **C (integration)**, both against the build = `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md` **plus its same-version addendums** `v1_6_0_ADDENDUM_DESIGN.md` (presentation) + `v1_6_0_ADDENDUM_TESTING.md` (verification). **The three are one build; every addendum is always in scope** — review them together. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per angle** (no context contamination). Reviewers change **nothing** — output is findings only.
+**Angle A is CLOSED** — the holistic out-of-repo loop ran 9 cold passes and the 9th (`assets/docs/archive/v1_5/v1_5_9_GAP_REVIEW_A.md`) returned **READY TO BUILD**; its 6 polish findings are folded into `v1_6_1_IMPLEMENT.md`. This round runs **B (fidelity)** and **C (integration)**, both against the build = `assets/docs/archive/v1_6/v1_6_1_IMPLEMENT.md` **plus its same-version addendums** `v1_6_1_ADDENDUM_DESIGN.md` (presentation) + `v1_6_1_ADDENDUM_TESTING.md` (verification). **The three are one build; every addendum is always in scope** — review them together. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per angle** (no context contamination). Reviewers change **nothing** — output is findings only.
 
 > ## ⭐ The review lens (give this to EVERY reviewer — subagent breadth AND cold A/B/C)
 > **The product North Star is: minimize the owner's friction to manage her entire digital product — the
@@ -17,22 +17,25 @@
 > **link** (the GPT fetches a Drive/direct URL), and the GPT asks for a link when a file is pasted. A
 > finding that "X technically works but Em can't trigger it by chat" is a **real gap**, not a nitpick.
 
-> **Angle A ran 9 cold passes and is closed.** Passes 1–9 (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`) each came back NARROW and were folded → v1.5.2 … v1.5.9; convergence was narrowing but **non-monotonic** (a fold sometimes introduced the next finding — e.g. pass 8's data-loss bug came from pass 7's own effective-compare fix). The **9th pass returned READY TO BUILD**: no architecture gap, no missing chat capability, no data-loss regression; landmines 7–30 confirmed holding against quoted code. Its **6 polish findings are folded into `v1_6_0_IMPLEMENT.md`** and recorded as **landmines #31–36** below — B and C should confirm those hold, not re-litigate the closed A trail. The full per-pass detail lives in the `v1_5_*_GAP_REVIEW_A.md` archive.
+> ## Review mandate — broader than the North Star (don't let the lens shrink the scope)
+> The North Star above is the **primary** lens for the *functionality* thesis — but it is **NOT** the filter for what counts as a gap. Every reviewer must ALSO catch, across the **whole build** (functionality + design + general feedback), anything **not truly exclusively-executable**, any **unvalidated assumption**, and any **design-correctness** failure — the **columns-bug class**: a spec that *applies* cleanly but *renders wrong or incomplete* (e.g. removing an inline style assuming a stylesheet rule takes over — does that rule exist and win the cascade?). The closed Angle-A READY verdict was **North-Star-scoped** (the store is chat-drivable); it did **not** certify whole-build executability or the design additions. **Caution:** do NOT re-litigate the *closed functionality A-loop's* settled polish (the 9th-A warned that re-looping it manufactures blockers) — this mandate targets the new design/general-feedback material and whole-build executability, not a re-run of A.
+
+> **Angle A ran 9 cold passes and is closed.** Passes 1–9 (`v1_5_1`…`v1_5_9_GAP_REVIEW_A.md`) each came back NARROW and were folded → v1.5.2 … v1.5.9; convergence was narrowing but **non-monotonic** (a fold sometimes introduced the next finding — e.g. pass 8's data-loss bug came from pass 7's own effective-compare fix). The **9th pass returned READY TO BUILD**: no architecture gap, no missing chat capability, no data-loss regression; landmines 7–30 confirmed holding against quoted code. Its **6 polish findings are folded into `v1_6_1_IMPLEMENT.md`** and recorded as **landmines #31–36** below — B and C should confirm those hold, not re-litigate the closed A trail. The full per-pass detail lives in the `v1_5_*_GAP_REVIEW_A.md` archive.
 
 > **Before the B/C round:** a fast in-house **subagent breadth pass** (owner-journey completeness +
-> integration/state-machine, **through the review lens above**) was run against `v1_6_0_IMPLEMENT.md` after
+> integration/state-machine, **through the review lens above**) was run against `v1_6_1_IMPLEMENT.md` after
 > the 6-finding fold to confirm no fold introduced a regression (the non-monotonic trap). Subagents are
 > pre-gate breadth — never the gate itself; per DEV_RULES.
 
 ## Sequencing (per Sean's gap-review flow)
 
-1. **A — DONE** (cold / out-of-repo, the holistic gate). Ran 9 passes, closed at v1.5.9 = READY TO BUILD; its findings folded into `v1_6_0_IMPLEMENT.md`.
-2. **B + C** (in repo) — run **in parallel** (orthogonal angles: fidelity vs. integration). Fold both at once → bump the doc (`v1_6_0` → `v1_6_1`…); re-run an angle only if it finds something load-bearing.
-3. Both clean → **Sean approves** → a fresh agent executes on the dev preview (the v2.0.0 build).
+1. **A — DONE** (cold / out-of-repo, the holistic gate). Ran 9 passes, closed at v1.5.9 = READY TO BUILD; its findings folded into `v1_6_1_IMPLEMENT.md`.
+2. **B + C + D** (in repo) — run **in parallel** (orthogonal angles: fidelity vs. integration vs. holistic design-correctness). Fold all at once → bump the doc (`v1_6_1` → `v1_6_2`…); re-run an angle only if it finds something load-bearing. **D is the *design* holistic pass — NOT a re-run of the closed functionality A.**
+3. All clean → **Sean approves** → a fresh agent executes on the dev preview (the v2.0.0 build).
 
 ## What to hand each reviewer
 
-- **B / C:** the repo + `assets/docs/archive/v1_6/v1_6_0_IMPLEMENT.md` + **both addendums** (`v1_6_0_ADDENDUM_DESIGN.md`, `v1_6_0_ADDENDUM_TESTING.md`); **C** also reads `assets/docs/EVERLASTINGS_STORE.md` first. **Rule: all addendums are always part of the build and of every gap review** — hand the reviewer the IMPLEMENT and every addendum. The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
+- **B / C / D:** the repo + `assets/docs/archive/v1_6/v1_6_1_IMPLEMENT.md` + **both addendums** (`v1_6_1_ADDENDUM_DESIGN.md`, `v1_6_1_ADDENDUM_TESTING.md`); **C** also reads `assets/docs/EVERLASTINGS_STORE.md` first; **D** also reads the design feedback it serves (`assets/docs/archive/v1_5/v1_5_0_FEEDBACK.md` + the screenshots in `assets/docs/archive/images/`). **Rule: all addendums are always part of the build and of every gap review** — hand the reviewer the IMPLEMENT and every addendum. The review lens + landmines are **inlined in each prompt block below** — no separate paste needed.
 - (A is closed; its cold/out-of-repo charter is preserved below for the record but is not part of this round.)
 
 ## Landmines — given to EVERY reviewer (validate against reality, not training data)
@@ -80,7 +83,7 @@ These are inlined verbatim into each prompt block below. Items 7–21 are the mo
 
 ## Angle A — cold / out-of-repo (self-containment + completeness) — CLOSED (9 passes → READY TO BUILD)
 
-> **A is closed — do not run this round.** The charter below is preserved for the record (and for any future cold-A on a later initiative). It ran 9 times against `v1_5_*_IMPLEMENT.md`; the 9th (`v1_5_9_GAP_REVIEW_A.md`) returned READY TO BUILD and its 6 findings are folded into `v1_6_0_IMPLEMENT.md` (landmines #31–36). The active round is **B + C** below.
+> **A is closed — do not run this round.** The charter below is preserved for the record (and for any future cold-A on a later initiative). It ran 9 times against `v1_5_*_IMPLEMENT.md`; the 9th (`v1_5_9_GAP_REVIEW_A.md`) returned READY TO BUILD and its 6 findings are folded into `v1_6_1_IMPLEMENT.md` (landmines #31–36). The active round is **B + C** below.
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
@@ -259,7 +262,7 @@ beats "coupons look incomplete."
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_6_0_GAP_REVIEW_B.md).
+output findings only (write them to v1_6_1_GAP_REVIEW_B.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her whole store by chat via
 her Custom GPT (which should match what an agent like Claude Code could do). Fidelity matters because a
@@ -268,8 +271,8 @@ CURRENT block that no longer matches means the builder DISCOVERS/DECIDES — fri
 forward a pasted file, so media comes by URL.
 
 CONTEXT
-- The build is v1_6_0_IMPLEMENT.md (Part 2 functionality) PLUS its addendums — v1_6_0_ADDENDUM_DESIGN.md
-  (presentation: CSS/markup, with CURRENT/NEW blocks) and v1_6_0_ADDENDUM_TESTING.md (the full verification
+- The build is v1_6_1_IMPLEMENT.md (Part 2 functionality) PLUS its addendums — v1_6_1_ADDENDUM_DESIGN.md
+  (presentation: CSS/markup, with CURRENT/NEW blocks) and v1_6_1_ADDENDUM_TESTING.md (the full verification
   plan). A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every CODE edit quotes
   a CURRENT block (locator) + a NEW block; the doc-edit phases (9 / 10 / 10b) are line-hinted prose, NOT
   byte-anchored (the plan says so) — treat a CURRENT line-ref there as a locator to confirm, not a hard byte
@@ -358,7 +361,7 @@ OUTPUT
 
 ```
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs —
-output findings only (write them to v1_6_0_GAP_REVIEW_C.md).
+output findings only (write them to v1_6_1_GAP_REVIEW_C.md).
 
 THE REVIEW LENS: the North Star is to minimize the owner's friction to run her ENTIRE store (site,
 store, sales) by chatting with her Custom GPT — which should be able to do what an agent like Claude
@@ -367,8 +370,8 @@ wider system, makes a by-chat capability fail or leak. Structural limit: a GPT A
 can't forward a pasted file → media comes by URL (the GPT fetches a Drive/direct link).
 
 CONTEXT
-- Read EVERLASTINGS_STORE.md FIRST, then v1_6_0_IMPLEMENT.md AND its addendums (v1_6_0_ADDENDUM_DESIGN.md,
-  v1_6_0_ADDENDUM_TESTING.md). A FRESH agent applies the WHOLE build to this repo and tests on the dev
+- Read EVERLASTINGS_STORE.md FIRST, then v1_6_1_IMPLEMENT.md AND its addendums (v1_6_1_ADDENDUM_DESIGN.md,
+  v1_6_1_ADDENDUM_TESTING.md). A FRESH agent applies the WHOLE build to this repo and tests on the dev
   preview. DESIGN INTEGRATION IS IN SCOPE: the D2 product-layout HTML moves run AFTER parent Phase 7.2's
   media-container swap (confirm the ordering + that `product.js` data-* population still works after the
   moves); the hero (D7) references CDN assets that are LIVE (https://cdn.everlastingsbyemaline.com/hero-bg-anim/);
@@ -464,6 +467,47 @@ but breaks the wider system OR a by-chat capability:
 
 OUTPUT
 - Ranked list: location, the integration risk, the concrete fix.
+- The single most important fix.
+- One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
+```
+
+## Angle D — holistic design correctness (repo + design intent)
+
+```
+You are a senior engineer + designer doing a pre-build gap review. Effort: maximum. Do NOT change anything —
+output findings only (write them to v1_6_1_GAP_REVIEW_D.md).
+
+THE REVIEW LENS: the North Star (minimize the owner's by-chat friction) is PRIMARY for functionality, but
+your job is BROADER — whole-build DESIGN CORRECTNESS + completeness + exclusive-executability. You are the
+HOLISTIC pass for the DESIGN material that the functionality A-loop never scrutinized. This is NOT a re-run
+of the closed functionality A-loop — do not re-litigate its settled polish.
+
+CONTEXT
+- Read v1_6_1_ADDENDUM_DESIGN.md (the presentation spec) WITH the repo it edits — product.html, shop.html,
+  index.html, assets/css/styles.css, assets/js/{shop,main,product}.js — and the design intent it serves:
+  assets/docs/archive/v1_5/v1_5_0_FEEDBACK.md + the screenshots in assets/docs/archive/images/. Also skim
+  v1_6_1_IMPLEMENT.md (esp. Phase 7 / 7.2, which D2/D3 depend on) and v1_6_1_ADDENDUM_TESTING.md (Part T2).
+
+ANGLE D — holistic design correctness. Hunt for:
+1. THE COLUMNS-BUG CLASS: any spec that APPLIES cleanly but RENDERS WRONG or INCOMPLETE. For every CSS/markup
+   change, verify the rule it relies on EXISTS and WINS the cascade — quote it. (D1 removes an inline override:
+   does the desktop <style> rule that takes over exist? D2 ADDS grid-areas to product's EXISTING rule: any
+   conflicting/duplicate .product-layout declaration elsewhere? D6 glow z-index/stacking: does content sit
+   correctly relative to a z-index:-1 fixed overlay given the page backgrounds?)
+2. UNVALIDATED ASSUMPTIONS vs the real files: do referenced tokens/classes/selectors/elements exist with the
+   values the spec assumes? (D5 spacing tokens; D3 .product-media__item classes match populateMedia's output;
+   D7 .hero__spotlight exists; D6 main.js runs on every page; D4 .checkbox-label works inside <details>.)
+3. EXCLUSIVE-EXECUTABILITY: anywhere the builder would discover, decide, or guess (an unstated default; an
+   ambiguous move target). Render-tuned values (D5/D6/D7) ship a default + a render-tune note — judge whether
+   the default is concrete enough to apply with zero guesswork, not whether it's the final value.
+4. COMPLETENESS vs INTENT: does the executed spec achieve the design feedback + original intent across ALL
+   states — mobile/desktop, prefers-reduced-motion, empty/absent media, the disabled "Preview only" controls?
+   Anything in the feedback/screenshots the spec misses?
+5. DESIGN/FUNCTIONALITY OVERLAP: items that straddle the line (filters ↔ shop.js; glow injection JS; the
+   D2 ↔ Phase 7.2 ordering) — does the design change break functionality, or vice-versa?
+
+OUTPUT
+- Ranked list: location (D#, file:line), what's wrong / under-specified / would-render-wrong, the concrete fix.
 - The single most important fix.
 - One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
 ```

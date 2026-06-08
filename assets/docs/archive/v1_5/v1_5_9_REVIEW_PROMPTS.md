@@ -1,6 +1,6 @@
 # v1.5.x — Gap-review prompts (fresh instances)
 
-> **SUPERSEDED.** Angle A is closed (9 passes → READY TO BUILD). The current charters (B + C round, against `v1_6_0_IMPLEMENT.md`) live in `assets/docs/archive/v1_6/v1_6_0_REVIEW_PROMPTS.md`.
+> **SUPERSEDED.** Angle A is closed (9 passes → READY TO BUILD). The current charters (B + C round, against `v1_6_1_IMPLEMENT.md`) live in `assets/docs/archive/v1_6/v1_6_1_REVIEW_PROMPTS.md`.
 
 All three angles review the **single living plan** `assets/docs/archive/v1_5/v1_5_9_IMPLEMENT.md`. Adapted from `.agent/DEV_RULES.md` §The Gap-Review Gate. **Effort: maximum. A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only.
 

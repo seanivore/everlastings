@@ -1,6 +1,6 @@
-# ADDENDUM · TESTING — v1.6.0
+# ADDENDUM · TESTING — v1.6.1
 
-**Parent:** `v1_6_0_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Pairs with:** `v1_6_0_ADDENDUM_DESIGN.md`. This doc is the full verification plan — **functionality and design are tested the same way**, on the dev preview, on production-grade placeholder assets (no real content required). It absorbs the parent's former "Phase 11 — Verify + test" (now a pointer) and adds the design + media matrix.
+**Parent:** `v1_6_1_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Pairs with:** `v1_6_1_ADDENDUM_DESIGN.md`. This doc is the full verification plan — **functionality and design are tested the same way**, on the dev preview, on production-grade placeholder assets (no real content required). It absorbs the parent's former "Phase 11 — Verify + test" (now a pointer) and adds the design + media matrix.
 
 > **Test on Vercel preview URLs, never localhost.** Point any GPT/curl at the dev preview; `is_test=true`, no real money; SSO off for third-party calls during testing.
 

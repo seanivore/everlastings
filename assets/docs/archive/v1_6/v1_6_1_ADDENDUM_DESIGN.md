@@ -1,8 +1,8 @@
-# ADDENDUM · DESIGN — v1.6.0 (exclusively executable)
+# ADDENDUM · DESIGN — v1.6.1 (exclusively executable)
 
-**Parent:** `v1_6_0_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Required reading with it:** `assets/docs/EVERLASTINGS_STORE.md` + the parent. **Scope:** the presentation layer — CSS, markup structure, and render-tuned aesthetics for the pages. Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, GPT schema) stays in the parent; this doc styles and arranges what that behavior produces.
+**Parent:** `v1_6_1_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Required reading with it:** `assets/docs/EVERLASTINGS_STORE.md` + the parent. **Scope:** the presentation layer — CSS, markup structure, and render-tuned aesthetics for the pages. Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, GPT schema) stays in the parent; this doc styles and arranges what that behavior produces.
 
-> **How design is "executable" here (read once).** Design is built and validated **exactly like functionality**: the spec gives the builder concrete CURRENT/NEW blocks or concrete default values so it never *guesses* — and then, like every functionality phase, it gets a **testing + feedback pass** on the dev preview (see `v1_6_0_ADDENDUM_TESTING.md`). Render-dependent aesthetics (glow palette, density, hero treatment) ship with a **stated default** plus a **RENDER-TUNE** note; tuning them on the live render is the design test phase, not a plan gap. "Executable" means *no discovery/decision is left to the builder*, not *frozen forever*.
+> **How design is "executable" here (read once).** Design is built and validated **exactly like functionality**: the spec gives the builder concrete CURRENT/NEW blocks or concrete default values so it never *guesses* — and then, like every functionality phase, it gets a **testing + feedback pass** on the dev preview (see `v1_6_1_ADDENDUM_TESTING.md`). Render-dependent aesthetics (glow palette, density, hero treatment) ship with a **stated default** plus a **RENDER-TUNE** note; tuning them on the live render is the design test phase, not a plan gap. "Executable" means *no discovery/decision is left to the builder*, not *frozen forever*. **Design/functionality overlap is real:** several items here straddle the line — the filter dropdowns (D4) also bind to `shop.js`, the glow (D6) is injected by JS, and the D2 layout moves depend on parent Phase 7.2. They're specced here for *presentation*, but the **whole build is reviewed together**, never siloed by the design-vs-functionality split.
 
 > ## ⭐ The lens (same North Star as the parent)
 > Minimize the owner's friction to run her whole digital product by chat via her Custom GPT. The site itself is the other place we out-class a Shopify/"AI-website" feel — through a distinctive, custom **experience**. This addendum keeps the already-beautiful site intact and fills the narrow gaps the original design plan specified but the build missed (optional product video behaviors, the filter layout), fixes the one real layout bug (columns), and adds the small requested touches (filter dropdowns, ambient glow, the animated hero). The richer interactive homepage vision is a **separate v3.0.0 initiative** (see `assets/docs/archive/v3_0/`), not this build.
@@ -13,7 +13,7 @@
 
 ## D1 — Columns root-cause bug (EXECUTABLE) — was §3.1
 
-Both pages set `grid-template-columns: 1fr` as an **inline style** on the layout div, overriding the desktop two-column rule in the page's `<style>` block (inline beats a stylesheet selector) — so both are permanently single-column on desktop. Fix = delete the inline `grid-template-columns` and let the media-queried `<style>` rule own it. Mobile stays single-column naturally (a grid with no explicit columns flows to one column).
+Both pages set `grid-template-columns: 1fr` as an **inline style** on the layout div, overriding the desktop two-column rule in the page's `<style>` block (inline beats a stylesheet selector) — so both are permanently single-column on desktop. Fix = delete the inline `grid-template-columns` and let the media-queried `<style>` rule own it — **that desktop rule already exists** (this is the columns-bug-class check: the rule that must win is present): `product.html:444-448` (`.product-layout` → `1fr 360px` at ≥768, `1fr 400px` at ≥1024) and `shop.html:368-372` (`.shop-layout` → `220px 1fr` / `240px 1fr`). Removing the inline override is all it takes — no new column rule is needed (D2 only *adds grid-areas* to product's existing rule; it does not re-declare the columns). Mobile stays single-column naturally (a grid with no explicit columns flows to one column).
 
 **`product.html:162` CURRENT:**
 ```html
@@ -46,25 +46,45 @@ Restores the intended layout the D1 bug flattened, plus the element order from `
 
 > **Order dependency (integration note for Angle C):** this runs **after parent Phase 7.2**, which already swaps the static `.product-gallery__media` block for the empty data-bound container `<div class="product-gallery__media hidden" data-product-media></div>`. D2 operates on that post-7.2 markup. `product.js` binds by `data-*` attributes, so relocating elements does **not** affect population.
 
-**CSS — add to `assets/css/styles.css` (new rules; the existing sticky rule at 878-890 stays and supplies the stickiness):**
-```css
-.product-layout {
-  grid-template-areas: "gallery" "card" "story" "media" "details";   /* mobile order */
-}
-.product-layout > .product-gallery        { grid-area: gallery; }
-.product-layout > .product-sticky-card    { grid-area: card; }
-.product-layout > .story-card             { grid-area: story; }
-.product-layout > .product-gallery__media { grid-area: media; }
-.product-layout > .product-details        { grid-area: details; }
-@media (min-width: 768px) {
-  .product-layout {
-    grid-template-columns: 1fr 380px;
-    grid-template-areas: "gallery card" "story card" "media details";
-  }
-  .product-layout > .product-sticky-card { align-self: start; } /* let the existing sticky rule work in-grid */
-}
+**CSS — EXTEND the existing product-page `<style>` block (`product.html:442-450`), which already declares the desktop columns. Do NOT add a second `.product-layout` rule (e.g. in `styles.css`) — that would conflict with this one. We only ADD `grid-template-areas` + child area assignments; the existing `1fr 360px`/`1fr 400px` columns stay.**
+
+CURRENT (`product.html:442-450`):
+```html
+    <style>
+      /* product.html-only layout: two-column on desktop, stacked on mobile */
+      @media (min-width: 768px) {
+        .product-layout { grid-template-columns: 1fr 360px; }
+      }
+      @media (min-width: 1024px) {
+        .product-layout { grid-template-columns: 1fr 400px; gap: var(--space-3xl); }
+      }
+    </style>
 ```
-(The `grid-template-columns`/`gap`/`margin-top` stay inline on `.product-layout` per D1; the desktop column override above wins inside the media query. Keep the existing `.product-sticky-card { position: sticky; … }` at `styles.css:885-890`.)
+NEW (adds mobile + desktop `grid-template-areas` and the child `grid-area` assignments; columns unchanged):
+```html
+    <style>
+      /* product.html-only layout: two-column on desktop, stacked on mobile */
+      .product-layout {
+        grid-template-areas: "gallery" "card" "story" "media" "details";   /* mobile order */
+      }
+      .product-layout > .product-gallery        { grid-area: gallery; }
+      .product-layout > .product-sticky-card    { grid-area: card; }
+      .product-layout > .story-card             { grid-area: story; }
+      .product-layout > .product-gallery__media { grid-area: media; }
+      .product-layout > .product-details        { grid-area: details; }
+      @media (min-width: 768px) {
+        .product-layout {
+          grid-template-columns: 1fr 360px;
+          grid-template-areas: "gallery card" "story card" "media details";
+        }
+        .product-layout > .product-sticky-card { align-self: start; } /* let the existing sticky rule work in-grid */
+      }
+      @media (min-width: 1024px) {
+        .product-layout { grid-template-columns: 1fr 400px; gap: var(--space-3xl); }
+      }
+    </style>
+```
+(The inline `display:grid; gap; margin-top` on `.product-layout` at `product.html:162` stays; the existing sticky rule at `styles.css:885-890` supplies the stickiness — `align-self: start` lets it work in the grid.)
 
 **HTML moves in `product.html` (make the four blocks direct children of `.product-layout`):**
 1. **Unwrap `.product-story`** (`product.html:167`, closing `</div>` at `:277`): delete the wrapping `<div class="product-story">` and its close so `.product-gallery` (`:173`) and `.story-card` (`:265`) become direct children of `.product-layout`.
@@ -108,7 +128,7 @@ RENDER-TUNE (not blockers): the sticky card keeps BUY in view; `.product-details
 .product-media__item--embed { aspect-ratio: 16 / 9; }
 .product-media__item--embed iframe { width: 100%; height: 100%; border: 0; border-radius: var(--radius-md); }
 ```
-(The container + `populateMedia` ship + are tested in parent Phase 7/7.2; **GIFs are retired** — an MP4 `<video loop muted playsinline>` is smaller and cleaner. The `gif-0[1-5]` `ROLE_PATTERN` entries can be retired in a follow-up; harmless if left.)
+(The container + `populateMedia` ship + are tested in parent Phase 7/7.2. **Prereq:** these class names — `.product-media__item` and `.product-media__item--embed` — style exactly what Phase 7.2's `populateMedia` emits (verified against the Phase 7 code), so Phase 7.2 runs first or these rules have nothing to target. **GIFs are retired** — an MP4 `<video loop muted playsinline>` is smaller and cleaner. The `gif-0[1-5]` `ROLE_PATTERN` entries can be retired in a follow-up; harmless if left.)
 
 ---
 
@@ -193,16 +213,16 @@ RENDER-TUNE: open/closed defaults (Series open, others closed above) and caret s
 
 Scale spacing/sizing down on desktop so cart / checkout / cards don't push content below the fold at smaller desktop widths. Concrete default = tighten the large spacing tokens at the desktop breakpoint only (mobile untouched), so the change is global, reversible, and design-token-driven rather than per-component.
 
-**Default (add to `assets/css/styles.css`):**
+**Default (add to `assets/css/styles.css`).** Real current defaults are `--space-2xl: 3rem` and `--space-3xl: 4rem` (`styles.css:76-77`); tighten both at the desktop breakpoint only (mobile untouched):
 ```css
 @media (min-width: 1024px) {
   :root {
-    --space-3xl: 4rem;   /* from the larger default — tighten vertical rhythm on desktop */
-    --space-2xl: 2.5rem;
+    --space-3xl: 3rem;    /* 4rem → 3rem: tighten desktop vertical rhythm */
+    --space-2xl: 2.25rem; /* 3rem → 2.25rem */
   }
 }
 ```
-RENDER-TUNE: the exact reductions are confirmed against the cart/checkout/card renders on the dev preview (start from the values above; adjust until nothing critical sits below the fold at 1280–1440px). Verify the values against the real token defaults in `:root` before applying (anchor: the `--space-*` scale at the top of `styles.css`).
+This also tightens the product-page `.product-layout` gap (it uses `--space-3xl` at ≥1024) and the shop `.shop-layout` gap (`--space-2xl`) — intended. RENDER-TUNE: the exact reductions are confirmed against the cart/checkout/card renders on the dev preview (start from the values above; adjust until nothing critical sits below the fold at 1280–1440px).
 
 ---
 
@@ -215,7 +235,7 @@ A warm bloom seeping inward from all four viewport edges (ref `assets/docs/archi
 **CSS (add to `assets/css/styles.css`):**
 ```css
 :root { --glow-color: 212, 175, 122; --glow-intensity: 0.45; } /* warm firelight default; page JS may override */
-.firelight-glow { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+.firelight-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
     radial-gradient(120% 80% at 50% -10%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
     radial-gradient(120% 80% at 50% 110%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
@@ -229,7 +249,20 @@ A warm bloom seeping inward from all four viewport edges (ref `assets/docs/archi
 @keyframes glow-rotate  { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .firelight-glow, .firelight-glow::before { animation: none; } }
 ```
-**Placement:** one fixed, non-interactive overlay behind content — injected once from `main.js` on every page (cleaner than editing each page's template): create `<div class="firelight-glow" aria-hidden="true">` as the first child of `<body>`. The main content wrapper gets `position: relative; z-index: 1` if a stacking fix is needed. **Per-page color (`main.js`):** set `document.documentElement.style.setProperty('--glow-color', <triplet>)` per context from the brand palette above (default warm-gold; shop → amethyst; product page → seed from the piece). Deferred: a per-product `accent_color` column feeding `--glow-color`.
+**Placement + injection (EXECUTABLE — `main.js` runs on every page; add to its `DOMContentLoaded` handler, ~`main.js:264`, alongside `initConfig()`):** the glow is `z-index: -1`, so it sits behind all in-flow content with **no content-lift needed** (no per-page wrapper or `<main>` z-index edits — the earlier "add z-index:1 to the wrapper" idea is unnecessary with a negative z-index). Inject once + apply an optional per-page tint:
+```js
+// v1.6 Firelight ambient glow (design addendum D6) — inject once, sits behind content.
+if (!document.querySelector('.firelight-glow')) {
+  const glow = document.createElement('div');
+  glow.className = 'firelight-glow';
+  glow.setAttribute('aria-hidden', 'true');
+  document.body.prepend(glow);
+}
+// optional per-page tint (brand palette); the warm-gold default lives in :root.
+const glowTint = { '/shop': '155, 107, 158' /* amethyst */ }[location.pathname.replace(/\/$/, '')];
+if (glowTint) document.documentElement.style.setProperty('--glow-color', glowTint);
+```
+RENDER-TUNE: `--glow-intensity` + per-page `--glow-color`, and whether any full-bleed section needs a transparent/translucent background to let the edge-bleed read (a `z-index:-1` glow shows through wherever a section doesn't paint an opaque background over it). Deferred: a per-product `accent_color` column feeding `--glow-color`.
 
 RENDER-TUNE: the exact `--glow-color` per page + `--glow-intensity` are confirmed against the live effect (palette-first); the mechanism above is fixed.
 
@@ -288,7 +321,7 @@ RENDER-TUNE: spotlight intensity/position, overlay strength for text contrast ov
 
 **Placeholder principle:** build/test on production-grade placeholders that mimic the GPT-validated real-asset specs (existing AI pipeline). **Real content is never a build/test gate**; the client adds it by chat after handoff.
 
-**Placeholder set must cover the full media test matrix** (so D3/Phase 7 render is provable without real assets) — see `v1_6_0_ADDENDUM_TESTING.md`:
+**Placeholder set must cover the full media test matrix** (so D3/Phase 7 render is provable without real assets) — see `v1_6_1_ADDENDUM_TESTING.md`:
 - a product with a **GIF-like** video (`autoplay:true, loop:true` → silent, no controls),
 - a product with a **click-to-play** video (controls, sound, no autoplay),
 - a product with a **YouTube** item,
