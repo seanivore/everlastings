@@ -66,16 +66,29 @@ All quoted CURRENT blocks matched the working tree byte-for-byte (line numbers w
 
 **Surfaced (not bugs):** the preview token **rotates on every edit** (correct — "only the latest preview link works"); the unauthorized `/api/products` returns `is_test=false` only (correct isolation — returns 0 on a test-only preview; the public *site* reads test rows via `main.js`).
 
-## Verification — design (T2)
+## Verification — design (T2, browser render-check on the dev preview)
 
-_In progress (browser render-check on the dev preview): product-page two-column + sticky aside, story-card, ambient glow, filter dropdowns, animated homepage hero, media matrix, desktop + mobile, console-error sweep. Render-tuning aesthetics are Sean's design-feedback pass._
+Verified live (Claude-in-Chrome), desktop + mobile:
+- **D7 animated hero** — real `<video>`, autoplaying, muted/loop, `homepage-hero-animation.mp4` (1920×1080). ✓
+- **D1 columns fix** — `/shop` renders two columns (filter sidebar + grid); the permanent-single-column bug is gone. ✓
+- **D4 filter dropdowns** — Series/Type/Availability are native `<details>` (Series open, others collapsed, +/− caret); sort intact. ✓
+- **D2 product two-column + sticky aside** — `grid-template-areas:"gallery aside" "story aside" "media ."`, child order gallery→aside→story→media (buy card precedes media), aside `position:sticky` with the inner card neutralized to `static`; Details under the card; Related rail renders. ✓
+- **D3 story-card** — body font, `font-style:normal` (no longer display-serif italic). ✓
+- **Media matrix** — GIF-like autoplay (silent, no controls, plays in view), click-to-play (controls), YouTube after MP4, **MP4-first sort confirmed** (mixed fixture authored YouTube-first still renders MP4 first), images-only + empty-media both hide the section. ✓
+- **Preview mode** — "Draft preview — not yet live" banner + "PREVIEW ONLY" disabled buy buttons. ✓
+- **Mobile (<768px)** — product layout single-columns gallery→aside→story→media; hamburger nav. ✓
+- **Console** — no errors across homepage / shop / product. ✓
+
+**Design feedback applied (D6 glow):** Sean's pass found the glow reading as a full-page wash; retuned to an **edge-frame bloom** (hugs all four viewport edges, clear centre, per-page brand hues) — commit `b19bb34`. New CSS confirmed live; **final glow aesthetic awaits Sean's eye** (the `z-index:-1` glow under-renders in agent screenshots).
+
+**Pre-existing (out of scope, noted):** the `Shop` nav item's dropdown indicator has rendered oddly since the first build (a pre-existing `nav-dropdown`, untouched by v2.0).
 
 ---
 
 ## Remaining before ship
 
-- **T2 design render-check** (in progress) + Sean's aesthetic/render-tune pass.
-- **#10 GPT behaviour** — Sean configures the Custom GPT (his account), Action → preview + the new preview key, Web Browsing ON.
+- **Glow aesthetic** — Sean's eye on the retuned edge-frame glow (intensity + per-page hues) on the live preview; tune if needed.
+- **#10 GPT behaviour** — Sean configures the Custom GPT (his account), Action → preview + the preview key, Web Browsing ON.
 - **#22 refund** — Sean enables `charge.refunded` on the Stripe webhook (test mode), then a full test refund flips order status to `refunded`.
 - **Phase 10 as-built docs** (`EVERLASTINGS_STORE.md`, `STORE_ADMINISTRATION.md`, `BRAND.md`, `README.md`) — written last, after testing + bug-fix.
 
