@@ -1,5 +1,5 @@
 import { corsHeaders, preflight } from './_lib/cors';
-import { env } from './_lib/env';
+import { env, isTest } from './_lib/env';
 
 export async function GET(req: Request) {
   return Response.json(
@@ -8,6 +8,7 @@ export async function GET(req: Request) {
       supabaseUrl: env('SUPABASE_URL'),
       supabasePublishableKey: env('SUPABASE_PUBLISHABLE_KEY'),
       metaPixelId: env('META_PIXEL_ID') || null,
+      isTest,
     },
     { headers: corsHeaders(req) },
   );

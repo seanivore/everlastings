@@ -57,6 +57,37 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: 'Idempotency claim failed' }), { status: 500, headers });
   }
 
+  if (event.type === 'charge.refunded') {
+    try {
+      const charge = event.data.object as Stripe.Charge;
+      const piId = typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : charge.payment_intent?.id ?? null;
+      const fullyRefunded = charge.amount_refunded >= charge.amount;
+      if (piId && fullyRefunded) {
+        // `refunded` is terminal truth: this intentionally overwrites a prior 'shipped'/'delivered'
+        // status (a refund after shipping is still a refund). The partial-shipping-queue index
+        // (WHERE status='completed') drops the row, so a refunded order leaves the GPT's shipping
+        // list cleanly. The admin order view reads `status` directly, so it reflects the flip.
+        const { error: refundErr } = await supabase
+          .from('orders')
+          .update({ status: 'refunded' })
+          .eq('stripe_payment_intent', piId);
+        if (refundErr) {
+          console.error(`Refund status update failed for ${event.id} (PI ${piId}):`, refundErr);
+        } else {
+          console.log(`Order(s) marked refunded (${event.id}): PI ${piId}`);
+        }
+      } else {
+        console.log(`charge.refunded ${event.id}: partial or no PI (refunded ${charge.amount_refunded}/${charge.amount}) — no status change`);
+      }
+    } catch (err) {
+      // Claim already inserted; never 5xx (would trigger a Stripe retry we'd then no-op).
+      console.error(`Refund handler error after claim for ${event.id} (returning 200):`, err);
+    }
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers });
+  }
+
   if (event.type !== 'checkout.session.completed') {
     console.log(`Webhook event ${event.id} (${event.type}) recorded, no-op handler`);
     return new Response(JSON.stringify({ received: true }), { status: 200, headers });

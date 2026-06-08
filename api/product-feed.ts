@@ -19,7 +19,9 @@ export async function GET(req: Request) {
   const { data: products, error } = await supabase
     .from('products')
     .select('slug, title, description, price, available, thumbnail')
-    .eq('is_test', false);
+    .eq('is_test', false)
+    .eq('is_published', true)
+    .is('archived_at', null);
 
   if (error) {
     console.error('Product feed query failed:', error);

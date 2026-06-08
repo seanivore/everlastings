@@ -17,6 +17,9 @@ export type SyncableProduct = {
   description?: string | null;
   headline?: string | null;
   images?: Array<{ url: string }> | null;
+  checkout_name?: string | null;
+  checkout_description?: string | null;
+  checkout_image?: string | null;
   stripe_product_id?: string | null;
   stripe_price_id?: string | null;
 };
@@ -59,9 +62,9 @@ export async function syncProductToStripe(product: SyncableProduct): Promise<Str
   }
 
   const stripeProduct = await stripe.products.create({
-    name: product.title,
-    description: product.description || product.headline || undefined,
-    images: product.images?.slice(0, 8).map((img) => img.url) ?? [],
+    name: product.checkout_name || product.title,
+    description: product.checkout_description || product.description || product.headline || undefined,
+    images: product.checkout_image ? [product.checkout_image] : (product.images?.slice(0, 1).map((img) => img.url) ?? []),
     metadata: {
       supabase_id: product.id,
       slug: product.slug ?? '',

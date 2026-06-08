@@ -67,7 +67,7 @@ async function handleSession(request: Request): Promise<Response> {
 
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('id, slug, stripe_price_id, available, quantity')
+      .select('id, slug, stripe_price_id, available, quantity, is_published, archived_at')
       .in('id', productIds);
 
     if (productsError) throw productsError;
@@ -76,7 +76,7 @@ async function handleSession(request: Request): Promise<Response> {
 
     for (const item of items) {
       const product = productMap.get(item.product_id);
-      if (!product || product.available !== true || (product.quantity ?? 0) < 1) {
+      if (!product || product.is_published !== true || product.archived_at != null || product.available !== true || (product.quantity ?? 0) < 1) {
         return Response.json(
           { error: 'hold_expired' },
           { status: 410, headers: corsHeaders(request) },
@@ -185,7 +185,7 @@ async function handleReserve(request: Request): Promise<Response> {
       await Promise.all([
         supabase
           .from('products')
-          .select('id, slug, available, quantity, series')
+          .select('id, slug, available, quantity, series, is_published, archived_at')
           .in('id', productIds),
         supabase
           .from('cart_holds')
@@ -202,7 +202,7 @@ async function handleReserve(request: Request): Promise<Response> {
     const unavailable = items
       .filter((item) => {
         const product = productMap.get(item.product_id);
-        if (!product || product.available !== true || (product.quantity ?? 0) < 1) return true;
+        if (!product || product.is_published !== true || product.archived_at != null || product.available !== true || (product.quantity ?? 0) < 1) return true;
         const conflict = (activeHolds || []).some(
           (h) => h.product_id === item.product_id && h.session_id !== session_id,
         );
@@ -229,6 +229,8 @@ async function handleReserve(request: Request): Promise<Response> {
           .in('series', seriesValues)
           .eq('available', true)
           .eq('is_test', isTest)
+          .eq('is_published', true)
+          .is('archived_at', null)
           .limit(12);
 
         related = (seriesRelated || [])
@@ -242,6 +244,8 @@ async function handleReserve(request: Request): Promise<Response> {
           .select('id, slug, available')
           .eq('available', true)
           .eq('is_test', isTest)
+          .eq('is_published', true)
+          .is('archived_at', null)
           .limit(6);
         related = (fallback || [])
           .filter((p) => !unavailableProductIds.has(p.id))
