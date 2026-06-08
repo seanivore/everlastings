@@ -68,6 +68,9 @@
       .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #eee; font-size: 11px; }
       .pill.shipped { background: #cfe; color: #060; }
       .pill.unsent { background: #fee; color: #800; }
+      .pill.draft { background: #fdf0d5; color: #7a4a00; }
+      .pill.edits { background: #e7e0ff; color: #4a1942; }
+      .pill.archived { background: #e0e0e0; color: #555; }
     </style>
   </head>
   <body>
@@ -153,10 +156,19 @@
                 <span></span>
               </div>
               <label class="field"><span>Artist Note</span><textarea id="p-artist-note" rows="2"></textarea></label>
+              <label class="field"><span>Media (JSON array — optional MP4 / YouTube, in order)</span><textarea id="p-media" rows="3" placeholder='[{"type":"video","url":"https://cdn.../video-01-slug.mp4","loop":true,"autoplay":true},{"type":"youtube","url":"https://youtu.be/ID"}]'></textarea></label>
               <div class="row-2">
                 <label class="field"><span>SEO Title</span><input id="p-seo-title" /></label>
                 <label class="field"><span>SEO Description</span><input id="p-seo-description" /></label>
               </div>
+              <label class="field"><span>SEO Thumbnail URL (OG image, 1.91:1)</span><input id="p-seo-thumbnail" /></label>
+
+              <fieldset style="border:1px solid #ddd; border-radius:6px; padding:12px;">
+                <legend>Checkout (Stripe — set once, frozen after publish)</legend>
+                <label class="field"><span>Checkout Name (defaults to Title)</span><input id="p-checkout-name" /></label>
+                <label class="field"><span>Checkout Description — one short line (defaults to Description)</span><input id="p-checkout-description" /></label>
+                <label class="field"><span>Checkout Image URL (1:1; defaults to thumbnail)</span><input id="p-checkout-image" /></label>
+              </fieldset>
 
               <fieldset style="border:1px solid #ddd; border-radius:6px; padding:12px;">
                 <legend>Images</legend>
@@ -203,6 +215,8 @@
                       <option value="video-03">video-03</option>
                       <option value="detail-01">detail-01</option>
                       <option value="detail-02">detail-02</option>
+                      <option value="checkout_image">checkout_image</option>
+                      <option value="seo_thumbnail">seo_thumbnail</option>
                     </select>
                     <input type="file" id="upload-file" accept="image/*,video/mp4,video/webm" />
                     <button type="button" id="upload-btn">Upload</button>
@@ -219,8 +233,9 @@
                 <button type="button" id="cancel-edit">Cancel</button>
                 <span class="spacer"></span>
                 <button type="button" id="delete-product" class="danger hidden">Delete</button>
-                <button type="submit" class="primary" id="save-product">Save</button>
+                <button type="submit" class="primary" id="save-product">Save draft</button>
               </div>
+              <div id="publish-panel" class="hidden" style="margin-top:12px; padding:12px; border:1px solid #ddd; border-radius:6px;"></div>
             </form>
           </div>
         </section>

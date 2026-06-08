@@ -156,15 +156,11 @@
       </nav>
 
       <!-- ============================================================
-           Two-column layout (desktop): gallery + story (left) / sticky card (right)
-           Stacked on mobile: gallery → sticky card (in flow) → story
+           Flat grid layout: gallery / aside [buy card + details] / story / media.
+           Desktop: gallery+story (left) / sticky aside (right), media full-width below.
+           Mobile (one column): gallery → aside [card + details] → story → media.
            ============================================================ -->
-      <div class="product-layout" style="display: grid; gap: var(--space-2xl); grid-template-columns: 1fr; margin-top: var(--space-md);">
-
-        <!-- ============================================================
-             LEFT COLUMN: gallery + story
-             ============================================================ -->
-        <div class="product-story">
+      <div class="product-layout" style="display: grid; margin-top: var(--space-md);">
 
           <!-- ============================================================
                GALLERY — main image + thumbnail strip
@@ -232,53 +228,12 @@
 
             </div>
 
-            <!-- Media examples (video, GIF, YouTube). Static for v1.4.5 — Track A hasn't shipped media-row fields yet. -->
-            <div class="product-gallery__media" style="margin-top: var(--space-lg); display: grid; gap: var(--space-md); grid-template-columns: 1fr;">
-
-              <video controls preload="metadata"
-                     poster="https://cdn.everlastingsbyemaline.com/test/placeholder-haven-i/hero-placeholder-haven-i.webp"
-                     style="width: 100%; aspect-ratio: 16/9; background: var(--color-ink); border-radius: var(--radius-md);">
-                <source src="https://cdn.everlastingsbyemaline.com/test/placeholder-haven-i/test_video-01-placeholder-haven-i.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-              </video>
-
-              <img src="https://cdn.everlastingsbyemaline.com/test/placeholder-haven-i/test_gif-01-placeholder-haven-i.gif"
-                   alt="Placeholder Haven I — animated detail"
-                   loading="lazy"
-                   onerror="this.onerror=null;this.style.display='none'"
-                   style="width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: var(--radius-md);">
-
-              <!-- YouTube embed example (privacy-enhanced; placeholder ID for now) -->
-              <iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
-                      title="Behind the work"
-                      loading="lazy"
-                      allowfullscreen
-                      style="width: 100%; aspect-ratio: 16/9; border: 0; border-radius: var(--radius-md);"></iframe>
-
-            </div>
-
           </section>
-
-          <!-- ============================================================
-               STORY CARD — poetic narrative; product.js overwrites innerHTML with paragraphs from story_card.
-               ============================================================ -->
-          <section class="story-card" data-product-story style="margin-top: var(--space-3xl); padding: var(--space-xl); background: var(--color-cream); border-left: 3px solid var(--accent-primary); border-radius: var(--radius-md);">
-
-            <p>Placeholder Haven I waits at the edge of an evening. The light here has chosen to stay. There is a small door, and behind it a garden, and behind the garden a quieter still — places that ask nothing of you.</p>
-
-            <p>This piece began with a single question: what does it look like to make a room for grief that does not insist on being grief? The answer, after many drafts, was light. Soft, warm, persistent light — the kind that finds you before you know you've turned to look for it.</p>
-
-            <p>Each component is hand-placed: the moss at the base gathered slowly over months, the windows etched one at a time, the wiring threaded through tiny channels that no one will ever see. The work is not the showing of the work. The work is the quiet evidence that someone cared enough to do it carefully.</p>
-
-            <p>This is a place you can return to, whenever the world feels too loud, too fast, too much.</p>
-
-          </section>
-
-        </div>
 
         <!-- ============================================================
-             RIGHT COLUMN: sticky details card (hooks already in place; product.js binds data).
+             ASIDE: sticky buy card + details beneath it (product.js binds data).
              ============================================================ -->
+        <div class="product-aside">
         <aside class="product-sticky-card" data-product-card>
 
           <h1 data-product-title style="margin-bottom: var(--space-xs);">Placeholder Haven I</h1>
@@ -313,12 +268,10 @@
 
         </aside>
 
-      </div>
-
-      <!-- ============================================================
-           DETAILS — features list (with 6 SVG icons), then sections
-           ============================================================ -->
-      <section class="product-details" style="margin-top: var(--space-3xl); padding-top: var(--space-2xl); border-top: 1px solid var(--color-fog);">
+        <!-- ============================================================
+             DETAILS — features list (with 6 SVG icons); in-column under the buy card.
+             ============================================================ -->
+        <section class="product-details" style="padding-top: var(--space-2xl); border-top: 1px solid var(--color-fog);">
 
         <h2>Details</h2>
 
@@ -368,7 +321,29 @@
           </li>
 
         </ul>
-      </section>
+        </section>
+        <!-- /product-aside -->
+        </div>
+
+        <!-- ============================================================
+             STORY CARD — poetic narrative; product.js overwrites innerHTML with paragraphs from story_card.
+             ============================================================ -->
+        <section class="story-card" data-product-story style="padding: var(--space-xl); background: var(--color-cream); border-left: 3px solid var(--accent-primary); border-radius: var(--radius-md);">
+
+          <p>Placeholder Haven I waits at the edge of an evening. The light here has chosen to stay. There is a small door, and behind it a garden, and behind the garden a quieter still — places that ask nothing of you.</p>
+
+          <p>This piece began with a single question: what does it look like to make a room for grief that does not insist on being grief? The answer, after many drafts, was light. Soft, warm, persistent light — the kind that finds you before you know you've turned to look for it.</p>
+
+          <p>Each component is hand-placed: the moss at the base gathered slowly over months, the windows etched one at a time, the wiring threaded through tiny channels that no one will ever see. The work is not the showing of the work. The work is the quiet evidence that someone cared enough to do it carefully.</p>
+
+          <p>This is a place you can return to, whenever the world feels too loud, too fast, too much.</p>
+
+        </section>
+
+        <!-- v1.5: optional media (MP4 / YouTube) — product.js populateMedia fills it; hidden when none. -->
+        <div class="product-gallery__media hidden" data-product-media></div>
+
+      </div>
 
       <!-- ============================================================
            RELATED HAVENS — uses canonical .product-tile from B4
@@ -441,8 +416,29 @@
 
     <style>
       /* product.html-only layout: two-column on desktop, stacked on mobile */
+      .product-layout {
+        gap: var(--space-2xl);                                   /* base gap (was inline) */
+        grid-template-areas: "gallery" "aside" "story" "media";  /* mobile: images, buy card+details, story, media */
+      }
+      .product-layout > .product-gallery        { grid-area: gallery; }
+      .product-layout > .product-aside          { grid-area: aside; }
+      .product-layout > .story-card             { grid-area: story; }
+      .product-layout > .product-gallery__media { grid-area: media; }
       @media (min-width: 768px) {
-        .product-layout { grid-template-columns: 1fr 360px; }
+        .product-layout {
+          grid-template-columns: 1fr 360px;
+          grid-template-areas: "gallery aside" "story aside" "media .";
+        }
+        /* The aside (buy card + details beneath it) is the sticky unit: bounded by its grid area
+           (gallery+story rows), it holds through gallery+story and releases at the media row.
+           align-self:start keeps it content-height so it pins cleanly. Neutralize the card's own
+           sticky inside it so there is a single sticky context. */
+        .product-layout > .product-aside {
+          align-self: start;
+          position: sticky;
+          top: calc(var(--header-height) + var(--space-lg));
+        }
+        .product-layout > .product-aside > .product-sticky-card { position: static; }
       }
       @media (min-width: 1024px) {
         .product-layout { grid-template-columns: 1fr 400px; gap: var(--space-3xl); }

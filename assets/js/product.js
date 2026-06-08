@@ -5,19 +5,24 @@
 // This module only data-binds. It does not re-implement anything ui.js / lightbox.js already wires.
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
   const slug = (() => {
     const path = window.location.pathname.match(/^\/product\/([^/]+)\/?$/);
     if (path) return path[1];
-    return new URLSearchParams(window.location.search).get('slug');
+    return params.get('slug');
   })();
   if (!slug) {
     revealNotFound();
     return;
   }
 
+  const previewToken = params.get('preview');
+
   await waitForSupabase();
 
-  const product = await getProductBySlug(slug);
+  const product = previewToken
+    ? await fetchPreviewProduct(slug, previewToken)
+    : await getProductBySlug(slug);
   if (!product) {
     revealNotFound();
     return;
@@ -30,13 +35,168 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateHero(product);
   populateGallery(product);
   populateStory(product);
+  populateMedia(product);
   populateFeatures(product);
   wireCartButtons(product);
   wireProductInterestForm(product);
   wireContemplationOfferSuccess(product);
-  fireViewItem(product);
+  if (!previewToken) fireViewItem(product); // no view_item/ViewContent on an owner preview load
   renderRelatedProducts(product);
+
+  if (previewToken) {
+    // an EDIT preview of an already-PUBLISHED product is is_published/available with a live
+    // stripe_price_id, so its Buy/Add controls would create a REAL Checkout Session at the live price
+    // beneath the "Draft preview — not yet live" banner. Disable + relabel them so the banner isn't
+    // contradicted by a working purchase. (New-draft previews are also covered — checkout already rejects
+    // unpublished rows server-side, but the controls shouldn't look active either.) The buttons honor
+    // `btn.disabled`, so this is sufficient to block a transaction; full visual treatment is Part 3.
+    disableCartControlsForPreview();
+    mountPreviewBanner(product, previewToken);
+  }
 });
+
+// neutralize the live purchase controls on a preview load (kept visible so Em sees the layout,
+// but non-functional + clearly labeled). Full styling lands with the Part 3 preview visual slice.
+// ANCHOR (why `btn.disabled` is sufficient, verifiable without opening files): both purchase controls
+// are real `<button>` elements (so `disabled` actually suppresses the click — it would be a no-op on an
+// `<a>`), and these exact selectors are the ones the page already uses to wire them. `product.html:289-290`:
+//     <button type="button" class="btn btn-primary btn-block" data-product-add-to-cart>Add to Cart</button>
+//     <button type="button" class="btn btn-secondary btn-block" data-product-buy-now …>Buy Now</button>
+// and `product.js` reuses `[data-product-add-to-cart]` / `[data-product-buy-now]` to bind handlers (the
+// sold-out path at :137 and the click wiring at :207/:218) — so this disable targets the same elements.
+function disableCartControlsForPreview() {
+  document.querySelectorAll('[data-product-add-to-cart], [data-product-buy-now]').forEach((btn) => {
+    btn.disabled = true;
+    btn.setAttribute('aria-disabled', 'true');
+    btn.title = 'Preview only — publish to make this buyable';
+    btn.textContent = 'Preview only';
+  });
+}
+
+// v1.5 — preview fetches the draft via the service-role API (the anon client can't
+// read unpublished rows under RLS). The token in the URL is the read capability.
+async function fetchPreviewProduct(slug, token) {
+  try {
+    const res = await fetch(
+      `/api/products?slug=${encodeURIComponent(slug)}&preview=${encodeURIComponent(token)}`,
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// The Publish bar is the one thing not in the shopper view — it doubles as the
+// "not live yet" signal. Tapping it publishes via the token capability (no login).
+function mountPreviewBanner(product, token) {
+  const bar = document.createElement('div');
+  bar.setAttribute('role', 'status');
+  bar.style.cssText =
+    'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:16px;padding:10px 16px;background:var(--accent-primary,#4A1942);color:var(--text-inverse,#FFF8E7);font-family:var(--font-body,sans-serif);font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+  const label = document.createElement('span');
+  label.textContent = 'Draft preview — not yet live. This is how shoppers will see it.';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Publish';
+  btn.style.cssText =
+    'padding:6px 18px;border:0;border-radius:6px;background:var(--accent-gold,#D4AF7A);color:var(--color-ink,#1A1A1A);font:inherit;font-weight:600;cursor:pointer;';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+    try {
+      const res = await fetch('/api/products/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      if (!res.ok) {
+        // surface the server's specific reason when there is one — e.g. the 409 publish guard
+        // "This product is archived — resurface it before publishing" (Phase 3, test #18). A stale
+        // preview of an archived piece would otherwise dead-end on a generic "try again".
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Publish failed');
+      }
+      window.location.href = `/product/${product.slug}`;
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Publish';
+      label.textContent = err && err.message && err.message !== 'Publish failed'
+        ? err.message
+        : 'Could not publish — try again, or open your admin panel and tap “Publish now” there. If it still fails, text Sean.';
+    }
+  });
+  bar.appendChild(label);
+  bar.appendChild(btn);
+  document.body.appendChild(bar);
+  document.body.style.paddingTop = '48px';
+}
+
+// v1.5 — optional media (MP4 + YouTube), data-driven, hides when absent. Mirrors the portfolio's
+// renderMedia pattern (structured + createElement + hide-when-empty, 360-design
+// media-controller.js); we build the YouTube iframe from a parsed video id rather than storing raw
+// embed HTML — safer for GPT-generated values (no innerHTML injection).
+function populateMedia(p) {
+  const container = document.querySelector('[data-product-media]');
+  if (!container) return;
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const items = Array.isArray(p.media) ? p.media : [];
+  if (!items.length) return; // stays hidden — media is optional
+  const ordered = [...items].sort((a, b) => (a?.type === 'youtube' ? 1 : 0) - (b?.type === 'youtube' ? 1 : 0)); // MP4s first
+  const frag = document.createDocumentFragment();
+  for (const m of ordered) {
+    if (!m || !m.url) continue;
+    if (m.type === 'video') {
+      const wrap = document.createElement('div');
+      wrap.className = 'product-media__item';
+      const v = document.createElement('video');
+      v.src = m.url;
+      if (m.poster) v.poster = m.poster;
+      v.playsInline = true;
+      v.preload = 'metadata';
+      // Per-clip behaviour — the GPT/admin sets these case-by-case. Two presets:
+      //   GIF-like      : autoplay:true, loop:true → plays itself, silent, no buttons.
+      //   click-to-play : default → she presses play; buttons shown; sound on.
+      // A GIF-like clip is auto-playing motion, so honor prefers-reduced-motion —
+      // for those visitors it falls back to a paused, click-to-play video (poster + buttons).
+      const wantsAutoplay = m.autoplay === true;
+      v.autoplay = wantsAutoplay && !reduceMotion;
+      v.loop = m.loop === true;
+      if (v.autoplay) {
+        v.muted = true;                    // browsers only allow muted autoplay
+        v.controls = m.controls === true;  // GIF-like → no buttons unless asked
+      } else {
+        v.muted = m.muted === true;        // has sound unless she asks to mute
+        // click-to-play buttons; a reduced-motion'd GIF-like clip always gets them so it stays playable.
+        v.controls = wantsAutoplay ? true : (m.controls !== false);
+      }
+      if (m.alt) v.setAttribute('aria-label', m.alt);
+      wrap.appendChild(v);
+      frag.appendChild(wrap);
+    } else if (m.type === 'youtube') {
+      const id = youtubeId(m.url);
+      if (!id) continue;
+      const wrap = document.createElement('div');
+      wrap.className = 'product-media__item product-media__item--embed';
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${id}`;
+      iframe.title = m.alt || 'Video';
+      iframe.loading = 'lazy';
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+      frag.appendChild(wrap);
+    }
+  }
+  if (!frag.childNodes.length) return;
+  container.innerHTML = '';
+  container.appendChild(frag);
+  container.classList.remove('hidden');
+}
+
+function youtubeId(url) {
+  const m = String(url || '').match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|v\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 
 async function waitForSupabase() {
   for (let i = 0; i < 50 && !getSupabase(); i++) {

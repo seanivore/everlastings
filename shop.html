@@ -161,7 +161,7 @@
         </header>
 
         <!-- Two-column layout: filter sidebar + product grid -->
-        <div class="shop-layout" style="display: grid; gap: var(--space-xl); grid-template-columns: 1fr;">
+        <div class="shop-layout" style="display: grid;">
 
           <!-- ============================================================
                FILTER SIDEBAR — Track C wires the actual filtering JS
@@ -181,29 +181,27 @@
               </div>
 
               <!-- Series filter -->
-              <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 0;">
-                <legend style="font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-sm); padding: 0;">Series</legend>
+              <details class="filter-group" open>
+                <summary>Series</summary>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="portals-to-peace"> Portals to Peace</label>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="book-nooks"> Book Nooks</label>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="story-lofts"> Story Lofts</label>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="seasonal"> Seasonal</label>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="limited-edition"> Limited Edition</label>
-              </fieldset>
+              </details>
 
               <!-- Product type filter -->
-              <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 0;">
-                <legend style="font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-sm); padding: 0;">Type</legend>
+              <details class="filter-group">
+                <summary>Type</summary>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="product_type" value="miniature"> Miniatures</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="product_type" value="storybook"> Storybooks</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="product_type" value="printable"> Printables</label>
-              </fieldset>
+              </details>
 
               <!-- Availability filter -->
-              <fieldset style="border: 0; padding: 0; margin: var(--space-lg) 0 0;">
-                <legend style="font-family: var(--font-display); font-size: var(--text-lg); margin-bottom: var(--space-sm); padding: 0;">Availability</legend>
+              <details class="filter-group">
+                <summary>Availability</summary>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="available" value="true" checked> Available</label>
                 <label class="checkbox-label"><input type="checkbox" data-shop-filter="available" value="false"> Sold Archive</label>
-              </fieldset>
+              </details>
 
               <button type="button" class="btn btn-ghost btn-sm" data-shop-clear-filters style="margin-top: var(--space-lg);">Clear filters</button>
 
@@ -304,16 +302,16 @@
                 </a>
               </article>
 
-              <article class="card product-tile" data-product-slug="placeholder-printable-set" data-series="limited-edition" data-product-type="printable" data-available="true">
-                <a href="/product/placeholder-printable-set" style="display: block; color: inherit; text-decoration: none;">
+              <article class="card product-tile" data-product-slug="placeholder-limited-haven" data-series="limited-edition" data-product-type="miniature" data-available="true">
+                <a href="/product/placeholder-limited-haven" style="display: block; color: inherit; text-decoration: none;">
                   <div class="card__media">
-                    <img loading="lazy" alt="Placeholder Printable Set"
+                    <img loading="lazy" alt="Placeholder Limited Haven"
                          src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23FFF8E7'/%3E%3Crect x='0' y='0' width='4' height='1' fill='%23D4AF7A' opacity='0.5'/%3E%3Crect x='0' y='2' width='4' height='1' fill='%234A1942' opacity='0.3'/%3E%3Crect x='0' y='4' width='4' height='1' fill='%231B3A52' opacity='0.4'/%3E%3C/svg%3E"
                          onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 5%22%3E%3Crect width=%224%22 height=%225%22 fill=%22%234A1942%22/%3E%3C/svg%3E'">
                   </div>
                   <div class="card__body">
-                    <h3 class="card__title">Placeholder Printable Set</h3>
-                    <p class="card__price">$48.00</p>
+                    <h3 class="card__title">Placeholder Limited Haven</h3>
+                    <p class="card__price">$165.00</p>
                   </div>
                 </a>
               </article>
@@ -365,6 +363,7 @@
 
     <style>
       /* shop.html-only layout escalations */
+      .shop-layout { gap: var(--space-xl); }
       @media (min-width: 768px) {
         .shop-layout { grid-template-columns: 220px 1fr; }
       }

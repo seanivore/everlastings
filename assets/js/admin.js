@@ -148,7 +148,7 @@ function attachEventListeners() {
   $('refresh-products-btn').addEventListener('click', loadProducts);
   $('cancel-edit').addEventListener('click', closeEditor);
   $('product-form').addEventListener('submit', onSaveProduct);
-  $('delete-product').addEventListener('click', onDeleteProduct);
+  $('delete-product').addEventListener('click', onArchiveToggle);
   $('add-image-row').addEventListener('click', () => addImageRow('', ''));
   $('upload-btn').addEventListener('click', onUploadImage);
 
@@ -245,10 +245,15 @@ function renderProductList() {
     const thumb = p.thumbnail || (Array.isArray(p.images) && p.images[0]?.url) || '';
     const priceLabel = typeof p.price === 'number' ? `$${centsToDollars(p.price)}` : '—';
     const availPill = p.available ? '<span class="pill">available</span>' : '<span class="pill unsent">sold</span>';
+    const statusPill = p.archived_at
+      ? '<span class="pill archived">archived</span>'
+      : p.is_published
+        ? (p.draft ? '<span class="pill edits">live · edits pending</span>' : '<span class="pill shipped">live</span>')
+        : '<span class="pill draft">draft</span>';
     card.innerHTML = `
       <img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.thumbnail_alt || p.title || '')}" />
       <p class="pc-title">${escapeHtml(p.title || '(untitled)')}</p>
-      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'} ${availPill}</p>
+      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'} ${statusPill} ${availPill}</p>
     `;
     card.addEventListener('click', () => openEditor(p.id));
     list.appendChild(card);
@@ -258,47 +263,62 @@ function renderProductList() {
 function openEditor(productId) {
   const product = productId ? state.products.find((p) => p.id === productId) : null;
   state.editing = product || null;
+  // Overlay any staged draft so the editor SHOWS and BUILDS ON pending edits (a published row may carry
+  // copy/SEO/photo edits staged by the GPT or a prior admin save). `draft` only ever
+  // holds DRAFTABLE keys (api/products.ts §3.4), so `eff` == `product` for the live-apply trio and for
+  // anything with nothing staged: read price/available/quantity + slug/id/type from the live `product`,
+  // and every draftable copy/SEO/array field from `eff`. Paired with §3.4's live-compare change-detect,
+  // re-saving these staged values back is a no-op — they still differ from live, so the existingDraft
+  // spread preserves them; they are NOT re-clobbered with the live value.
+  const eff = product ? { ...product, ...(product.draft || {}) } : null;
   setStatus('editor-status', '', 'info');
   $('product-editor').classList.remove('hidden');
   $('products-list').classList.add('hidden');
   $('editor-heading').textContent = product ? `Edit: ${product.title}` : 'New Product';
 
   $('p-id').value = product?.id ?? '';
-  $('p-title').value = product?.title ?? '';
+  $('p-title').value = eff?.title ?? '';
   $('p-slug').value = product?.slug ?? '';
   $('p-slug').disabled = !!product;
-  $('p-headline').value = product?.headline ?? '';
-  $('p-story').value = product?.story_card ?? '';
-  $('p-description').value = product?.description ?? '';
-  $('p-features').value = arrayToLines(product?.features);
-  $('p-price').value = typeof product?.price === 'number' ? centsToDollars(product.price) : '';
-  $('p-quantity').value = product?.quantity ?? 1;
+  $('p-headline').value = eff?.headline ?? '';
+  $('p-story').value = eff?.story_card ?? '';
+  $('p-description').value = eff?.description ?? '';
+  $('p-features').value = arrayToLines(eff?.features);
+  $('p-price').value = typeof product?.price === 'number' ? centsToDollars(product.price) : '';   // live-apply — show live
+  $('p-quantity').value = product?.quantity ?? 1;                                                  // live-apply — show live
   $('p-type').value = product?.product_type ?? 'miniature';
-  $('p-dimensions').value = product?.dimensions ?? '';
-  $('p-weight').value = product?.weight ?? '';
-  $('p-power').value = product?.power_supply ?? '';
-  $('p-materials').value = arrayToLines(product?.materials);
-  $('p-care').value = arrayToLines(product?.care_instructions);
-  $('p-shipping').value = arrayToLines(product?.shipping_details);
-  $('p-series').value = product?.series ?? '';
-  $('p-theme').value = product?.homepage_theme ? JSON.stringify(product.homepage_theme) : '';
-  $('p-available').checked = product?.available !== false;
-  $('p-featured').checked = !!product?.featured;
-  $('p-artist-note').value = product?.artist_note ?? '';
-  $('p-seo-title').value = product?.seo_title ?? '';
-  $('p-seo-description').value = product?.seo_description ?? '';
-  $('p-thumbnail').value = product?.thumbnail ?? '';
-  $('p-thumbnail-alt').value = product?.thumbnail_alt ?? '';
+  $('p-dimensions').value = eff?.dimensions ?? '';
+  $('p-weight').value = eff?.weight ?? '';
+  $('p-power').value = eff?.power_supply ?? '';
+  $('p-materials').value = arrayToLines(eff?.materials);
+  $('p-care').value = arrayToLines(eff?.care_instructions);
+  $('p-shipping').value = arrayToLines(eff?.shipping_details);
+  $('p-series').value = eff?.series ?? '';
+  $('p-theme').value = eff?.homepage_theme ? JSON.stringify(eff.homepage_theme) : '';
+  $('p-media').value = eff?.media ? JSON.stringify(eff.media) : '';
+  $('p-available').checked = product?.available !== false;                                         // live-apply — show live
+  $('p-featured').checked = !!eff?.featured;
+  $('p-artist-note').value = eff?.artist_note ?? '';
+  $('p-seo-title').value = eff?.seo_title ?? '';
+  $('p-seo-description').value = eff?.seo_description ?? '';
+  $('p-seo-thumbnail').value = eff?.seo_thumbnail ?? '';
+  $('p-checkout-name').value = eff?.checkout_name ?? '';
+  $('p-checkout-description').value = eff?.checkout_description ?? '';
+  $('p-checkout-image').value = eff?.checkout_image ?? '';
+  $('p-thumbnail').value = eff?.thumbnail ?? '';
+  $('p-thumbnail-alt').value = eff?.thumbnail_alt ?? '';
 
   const imgList = $('p-images');
   imgList.innerHTML = '';
-  if (Array.isArray(product?.images) && product.images.length) {
-    for (const img of product.images) addImageRow(img.url || '', img.alt || '');
+  if (Array.isArray(eff?.images) && eff.images.length) {
+    for (const img of eff.images) addImageRow(img.url || '', img.alt || '');
   } else {
     addImageRow('', '');
   }
 
-  $('delete-product').classList.toggle('hidden', !product);
+  const archiveBtn = $('delete-product');
+  archiveBtn.classList.toggle('hidden', !product);
+  archiveBtn.textContent = product?.archived_at ? 'Resurface' : 'Archive';
   $('upload-status').textContent = '';
 }
 
@@ -406,6 +426,10 @@ function buildProductPayload() {
     artist_note: $('p-artist-note').value.trim() || null,
     seo_title: $('p-seo-title').value.trim() || null,
     seo_description: $('p-seo-description').value.trim() || null,
+    seo_thumbnail: $('p-seo-thumbnail').value.trim() || null,
+    checkout_name: $('p-checkout-name').value.trim() || null,
+    checkout_description: $('p-checkout-description').value.trim() || null,
+    checkout_image: $('p-checkout-image').value.trim() || null,
     thumbnail: $('p-thumbnail').value.trim(),
     thumbnail_alt: $('p-thumbnail-alt').value.trim() || null,
     images: collectImages(),
@@ -420,6 +444,14 @@ function buildProductPayload() {
     }
   } else {
     payload.homepage_theme = null;
+  }
+
+  const mediaRaw = $('p-media').value.trim();
+  if (mediaRaw) {
+    try { payload.media = JSON.parse(mediaRaw); }
+    catch { throw new Error('Media must be a valid JSON array or empty'); }
+  } else {
+    payload.media = null;
   }
 
   const slugVal = $('p-slug').value.trim();
@@ -451,14 +483,15 @@ async function onSaveProduct(e) {
         body: JSON.stringify(payload),
       });
     }
-    const body = await res.json().catch(() => ({}));
+    const body = await res.json().catch(() => ({}));   // body = { success, product, preview_url, preview_token }
     if (!res.ok) {
       if (res.status === 409) {
         throw new Error('A product with that slug already exists. Pick a different title.');
       }
       throw new Error(body.error || `HTTP ${res.status}`);
     }
-    setStatus('editor-status', editing ? 'Saved.' : 'Created.', 'success');
+    setStatus('editor-status', editing ? 'Draft saved.' : 'Draft created.', 'success');
+    renderPublishPanel(body, editing ? editing.id : body.product?.id);
     await loadProducts();
   } catch (err) {
     setStatus('editor-status', err.message, 'error');
@@ -467,22 +500,148 @@ async function onSaveProduct(e) {
   }
 }
 
-async function onDeleteProduct() {
-  const editing = state.editing;
-  if (!editing) return;
-  const confirmed = window.confirm(`Delete "${editing.title}"? This cannot be undone.`);
-  if (!confirmed) return;
-  setStatus('editor-status', '', 'info');
+function renderPublishPanel(body, id) {
+  const panel = $('publish-panel');
+  if (!panel) return;
+  // A fresh draft / staged edit from THIS save returns a preview_url. A price/availability/quantity-only
+  // change stages nothing and returns none — BUT if an earlier copy edit is still staged, this PUT
+  // preserved the row's draft + preview_token. Detect that pending draft and build its preview
+  // link client-side from body.product, so the panel never contradicts the list pill ("live · edits
+  // pending") or let Em think her staged copy edit vanished.
+  const pendingDraft = !!(body.product && body.product.draft != null && body.product.preview_token);
+  let previewUrl = body.preview_url;
+  if (!previewUrl && pendingDraft) {
+    previewUrl = '/product/' + body.product.slug + '?preview=' + encodeURIComponent(body.product.preview_token);
+  }
+  // Something is publishable when there's a draft to publish — a new draft/staged edit this save, OR a
+  // pending draft preserved through a live-only change.
+  const publishable = !!previewUrl;
+  panel.classList.remove('hidden');
+  panel.innerHTML = '';
+  const p = document.createElement('p');
+  p.style.margin = '0 0 8px';
+  const pendingLink = (lead) =>
+    lead + ' — you still have edits pending: <a href="' + previewUrl + '" target="_blank" rel="noopener">open preview</a>, then publish or discard.';
+  if (body.preview_url) {
+    p.innerHTML =
+      'Preview how it looks: <a href="' + body.preview_url + '" target="_blank" rel="noopener">open preview</a> — then publish when it looks right.';
+  } else if (body.price_updated || body.availability_updated || body.quantity_updated) {
+    // Price / availability / quantity-only change: live now. All three go live immediately like price.
+    const bits = [];
+    if (body.price_updated) bits.push('Price change');
+    if (body.availability_updated) bits.push('Availability change');
+    if (body.quantity_updated) bits.push('Stock change');
+    const lead = bits.join(' and ') + ' is live now';
+    // If a copy edit is still staged, say so (and give the preview link) instead of "nothing to publish".
+    if (pendingDraft) p.innerHTML = pendingLink(lead);
+    else p.textContent = lead + ' — nothing else to publish.';
+  } else if (pendingDraft) {
+    p.innerHTML = pendingLink('Saved');
+  } else {
+    p.textContent = 'Saved.';
+  }
+  panel.appendChild(p);
+  // When a price change rides ALONGSIDE a freshly-staged copy edit (one save), add the "price already
+  // live" detail. (For a price-only change, or a price change over a PRE-existing pending draft, the
+  // line above already covers it — gate on body.preview_url so we don't duplicate.)
+  if (body.price_updated && body.preview_url) {
+    const note = document.createElement('p');
+    note.style.margin = '0 0 8px';
+    note.textContent = 'Price change is live now (price updates immediately; it isn’t part of the draft preview).';
+    panel.appendChild(note);
+  }
+  // Publish button whenever there's a draft to publish — a fresh draft OR a preserved pending draft;
+  // never for a pure live-only change with nothing staged.
+  if (publishable) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary';
+    btn.textContent = 'Publish now';
+    btn.addEventListener('click', () => publishProduct(id, btn));
+    panel.appendChild(btn);
+  }
+  // Discard when edits are staged this save OR a prior draft is still pending (the inverse of publish).
+  if (body.staged || pendingDraft) {
+    const discardBtn = document.createElement('button');
+    discardBtn.type = 'button';
+    discardBtn.className = 'danger';
+    discardBtn.style.marginLeft = '8px';
+    discardBtn.textContent = 'Discard pending edits';
+    discardBtn.addEventListener('click', () => discardEdits(id, discardBtn));
+    panel.appendChild(discardBtn);
+  }
+}
+
+async function publishProduct(id, btn) {
+  if (!id) return;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Publishing…';
   try {
-    // Delete via Supabase JS — RLS allows authenticated users to delete.
-    // /api/products has no DELETE handler; using the client respects the same
-    // auth boundary because the user JWT is what authenticates.
-    const { error } = await state.client.from('products').delete().eq('id', editing.id);
-    if (error) throw new Error(error.message);
-    setStatus('editor-status', 'Deleted.', 'success');
+    const res = await fetch('/api/products/publish', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    setStatus('editor-status', 'Published — it is now live.', 'success');
+    $('publish-panel').classList.add('hidden');
     await loadProducts();
   } catch (err) {
-    setStatus('editor-status', `Delete failed: ${err.message}`, 'error');
+    btn.disabled = false;
+    btn.textContent = original;
+    setStatus('editor-status', err.message, 'error');
+  }
+}
+
+// Scrap a published product's staged draft without publishing. Live page is untouched.
+async function discardEdits(id, btn) {
+  if (!id) return;
+  if (!window.confirm('Discard the pending edits? The live page stays exactly as it is now.')) return;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Discarding…';
+  try {
+    const res = await fetch('/api/products/discard', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    setStatus('editor-status', 'Pending edits discarded — the live page is unchanged.', 'success');
+    $('publish-panel').classList.add('hidden');
+    await loadProducts();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = original;
+    setStatus('editor-status', err.message, 'error');
+  }
+}
+
+async function onArchiveToggle() {
+  const editing = state.editing;
+  if (!editing) return;
+  const archiving = !editing.archived_at;
+  const verb = archiving ? 'Archive' : 'Resurface';
+  const note = archiving
+    ? 'It leaves the shop but stays here — you can resurface it anytime.'
+    : 'It goes back into the shop.';
+  if (!window.confirm(`${verb} "${editing.title}"? ${note}`)) return;
+  setStatus('editor-status', '', 'info');
+  try {
+    const res = await fetch(`/api/products/${archiving ? 'archive' : 'unarchive'}`, {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editing.id }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    setStatus('editor-status', archiving ? 'Archived.' : 'Resurfaced.', 'success');
+    await loadProducts();
+  } catch (err) {
+    setStatus('editor-status', `${verb} failed: ${err.message}`, 'error');
   }
 }
 

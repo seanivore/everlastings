@@ -927,11 +927,11 @@ select:focus {
 
 /* Story card (poetic narrative) */
 .story-card {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: var(--text-lg);
   line-height: var(--leading-loose);
   color: var(--text-primary);
-  font-style: italic;
+  font-style: normal;
 }
 
 /* Hero block (homepage + page heroes) */
@@ -995,3 +995,54 @@ select:focus {
   box-shadow: var(--shadow-md);
 }
 .toast.is-visible { transform: translateX(-50%) translateY(0); }
+
+/* ============================================================
+   D3 — Product media (MP4 / YouTube). Same <video> for GIF-like + click-to-play.
+   MP4 respects intrinsic ratio (no forced 16/9 bars); YouTube embeds get 16/9.
+   ============================================================ */
+.product-gallery__media { display: grid; gap: var(--space-md); }
+.product-media__item video { width: 100%; height: auto; display: block; border-radius: var(--radius-md); }
+.product-media__item--embed { aspect-ratio: 16 / 9; }
+.product-media__item--embed iframe { width: 100%; height: 100%; border: 0; border-radius: var(--radius-md); }
+
+/* ============================================================
+   D4 — Shop filter groups as compact <details> dropdowns (matches legend styling).
+   ============================================================ */
+.filter-group { border: 0; margin: var(--space-lg) 0 0; }
+.filter-group > summary {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-sm);
+  cursor: pointer;
+  list-style: none;            /* hide default marker; use a custom caret */
+  display: flex; align-items: center; justify-content: space-between;
+}
+.filter-group > summary::-webkit-details-marker { display: none; }
+.filter-group > summary::after { content: "+"; color: var(--text-muted); font-weight: 400; }
+.filter-group[open] > summary::after { content: "–"; }
+
+/* ============================================================
+   D5 — Desktop density on the dense flows (cart + checkout only; global rhythm untouched).
+   ============================================================ */
+@media (min-width: 1024px) {
+  .density-compact .section       { padding-top: var(--space-xl);  padding-bottom: var(--space-xl); }
+  .density-compact .section-loose { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); }
+}
+
+/* ============================================================
+   D6 — "Firelight" ambient glow (warm bloom from all four edges; honors reduced-motion).
+   ============================================================ */
+:root { --glow-color: 212, 175, 122; --glow-intensity: 0.45; } /* warm firelight default; page JS may override */
+.firelight-glow { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(120% 80% at 50% 110%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(80% 120% at -10% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%),
+    radial-gradient(80% 120% at 110% 50%, rgba(var(--glow-color), var(--glow-intensity)), transparent 60%);
+  animation: glow-breathe 14s ease-in-out infinite; }
+.firelight-glow::before { content: ""; position: absolute; inset: -20%;
+  background: conic-gradient(from 0deg, transparent, rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)), transparent 60%);
+  animation: glow-rotate 40s linear infinite; }
+@keyframes glow-breathe { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes glow-rotate  { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .firelight-glow, .firelight-glow::before { animation: none; } }
