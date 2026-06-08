@@ -471,8 +471,11 @@ paths:
 
 ### 2C. Authentication
 
-- **Type:** API Key · **Auth Type:** Bearer · **API Key:** the **production** `PRODUCT_API_KEY` (Vercel → Project → Settings → Environment Variables → `PRODUCT_API_KEY`, **Production** scope). Never the preview value.
-- One key authorizes all four actions (`/api/products`, `/api/upload`, and — after `v1_4_9` Phase 6 — `/api/orders`).
+- **Type:** API Key · **Auth Type:** Bearer · **API Key:** use the `PRODUCT_API_KEY` **whose Vercel scope matches the environment the Action's `servers:` URL points at** (Vercel → Project → Settings → Environment Variables → `PRODUCT_API_KEY`):
+  - **Testing against the dev preview** (where setup happens): the **Preview**-scoped value — the same key in `.env.local` that ran the curl tests (the preview deploy runs `is_test=true`).
+  - **Production hand-off:** the **Production**-scoped value.
+  - Never mix scopes — a key from the wrong environment returns `401`.
+- One key authorizes all the actions (`/api/products`, `/api/upload`, `/api/coupons`, and `/api/orders`).
 
 ### 2D. Settings
 
