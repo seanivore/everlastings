@@ -1,8 +1,8 @@
-# ADDENDUM · DESIGN — v1.6.2 (exclusively executable)
+# ADDENDUM · DESIGN — v1.6.3 (exclusively executable)
 
-**Parent:** `v1_6_2_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Required reading with it:** `assets/docs/EVERLASTINGS_STORE.md` + the parent. **Scope:** the presentation layer — CSS, markup structure, and render-tuned aesthetics for the pages. Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, GPT schema) stays in the parent; this doc styles and arranges what that behavior produces.
+**Parent:** `v1_6_3_IMPLEMENT.md` (this is an addendum; it carries the same version and is **always** part of the same build + every gap review). **Required reading with it:** `assets/docs/EVERLASTINGS_STORE.md` + the parent. **Scope:** the presentation layer — CSS, markup structure, and render-tuned aesthetics for the pages. Behavior that ships data (the `media` model, `populateMedia`, the Phase 7.2 container, GPT schema) stays in the parent; this doc styles and arranges what that behavior produces.
 
-> **How design is "executable" here (read once).** Design is built and validated **exactly like functionality**: the spec gives the builder concrete CURRENT/NEW blocks or concrete default values so it never *guesses* — and then, like every functionality phase, it gets a **testing + feedback pass** on the dev preview (see `v1_6_2_ADDENDUM_TESTING.md`). Render-dependent aesthetics (glow palette, density, hero treatment) ship with a **stated default** plus a **RENDER-TUNE** note; tuning them on the live render is the design test phase, not a plan gap. "Executable" means *no discovery/decision is left to the builder*, not *frozen forever*. **Design/functionality overlap is real:** several items here straddle the line — the filter dropdowns (D4) also bind to `shop.js`, the glow (D6) is injected by JS, and the D2 layout moves depend on parent Phase 7.2. They're specced here for *presentation*, but the **whole build is reviewed together**, never siloed by the design-vs-functionality split.
+> **How design is "executable" here (read once).** Design is built and validated **exactly like functionality**: the spec gives the builder concrete CURRENT/NEW blocks or concrete default values so it never *guesses* — and then, like every functionality phase, it gets a **testing + feedback pass** on the dev preview (see `v1_6_3_ADDENDUM_TESTING.md`). Render-dependent aesthetics (glow palette, density, hero treatment) ship with a **stated default** plus a **RENDER-TUNE** note; tuning them on the live render is the design test phase, not a plan gap. "Executable" means *no discovery/decision is left to the builder*, not *frozen forever*. **Design/functionality overlap is real:** several items here straddle the line — the filter dropdowns (D4) also bind to `shop.js`, the glow (D6) is injected by JS, and the D2 layout moves depend on parent Phase 7.2. They're specced here for *presentation*, but the **whole build is reviewed together**, never siloed by the design-vs-functionality split.
 
 > ## ⭐ The lens (same North Star as the parent)
 > Minimize the owner's friction to run her whole digital product by chat via her Custom GPT. The site itself is the other place we out-class a Shopify/"AI-website" feel — through a distinctive, custom **experience**. This addendum keeps the already-beautiful site intact and fills the narrow gaps the original design plan specified but the build missed (optional product video behaviors, the filter layout), fixes the one real layout bug (columns), and adds the small requested touches (filter dropdowns, ambient glow, the animated hero). The richer interactive homepage vision is a **separate v3.0.0 initiative** (see `assets/docs/archive/v3_0/`), not this build.
@@ -131,7 +131,7 @@ NEW (adds the base `gap`, mobile + desktop `grid-template-areas`, child `grid-ar
 5. **Fix the now-stale structure comments (D-5).** The `<!-- Two-column layout … gallery + story (left) / sticky card (right) … gallery → sticky card (in flow) → story -->` block comment (`product.html:158-160`), the `<!-- LEFT COLUMN: gallery + story -->` comment (`:166`), and the `<!-- RIGHT COLUMN: sticky details card … -->` comment (`:279-281`) describe the pre-D2 two-`div` structure. Update them to the flat grid (gallery / aside [card + details] / story / media).
 6. `grid-template-columns` and inline `gap` already removed from the inline style by D1.
 
-RENDER-TUNE (not blockers): the aside (card + details) keeps BUY in view through gallery+story and releases at the media row. Confirm the card+details combined height fits the viewport while sticky — if it exceeds it, the bottom of details clips near the release point (acceptable, or reduce details density). `.product-details` `border-top`/`padding-top` may want trimming now it sits in-column under the card. **No-media product (D-7):** the hidden media grid area can read as a double gap on a product with no `media` — confirm it looks clean (trivially tightened if not).
+RENDER-TUNE (not blockers): the aside (card + details) keeps BUY in view through gallery+story and releases at the media row. Confirm the card+details combined height fits the viewport while sticky — if it exceeds it, the bottom of details clips near the release point (acceptable, or reduce details density). `.product-details` `border-top`/`padding-top` may want trimming now it sits in-column under the card. **Narrow right rail (D-3):** in the ~360–400px aside, the details `<h2>` (40px) and the six icon+text feature rows reflow into a narrow column — eye-check the heading scale and feature-row wrapping at that width; concrete default = keep the details `border-top` divider, and add a small `.product-aside` gap only if the details read flush against the card. **No-media product (D-7):** the hidden media grid area can read as a double gap on a product with no `media` — confirm it looks clean (trivially tightened if not).
 
 ---
 
@@ -243,6 +243,39 @@ The original plan specified a real filter sidebar (the column notes are in the m
 .filter-group[open] > summary::after { content: "–"; }
 ```
 RENDER-TUNE: open/closed defaults (Series open, others closed above) and caret styling. **Type group is now miniatures-only (C3):** the `storybook`/`printable` options are dropped from the NEW markup — the store is miniatures-only and the `createProduct`/`editProduct` enums are `[miniature]`, so those filters could never match and a dead filter reads as broken on a showcase storefront (restore them if a second product type ships). That leaves a single-value "Type" group; the "smart-hide a filter group whose tag has only one value" enhancement (a `shop.js` change, not markup) is the clean follow-up — **deferred**; on render, decide whether to keep the lone "Miniatures" toggle or hide the group until there's a second type.
+
+**D-4b — the static fallback tiles match the live filter set (C3 consistency).** `shop.js` overwrites `[data-shop-grid]` on first paint, so the hardcoded `.product-tile` articles are only ever a pre-paint fallback — but one of them (`shop.html:307-319`) is a `data-product-type="printable"` tile, which now contradicts the miniatures-only Type filter on a source-visible showcase template. Retype that one tile to a miniature so the never-shown fallback can't contradict the live set (its `series="limited-edition"` is unchanged — only the *type* filter dropped). The other five fallback tiles are already `miniature`. CURRENT (`shop.html:307-319`):
+```html
+              <article class="card product-tile" data-product-slug="placeholder-printable-set" data-series="limited-edition" data-product-type="printable" data-available="true">
+                <a href="/product/placeholder-printable-set" style="display: block; color: inherit; text-decoration: none;">
+                  <div class="card__media">
+                    <img loading="lazy" alt="Placeholder Printable Set"
+                         src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23FFF8E7'/%3E%3Crect x='0' y='0' width='4' height='1' fill='%23D4AF7A' opacity='0.5'/%3E%3Crect x='0' y='2' width='4' height='1' fill='%234A1942' opacity='0.3'/%3E%3Crect x='0' y='4' width='4' height='1' fill='%231B3A52' opacity='0.4'/%3E%3C/svg%3E"
+                         onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 5%22%3E%3Crect width=%224%22 height=%225%22 fill=%22%234A1942%22/%3E%3C/svg%3E'">
+                  </div>
+                  <div class="card__body">
+                    <h3 class="card__title">Placeholder Printable Set</h3>
+                    <p class="card__price">$48.00</p>
+                  </div>
+                </a>
+              </article>
+```
+NEW (retyped to `miniature`; relabelled to a coherent limited haven; swatch + series kept):
+```html
+              <article class="card product-tile" data-product-slug="placeholder-limited-haven" data-series="limited-edition" data-product-type="miniature" data-available="true">
+                <a href="/product/placeholder-limited-haven" style="display: block; color: inherit; text-decoration: none;">
+                  <div class="card__media">
+                    <img loading="lazy" alt="Placeholder Limited Haven"
+                         src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Crect width='4' height='5' fill='%23FFF8E7'/%3E%3Crect x='0' y='0' width='4' height='1' fill='%23D4AF7A' opacity='0.5'/%3E%3Crect x='0' y='2' width='4' height='1' fill='%234A1942' opacity='0.3'/%3E%3Crect x='0' y='4' width='4' height='1' fill='%231B3A52' opacity='0.4'/%3E%3C/svg%3E"
+                         onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 5%22%3E%3Crect width=%224%22 height=%225%22 fill=%22%234A1942%22/%3E%3C/svg%3E'">
+                  </div>
+                  <div class="card__body">
+                    <h3 class="card__title">Placeholder Limited Haven</h3>
+                    <p class="card__price">$165.00</p>
+                  </div>
+                </a>
+              </article>
+```
 
 ---
 
@@ -391,7 +424,7 @@ RENDER-TUNE: spotlight intensity/position, overlay strength for text contrast ov
 
 **Placeholder principle:** build/test on production-grade placeholders that mimic the GPT-validated real-asset specs (existing AI pipeline). **Real content is never a build/test gate**; the client adds it by chat after handoff.
 
-**Placeholder set must cover the full media test matrix** (so D3/Phase 7 render is provable without real assets) — see `v1_6_2_ADDENDUM_TESTING.md`:
+**Placeholder set must cover the full media test matrix** (so D3/Phase 7 render is provable without real assets) — see `v1_6_3_ADDENDUM_TESTING.md`:
 - a product with a **GIF-like** video (`autoplay:true, loop:true` → silent, no controls),
 - a product with a **click-to-play** video (controls, sound, no autoplay),
 - a product with a **YouTube** item,
