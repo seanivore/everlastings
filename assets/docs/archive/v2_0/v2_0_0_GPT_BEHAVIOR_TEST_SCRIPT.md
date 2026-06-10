@@ -178,8 +178,20 @@ Across these six test posts are a variety of images and videos. These have been 
 
 ### Media 
 
-  - YouTube to embed: `https://youtu.be/6OT_uGu2vP4`
-  - Drive folder: `https://drive.google.com/drive/folders/1kRlt_McprANI2Ku4b07k21Xh6y7ZB0T5?usp=sharing`
+  - Gallery:
+    - `https://drive.google.com/file/d/1-rt78eJ6bvlAof2QALeWOCUMcyyp5e6r/view?usp=sharing`
+    - `https://drive.google.com/file/d/16FMXSkRRMiCpvBhsXAQw2_HPvacyiP2M/view?usp=sharing`
+    - `https://drive.google.com/file/d/1M17EzOyACNa0gFExH3J5OzLxPt6U0seT/view?usp=sharing`
+    - `https://drive.google.com/file/d/1bzf5VuujYYQjWmNhCPrC5CUiJt4YqwYT/view?usp=sharing`
+    - `https://drive.google.com/file/d/1md6IaVq0U-nI6jEJcSAUWTVxB2P_P1me/view?usp=sharing`
+    - `https://drive.google.com/file/d/1nxWcfq93qTcKXdas7cELp9kqfaQWPLhQ/view?usp=sharing`
+    - `https://drive.google.com/file/d/1nxWcfq93qTcKXdas7cELp9kqfaQWPLhQ/view?usp=sharing`
+  - Hero: 
+    - `https://drive.google.com/file/d/1Nga3rOkTkkG8po8uMHuFFObXjvv-FPE0/view?usp=sharing`
+  - Thumbnail: 
+    - `https://drive.google.com/file/d/17wsF6g64HGk_8hV2AFIv8XCYB8JiWZW1/view?usp=sharing`
+  - YouTube: 
+    - `https://youtu.be/6OT_uGu2vP4`
 
 ### Script
 
@@ -226,7 +238,19 @@ It's a tiny stone cottage at the end of a path you almost didn't take, the eveni
 
 ### Media
 
-  - Drive folder: `https://drive.google.com/drive/folders/1xZi1tbrOAKuKE073V0s9sUzn2nfppFHH?usp=sharing`
+  - Gallery: 
+    - `https://drive.google.com/file/d/1DI7bigiefnPG0X-otnPCLnWqHNqxO44x/view?usp=sharing`
+    - `https://drive.google.com/file/d/1EqCx2hckb1FZjThpwYywIfkhMshin7rR/view?usp=sharing`
+    - `https://drive.google.com/file/d/1HwqMZVy0VH5hmGIMTAFdumE8mG3Sybz9/view?usp=sharing`
+    - `https://drive.google.com/file/d/1XyO_HTMx-CsNqcKPVjUP6zXd3hyFmO-M/view?usp=sharing`
+    - `https://drive.google.com/file/d/1exy5t0gKsV_0qnS7t_Vsq7XTXW6pErFQ/view?usp=sharing`
+    - `https://drive.google.com/file/d/1rvh44hlkQc3VrGc4NPANFoPI_29rdiMS/view?usp=sharing`
+  - Hero:
+    - `https://drive.google.com/file/d/12m0jabvS5RH7dejZca1Tuvc7Z6M13s72/view?usp=sharing`
+  - Thumbnail:
+    - `https://drive.google.com/file/d/1jUaZo08toSdn_P9Ujf1C5uO8LcFH_f5w/view?usp=sharing`
+  - Video:
+    - `https://drive.google.com/file/d/1H2vDNAcaJypIARN11kptExmAUNOQjuI9/view?usp=sharing`
 
 ### Script
 
@@ -271,7 +295,23 @@ That pocket of late afternoon when the light goes amber and the house holds its 
 
 ### Media
 
-  - Drive folder: `https://drive.google.com/drive/folders/1Ufh0D7KYkxom8JyJMt4zf87m_KzPaxZA?usp=sharing`
+  - Gallery: 
+    - `https://drive.google.com/file/d/13nUVIq1B33OwEe-NvtLh7Qx0u9xLmokv/view?usp=sharing`
+    - `https://drive.google.com/file/d/19pFjhsKuFjlFmCgsGBIggy5-tq2MkNXB/view?usp=sharing`
+    - `https://drive.google.com/file/d/1B0-yvY7n25L4iQGbV5-VVfYytgYzjIoR/view?usp=sharing`
+    - `https://drive.google.com/file/d/1FFWbu9Ht3DOPh6TUxVNymLX9RG4uBLKH/view?usp=sharing`
+    - `https://drive.google.com/file/d/1Qa8NXiCYwvkHmhsqWbITc-WDLecRM8-g/view?usp=sharing`
+    - `https://drive.google.com/file/d/1SpR2vUVhGRhplmqsKRjRRq7hzJvNG18t/view?usp=sharing`
+    - `https://drive.google.com/file/d/1c0t37VprKxsywZh2NjWv1wsobwnlJPrA/view?usp=sharing`
+    - `https://drive.google.com/file/d/1qDsd4ou1L1YOW5qW5SzIhA-7_tHVZ-kp/view?usp=sharing`
+  - Hero:
+    - `https://drive.google.com/file/d/1gUpJ5tR0sv1ZaxzsXPlBMyBuaYdag3qJ/view?usp=sharing`
+  - Poster:
+    - `https://drive.google.com/file/d/1eepHsyuqUKFjOd0aCdsmxmQ43vCX8alH/view?usp=sharing`
+  - Thumbnail:
+    - `https://drive.google.com/file/d/1UaC-IMU6YaRKTbHs_iosB6ySbqfHFbFD/view?usp=sharing`
+  - Video:
+    - `https://drive.google.com/file/d/1_SS04zQH7FWCIwAjjZhdTDtc7q3OTsGv/view?usp=sharing`
 
 ### Script
 
@@ -316,7 +356,20 @@ The morning after the first real snow, the whole world soft and soundless, the o
 
 ### Media
 
-  - Drive folder: `https://drive.google.com/drive/folders/1PUU6ky34uEdGyGFoExgtIbmoQ2y2wE6N?usp=sharing`
+  - Gallery: 
+    - `https://drive.google.com/file/d/1-R3UWMlqfuiCkrYaK1mjJPoatm85XGf5/view?usp=sharing`
+    - `https://drive.google.com/file/d/1AjUjT-1lTFC26LsQi_a_zUCo6syNxR3R/view?usp=sharing`
+    - `https://drive.google.com/file/d/1EyBQHqAAP1ioIDTrtebT0dfq83Zu9kzy/view?usp=sharing`
+    - `https://drive.google.com/file/d/1JgeCsG9I5Y_iexvzSVI5-4euShjUQ-gq/view?usp=sharing`
+    - `https://drive.google.com/file/d/1X8BqJVo5BmlzNGmnuSTUHj8AI20sy4UE/view?usp=sharing`
+    - `https://drive.google.com/file/d/1hCXZ0_Oe_QkHjIq9aBeMgFjdstc2kq41/view?usp=sharing`
+  - Hero:
+    - `https://drive.google.com/file/d/1dGJTEA3AaXw_Atj7lNEJs-PPAWPnJFzP/view?usp=sharing`
+  - Thumbnail:
+    - `https://drive.google.com/file/d/1yy2MxVCqFx6MHumonV34OUnXn7EFHtTp/view?usp=sharing`
+  - Video:
+    - LOOP `https://drive.google.com/file/d/1P4EkwMvI9ep_Tm9te1z4RgT4iG2pRTbY/view?usp=sharing`
+    - CLICK-TO-PLAY `https://drive.google.com/file/d/1mnX0LK-iXrYPotGNcwBLZ7uJWcSJsqog/view?usp=sharing`
 
 ### Script
 
@@ -361,7 +414,21 @@ The desk of a lighthouse keeper who reads more than he sleeps. Books stacked to 
 
 ### Media
 
-  - Drive folder: `https://drive.google.com/drive/folders/1Gh5HJ2vKpnnPNhbzCV__3N96J7O48XfD?usp=sharing`
+  - Gallery: 
+    - `https://drive.google.com/file/d/12Tt4MSCfI4SduwG05U2cmkwP-tXRenga/view?usp=sharing`
+    - `https://drive.google.com/file/d/13Tg1jPHuNUjlqAXPkdbrqBkaOXK_oIEC/view?usp=sharing`
+    - `https://drive.google.com/file/d/16PKBPLLH91a0RNjEO9mFKMT6EZaZXQRO/view?usp=sharing`
+    - `https://drive.google.com/file/d/19YOaJTVfcyd4hhnLSWwc9GslDCLQhLuc/view?usp=sharing`
+    - `https://drive.google.com/file/d/1G4BquriWI8YNFZGyscpNut5zyt8CtA__/view?usp=sharing`
+    - `https://drive.google.com/file/d/1kCIYlWmZedy8HBZxpipqg04uwqNW9peC/view?usp=sharing`
+  - Hero:
+    - `https://drive.google.com/file/d/1IRGJ-FnYG2uT6vXiVwuQBiFrNk5jbl2P/view?usp=sharing`
+  - Thumbnail:
+    - `https://drive.google.com/file/d/1W-R4xR5KQ3R5W2n9U8QOFhRAs6UeiAiF/view?usp=sharing`
+  - Video:
+    - `https://drive.google.com/file/d/1RUTXjvt61iqGvpgK1SplIevhRnSVPaoI/view?usp=sharing`
+  - YouTube:
+    - `https://youtu.be/PCZR34lX-9w`
 
 ### Script
 
@@ -406,7 +473,17 @@ A watchmaker's bench at the end of the day, when the low sun comes through the s
 
 ### Media
 
-  - Drive folder: `https://drive.google.com/drive/folders/1Exd9d5QCmIEXh35zCCm0VlI9chn8ajhR?usp=sharing`
+  - Gallery: 
+    - `https://drive.google.com/file/d/13gBXg8fEhX0469qBA3zjQKATT6hOW8C_/view?usp=sharing`
+    - `https://drive.google.com/file/d/1KMTd6DL6-p1ytO4UrEmPR7N_MMfI2nwL/view?usp=sharing`
+    - `https://drive.google.com/file/d/1gK4X3PHtQ8crWdWKFMxetjGa0KTKTZyC/view?usp=sharing`
+    - `https://drive.google.com/file/d/1jPh-crmpN0rywGcqwgjnghPX7eLACVDu/view?usp=sharing`
+    - `https://drive.google.com/file/d/1rPfqIho2el0yGG88bmBTId_AQJWzCiQt/view?usp=sharing`
+    - `https://drive.google.com/file/d/1xHUF97mc1y6_9w2-vkdYg7M7spYLYQuS/view?usp=sharing`
+  - Hero:
+    - `https://drive.google.com/file/d/1mt35zDhNamvI-ryIOBnVL3sG7U6V2P0U/view?usp=sharing`
+  - Thumbnail:
+    - `https://drive.google.com/file/d/1KLxN2IS6GW9EOu4_k0J6vFLQtSsxzaZy/view?usp=sharing`
 
 ### Script
 
