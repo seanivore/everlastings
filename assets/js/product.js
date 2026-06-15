@@ -93,7 +93,12 @@ function mountPreviewBanner(product, token) {
   const bar = document.createElement('div');
   bar.setAttribute('role', 'status');
   bar.style.cssText =
-    'position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:center;gap:16px;padding:10px 16px;background:var(--accent-primary,#4A1942);color:var(--text-inverse,#FFF8E7);font-family:var(--font-body,sans-serif);font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+    'position:fixed;top:0;left:0;right:0;z-index:9999;font-family:var(--font-body,sans-serif);box-shadow:0 2px 10px rgba(0,0,0,0.25);';
+
+  // Row 1 — the status bar + Publish + a toggle for the review panel.
+  const row = document.createElement('div');
+  row.style.cssText =
+    'display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding:10px 16px;background:var(--accent-primary,#4A1942);color:var(--text-inverse,#FFF8E7);font-size:14px;';
   const label = document.createElement('span');
   label.textContent = 'Draft preview — not yet live. This is how shoppers will see it.';
   const btn = document.createElement('button');
@@ -126,10 +131,90 @@ function mountPreviewBanner(product, token) {
         : 'Could not publish — try again, or open your admin panel and tap “Publish now” there. If it still fails, text Sean.';
     }
   });
-  bar.appendChild(label);
-  bar.appendChild(btn);
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.textContent = 'Hide draft details';
+  toggle.style.cssText =
+    'padding:6px 12px;border:1px solid rgba(255,255,255,0.4);border-radius:6px;background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer;';
+  row.append(label, btn, toggle);
+
+  // Row 2 — review panel: the fields the GPT wrote that the page itself never shows (SEO, the frozen
+  // checkout line, the image crops). Copyable so the owner can paste one back to the GPT with edits.
+  // Values come straight from the merged draft row (no innerHTML — GPT-generated text via textContent).
+  const panel = document.createElement('div');
+  panel.style.cssText =
+    'display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;padding:12px 18px;background:#FFF8E7;color:var(--color-ink,#1A1A1A);border-top:1px solid rgba(0,0,0,0.12);font-size:13px;';
+  const syncPad = () => { document.body.style.paddingTop = bar.offsetHeight + 'px'; };
+
+  function textCell(labelTxt, value) {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'flex:1 1 240px;min-width:200px;max-width:380px;';
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px;';
+    const lab = document.createElement('span');
+    lab.textContent = labelTxt;
+    lab.style.cssText = 'font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7a55;';
+    head.appendChild(lab);
+    if (value) {
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = 'Copy';
+      copy.style.cssText = 'font-size:10px;border:1px solid #cbb990;border-radius:4px;background:#fff;color:#4A1942;padding:1px 7px;cursor:pointer;';
+      copy.addEventListener('click', () => {
+        navigator.clipboard?.writeText(value);
+        copy.textContent = 'Copied'; setTimeout(() => (copy.textContent = 'Copy'), 1200);
+      });
+      head.appendChild(copy);
+    }
+    const val = document.createElement('div');
+    val.textContent = value || '(not set — falls back to the page copy)';
+    val.style.cssText = 'line-height:1.4;user-select:text;' + (value ? '' : 'color:#a08;opacity:.6;font-style:italic;');
+    cell.append(head, val);
+    return cell;
+  }
+  function imgCell(labelTxt, src) {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'flex:0 0 auto;';
+    const lab = document.createElement('div');
+    lab.textContent = labelTxt;
+    lab.style.cssText = 'font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8a7a55;margin-bottom:3px;';
+    cell.appendChild(lab);
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src; img.alt = labelTxt; img.loading = 'lazy';
+      img.style.cssText = 'height:72px;width:auto;max-width:150px;object-fit:contain;border:1px solid rgba(0,0,0,0.15);border-radius:4px;background:#fff;display:block;';
+      cell.appendChild(img);
+    } else {
+      const none = document.createElement('div');
+      none.textContent = '(not set)';
+      none.style.cssText = 'color:#a08;opacity:.6;font-style:italic;font-size:11px;';
+      cell.appendChild(none);
+    }
+    return cell;
+  }
+
+  panel.append(
+    textCell('SEO title', product.seo_title),
+    textCell('SEO description', product.seo_description),
+    textCell('Checkout name', product.checkout_name),
+    textCell('Checkout line', product.checkout_description),
+    imgCell('Thumbnail', product.thumbnail),
+    imgCell('OG image (1.91:1)', product.seo_thumbnail),
+    imgCell('Checkout image (1:1)', product.checkout_image),
+  );
+
+  let open = true;
+  toggle.addEventListener('click', () => {
+    open = !open;
+    panel.style.display = open ? 'flex' : 'none';
+    toggle.textContent = open ? 'Hide draft details' : 'Show draft details';
+    syncPad();
+  });
+
+  bar.append(row, panel);
   document.body.appendChild(bar);
-  document.body.style.paddingTop = '48px';
+  syncPad();
+  window.addEventListener('resize', syncPad);
 }
 
 // v1.5 — optional media (MP4 + YouTube), data-driven, hides when absent. Mirrors the portfolio's
