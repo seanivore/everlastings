@@ -220,7 +220,9 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
 
 ### Aspect Ratio
 
-All product images: **4:5** (portrait orientation). This is enforced in the admin upload UI and prevents messy grid layouts.
+**Product images: 4:5** (portrait) — the gallery/shop crop, enforced in the upload pipeline. The pipeline now also produces, for the GPT's by-chat flow:
+- **`checkout_image` — 1:1** (square): the Stripe checkout / receipt image.
+- **`seo_thumbnail` — ~1.91:1** (wide): the Open-Graph / Twitter social-card image.
 
 ### Format
 
@@ -239,10 +241,13 @@ Images are stored in Cloudflare R2 with SEO-friendly filenames:
   ...
   /products/{slug}/thumbnail-{slug}.webp
   /products/{slug}/video-01-{slug}.mp4
-  /products/{slug}/detail-01-{slug}.gif
+  /products/{slug}/checkout_image-{slug}.webp   (1:1, Stripe)
+  /products/{slug}/seo_thumbnail-{slug}.webp    (1.91:1, OG card)
   ```
 
-Raw images are transformed via Cloudinary (4:5 crop, WebP, compress) before upload to R2. Videos and GIFs upload directly to R2 without transformation.
+Raw images are transformed via Cloudinary (per-role crop — 4:5 gallery, 1:1 checkout, 1.91:1 OG — WebP, compress) before upload to R2. Videos (MP4) upload directly to R2 without transformation; **GIFs are retired** (an MP4 `<video loop muted>` is smaller + cleaner).
+
+**Site ambiance (v2.1):** the homepage hero is a perspective-shift parallax over the artwork video, with a darkened scrim for legibility and a warm "firelight" glow framing the hero's window edges. The firelight glow is **hero-only** (an earlier site-wide ambient version was removed); a Lottie "script-writing" name treatment + a 35mm film-grain pass are planned follow-ups.
 
 ### Shot Guide
 

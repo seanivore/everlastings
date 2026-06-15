@@ -2,7 +2,7 @@
 
 **Handcrafted havens for the stories that stay** — a custom e-commerce site for artisan miniature dioramas, built so the owner can run the *entire* store by chatting with an AI assistant.
 
-**Status:** On-site checkout + fulfillment **built and verified on the preview** (v1.4.9), pre-launch. **AI store-management is in active development (v1.5)** — the layer that lets a non-technical owner create, edit, preview, publish, price, discount, and inventory the whole catalog through a Custom GPT. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v1.5 plan + design history](/assets/docs/archive/v1_5/).
+**Status:** the full store — on-site checkout + fulfillment **and** the by-chat AI management layer — **built and verified on the preview** (v2.0, with a v2.1 design pass), pre-launch. A non-technical owner creates, edits, previews, publishes, prices, discounts, and inventories the whole catalog through a Custom GPT, behind a draft → preview → publish safety net. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v2.0 build + design history](/assets/docs/archive/v2_0/).
 
 ---
 
@@ -78,14 +78,15 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
   + **Dynamic homepage** — rotating themes and a featured-product carousel driven by the database
   + **Smart filters** — shop grid with multi-select filtering by series, type, and availability
 
-## In active development (v1.5 — AI store-management)
+## By-chat store management (v2.0 — built + verified on preview)
 
   + Custom GPT that can **create, edit, draft-preview, and publish** every product field (copy, SEO, photos by link, price)
   + **Live price rotation**, **mark-sold / restock**, and **coupons** (create / list / end) by chat
   + **Archive / resurface** (no hard delete) and truthful **order status** including refunds
-  + Unified admin panel on the same draft/publish path, with an on-brand pass
+  + Unified admin panel on the same draft → preview → publish path, with an on-brand pass
+  + A "firelight" perspective-shift hero + a polished, compact product page (v2.1 design pass)
 
-> Currently in the design + gap-review hardening loop before build. Status here is kept honest — the management layer is **planned and specified, not yet live**.
+> Built, gap-reviewed across multiple cold passes, and verified on the dev preview; pre-launch. The owner runs the whole catalog by chatting with her Custom GPT.
 
 ---
 
@@ -143,7 +144,7 @@ Vercel auto-scopes environment variables per branch, so the same codebase runs a
 | [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Owner how-to: products + orders across GPT, Admin, Studio       |
 | [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Custom GPT brain + setup; agentic curl protocol                 |
 | [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist                                       |
-| [v2.0 Email/AI Pipeline Planning](/assets/docs/archive/v2_0/)              | Post-launch roadmap — AI-assisted email marketing, inbox agents |
+| [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                   | The by-chat management layer — IMPLEMENT, design/testing addenda, build report |
 
 ---
 

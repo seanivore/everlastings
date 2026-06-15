@@ -16,49 +16,57 @@ You have three tools. They all change the same store — pick whichever is easie
 
 **The short version:** chat with **The Sunkeeper** for almost everything. The **Admin panel** does the exact same jobs with forms — it's your backup, and the place to send a contractor. **Supabase Studio** is the database itself; lovely for a quick flip, but easy to fumble, so only when you need it.
 
+**What the Sunkeeper handles vs. "let's set that up with Sean":** the Sunkeeper runs everything about your **pieces** — adding, editing, photos, prices, sales, and orders. The **look of the site itself** (the homepage mood, the hero, the static pages) is a *set-up-with-Sean* job, not a chat change — so "redo the front page" gets "let's set that up together," not a vague attempt.
+
 > Logins live at the very bottom of this guide.
 
 ---
 
 # Part 1 — Products
 
+> **The big idea (new):** when you add or change a piece, it doesn't go live instantly — you get a **preview link** first (a real page, exactly how shoppers will see it). Look it over, then tap **Publish** (or tell the Sunkeeper "publish"). Until you do, the live store is untouched. The only things that change *immediately* (no preview) are the **price**, marking a piece **sold**, and the **stock count** — those need to be true right away.
+
 ## Add a new piece
 
 ### With The Sunkeeper (easiest)
 1. Open **The Sunkeeper** in your ChatGPT sidebar.
-2. Say what you're adding — title, price, the story, the details. Talk naturally; it'll ask for anything it needs.
-3. **Drag your photos into the chat** — at least 7 (one clear front shot, plus angles, details, a size reference).
-4. It shows you a **preview**. Read it — especially the **price**.
-5. Say "looks good" and it creates the piece. You'll get a link to the live page in a few seconds.
+2. Say what you're adding — title, price, the story, the details. Talk naturally; it drafts all the wording for you (including the behind-the-scenes SEO + checkout text).
+3. **Share your photos as links** — at least 7 (one clear front shot, plus angles, details, a size reference). A ChatGPT GPT can't grab a photo you paste *straight* into the chat, so it comes by link (it'll ask). The taps:
+   - **iPhone:** open the photo in Photos → **Share** → **Save to Files** (or the Drive app) → in **Google Drive**, long-press the file → **Share / Manage access** → **"Anyone with the link"** → **Copy link** → paste it to the Sunkeeper.
+   - **Android:** open the photo → **Share** → **Drive** → open it in Drive → **⋮** → **Manage access / Share** → **"Anyone with the link"** → **Copy link** → paste it.
+   - You can paste **several links in one message** — it adds them all.
+4. It hands you a **preview link** — open it and read the page (especially the **price**).
+5. Tap **Publish** on that page (or say "publish"). It goes live + buyable, and the old preview link stops working.
 
-*It will never change your price, never skip the preview, and never post with fewer than 7 photos.*
+*It never changes your price on its own, never skips the preview, and never posts with fewer than 7 photos.*
 
 ### With the Admin panel
 1. Go to `everlastingsbyemaline.com/admin` and log in.
-2. Click **New Product**.
-3. Fill in the fields (they match what you'd tell the Sunkeeper: title, headline, story, description, features, price, etc.).
-4. **Upload your photos** right in the form.
-5. Click **Save** — it's live immediately. Use **Preview** first if you want to see it.
+2. **New Product** → fill the fields (same as you'd tell the Sunkeeper) → **upload photos** in the form → **Save draft.**
+3. Open the **preview**, then **Publish now.** (Same draft → preview → publish habit everywhere.)
 
-### With Supabase Studio
-Adding a *whole* piece here is fiddly (photos, lists, and the Stripe link all have to be just right), so **use the Sunkeeper or Admin panel to add pieces.** Studio is for quick edits (below), not full adds.
+## Edit a piece — *the Sunkeeper can edit now!*
 
----
+Just tell it what to change — "change the Lantern Cottage's story to…", "swap the second photo", "fix the price to $290." It **stages** the change and hands you a fresh **preview link**; the live page stays exactly as it is until you **Publish**. Changed your mind on a previewed edit? Say **"discard"** and the live page is untouched. (The Admin panel does the same: Edit → Save draft → preview → Publish now.)
 
-## Take a piece down / mark it sold
+- **Price:** just say the new price — it updates **in place** on the same page and link, **right away** (no preview). It's a price change, not a new listing.
+- **Mark a piece sold / change stock:** "mark the Cottage sold" or "restock to 3" applies **immediately** (no preview/publish) — a sold piece shows as *sold* but stays on its page. (A real purchase marks it sold automatically — you do nothing.)
 
-When something sells in person, or you want to retire it:
+## Sales & coupons (by chat)
 
-- **Sunkeeper:** "Mark *The Sunkeeper* as sold." (Or ask it to take the piece down.)
-- **Admin panel:** open the product → **Edit** → set **Available** to off (and quantity to 0) → **Save.**
-- **Supabase Studio:** Table Editor → **products** → find the row → set **available** to `false` → save. (See the Studio primer below.)
+Start a sale whenever the mood strikes: *"Make a 15%-off code HOLIDAY15."* The Sunkeeper sets up the code. *"What sales are running?"* lists them; *"end the HOLIDAY15 sale"* stops it on the spot. It only ever touches **your** sales (the store's automatic welcome/cart codes are left alone). Percent-off or amount-off, store-wide or specific pieces, with an optional expiry or redemption cap. (No "buy-one-get-one" — that one it can't do.)
 
-*(When a piece sells through the website, it's marked sold automatically — you don't have to do anything.)*
+## Take a piece down (archive — it's reversible)
 
-## Change or replace a piece
+"Take the Cottage down" / "remove it" **archives** the piece: it leaves the shop and its page, but it's **kept** — bring it back anytime with "resurface it." **Nothing is ever truly deleted.** (Different from *sold*, which keeps the piece visible with a Sold note.)
 
-- **Edit what's there** (fix a typo, new price, new photo): **Admin panel** → find the product → **Edit** → change → **Save.** (A price change quietly updates Stripe for you.) The Sunkeeper can't *edit* existing pieces yet — use the Admin panel for edits.
-- **Swap one piece for another:** take the old one down (above), then **add the new piece** (Sunkeeper or Admin panel).
+## What the little labels mean
+
+A piece (in the admin list, or when you ask the Sunkeeper) is one of: **Live** (on the store) · **Draft** (created, not published yet) · **Live · edits pending** (live, with a change you previewed but haven't published) · **Archived** (taken down, resurfaceable).
+
+## What the shop is set up for
+
+Right now the store sells your **miniatures**. Adding a different *kind* of product (prints, storybooks, etc.) is a project to set up with Sean — not something the Sunkeeper can add on its own yet. So if you ask it for a "printable" and it says it can't, that's why.
 
 ---
 
@@ -87,7 +95,9 @@ Refunds happen in **Stripe** (not the Sunkeeper or Admin panel):
 2. **Payments** → find the payment → **Refund**.
 3. Stripe **emails the customer** the refund confirmation automatically.
 
-**Important:** a refund does **not** automatically put the piece back up for sale. If you want it available again, **relist it**: Admin panel → the product → **Edit** → set **Available** back on → **Save** (or ask a quick Studio flip). The Sunkeeper can guide you through a refund, but it can't do the refund for you.
+**The Sunkeeper can walk you through it** — ask "how do I refund jane@…'s order?" and it talks you through the current Stripe steps (it looks them up, since Stripe's screens change over time). It can't *do* the refund for you — that lives in Stripe, where you sign in for payouts anyway. A **full** refund automatically flips the order to **Refunded** in your orders list; a *partial* one won't change the status, so check Stripe for those.
+
+**Want the piece available again?** A refund does **not** relist it. Just tell the Sunkeeper "mark the Cottage available again" (or Admin panel → Edit → Available on) — immediate, no preview.
 
 ## A customer has a question (where did it ship, what did they order, etc.)
 
@@ -112,7 +122,8 @@ Studio is the **database itself** — the spreadsheet-like source behind your wh
 
 **Go slow:**
 - Change only the cell you mean to. Other columns (like the Stripe IDs or the slug) keep the store working — leave them alone.
-- Don't delete rows unless you're sure; "set available to false" is the safe way to hide a piece.
+- Don't delete rows unless you're sure; "set available to false" hides a piece, and **Archive** (via the Sunkeeper/Admin) is the proper "take it down."
+- **Never *publish* from Studio.** Flipping `is_published` to true here (or adding a row to make it live) skips the safety checks + the Stripe link, leaving an invisible, unbuyable piece. Publish from the **Admin panel** ("Publish now") or the **Sunkeeper**.
 - Prices, full new products, and photos are much safer through the Sunkeeper or Admin panel.
 
 ---
