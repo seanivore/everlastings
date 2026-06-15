@@ -95,3 +95,7 @@ Verified live (Claude-in-Chrome), desktop + mobile:
 ## Sean's launch / cutover to-dos (post sign-off)
 
 Live Stripe keys (Production scope) + live-mode coupon bootstrap · point the GPT at **production** + the production key · add the remaining admin logins (Supabase Auth) · content-placeholder gate (`grep -rn 'PLACEHOLDER:' .` = 0) · `charge.refunded` on the **live** endpoint · Stripe receipt branding · DNS · then `dev → main` ff-merge + tag `v2.0.0`.
+
+### Sean reports back in
+
+- **#22 refund** — the `charge.refunded` Stripe webhook was already configured on test mode. I ensured that live was configured in the same way that the test webhook was. 

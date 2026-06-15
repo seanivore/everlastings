@@ -1,6 +1,6 @@
 # Everlastings by Emaline — Brand Guide
 
-**Created**: 2026-03-16 **Updated**: 2026-04-09 **Source**: Consolidated from v0 brand docs, v1 planning, client input
+**Created**: 2026-03-16 **Updated**: 2026-06-10 **Source**: Consolidated from v0 brand docs, v1 planning, client input (2026-06-10: restored Origin & Positioning from the OG strategy docs)
 
 ---
 
@@ -12,6 +12,18 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
   - Handcrafted miniature worlds of quiet beauty, transforming loss into healing & hope.
   - Healing through art, on miniature world at a time.
   - Get lost in a tiny world filled with soft magic that feels like holding home in your hands.
+
+---
+
+## Origin & Positioning
+
+*Recovered from the original brand-strategy docs (`archive/resources/processed/`). The consolidation into this guide kept the voice but had dropped the story and the thesis — this section is the soul the rest of the guide exists to serve.*
+
+**The positioning — the line that reframes everything.** Everlastings by Emaline is not, at heart, a miniatures shop; it is a grief-processing platform where loss transforms into something you can hold. The miniatures are the *anchors* — physical objects people can keep and control when everything else feels uncontrollable. The real product is permission to grieve at one's own pace, the reminder that beauty persists, and the knowledge of not being alone. Read every product, page, and line of copy through this lens — it is the whole difference between "pretty miniatures" and the work as it actually is.
+
+**The origin story — Emy's, in brief.** Emy's husband suffered a brain injury and lost his personality: he is still here, but the person she married is gone. This is *ambiguous loss* — grief for someone who is still alive. She and her husband made a bonding ritual of sitting together at the kitchen table while she builds miniatures — tiny worlds where she has control when everything else is chaos. That ritual is how she processes the grief while they relearn who they are together. *"When the world cracked open, I made something small enough to hold."* Honor this story; never exploit it.
+
+**"The Sunkeeper" carries her husband's story.** It is a specific piece — the emotional center of the brand, and the canonical voice example across every guide (*"The Sunkeeper stands watch over a garden where time has learned to be gentle…"*). Treat the name with that weight wherever it appears, including any tool or assistant named after it.
 
 ---
 

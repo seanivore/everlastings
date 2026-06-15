@@ -80,22 +80,9 @@ Across these six test posts are a variety of images and videos. These have been 
 
 ### Clip 1 — "A whole store, run by chat" (GPT screen)
 
-  + [ ] **R1 · Recon.** 
-    - "Show me everything that's live in the shop right now." 
-    - → it calls **listProducts** and reads back the current placeholder pieces. 
-    - *(Good opening beat: the GPT can see the store.)*
-
-  + [ ] **R2 · Clear the placeholders.** 
-    - "These are all old test pieces with placeholder images — take them all down." 
-    - → it **archives each** (loops `archiveProduct`). Verify they leave the shop. 
-    - Nice line to say on camera: it's *archive, not delete* — reversible, nothing is ever destroyed. 
-    - *(If it's slow at bulk, name a few or say "archive every product that's currently live.")*
-
-  + [ ] **R3 · Add the first piece, live.** 
-    - Paste Piece 1's **opening line**, then its **details** when asked; give 7 photos; open the preview it returns; say **"publish."** 
-    - **Expect:** it writes the copy in Em's voice, never exposes slug/cents/jargon, speaks dollars 
-    - Hands a **preview link** (a draft), and publishing makes it live + purchasable (creates the Stripe listing). 
-    - **This is your hero sequence — raw words in, a finished product page out.**
+  + [x] **R1 · Recon: Show all products**
+  + [x] **R2 · Clear the placeholders.** 
+  + [x] **R3 · Add the first piece, live.** 
 
   + [ ] **R4 · Add the rest (2–6).** 
     - Work through Pieces 2–6 — mix "let it write" with pasting finished copy to keep pace. 
@@ -253,6 +240,8 @@ It's a tiny stone cottage at the end of a path you almost didn't take, the eveni
     - `https://drive.google.com/file/d/1H2vDNAcaJypIARN11kptExmAUNOQjuI9/view?usp=sharing`
 
 ### Script
+
+Okay, I have the rest of these all organized to optimize our workflow. When presenting me with the preview links, please include the proposed SEO Title and SEO Description text so that I can review it before I publish what I can't see on the preview or live page. 
 
 I want to add a new piece called "The Reading Hour". It's a "A little book nook that tucks between the real books on your shelf, with a tiny lamp that actually lights up" for $185.
 

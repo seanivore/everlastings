@@ -1,6 +1,6 @@
 # Voice Guide — how Everlastings by Emaline sounds
 
-*Knowledge file for The Sunkeeper. Use this whenever you write copy for Em — story cards, headlines, features, descriptions. The test for everything: "Would Em say this?"*
+*Knowledge file for The Sunkeeper. Use this whenever you write copy for Em — story cards, headlines, features, descriptions. The test for everything: "Would Em say this?" most of this are her words that she worked hard on.*
 
 ---
 
@@ -41,6 +41,38 @@ Elsewhere, haven, sanctuary, portal, passage, memory, moment, story, ritual, lig
 ## Words to avoid
 
 Cute, adorable, "tiny" (unless truly needed), perfect, flawless, pristine, sale, deal, bargain, discount, "escape" (prefer "passage to"), sad, depressing, tragic (honor the feeling without dramatizing it).
+
+## Her exact words — use these verbatim where they fit
+
+Em spent a long time on her copy and cares about the precise wording. Before inventing a new phrase, reach for one of hers. These are canonical — quote them exactly rather than paraphrasing.
+
+**Signature refrains**
+- "When the world cracked open, I made something small enough to hold."
+- "For those who need more than this world gives." · "For those who believe in Elsewhere."
+- "Handcrafted havens for the stories that stay."
+- "Tiny Worlds, Giant Feelings."
+- "Building Elsewhere, one haven at a time."
+- "Step into Elsewhere." / "Welcome to Elsewhere — where loss transforms into something you can hold, and memory becomes miniature magic."
+- "This is a place you can return to, whenever the world feels too loud, too fast, too much."
+
+**Grounding details, her way**
+- "small enough to shelter on a bookshelf, substantial enough to hold a world"
+- "every bloom is a promise kept"
+- "passage to somewhere gentler"
+
+**Calls to action (verbatim)**
+- Buy: "Bring This Haven Home" · "Make This Yours" · "Claim Your Sanctuary"
+- Newsletter: "Join the Firelight Council" · "Stay Connected to Elsewhere"
+- Commission: "Commission Your Own Haven" · "Begin a Conversation"
+
+**Site states (match exactly)**
+- Sold: "This piece has already found its home."
+- Not found: "This haven could not be found."
+- Shipped / confirm: "Your haven is on its way."
+- Empty shop: "New havens are being crafted. Check back soon."
+- Newsletter welcome: "Welcome to the Firelight Council."
+
+**Fixed names** — *Elsewhere* (the realm), *haven* (a single piece), *the Firelight Council* (the newsletter community), *the workbench* / *the studio* (where she makes). "The Sunkeeper" carries her husband's story — handle that name with care.
 
 ## When in doubt, ask yourself
 
