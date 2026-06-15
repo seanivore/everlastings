@@ -237,27 +237,28 @@
         <aside class="product-sticky-card" data-product-card>
 
           <h1 data-product-title style="margin-bottom: var(--space-xs);">Placeholder Haven I</h1>
-          <p style="font-style: italic; color: var(--text-secondary); margin: 0 0 var(--space-md);" data-product-headline>A quiet portal in waiting</p>
+          <p style="font-style: italic; color: var(--text-secondary); margin: 0 0 var(--space-sm); line-height: var(--leading-snug);" data-product-headline>A quiet portal in waiting</p>
 
           <p class="price" data-product-price>$245.00</p>
 
-          <button type="button" class="btn btn-primary btn-block" data-product-add-to-cart>Add to Cart</button>
-          <button type="button" class="btn btn-secondary btn-block" data-product-buy-now style="margin-top: var(--space-sm);">Buy Now</button>
+          <button type="button" class="btn btn-primary btn-block" data-product-buy-now>Buy Now</button>
+          <button type="button" class="btn btn-secondary btn-block" data-product-add-to-cart style="margin-top: var(--space-sm);">Add to Cart</button>
 
           <p class="availability-note" data-product-availability>
-            Each piece is one-of-a-kind. <a href="/policies#availability">Availability confirmed at checkout</a>.
+            <a href="/policies#availability">Availability confirmed at checkout</a>
           </p>
 
-          <!-- Email CTA #1: Product Interest -->
+          <!-- Email CTA #1: Product Interest (compact: inline email + arrow, short consent) -->
           <div class="interest-cta" id="product-interest-cta">
-            <p class="interest-cta__text">This is a one-of-a-kind piece. Love it? Get notified if someone else adds it to their cart.</p>
-            <form class="interest-form" data-email-cta="product-interest" data-product-slug="placeholder-haven-i">
+            <form class="interest-form interest-form--inline" data-email-cta="product-interest" data-product-slug="placeholder-haven-i">
+              <div class="interest-form__row">
+                <input type="email" placeholder="Email me about this piece" required>
+                <button type="submit" class="btn btn-primary btn-sm interest-form__go" aria-label="Notify me about this piece">&rarr;</button>
+              </div>
               <label class="checkbox-label">
                 <input type="checkbox" required>
-                Please email me. I agree to <a href="/terms">Terms</a> &amp; <a href="/privacy">Privacy Policy</a>.
+                Agree to <a href="/terms">Terms</a> &amp; <a href="/privacy">Privacy</a>.
               </label>
-              <input type="email" placeholder="Your email" required>
-              <button type="submit" class="btn btn-secondary btn-sm">Notify Me</button>
             </form>
           </div>
 
@@ -271,12 +272,12 @@
         <!-- ============================================================
              DETAILS — features list (with 6 SVG icons); in-column under the buy card.
              ============================================================ -->
-        <section class="product-details" style="padding-top: var(--space-2xl); border-top: 1px solid var(--color-fog);">
+        <section class="product-details" style="padding-top: var(--space-md); margin-top: var(--space-md); border-top: 1px solid var(--color-fog);">
 
-        <h2>Details</h2>
+        <h2 class="product-details__title">Details</h2>
 
         <!-- Features list. Track B fallback content stays unless Supabase p.features is provided. -->
-        <ul class="feature-list" data-product-features style="margin-top: var(--space-lg); max-width: 720px;">
+        <ul class="feature-list" data-product-features style="margin-top: var(--space-sm);">
 
           <li>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

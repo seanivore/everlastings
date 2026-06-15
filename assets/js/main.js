@@ -274,13 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (stored) {
     try { applyConsent(JSON.parse(stored)); } catch {}
   }
-  // Firelight ambient glow — inject once; frames the viewport edges on top (pointer-events:none, rim-only).
-  if (!document.querySelector('.firelight-glow')) {
-    const glow = document.createElement('div');
-    glow.className = 'firelight-glow';
-    glow.setAttribute('aria-hidden', 'true');
-    document.body.prepend(glow);
-  }
-  // Per-page variety: start each page's flame at a different point in its flicker cycle.
-  document.documentElement.style.setProperty('--fire-delay', (-(Math.random() * 3.4)).toFixed(2) + 's');
+  // Firelight glow: turned OFF globally (v2.1 feedback). To be revisited + repurposed onto the homepage
+  // hero's window edges in the hero rework; the .firelight-glow CSS stays in styles.css for that reuse.
 });
