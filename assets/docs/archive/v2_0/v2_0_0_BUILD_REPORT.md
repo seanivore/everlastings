@@ -1,7 +1,7 @@
 # v2.0.0 BUILD REPORT — AI Store Management + Design
 
 **Initiative:** the by-chat store-management layer (create→preview→publish, edit/stage, coupons, archive, media-by-link, refund-status, strict test isolation) + the v1.5 design pass.
-**Branch:** `dev` · **Status:** _in progress_ — built, deployed to the dev preview, **functional suite verified live**; design-visual pass underway; GPT-behaviour + refund tests await Sean's touchpoints.
+**Branch:** `dev` · **Status:** built + verified on the dev preview through **v2.1** (post-review visual polish). Every build-exercisable T1/T2 box is green; GPT-behaviour (#10) + a full Stripe checkout + the refund-status flip (#22) are Sean's final on-camera tests, then `dev → main` sign-off.
 **Source of truth:** `v2_0_0_IMPLEMENT.md` + `ADDENDUM_DESIGN.md` + `ADDENDUM_TESTING.md`. This report records what was built and what verified; its findings fold into `EVERLASTINGS_STORE.md` (Phase 10) so STORE becomes the standalone as-built truth.
 
 ---
@@ -85,12 +85,25 @@ Verified live (Claude-in-Chrome), desktop + mobile:
 
 ---
 
+## v2.1 — post-review visual polish (review feedback round)
+
+After v2.0 verified, Sean reviewed the site (`v2_1_0_REVIEW_FEEDBACK.md`) before recording portfolio video and surfaced final cleanup. All on `dev`, deployed + verified on the preview (Sean's eye on the render-tuned values):
+
+- **Ambient glow:** turned **off globally** (the fireplace rim read too heavy on every page) and **repurposed onto the homepage hero's window edges**, under the text (`.hero__glow`, reusing the `fire` keyframe + `@property` zones). The global `.firelight-glow` injection was removed from `main.js`; the CSS stays for the hero reuse. (`54f6bbb`)
+- **Product page** (`product.html` + `styles.css`): smaller-but-**bolder title** (28px / weight 600) + a slightly bigger headline; **Buy Now** is now the filled primary (Add to Cart secondary); availability collapsed to one tight linked line; the interest CTA is a compact **inline email row** ("Email me about this piece" + a "→" submit) with an inline "Agree to Terms & Privacy" consent (wrapped in a `<span>` so the flex gap no longer splits the words); **Details** = a small tight bullet list (icons hidden — real features render as plain `<li>`); **story-card italic** again at a comfortable size (reverses D3's upright change); tighter card padding so the buy card sits **above the fold**. (`54f6bbb`, `3e5a824`)
+- **Preview/publish banner** (`product.js` `mountPreviewBanner`): a collapsible **review panel** showing the fields the page never displays — copyable **SEO title / SEO description / checkout name / checkout line** + **image previews cropped to their target aspect** (thumbnail 4:5, OG 1.91:1, checkout 1:1) — so the owner can review/copy the GPT's hidden fields before publishing. Body padding syncs to the banner height; `textContent` only (no innerHTML for GPT values). (`3ccc4db`, `5c3dc37`)
+- **Homepage hero** (`index.html` + `styles.css`): a stronger **perspective-shift parallax** (scale 1.2 ≈ 20% zoom, `translateY` pan via the existing `@supports (animation-timeline: scroll())` scaffold; static fallback in Safari/FF), a **darker overlay** for white-text pop, the hero window framed shorter (90vh→80vh), and the hero-edge fire glow above.
+- **Deferred to a later pass** (Sean): a Lottie "script-writing" treatment for the company name + a 35mm film-grain FX on the hero video — both to start with subagent research first.
+
+**Final box-check (T1/T2).** Every build-exercisable box is green. One correction worth recording: the first SSRF pass (#21) asserted only the status code and was masking on an *Invalid role* 400 (the valid hero role is `hero`, not `hero-01`) — re-run with valid roles, the SSRF guard genuinely fires (localhost / `169.254` cloud-metadata / private / non-https all return "must be a public https URL"), the role check still rejects before fetch, and a valid-https request reaches the fetch (proper "not directly downloadable" message). **Upload success (#20)** is proven end-to-end by Sean's real GPT-created product ("The Lantern Keeper's Cottage" — images uploaded by URL, live on the CDN, rendering on the page). The remaining items are Sean's on-camera tests (#10 GPT, the checkout, #22 refund-flip).
+
+---
+
 ## Remaining before ship
 
-- **Glow aesthetic** — Sean's eye on the retuned edge-frame glow (intensity + per-page hues) on the live preview; tune if needed.
-- **#10 GPT behaviour** — Sean configures the Custom GPT (his account), Action → preview + the preview key, Web Browsing ON.
-- **#22 refund** — Sean enables `charge.refunded` on the Stripe webhook (test mode), then a full test refund flips order status to `refunded`.
-- **Phase 10 as-built docs** (`EVERLASTINGS_STORE.md`, `STORE_ADMINISTRATION.md`, `BRAND.md`, `README.md`) — written last, after testing + bug-fix.
+- **#10 GPT behaviour** + **a full Stripe checkout** — Sean's on-camera tests (the GPT is configured + in active use; a real product is live and rendering).
+- **#22 refund flip** — `charge.refunded` is now enabled on **both** the test and live webhook endpoints (Sean); verify the order `status` flips to `refunded` after Sean's test checkout + refund.
+- **Phase 10 as-built docs** — this report + `EVERLASTINGS_STORE.md` / `STORE_ADMINISTRATION.md` / `BRAND.md` / `README.md` (in progress, this pass).
 
 ## Sean's launch / cutover to-dos (post sign-off)
 

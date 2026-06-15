@@ -60,7 +60,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
 - **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers. Equivalent: run the create-tables SQL once.
 - **Migrations via MCP** — Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same. Default: **Supabase CLI `supabase db push`**.
-- **Supabase DB webhook** — A Supabase Studio setting: "when a row is inserted into `products`, POST to this URL." An HTTP trigger fired by the database, like an IFTTT rule on row insert. Used to push new product rows into Stripe via `POST /api/stripe-sync`. Agent-driven callers can bypass the wait by adding `?sync=true` to their `POST /api/products` call (see AR #35); the same helper runs inline and the eventual webhook fire becomes a no-op.
+- **Supabase DB webhook** — *Despite the name, a SQL trigger, not a Studio setting:* `notify_stripe_sync()` (`AFTER INSERT ON products`, migration `…0003`) `POST`s to `/api/stripe-sync` to push a new product into Stripe. **Since v1.5 it skips drafts** — returns early when `is_test=true` OR `is_published=false`, so it fires only for a published, non-test insert. Stripe is normally created at **publish** (inline in `handlePublish`), not here; this trigger is just the backstop for a direct published insert. (The old `?sync=true`-on-create bypass is retired.)
 - **Stripe webhook** — Stripe's outbound notification when a payment completes. Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
 - **Stripe coupon bootstrap** — A one-time script that creates the two base coupons in Stripe via API so dev and prod match. Run once. Alternative: click-create them in the Stripe dashboard.
 - **Preview CORS smoke test** — Push a throwaway branch; open the Vercel preview URL; confirm API calls work. A 2-minute sanity check — past projects had invisible CORS bugs on preview deployments.
@@ -108,7 +108,8 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │  GET    /api/session-status    → return page payment verification   │
 │  POST   /api/webhook           → handle Stripe payment events       │
 │  POST   /api/stripe-sync       → create Stripe Product+Price (DB    │
-│                                  webhook + inline ?sync=true caller)│
+│                                  trigger, published inserts only;   │
+│                                  Stripe normally made at publish)   │
 │  POST   /api/upload            → signed Cloudinary transform → R2   │
 │  POST   /api/cart-recovery     → sold-in-cart promo code + email    │
 │  GET/POST/PUT /api/products    → CRUD for AI-assisted creation      │
@@ -145,7 +146,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │                          │   │                                    │
 │  Auth: admin login       │   │  Public CDN access via             │
 │  RLS: row-level security │   │  cdn.everlastingsbyemaline.com     │
-│  DB Webhooks: on INSERT  │   │                                    │
+│  DB trigger (publish)    │   │                                    │
 └──────────────────────────┘   └────────────────────────────────────┘
            │
            ▼
@@ -176,7 +177,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   7. **No git for client** — Emy manages products through admin UI or Supabase Studio. Changes reflect instantly via database, no deploy needed.
 
-  8. **Supabase Database Webhook + inline `?sync=true` for Stripe sync** — On INSERT into products table, Supabase fires a webhook to `/api/stripe-sync`, which creates the Stripe Product + Price and writes IDs back. Works for ALL entry methods (admin UI, Supabase Studio, AI assistant via API). Agent-driven callers (`POST /api/products?sync=true`) additionally run the sync inline before responding so the Stripe IDs are available in the create response — useful when the database webhook isn't routed to the calling preview deployment, or when the caller needs a deterministic round-trip. Both paths share one idempotent helper at `api/_lib/stripeSync.ts`.
+  8. **Stripe sync — at PUBLISH (v1.5; supersedes the old INSERT / `?sync=true` model)** — `publishProduct` creates the Stripe Product + Price **inline** (`handlePublish` → `syncProductToStripe`). The `notify_stripe_sync` INSERT trigger now **skips drafts** (a backstop for a direct *published* insert only); the `?sync=true`-on-create path is retired. One idempotent helper at `api/_lib/stripeSync.ts`. See "Draft → Preview → Publish" + Stripe Sync Rules.
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
@@ -342,9 +343,8 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - Adding new endpoints: consolidate into existing namespaces (e.g. a new admin endpoint joins `api/orders.ts` or a new `api/admin.ts`) rather than creating standalone files. Buffer is 1 below cap (11/12).
       - `vercel dev` does NOT enforce the cap — must verify against a real preview deploy before merging.
 
-  35. **Inline Stripe sync via `?sync=true` on `POST /api/products`**
-      - Default behavior of `POST /api/products` is to insert a row and respond. The Supabase database webhook then asynchronously fires `/api/stripe-sync` and writes Stripe IDs back. This works for the admin UI and Supabase Studio entry paths.
-      - Agent-driven callers (Custom GPT, curl protocol, programmatic seeding) opt in with `?sync=true`, which runs the same sync helper inline and returns the new Stripe product/price IDs in the response body. Lets a single agent round-trip a fully-synced product without polling for webhook delivery.
+  35. **Stripe sync at publish (v1.5) — supersedes the old `?sync=true`-on-create decision**
+      - Originally `POST /api/products` inserted a row and the DB webhook fired `/api/stripe-sync` (with `?sync=true` for an inline round-trip). **Retired in v1.5:** create makes an *unpublished draft* with no Stripe object; the Stripe Product + Price are created **inline at publish** (`handlePublish`), and the INSERT trigger skips drafts. (Kept for history; the live model is "Draft → Preview → Publish.")
       - Both paths call the shared idempotent helper at `api/_lib/stripeSync.ts`. If both fire for the same row, the second one is a no-op.
 
   36. **Signed Cloudinary uploads (no preset dependency)**
@@ -359,16 +359,33 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
 
 ## Stripe Sync Rules
 
-Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/_lib/stripeSync.ts` (the shared idempotent helper) plus `api/stripe-sync.ts` (DB webhook entrypoint), `api/products.ts > POST` (inline `?sync=true`), and `api/products.ts > PUT` (price changes).
+Defines exactly how Supabase state flows into Stripe. Implementation lives in `api/_lib/stripeSync.ts` (the shared idempotent helper), `api/products.ts > handlePublish` (inline at publish), and `api/products.ts > PUT` (price rotation). The `charge.refunded` order-status reflection is in `api/webhook.ts`.
 
-  - On product **INSERT** → create Stripe Product + Price. Two paths into the helper, identical outcome:
-    + The Supabase database webhook fires `POST /api/stripe-sync` (admin UI, Supabase Studio).
-    + Agent-driven callers add `?sync=true` to their `POST /api/products` call to run the sync inline and receive the Stripe IDs in the response.
-  - The helper at `api/_lib/stripeSync.ts` is idempotent: it short-circuits if either the payload or a fresh DB read shows `stripe_product_id` already set, so a webhook firing after an inline sync is a no-op.
-  - On **price change** → archive old Stripe Price (`active: false`), create new Price, update `stripe_price_id` in Supabase (handled in `api/products.ts > PUT`).
-  - On **title/image/description change** → DO NOTHING in Stripe (Stripe is a payment mirror, not source of truth).
-  - Never UPDATE a Stripe Price (they are immutable). Always archive + create new.
-  - Never manually create Stripe Products/Prices in Dashboard. The shared helper handles all creation.
+  - **Stripe is created at PUBLISH, not at INSERT (v1.5).** A `createProduct` inserts an **unpublished draft** with **no** Stripe object; `publishProduct` (the `?_action=publish` route) calls `syncProductToStripe` **inline** to create the Stripe Product + Price, then flips `is_published=true`. So an abandoned draft never orphans a Stripe object.
+  - The DB trigger `notify_stripe_sync()` (migration `…0003`, the "DB webhook") is **INSERT-only and now skips drafts** — it returns early when `is_test=true` OR `is_published=false`, firing only for a published, non-test *direct* insert (the publish-time `UPDATE` doesn't re-fire it → no double create). The old `?sync=true`-on-create path is **retired** (publish syncs inline). `syncProductToStripe` is still idempotent (short-circuits if `stripe_product_id` is already set).
+  - The Stripe checkout **identity** fields (`checkout_name`/`checkout_description`/`checkout_image`) + `sku` are **frozen after publish**; a marketing/SEO edit never touches Stripe.
+  - On a **price change of a published product** → **rotate in place** (`api/products.ts > PUT`): create a new active Price on the **same** Stripe product, point `stripe_price_id` at it, then deactivate the old Price — order matters (create → write-DB → deactivate) so the product stays buyable on any failure. Same slug / URL / page. (A *temporary* discount is a coupon, not a re-price.)
+  - Never UPDATE a Stripe Price (immutable) — always create new + deactivate old. Never manually create Stripe Products/Prices in the Dashboard.
+  - **Archive** = `archived_at` set + `stripe.products.update(active:false)` (reversible via unarchive); the only hard delete is the deferred, disabled `pg_cron` purge.
+
+---
+
+## Draft → Preview → Publish (v1.5)
+
+The safety UX that lets the owner run the store by chat without a "test mode": every change is **previewed on a real page** before it reaches shoppers.
+
+- **Create** inserts an **unpublished draft** (`is_published=false`, no Stripe). The response returns a `preview_url` carrying an unguessable `preview_token` — a **capability** (possessing the link is the authority to publish; no login).
+- **Preview** — `GET /product/{slug}?preview=<token>` fetches the draft through the **service-role API** (the anon client can't read unpublished rows under RLS) and renders the real page with `draft` overlaid, topped by a "Draft preview — not yet live" Publish bar (+ a review panel for the hidden SEO/checkout/image-crop fields — v2.1).
+- **Publish** (the Publish bar, or `publishProduct` / `?_action=publish`): new product → create Stripe + flip `is_published=true`, `published_at=now`; published-row edit → apply `draft` → live columns. Either way **clear `draft` + rotate/clear `preview_token`** so a stale link can't republish. First-publish and edit-publish both re-run `validateProductRules`, so a published product is always well-formed.
+- **Edit a published row** stages changes in `draft` (the live page keeps serving until publish); admin shows **"live · edits pending."** Each edit **re-stages the draft and rotates the preview token** (only the latest link works). **Discard** (`discardEdits` / `?_action=discard`) scraps a staged draft without publishing.
+- **Apply-live exceptions** (no preview/publish step): `price` (rotates the Stripe Price), `available` (sold flag), and `quantity` (stock) apply to the live columns **immediately** — they gate purchasability, so staging them would risk an oversell / stale-stock report. Everything else (copy/SEO/photos/media) stages.
+- **Change-detection:** `draft` holds exactly the fields differing from live, so a live-only edit never stages a phantom draft and a re-save of staged values never clobbers them. The admin editor and the GPT both edit the **staged** state (admin `openEditor` overlays `draft`; `getProduct` returns an additive `effective` view).
+- **RLS gate:** the public read policy is `USING (is_published = true AND archived_at IS NULL)` — drafts + archived rows are invisible to the site; admin/GPT read via the service-role API (bypasses RLS). `main.js` also filters `is_test` to the deployment (`/api/config` returns `isTest`), so production never shows test rows.
+- **Routes:** publish / archive / unarchive / discard / coupon / coupon_deactivate are `?_action=` sub-routes of `api/products.ts` reached via `vercel.json` rewrites — **no new Vercel function** (count stays 11/12).
+
+## Archive (remove = reversible, never hard-delete)
+
+"Remove / delete / take down" (admin or GPT) sets `archived_at = now()` + mirrors Stripe `active:false`. The piece leaves the shop, feed, product page, and checkout but stays in the DB — searchable + **resurfaceable** (`unarchiveProduct` reverses both). Distinct from `available` (sold, stays visible with a badge) and `is_published` (draft/live). The only hard delete is a deferred, **disabled** `pg_cron` purge (Phase 1 ships it commented) that always skips order-referenced rows.
 
 ---
 
@@ -511,7 +528,7 @@ stripe listen --forward-to localhost:3000/api/webhook
   │   ├── contact.ts                    # Contact form handler
   │   ├── orders.ts                     # Admin: list orders + record tracking
   │   ├── product-feed.ts               # CSV feed for Meta Commerce Catalog
-  │   ├── products.ts                   # CRUD for AI product creation; ?sync=true runs inline Stripe sync
+  │   ├── products.ts                   # product CRUD + ?_action= routes; create→draft, Stripe at publish
   │   ├── stripe-sync.ts                # Create Stripe Product+Price (DB webhook entrypoint)
   │   ├── subscribe.ts                  # Newsletter email capture
   │   ├── upload.ts                     # Signed Cloudinary transform → R2 upload
@@ -590,17 +607,17 @@ stripe listen --forward-to localhost:3000/api/webhook
 
   * **`api/products.ts`** — Product CRUD for AI assistants
     + GET: fetch product by slug (public for live products; bearer-gated for test mode)
-    + POST: create product (`PRODUCT_API_KEY` or Supabase JWT auth, validates fields, generates slug, checks conflicts). Strips `test_` prefix from image URLs before role validation. Add `?sync=true` to also run Stripe sync inline and include `stripe_sync` in the response.
-    + PUT: update product (same auth; handles Stripe price archiving if price changes)
+    + POST: create product as an **unpublished draft** (`PRODUCT_API_KEY` or Supabase JWT auth; per-type validation; server-normalizes the GPT-derived slug; allow-listed fields only; **no Stripe** — created at publish). Also routes the `?_action=` sub-routes: publish / coupon / coupon_deactivate / archive / unarchive / discard.
+    + PUT: edit — stages copy/SEO into `draft` on a published row, or applies to live columns on an unpublished draft; `price`/`available`/`quantity` apply live immediately; `checkout_*` frozen after publish (price rotates).
 
   * **`api/config.ts`** — Public configuration
     + Returns Stripe publishable key and Supabase config per environment
     + Enables automatic test/live switching without hardcoding keys
 
-  * **`api/stripe-sync.ts`** — Product catalog sync (DB webhook entrypoint)
-    + Called by the Supabase database webhook on `products` INSERT
+  * **`api/stripe-sync.ts`** — Product catalog sync (DB-trigger entrypoint)
+    + Called by the `notify_stripe_sync` SQL trigger — **only** for a published, non-test direct insert (skips drafts)
     + Delegates to the shared idempotent helper at `api/_lib/stripeSync.ts`
-    + Same helper is also called inline by `POST /api/products?sync=true`
+    + Normally just a backstop: Stripe is created at **publish**, inline in `api/products.ts > handlePublish` (the `?sync=true`-on-create path is retired)
 
 ---
 
@@ -609,22 +626,24 @@ stripe listen --forward-to localhost:3000/api/webhook
 ### Product Creation (Any Entry Method)
 
   ```
-  Emy adds product via Admin UI / Supabase Studio / the Sunkeeper Custom GPT
+  Emy adds a product via the Sunkeeper Custom GPT (or the admin panel)
     ↓
-  (01) Row inserted into Supabase `products` table
+  (01) createProduct → row inserted as an UNPUBLISHED DRAFT (is_published=false); NO Stripe object
     ↓
-  (02) Supabase Database Webhook fires on INSERT
+  (02) Response returns a preview_url (+ unguessable preview_token)
     ↓
-  (03) POST to /api/stripe-sync.ts (Vercel function)
+  (03) Emy opens the preview → the real page rendered with `draft` overlaid + a "Publish" bar
     ↓
-  (04) Function creates Stripe Product via API
-    ↓
-  (05) Function creates Stripe Price linked to Product
-    ↓
-  (06) Function writes stripe_product_id + stripe_price_id back to Supabase row
+  (04) Publish (bar / publishProduct) → validateProductRules, then syncProductToStripe INLINE:
+       create Stripe Product + Price, write the IDs back, flip is_published=true / published_at=now,
+       clear draft + preview_token
     ↓
   PRODUCT IS NOW LIVE AND PURCHASABLE
   (No deploy needed — frontend fetches from Supabase at runtime)
+
+  Edit a published product → changes stage in `draft` (live page untouched) → preview → Publish applies
+  them (price/available/quantity apply LIVE immediately, no preview). The notify_stripe_sync INSERT
+  trigger is a backstop only — it skips drafts; the publish-time UPDATE never re-fires it.
   ```
 
 ### Purchase Flow
@@ -739,8 +758,8 @@ stripe listen --forward-to localhost:3000/api/webhook
   1. **No React, no build step for frontend**
     - This is intentional. Vanilla HTML/CSS/JS served as static files. Only the `/api` functions are TypeScript compiled by Vercel.
 
-  2. **Products appear without deploy**
-    - Frontend fetches from Supabase at runtime. Adding a product to the database makes it live immediately. No git push needed.
+  2. **Published products appear without deploy**
+    - Frontend fetches from Supabase at runtime, so a **publish** makes a product live immediately (no git push). Note (v1.5): a *create* makes an **unpublished draft** — live only after Publish. See "Draft → Preview → Publish."
 
   3. **No Stripe Customer created before checkout**
     - Shoppers are anonymous — no Stripe Customer is created before checkout. The Phase 0 probe (2026-06-04) resolved the open question: the session **omits `customer_creation`** (it wasn't verified to populate `session.customer` under `ui_mode:'custom'`, and forcing it risked a 500). The webhook null-guards `stripe_customer_id` and keys customers by email. See `v1_4_9_FINISH_TRACK_C.md` (Phase 0 + Phase 1).
@@ -752,11 +771,11 @@ stripe listen --forward-to localhost:3000/api/webhook
   5. **Endpoint consolidation is intentional, not lazy**
     - The 11-deployable-function shape is a design constraint (Vercel Hobby cap of 12). Splitting `checkout.ts`, `orders.ts`, or `cart.ts` back into one-file-per-action would break the deploy. Add new endpoints into the existing namespaces, or check the cap before introducing a new top-level file. See AR #34.
 
-  6. **`POST /api/products?sync=true` returns Stripe IDs but the inserted row's snapshot does not**
-    - The product row is inserted first, then the inline Stripe sync runs and writes IDs back. The returned `product` object is the pre-sync snapshot from the insert; the Stripe IDs land in the `stripe_sync` block alongside it (and in the database row, observable on the next GET). This is intentional — the synthetic alternative would either re-fetch the row or return a fabricated merge. See AR #35.
+  6. **Stripe is created at PUBLISH, not at create (v1.5 — supersedes the old `?sync=true` model)**
+    - A `createProduct` makes an **unpublished draft** with no Stripe object; `publishProduct` creates the Stripe Product + Price **inline** (`handlePublish`), response carries `stripe_sync`. The old `?sync=true`-on-create path + its "pre-sync snapshot" caveat are retired — nothing to sync at create. The `notify_stripe_sync` INSERT trigger now **skips drafts**, so it's just a backstop for a direct *published* insert; `syncProductToStripe` stays idempotent.
 
-  7. **Inline `?sync=true` is intentional, not a webhook bypass**
-    - The Supabase database webhook still fires on every INSERT. The inline path exists so agent-driven callers (Custom GPT, curl protocol) get a deterministic round-trip without polling. The shared idempotent helper makes the second firing a safe no-op. Do not "simplify" this back to a webhook-only flow.
+  7. **Never *publish* from Supabase Studio (v1.5)**
+    - A Studio-inserted row defaults to `is_published=false` (draft, no Stripe). Flipping it true in Studio is an UPDATE → the INSERT trigger never fires → a published-but-no-Stripe zombie (invisible/unbuyable). A Studio INSERT with `is_published=true` fires the trigger but bypasses `handlePublish`'s validation. Publish via the admin panel ("Publish now") or the GPT — both run `handlePublish`.
 
   8. **`test_` prefix on test-mode images is real product behavior**
     - `/api/upload` namespaces test-mode objects under `test/{slug}/test_{role}-{slug}.{ext}` (live mode is `products/{slug}/{role}-{slug}.{ext}`). The `products.ts` validator strips the leading `test_` before checking the role-prefix, so URLs from `/api/upload` validate identically in both modes. Don't try to remove the prefix at upload time. See AR #37.
@@ -784,7 +803,7 @@ stripe listen --forward-to localhost:3000/api/webhook
   + **Slug is auto-generated** from title — "The Sunkeeper" → "the-sunkeeper"
   + **Images follow CDN path pattern** — `{R2_PUBLIC_URL}/products/{slug}/hero-{slug}.webp`
   + **All API functions are TypeScript** — frontend is vanilla JS
-  + **Database webhooks vs Stripe webhooks** — both are used but for different purposes. DB webhook syncs to Stripe on INSERT. Stripe webhook updates DB on payment.
+  + **Database trigger vs Stripe webhooks** — different purposes. The `notify_stripe_sync` DB trigger fires the **publish-time** Stripe sync path and **skips drafts** (not "on every INSERT"). The Stripe webhook updates the DB on payment (and flips order status on `charge.refunded`).
 
 ### Performance Considerations
 
@@ -959,7 +978,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | ----------------- | ----------- | ---------------------------------------------- |
 | id                | uuid        | PK, auto-generated                             |
 | sku               | text        | Unique, auto-generated                         |
-| slug              | text        | Unique, auto-generated from title              |
+| slug              | text        | Unique. GPT-derived + server-normalized; immutable after create (set_slug trigger = empty-input fallback) |
 | title             | text        | NOT NULL                                       |
 | headline          | text        | 5-7 word tagline                               |
 | story_card        | text        | 2-8 paragraphs, poetic                         |
@@ -972,7 +991,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | power_supply      | text        | Nullable                                       |
 | care_instructions | text[]      | Array of care steps                            |
 | shipping_details  | text[]      | Array of shipping info                         |
-| product_type      | text        | miniature, printable, storybook                |
+| product_type      | text        | `miniature` only today (printable/storybook = future work)     |
 | series            | text        | Nullable — Portals to Peace, etc.              |
 | available         | boolean     | Default true                                   |
 | quantity          | integer     | Default 1                                      |
@@ -980,13 +999,22 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | images            | jsonb       | Array of {url, alt} objects                    |
 | thumbnail         | text        | CDN URL                                        |
 | thumbnail_alt     | text        |                                                |
-| media             | jsonb       | Array of {type, url, caption} for videos/GIFs  |
+| media             | jsonb       | Array of {type, url, alt, loop, autoplay, controls, poster}; MP4 + YouTube (no GIF); renders via populateMedia, hides when absent |
 | seo_title         | text        |                                                |
 | seo_description   | text        |                                                |
 | artist_note       | text        | Nullable                                       |
-| stripe_product_id | text        | Nullable, auto-populated                       |
-| stripe_price_id   | text        | Nullable, auto-populated                       |
+| stripe_product_id | text        | Nullable — created at **publish**              |
+| stripe_price_id   | text        | Nullable — created at **publish**; rotates in place on a price change |
 | homepage_theme    | jsonb       | Nullable — {colors, mood} for dynamic homepage |
+| checkout_name        | text     | Stripe checkout name; frozen at publish; falls back to title |
+| checkout_description | text     | Stripe checkout line; frozen at publish; falls back to description→headline |
+| checkout_image       | text     | Stripe product image; frozen at publish; falls back to thumbnail |
+| seo_thumbnail        | text     | OG/Twitter card image (~1.91:1)                |
+| is_published         | boolean  | NOT NULL DEFAULT false — draft (false) vs live (true) |
+| published_at         | timestamptz | Nullable — set at first publish             |
+| draft                | jsonb    | Nullable — staged edits overlaying a published row (publish XOR discard) |
+| preview_token        | text     | Unique, nullable — capability link for the draft preview; rotates each edit/publish |
+| archived_at          | timestamptz | Nullable — set = archived (removed; reversible; never hard-deleted) |
 | created_at        | timestamptz | Auto                                           |
 | updated_at        | timestamptz | Auto                                           |
 | is_test           | boolean     | NOT NULL DEFAULT false — dev/preview isolation |
