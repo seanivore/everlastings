@@ -172,7 +172,7 @@ function mountPreviewBanner(product, token) {
     cell.append(head, val);
     return cell;
   }
-  function imgCell(labelTxt, src) {
+  function imgCell(labelTxt, src, ratio) {
     const cell = document.createElement('div');
     cell.style.cssText = 'flex:0 0 auto;';
     const lab = document.createElement('div');
@@ -182,7 +182,9 @@ function mountPreviewBanner(product, token) {
     if (src) {
       const img = document.createElement('img');
       img.src = src; img.alt = labelTxt; img.loading = 'lazy';
-      img.style.cssText = 'height:72px;width:auto;max-width:150px;object-fit:contain;border:1px solid rgba(0,0,0,0.15);border-radius:4px;background:#fff;display:block;';
+      // Crop to the TARGET ratio (cover) so the cell shows how the image will actually be cropped at
+      // that aspect — a 1:1 cell reads square, a 1.91:1 cell reads wide, a 4:5 cell reads portrait.
+      img.style.cssText = 'height:74px;aspect-ratio:' + ratio + ';object-fit:cover;border:1px solid rgba(0,0,0,0.18);border-radius:4px;background:#fff;display:block;';
       cell.appendChild(img);
     } else {
       const none = document.createElement('div');
@@ -198,9 +200,9 @@ function mountPreviewBanner(product, token) {
     textCell('SEO description', product.seo_description),
     textCell('Checkout name', product.checkout_name),
     textCell('Checkout line', product.checkout_description),
-    imgCell('Thumbnail', product.thumbnail),
-    imgCell('OG image (1.91:1)', product.seo_thumbnail),
-    imgCell('Checkout image (1:1)', product.checkout_image),
+    imgCell('Thumbnail (4:5)', product.thumbnail, '4 / 5'),
+    imgCell('OG image (1.91:1)', product.seo_thumbnail, '1.91 / 1'),
+    imgCell('Checkout image (1:1)', product.checkout_image, '1 / 1'),
   );
 
   let open = true;

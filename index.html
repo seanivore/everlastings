@@ -164,6 +164,7 @@
 
       <div class="hero__overlay" aria-hidden="true"></div>
       <div class="hero__spotlight" aria-hidden="true"></div>
+      <div class="hero__glow" aria-hidden="true"></div>
 
       <div class="hero__content">
         <h1>Step into Elsewhere</h1>
@@ -344,7 +345,7 @@
          (CSS-only via scroll-driven animation when supported; fallback is
          static). Brand-tied so the same effect can be reused on key pages. */
       .hero {
-        min-height: 90vh;
+        min-height: 80vh;   /* framed window — bottom pulled up so the next section peeks (v2.1 hero) */
       }
       .hero__media {
         will-change: transform;
@@ -367,8 +368,8 @@
           animation-range: 0 100vh;
         }
         @keyframes hero-counter-scroll {
-          from { transform: translateY(0) scale(1.05); }
-          to   { transform: translateY(-8%) scale(1.10); }
+          from { transform: translateY(8%) scale(1.2); }    /* ~20% zoom; pans top->bottom as you scroll */
+          to   { transform: translateY(-8%) scale(1.2); }
         }
       }
 

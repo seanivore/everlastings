@@ -963,7 +963,7 @@ select:focus {
 .hero__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(74, 25, 66, 0.35) 0%, rgba(26, 26, 26, 0.55) 100%);
+  background: linear-gradient(180deg, rgba(74, 25, 66, 0.5) 0%, rgba(26, 26, 26, 0.72) 100%);
   z-index: 1;
 }
 .hero__content {
@@ -982,6 +982,20 @@ select:focus {
 @media (min-width: 1024px) {
   .hero h1 { font-size: 4.5rem; }
 }
+
+/* Hero-edge firelight — the parked ambient glow, repurposed onto the hero window edges UNDER the text
+   (v2.1 hero). Reuses the @property fire zones (--fz1..4) + the `fire` keyframe from the D6 block. */
+.hero__glow { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--hero-glow-intensity, 0.85); }
+.hero__glow::after {
+  content: ""; position: absolute; inset: 0;
+  box-shadow:
+    inset 0  4px 7px -1px var(--fz1),  inset 0  10px 15px -4px var(--fz2),  inset 0  19px 27px -9px var(--fz3),  inset 0  34px 50px -22px var(--fz4),
+    inset 0 -4px 7px -1px var(--fz1),  inset 0 -10px 15px -4px var(--fz2),  inset 0 -19px 27px -9px var(--fz3),  inset 0 -34px 50px -22px var(--fz4),
+    inset  4px 0 7px -1px var(--fz1),  inset  10px 0 15px -4px var(--fz2),  inset  19px 0 27px -9px var(--fz3),  inset  34px 0 50px -22px var(--fz4),
+    inset -4px 0 7px -1px var(--fz1),  inset -10px 0 15px -4px var(--fz2),  inset -19px 0 27px -9px var(--fz3),  inset -34px 0 50px -22px var(--fz4);
+  animation: fire 3.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .hero__glow::after { animation: none; } }
 
 /* Toast (post-form-submit confirmation) */
 .toast {
