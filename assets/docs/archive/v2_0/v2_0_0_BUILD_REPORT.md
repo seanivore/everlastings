@@ -111,4 +111,17 @@ Live Stripe keys (Production scope) + live-mode coupon bootstrap · point the GP
 
 ### Sean reports back in
 
-- **#22 refund** — the `charge.refunded` Stripe webhook was already configured on test mode. I ensured that live was configured in the same way that the test webhook was. 
+- **#22 refund** — the `charge.refunded` Stripe webhook was already configured on test mode. I ensured that live was configured in the same way that the test webhook was.
+
+---
+
+## Workflow reflection (the gap-review gate, in hindsight)
+
+Since the question was asked: I came into a `v2_0_0_IMPLEMENT.md` (+ two addenda) that was already *exclusively executable* and gate-closed — and it showed. The build phase was overwhelmingly **mechanical execution + verification, not discovery**:
+
+- **Zero CURRENT-block mismatches** across the whole build (three parallel subagent groups). The byte-exact CURRENT/NEW anchoring meant "locate and apply," never "figure out." `tsc --noEmit` was clean on the first compile; the migration's live-trigger anti-fragility note matched the DB exactly; the Phase 1 RLS safety-guard never had to fire.
+- **The only deviations were trivial** (logged above): a one-file orchestration split (`main.js`), a mixed-truth doc cleanup the plan's own intent demanded (miniatures-only), and a Sean-directed test-key unification. None were architecture surprises.
+- **What came up during build/test was *not* the plan failing.** The design feedback rounds (glow → fireplace → off → hero; the product-page resize) are exactly the "design is tested + feedback'd like functionality" loop the plan anticipated — render-tune, not gap-recovery. The GPT-instructions 8k-char cap is an external OpenAI constraint. The one genuine catch — an SSRF test asserting only a status code and masking on an *Invalid role* 400 — was a flaw in *my test*, not the code (the guard was correct).
+- **The 90/10 ratio felt literal.** The build went fast and (knock wood) bug-free *because* the gap-review loop — the cold A-passes + the B/C/D round — had already absorbed the uncertainty upstream, where it's cheap to resolve and safe to review. The quiet build is the gate working as designed, not luck.
+
+If anything, the IMPLEMENT was *more* complete than the build strictly needed: several pre-flight anchors and code-verified-only items (the purchasability guard, the rotation-stays-buyable ordering) were correct exactly as written and never needed a second look. The state going in matched the state shipping out closely — the delta was the v2.1 polish layered on by review, not a recovery from gaps. A workflow worth trusting again. 
