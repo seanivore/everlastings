@@ -14,7 +14,7 @@
 2. **/admin, archived piece:** refund → relist prompt → accept → the piece **unarchives** (back in `/shop`); decline on another → stays archived.
 3. **GPT:** "refund <buyer>'s order for <product>" → it **reads back** piece + amount + buyer and waits → confirm → `refundOrder` → it reports refunded + **asks** relist-or-leave → "relist" → `editProduct {available:true}` (or `unarchiveProduct`) runs.
 4. **Idempotency:** trigger a refund twice fast (double-click / retry) → exactly **one** Stripe refund (idempotency key `refund-<id>`); second returns the already-refunded 409, no double-refund.
-5. **Guards:** refund a non-existent id → 404; an already-refunded order → 409; an order with no `payment_intent` → 409.
+5. **Guards:** refund a non-existent id → 404; an already-refunded order → 409; an order with no `payment_intent` → 409; refund a piece that is **still `available`** (e.g. multi-qty) → refund succeeds, **no relist prompt** (nothing to relist), no error.
 6. **Webhook reconciliation:** after the API refund, the `charge.refunded` event also arrives → order stays `refunded` (no error, idempotent double-write).
 7. **Partial:** confirm the GPT/admin route partials to the Stripe dashboard (not offered in-app).
 8. **`is_test` isolation:** on the test preview, the refund lookup is `is_test`-scoped — a prod order id is **not** found (404).

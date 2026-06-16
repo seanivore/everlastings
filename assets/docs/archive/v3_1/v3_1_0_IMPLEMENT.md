@@ -150,7 +150,7 @@ export async function POST(request: Request) {
   });
 }
 ```
-*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`order.products?.title`). `tsc --noEmit` clean — verify at build.)*
+*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65`/`:172` → `order.products?.title`) — **verify the shape against a real refund response, not just `tsc`**: a wrong assumption here doesn't crash, it just returns a malformed `relist` and the "put it back up for sale?" prompt silently never fires. `tsc --noEmit` clean.)*
 
 **Phase 1.2 — `vercel.json`: the refund rewrite (more specific path first).** **CURRENT (`vercel.json:12`):**
 ```json
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
 ```
 
-**Phase 1.3 — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): add the `refundOrder` op.** **CURRENT (the end of `markShipped` — the file's last lines, `:334-337`):**
+**Phase 1.3 — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): add the `refundOrder` op.** **CURRENT (the end of `markShipped` — the file's last lines, `:334-336`):**
 ```yaml
                 properties:
                   ok: { type: boolean }
