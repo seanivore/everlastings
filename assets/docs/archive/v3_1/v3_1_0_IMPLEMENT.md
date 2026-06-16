@@ -5,7 +5,7 @@
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** This is the first draft (the gap-review loop has NOT run). It is a **roadmap** with every decision locked; **Workstream 1 (Refund)** is detailed first. Byte-exact CURRENT/NEW anchors are added per slice as it approaches the gate (the targets below are confirmed file:line locations, not guesses). Workstreams 4–5 are now **spec'd** in `v3_1_0_ADDENDUM_DESIGN.md` (their Phase-0 research ran) and get byte-anchored to source files during execution, like 1–3.
+> **Status / depth.** Functional workstreams **1–3 are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_0_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_0_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
 
 ---
 
@@ -666,7 +666,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   // … the existing :202–316 body, verbatim, with the two return-swaps above …
 }
 ```
-The single-file POST path then ends by calling it (replacing the inlined `:195–316` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);`
+The single-file POST path then ends by calling it (replacing the inlined `:195–316` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);` *(`processOne` is module-level — place it beside `normalizeMediaUrl`/`isPublicHttpUrl`, above `export async function POST`, alongside the 3.2 helpers.)*
 
 **Phase 3.2 — `api/upload.ts`: branch the JSON intake + add `handleAttachedRefs`.** **CURRENT (`:129-138`):**
 ```ts
@@ -1007,10 +1007,8 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-## Later (direction only) — Workstreams 2–5
+## Workstreams 4–5 — executable design (spec'd in `v3_1_0_ADDENDUM_DESIGN.md`)
 
-- **2 · Coupons in /admin** — see the **Workstream 2 (detailing)** section above: 2.2 (human `expires_display`) + 2.3 (read-back beat) are byte-anchored; 2.1 (the /admin Coupons UI) is anchored next.
-- **3 · Chat-attach + admin media UX** — see the detailed **Workstream 3** section above: 3.1–3.6 (chat-attach `uploadImages` + schema + instructions flip + alt-text + filename/role) are byte-anchored; 3.7 (admin media UX: previews + remaining-role hint + structured MP4 editor + auto-skip_transform) is anchored next; 3.8 premise-sweep at as-built.
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
