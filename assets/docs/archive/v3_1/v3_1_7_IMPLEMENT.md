@@ -1,10 +1,10 @@
-# v3.1.6 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.7 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md`) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_6_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_6_ADDENDUM_TESTING.md`.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_7_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_7_ADDENDUM_TESTING.md`.
 
 ---
 
@@ -30,9 +30,9 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.6 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.7 ships on its own, separately, when Sean chooses.
 
-> **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7651 / 8000** (349 headroom). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
+> **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7728 / 8000** (272 headroom). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
 
 ---
 
@@ -190,9 +190,10 @@ export async function POST(request: Request) {
       });
     }
   }
-  // (relistIds empty = goodwill/partial, nothing returned → NO status flip, empty relist. A full-PI
-  // refund still flips every sibling order via charge.refunded.)
-  return jsonResponse(request, { ok: true, status: 'refunded', relist });
+  // (relistIds empty = goodwill/partial, nothing returned → NO status flip, empty relist; the response
+  // `status` mirrors that — 'refunded' only when pieces actually flipped, else the order's unchanged
+  // status, so the field never lies to the GPT. A full-PI refund still flips every sibling via charge.refunded.)
+  return jsonResponse(request, { ok: true, status: relistIds.length ? 'refunded' : order.status, relist });
 }
 ```
 *(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported; `orders.amount`/`product_id`/`stripe_payment_intent` are real columns (`webhook.ts:185-201` writes them). The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65` → `order.products?.title`) — **verify the relist shape against a real multi-item refund response, not just `tsc`**: a wrong assumption doesn't crash, it just returns a malformed `relist[]` and the "put it back up for sale?" prompt silently never fires. **`requireAdmin` returns the service-role client (`adminAuth.ts:27-31` — `SUPABASE_SECRET_KEY` on both auth paths), so the embed resolves for an archived product too** (bypasses the `archived_at IS NULL` RLS — needed for the WS6 relist). `tsc --noEmit` clean.)*
@@ -288,7 +289,7 @@ export async function POST(request: Request) {
 ```
 *(`summary` = **286 chars** (verified `wc`/byte-count), under the 300 cap — the earlier "≈295" estimate undercounted by ~20 and would have tripped the testing static gate (`every summary < 300`); count it, don't estimate. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a. `reason` is gone (the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7651/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
+**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7728/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
 
 *1.4a — REFUNDS.* **CURRENT (`:23`):**
 ```
@@ -539,8 +540,8 @@ async function relistPiece(r, down, msg) {
             <div class="field">
               <span>Limit to products (optional — leave all unchecked for store-wide)</span>
               <input type="search" id="c-product-search" placeholder="Filter products by title…" autocomplete="off" />
-              <div id="c-product-list" class="coupon-product-list" style="max-height:180px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px;margin-top:4px"></div>
-              <p id="c-product-selected" style="font-size:12px;color:#666;margin:4px 0 0">Store-wide (no products selected)</p>
+              <div id="c-product-list" class="coupon-product-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--c-border,#ddd);border-radius:4px;padding:4px;margin-top:4px"></div>
+              <p id="c-product-selected" style="font-size:12px;color:var(--c-text-muted,#666);margin:4px 0 0">Store-wide (no products selected)</p>
             </div>
             <div class="form-actions">
               <span class="spacer"></span>
@@ -709,7 +710,7 @@ function renderCoupons(coupons) {
     const used = `${c.times_redeemed ?? 0}${c.max_redemptions ? ` / ${c.max_redemptions}` : ''} used`;
     const ends = c.expires_display ? ` · ends ${escapeHtml(c.expires_display)}` : '';
     const row = document.createElement('div');
-    row.style.cssText = 'border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:8px';
+    row.style.cssText = 'border:1px solid var(--c-border,#ddd);border-radius:6px;padding:10px;margin-bottom:8px';
     row.innerHTML = `
       <p><span class="label">${escapeHtml(c.code)}</span> — ${escapeHtml(off)} · ${escapeHtml(scope)} · ${escapeHtml(used)}${ends}</p>
       <button type="button" class="end-sale">End sale</button>
@@ -979,12 +980,20 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
   const uploads: Array<{ url: string; filename: string; role: string }> = [];
   const failures: Array<{ index: number; error: string }> = [];
+  const usedRoles = new Set<string>();
   for (let i = 0; i < refs.length; i++) {
     const ref = refs[i] as FileRef;
     const link = typeof ref?.download_link === 'string' ? ref.download_link : '';
     const role = (typeof roles[i] === 'string' && ROLE_PATTERN.test((roles[i] as string).trim()))
       ? (roles[i] as string).trim()
       : positionalRole(i);
+    // Each file must land at a UNIQUE role: the server names the R2 object `{role}-{slug}`, so two files
+    // sharing a role would silently OVERWRITE each other (no error). A bad/duplicate explicit role, or a
+    // positional fallback landing on an already-taken role, surfaces loudly instead of losing the file.
+    if (usedRoles.has(role)) {
+      failures.push({ index: i + 1, error: `role "${role}" is already used by an earlier file — give each photo a distinct role` });
+      continue;
+    }
     // Collect per-file failures instead of bailing on the first — else an already-uploaded batch is
     // orphaned when file N is bad, and Em re-attaches all 7 (double R2 cost). The GPT reuses the
     // successes + asks her to re-attach only the failures.
@@ -1013,12 +1022,13 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
     const r = await processOne(file, slug, role, null); // attach is images-only → never skip_transform
     if (!r.ok) { failures.push({ index: i + 1, error: r.error }); continue; }
     uploads.push({ url: r.url, filename: r.filename, role });
+    usedRoles.add(role); // claim only on success → a file that failed to upload doesn't block a later retry of its role
   }
   // 200 with both arrays — partial success IS success: the GPT uses uploads[] and surfaces failures[].
   return jsonResponse(request, { uploads, failures });
 }
 ```
-*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence. **Attach is images-only:** a `video/*` MIME is rejected with a clear per-file failure ("send it as a link, use uploadImage"), so an attached video can never be silently named with an image role + dropped into `images[]` (which would render a broken `<img src=.mp4>` and never show as media). The GPT instruction (MEDIA) tells it not to attach video; this guard is the belt-and-suspenders so a slip surfaces loudly, not as a broken page. **Auth is already enforced:** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. **Unique role per file:** because the filename IS the role, two files resolving to the same role would overwrite each other in R2 — so a collision (a duplicate explicit role, or a positional fallback that lands on an already-claimed role) is rejected with a per-file failure rather than silently destroying the earlier upload; the role is claimed only on a successful upload, so a failed file never blocks a later retry of its role. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence. **Attach is images-only:** a `video/*` MIME is rejected with a clear per-file failure ("send it as a link, use uploadImage"), so an attached video can never be silently named with an image role + dropped into `images[]` (which would render a broken `<img src=.mp4>` and never show as media). The GPT instruction (MEDIA) tells it not to attach video; this guard is the belt-and-suspenders so a slip surfaces loudly, not as a broken page. **Auth is already enforced:** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
 
 **Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
 ```json
@@ -1060,7 +1070,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
                 roles:
                   type: array
                   items: { type: string }
-                  description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
+                  description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05, thumbnail, seo_thumbnail, checkout_image. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
       responses:
         '200': { description: "Returns { uploads: [{ url, role, filename }, …], failures: [{ index, error }, …] }. Use each uploaded url verbatim in the product fields; if failures is non-empty, keep the successes and ask Em to re-attach just those." }
         '400': { description: "No files attached, more than 10 files, or a missing slug (whole-request errors). Per-file problems come back in failures[], not here. Relay plainly." }
@@ -1289,7 +1299,7 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7651 / 8000** (349 headroom; added the attached-video routing line to MEDIA).
+**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7728 / 8000** (272 headroom; this round added the attach-path roles thumbnail/seo_thumbnail/checkout_image + the clearer full-cart-goodwill wording).
 
 **This is the artifact to ship: replace `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
 
@@ -1299,7 +1309,7 @@ You're 'The Sunkeeper', warm, capable Everlastings by Emaline store studio assis
 Create PRODUCT FLOW order: slug - upload photos - createProduct - share preview - publish
 Conversationally ask for fields. Reqd: title, headline (5-7 word tagline), story_card (2-8 poetic para.), description, features, price (dollars), product_type=miniature. Optl. fields in PRODUCT-REFERENCE.
 1. Compute slug ONCE (v. THE SLUG) before upload.
-2. Photos ATTACHED in chat: call uploadImages (forward openaiFileIdRefs; optl. roles[] in the shown order: hero, gallery-01.., detail-01..). Photos from anyone with SHARE LINK or direct URL, call uploadImage (not plural).
+2. Photos ATTACHED in chat: call uploadImages (forward openaiFileIdRefs; optl. roles[] in the shown order: hero, gallery-01.., detail-01.., thumbnail, seo_thumbnail, checkout_image). Photos from anyone with SHARE LINK or direct URL, call uploadImage (not plural).
 CDN url returned to use verbatim.
 uploadImages can return failures[] (v. LINK TROUBLE)
 You assign the ROLE; the server names the file from it — never rename or invent a filename.
@@ -1333,7 +1343,7 @@ COUPONS: createCoupon = percent OR amount-off in cents (dollars→cents); option
 
 ORDERS: listOrders finds them (status=needs_shipping/shipped; q = order id, email, or tracking) — read back plainly. markShipped needs tracking + carrier (exactly USPS, UPS, FedEx, DHL; "post office" = USPS). CONFIRM FIRST: "Mark <product> shipped via <carrier> <tracking> + email <buyer>?" — it emails the buyer, can't be undone. email_sent:false = tracking saved but the email didn't; text Sean.
 
-REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches past/shipped orders). A Stripe refund is an AMOUNT against the whole purchase, and one cart can be several orders on one payment. refundOrder {id} refunds THIS order's amount + relists THIS piece. CONFIRM FIRST: read back piece(s) + amount + buyer ("Refund <buyer> $X for <product>? Can't be undone."). Several pieces, one purchase: confirm which came back, pass relist_product_ids:[their ids] + amount_cents=summed cents. Goodwill/partial, nothing back: amount_cents + relist_product_ids:[] (a FULL-amount goodwill refund still flips the order to refunded — tell her). It returns `relist`, one entry r per returned piece; a refund never relists itself, so for EACH r ALWAYS offer to restore it — down (r.available false or r.archived) "Put it back up for sale?", else "Add 1 to its quantity?". Yes = unarchiveProduct {id:r.product_id} if r.archived AND editProduct {id:r.product_id, available:true, quantity:r.quantity+1}. Revenue/payouts live in Stripe.
+REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches past/shipped orders). A Stripe refund is an AMOUNT against the whole purchase, and one cart can be several orders on one payment. refundOrder {id} refunds THIS order's amount + relists THIS piece. CONFIRM FIRST: read back piece(s) + amount + buyer ("Refund <buyer> $X for <product>? Can't be undone."). Several pieces, one purchase: confirm which came back, pass relist_product_ids:[their ids] + amount_cents=summed cents. Goodwill/partial, nothing back: amount_cents + relist_product_ids:[] (refunding the FULL CART total as goodwill still flips status — a smaller goodwill amount doesn't — tell her). It returns `relist`, one entry r per returned piece; a refund never relists itself, so for EACH r ALWAYS offer to restore it — down (r.available false or r.archived) "Put it back up for sale?", else "Add 1 to its quantity?". Yes = unarchiveProduct {id:r.product_id} if r.archived AND editProduct {id:r.product_id, available:true, quantity:r.quantity+1}. Revenue/payouts live in Stripe.
 
 MEDIA (optional page video): video is ALWAYS by-link — even if she ATTACHES it, don't uploadImages; ask for a Drive share/direct link, then uploadImage the MP4 (skip_transform:true). Then ALWAYS ask per clip (never assume): autoplay + loop, silent, no buttons (GIF-like) OR click-to-play with sound (the default; she can add a still "poster" = the image shown before it plays). Set the media flags. MP4s render before YouTube (YouTube is rare); empty media hides the section. No GIFs.
 
@@ -1422,12 +1432,12 @@ $$;
 
 > **A forward-pointer in STORE *now* was proposed and REJECTED.** Adding "v3.1.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_6_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_1_7_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_6_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_7_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
