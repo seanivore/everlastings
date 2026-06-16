@@ -427,7 +427,7 @@
       .product-layout > .product-gallery__media { grid-area: media; }
       @media (min-width: 768px) {
         .product-layout {
-          grid-template-columns: 1fr 360px;
+          grid-template-columns: minmax(0, 1fr) 360px;
           grid-template-areas: "gallery aside" "story aside" "media .";
         }
         /* The aside (buy card + details beneath it) is the sticky unit: bounded by its grid area
@@ -442,7 +442,7 @@
         .product-layout > .product-aside > .product-sticky-card { position: static; }
       }
       @media (min-width: 1024px) {
-        .product-layout { grid-template-columns: 1fr 400px; gap: var(--space-3xl); }
+        .product-layout { grid-template-columns: minmax(0, 1fr) 400px; gap: var(--space-3xl); }
       }
     </style>
 
