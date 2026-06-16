@@ -329,9 +329,64 @@ async function relistPiece(r, msg) {
 
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; it asks about relisting") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note + test-script **R15** flips from "can't issue refunds" → "issues + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
+## Workstream 2 — Coupons in /admin (detailing)
+
+**Phase 2.1 — /admin Coupons UI (DIRECTION; byte-anchored next — needs the admin tab-structure read).** A new "Coupons" tab/section in `admin/index.html` + `admin.js` handlers over the existing `/api/coupons` create/list/deactivate: full field surface (type/value/code/product-scope by **`stripe_product_id`**/min/expiry as a **date input**/max), a list showing `expires_display` + scope + redemptions, and deactivate-by-code. No backend change beyond 2.2.
+
+**Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
+
+*2.2a — a formatter, above `handleCouponList`.* **CURRENT (`api/products.ts:751-752`):**
+```ts
+// ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
+async function handleCouponList(request: Request): Promise<Response> {
+```
+**NEW (add the helper just above it — declarations hoist, so `handleCoupon` at :733 can use it too):**
+```ts
+// Human-readable coupon expiry in the store's timezone, so the GPT/admin never decode a raw Unix
+// timestamp (FEEDBACK_COUPON_v2_1_0: a raw expires_at was misread as July). Returned ALONGSIDE expires_at.
+function formatExpiry(unixSeconds: number): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  }).format(new Date(unixSeconds * 1000));
+}
+
+// ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
+async function handleCouponList(request: Request): Promise<Response> {
+```
+
+*2.2b — include it in each listed coupon.* **CURRENT (`api/products.ts:786`):**
+```ts
+          expires_at: pc.expires_at ?? null,
+```
+**NEW:**
+```ts
+          expires_at: pc.expires_at ?? null,
+          expires_display: pc.expires_at ? formatExpiry(pc.expires_at) : null,
+```
+
+*2.2c — echo it on create too.* **CURRENT (`api/products.ts:741`):**
+```ts
+    return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id });
+```
+**NEW:**
+```ts
+    return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id, expires_display: typeof body.expires_at === 'number' ? formatExpiry(body.expires_at) : null });
+```
+
+**Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
+```
+COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". Read the code back. listCoupons shows running sales and each one's scope (store-wide vs specific); relay it. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
+```
+**NEW (read the full terms back in plain dates before creating; never decode a timestamp):**
+```
+COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give. listCoupons returns expires_display (a plain date) beside each sale's scope (store-wide vs specific) — relay THAT; never decode a raw timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
+```
+
 ## Later (direction only) — Workstreams 2–5
 
-- **2 · Coupons in /admin** — a Coupons tab/section (`admin/index.html`) + `admin.js` handlers calling the existing `/api/coupons` create/list/deactivate; full field surface; product-scope picker maps to `stripe_product_id`; **+ the human `expires_display` backend add + a read-back-before-create beat + a date input**. Detailed after WS1.
+- **2 · Coupons in /admin** — see the **Workstream 2 (detailing)** section above: 2.2 (human `expires_display`) + 2.3 (read-back beat) are byte-anchored; 2.1 (the /admin Coupons UI) is anchored next.
 - **3 · Chat-attach + admin upload UX** — fold the `v3_0_0` brief's phases (upload.ts intake, schema `uploadImages`, vercel rewrite, instructions flip) + the admin upload previews / remaining-role hint / structured MP4 editor / auto-skip_transform **+ the alt-text requirement + the filename/role clarification** (server names from role; frontend reads role from the filename).
 - **4 · Admin polish** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §WS4 (token system + P1–P7 with a de-risking fold order) **+ in-admin nav/back + product-list state-filter tabs**; byte-anchor to `admin/index.html` + `assets/js/admin.js` next. Execution captures live /admin screenshots (Claude-in-Chrome) for multiple fresh-instance design passes; optional `improve` skill audit.
 - **5 · Homepage experience** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §5 (Lottie title §5.1; old-film hero §5.2, build-time resolved); byte-anchor next.
