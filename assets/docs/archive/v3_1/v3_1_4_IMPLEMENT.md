@@ -1,11 +1,11 @@
-# v3.1.3 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.4 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
-**Revision driven by**: round-3 cold Angle-A fold (v3.1.2 → v3.1.3 — **amount-based refund composer** for multi-item carts [headline: one cart = N orders on one PaymentIntent], concrete GPT-instruction trims [Phase 3.9], drop the unused `reason` param, concrete P3d upload-zone markup + `wireUploadZone`, verified `processOne` externals, honest hero→thumbnail coverage, `controls` round-trip, batch partial-success `{uploads,failures}`, WS6 cutover data-fix; rejected with rationale notes the opaque-200-schema, auth-already-at-POST-top, and tokens-missing misfires). Earlier: round-2 fold (v3.1.1 → v3.1.2 — coupon-date parity, P3d functional rules, canonical `productState`, coupon multi-select, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
+**Revision driven by**: round-4 cold Angle-A fold (v3.1.3 → v3.1.4 — **GPT-instruction file fully restructured** to fit the hard 8000-char cap [headline #1: trims alone bottomed at 8538, so a 3-pass copywriting rewrite → **Phase 3.9, 7526/8000**], `endOfDayET`→`formatToParts` [no brittle locale round-trip], WS6 cutover scoped to actually-sold rows [no zeroing of paused stock], concrete `.pill` state CSS incl. `.pill.refunded`, Lottie `data_failed`+SVG-content guard [no blank hero], `/admin` alt-text parity nudge, refund relist names `{id:r.product_id}` + a full-amount-goodwill-flip note, TESTING seeds/asserts [controls round-trip, multi-piece `relist[]`, full-goodwill branch]; **rejected** the STORE-edit-now with a rationale note [no-mixed-truth — orientation moved to the WS6 build phase]). Earlier: round-3 fold (v3.1.2 → v3.1.3 — **amount-based refund composer** for multi-item carts [one cart = N orders on one PaymentIntent], concrete P3d upload-zone markup + `wireUploadZone`, verified `processOne` externals, honest hero→thumbnail coverage, `controls` round-trip, batch partial-success `{uploads,failures}`, WS6 cutover data-fix, drop the unused `reason`; rejected the opaque-200-schema / auth-at-POST-top / tokens-missing misfires). round-2 fold (v3.1.1 → v3.1.2 — coupon-date parity, P3d functional rules, canonical `productState`, coupon multi-select, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_3_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_3_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 + round-3 cold Angle-A have folded (→ v3.1.3); **next = an in-house breadth pass → a fresh cold Angle-A on v3.1.3, looped until it passes, then B/C/D in parallel.**
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_4_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_4_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 + round-3 + round-4 cold Angle-A have folded (→ v3.1.4, breadth-passed); **next = a fresh cold Angle-A on v3.1.4, looped until it passes, then B/C/D in parallel.**
 
 ---
 
@@ -31,9 +31,9 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.3 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.4 ships on its own, separately, when Sean chooses.
 
-> **GPT instructions char budget — hard cap 8000 (F#14 / T1·1).** `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` is **7781 / 8000** today. The WS1–3 instruction edits net-grow it well over the cap: the v3.1.2 set (1.4a/1.4b REFUNDS+poster, 2.3 COUPONS+`expires_date`, 3.5a/3.5b attach+alt+roles) was ≈ +1086, and the round-3 folds add more (REFUNDS reframed to amount-based + multi-piece; 3.5a/3.5b a partial-success clause — the `reason` removal claws a little back). Over-cap = the GPT **silently truncates its own instructions**, and the TESTING static gate (assembled file < 8000) fails the deploy. **The concrete trims live in Phase 3.9** (CURRENT→NEW for THE SLUG / EDITING / PUBLISHING — repetition cut, every distinct rule kept; ≈ 500+ chars reclaimed) — no "consolidate-and-decide" left to the builder. **Apply ALL the WS1–3 instruction edits, then `wc -c` the file:** under 8000 → done; still over → ORDERS/MEDIA carry further compressible repetition, trim there too until green. Cut repetition only; keep every distinct rule.
+> **GPT instructions char budget — hard cap 8000 (F#14 / T1·1 / round-4 A #1) — RESOLVED.** The four v3.1 capability adds (amount-based REFUNDS, chat-attach, COUPONS dates, LINK TROUBLE) take the shipped file from 7781 → **8921**, and section-by-section trims bottom out at **8538** — so the cap **cannot** be met by patching; over-cap = the GPT silently truncates its own instructions + the static gate fails the deploy. The file was therefore **fully restructured** (cut → restructure → remove-redundancy; every distinct rule kept) → **verified `wc -c` = 7526 / 8000**. **The final file is in Phase 3.9 — ship that verbatim** (the per-workstream phases 1.4/2.3/3.5 document the rule deltas, not the final wording). No "trim until green" left to the builder; the count is closed. The cap stays hard — any future instruction add must re-run `wc -c`.
 
 ---
 
@@ -198,6 +198,29 @@ export async function POST(request: Request) {
 ```
 *(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported; `orders.amount`/`product_id`/`stripe_payment_intent` are real columns (`webhook.ts:185-201` writes them). The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65` → `order.products?.title`) — **verify the relist shape against a real multi-item refund response, not just `tsc`**: a wrong assumption doesn't crash, it just returns a malformed `relist[]` and the "put it back up for sale?" prompt silently never fires. **`requireAdmin` returns the service-role client (`adminAuth.ts:27-31` — `SUPABASE_SECRET_KEY` on both auth paths), so the embed resolves for an archived product too** (bypasses the `archived_at IS NULL` RLS — needed for the WS6 relist). `tsc --noEmit` clean.)*
 
+**Phase 1.1c — `api/orders.ts` GET: a `payment_intent` filter (round-4 breadth-pass fix).** The /admin refund panel must load a cart's **full** sibling set regardless of the active orders subtab — a multi-piece cart's siblings can straddle `needs_shipping`/`shipped` (one piece shipped, the rest not), so grouping from the active-subtab slice silently UNDER-lists a partial cart (the GPT path has no such limit — it passes ids directly — so this was an /admin↔GPT parity hole on the headline money journey). Add an explicit by-PaymentIntent filter (the GET already runs `requireAdmin`, so no new auth surface). **CURRENT (`api/orders.ts:70-74`):**
+```ts
+  if (status === 'needs_shipping') {
+    query = query.is('shipped_at', null).eq('status', 'completed');
+  } else if (status === 'shipped') {
+    query = query.not('shipped_at', 'is', null);
+  }
+```
+**NEW (add the PI filter right after the status block; `url` is already defined `:58`):**
+```ts
+  if (status === 'needs_shipping') {
+    query = query.is('shipped_at', null).eq('status', 'completed');
+  } else if (status === 'shipped') {
+    query = query.not('shipped_at', 'is', null);
+  }
+
+  // Refund panel: load a cart's FULL sibling set by PaymentIntent, independent of the shipping subtab
+  // (siblings can straddle needs_shipping/shipped) — round-4 breadth-pass fix.
+  const paymentIntent = url.searchParams.get('payment_intent');
+  if (paymentIntent) query = query.eq('stripe_payment_intent', paymentIntent);
+```
+*(Combines with `is_test` scoping already on the base `query`; the panel calls with `payment_intent` only — no `status` — so it returns every sibling for that PI. `tsc --noEmit` clean.)*
+
 **Phase 1.2 — `vercel.json`: the refund rewrite (more specific path first).** **CURRENT (`vercel.json:12`):**
 ```json
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
@@ -266,7 +289,7 @@ export async function POST(request: Request) {
 ```
 *(`summary` ≈ 295 chars, just under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a — F16. `reason` is gone (T1·3: the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.**
+**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure, 7526/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
 
 *1.4a — REFUNDS.* **CURRENT (`:23`):**
 ```
@@ -282,35 +305,7 @@ REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches ship
 
 **Phase 1.5 — `/admin`: refund composer panel + always-offer relist** (`assets/js/admin.js`; order cards are built in `buildOrderCard`). The single `window.confirm` is replaced by an inline **refund panel**: it lists every piece in the purchase (the sibling orders sharing one `stripe_payment_intent`), checkboxes mark which came back (→ relist), and an auto-summing but **freely editable** amount drives the Stripe refund (Sean's call — Stripe-faithful, amount-based; per-line is the one-piece special case). Concrete-default + render-tune; WS4 restyles with tokens.
 
-*1.5a — store the loaded orders so the panel can group a purchase's sibling pieces.* **CURRENT (`admin.js:681-691`):**
-```js
-function renderOrders(orders) {
-  const list = $('orders-list');
-  if (!orders.length) {
-    list.innerHTML = '<div class="empty">No orders match this view.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  for (const order of orders) {
-    list.appendChild(buildOrderCard(order));
-  }
-}
-```
-**NEW (stash the list on `state` — the GET already returns `*` incl. `stripe_payment_intent`/`amount`/`product_id` + `products.title`, so grouping is client-side; no new endpoint, no GET change):**
-```js
-function renderOrders(orders) {
-  const list = $('orders-list');
-  state.orders = orders; // for the refund panel's sibling-piece grouping (by stripe_payment_intent)
-  if (!orders.length) {
-    list.innerHTML = '<div class="empty">No orders match this view.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  for (const order of orders) {
-    list.appendChild(buildOrderCard(order));
-  }
-}
-```
+*1.5a — (no change to `renderOrders`).* Earlier drafts stashed `state.orders = orders` here so the panel could group siblings from the loaded slice — the round-4 breadth-pass fix replaced that with a by-PaymentIntent fetch in `openRefundPanel` (Phase 1.1c + 1.5d), which is robust regardless of subtab. So **`renderOrders` is left exactly as shipped** — no stash (it would be dead code now). The clicked `order` already carries `stripe_payment_intent` (the GET returns `*`), which is all the panel needs to fetch the rest.
 
 *1.5b — the Refund button + the (initially hidden) panel container, in the order-info block.* **CURRENT (`admin.js:770-771`):**
 ```js
@@ -367,12 +362,24 @@ function renderOrders(orders) {
 // so the panel shows every piece in THIS purchase: CHECK the ones that came back (they get relisted),
 // and the amount auto-sums but stays freely EDITABLE (goodwill / restocking). Checkmarks drive relist;
 // the amount drives the refund. A single-item order = one piece, pre-checked, amount pre-filled.
-function openRefundPanel(order, card) {
+async function openRefundPanel(order, card) {
   const panel = card.querySelector('.refund-panel');
   if (!panel) return;
   if (panel.style.display !== 'none') { panel.style.display = 'none'; return; } // toggle closed
   const pi = order.stripe_payment_intent;
-  const pieces = (state.orders || []).filter((o) => pi && o.stripe_payment_intent === pi && o.status !== 'refunded');
+  // Load the cart's FULL sibling set by PaymentIntent (round-4 breadth-pass fix): a multi-piece cart's
+  // siblings can straddle the needs_shipping/shipped subtabs, so the active-subtab slice can silently
+  // UNDER-list a partial cart. Fetch by PI so the panel always shows every piece in the purchase.
+  panel.style.display = 'block';
+  panel.innerHTML = '<p style="font-size:13px;margin:0">Loading the pieces in this purchase…</p>';
+  let pieces = [order];
+  if (pi) {
+    try {
+      const res = await fetch(`/api/orders?payment_intent=${encodeURIComponent(pi)}`, { headers: { ...authHeader() } });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(body.orders)) pieces = body.orders.filter((o) => o.status !== 'refunded');
+    } catch { /* network/Action error → fall back to the single clicked order */ }
+  }
   const list = pieces.length ? pieces : [order];
   panel.innerHTML = `
     <p style="font-size:13px;margin:0 0 6px">Check the pieces that came back (they'll be re-listed). The amount fills in — edit it for a partial/goodwill refund.</p>
@@ -472,7 +479,7 @@ async function relistPiece(r, down, msg) {
   }
 }
 ```
-*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` / `state` already exist in `admin.js`; `customerEmail` (`:701`), `totalLabel` (`:711`), `productTitle` (`:698`) are confirmed in `buildOrderCard`'s scope — T3·9. `centsToDollars` returns a plain dollar string (e.g. "50.00"), fine for the number input value. The panel reads sibling pieces from `state.orders` (set in 1.5a); a single-item order shows one pre-checked piece, so it's one extra reveal + the amount-edit affordance Sean asked for.)*
+*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` already exist in `admin.js`; `customerEmail` (`:701`), `totalLabel` (`:711`), `productTitle` (`:698`) are confirmed in `buildOrderCard`'s scope — T3·9. `centsToDollars` returns a plain dollar string (e.g. "50.00"), fine for the number input value. `openRefundPanel` is **async** — it fetches the cart's full sibling set by PaymentIntent (Phase 1.1c), so it shows every piece regardless of the active orders subtab (round-4 breadth-pass fix), then falls back to the single clicked order if the fetch fails. A single-item order shows one pre-checked piece, so it's one extra reveal + the amount-edit affordance Sean asked for.)*
 
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; pick the amount + which pieces came back; it asks about relisting each") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note (**document that one cart = N `orders` rows sharing one `stripe_payment_intent`, so a refund is an AMOUNT against the PaymentIntent and flips/relists only the marked pieces** — the substrate fact a cold reviewer missed, headline T) + test-script **R15** flips from "can't issue refunds" → "issues an amount-based refund + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
@@ -809,14 +816,17 @@ function formatExpiry(unixSeconds: number): string {
 
 // End-of-day (23:59:59) on a YYYY-MM-DD calendar date, interpreted in the STORE timezone, as a Unix
 // timestamp — so a coupon's stored expiry matches the date the owner picked regardless of their
-// browser locale (F9). Offset derived by round-tripping the naive instant through the TZ; Vercel
-// functions run in UTC, so `new Date(localized)` reads the ET wall-clock back as UTC for the diff.
+// browser locale (F9). Offset for THIS date is read EXPLICITLY via Intl formatToParts (round-4 A #6):
+// never round-trip a localized string through `new Date()` — only ISO 8601 is guaranteed to parse,
+// and toLocaleString's output is locale/ICU-version-dependent, so a Node/ICU bump could break it
+// silently with no tsc warning. `shortOffset` yields "GMT-5" (EST) / "GMT-4" (EDT) for ET.
 function endOfDayET(dateStr: string): number {
   const [y, m, d] = dateStr.split('-').map(Number);
-  const naiveUTC = Date.UTC(y, m - 1, d, 23, 59, 59);
-  const localized = new Date(naiveUTC).toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const offsetMs = naiveUTC - new Date(localized).getTime();
-  return Math.floor((naiveUTC + offsetMs) / 1000);
+  const off = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' })
+    .formatToParts(new Date(Date.UTC(y, m - 1, d, 23, 59, 59)))
+    .find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-5';
+  const offsetHours = Number(off.replace(/^GMT/, '').replace('−', '-')) || -5; // EST -5, EDT -4
+  return Math.floor(Date.UTC(y, m - 1, d, 23 - offsetHours, 59, 59) / 1000);
 }
 
 // ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
@@ -861,7 +871,7 @@ Both surfaces send `expires_date`: /admin already does, and **the GPT does too n
 ```
 *(`handleCoupon`'s 2.2d normalization already accepts `expires_date`, so the backend is ready — only the schema + instruction needed exposing. Each `description` < 300 chars.)*
 
-**Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
+**Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** *(→ Documents the COUPONS rule change; the file is shipped from **Phase 3.9** in full — don't hand-apply the block below.)* **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
 ```
 COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". Read the code back. listCoupons shows running sales and each one's scope (store-wide vs specific); relay it. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
 ```
@@ -1023,7 +1033,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 
 *3.4b — point `uploadImage` at the new op.* **CURRENT (`:269`):** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."` → **NEW:** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Use this for media given as a LINK (a Drive share or direct URL) or for video. If she ATTACHED photos to the chat, use uploadImages instead."` *(keep < 300 chars)*
 
-**Phase 3.5 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.**
+**Phase 3.5 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.** *(→ Documents the attach/alt/roles rule changes; the file is shipped from **Phase 3.9** in full — don't hand-apply the blocks below.)*
 
 *3.5a — step 3 (`:6`).* **CURRENT:**
 ```
@@ -1242,34 +1252,60 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-**Phase 3.9 — GPT-instruction trims to fit the 8000 cap (T1·1 — concrete NEW text, not "consolidate").** The exclusively-executable rule wants the bytes, not a "tighten these" instruction. These three CURRENT→NEW edits to `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` cut **repetition only** — every distinct rule is preserved (verify against the CURRENT). Apply them, then `wc -c` the assembled file (see the budget callout). If it's still over, ORDERS/MEDIA carry further slack — but these three should clear it.
+**Phase 3.9 — FINAL GPT instructions file (complete restructure — round-4 A #1).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7526 / 8000** (474 headroom).
 
-*3.9a — THE SLUG (`:11`): state the FOLD-not-DROP rule once (it's said twice today).* **CURRENT:**
+**This is the artifact to ship: replace `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
+
 ```
-THE SLUG (derive ONCE, before uploading): it is the URL handle and the CDN photo folder, required on createProduct, and photos upload before the row exists, so derive it first. From the title: FOLD accented letters to plain ASCII (café->cafe, piñata->pinata), lowercase, spaces->hyphens, strip anything not a-z/0-9/hyphen ("Em's Lavender & Sage" -> "ems-lavender-sage"), collapse repeats. FOLD, do NOT DROP, accents: the server folds the same way, so folding keeps your slug identical to its; dropping makes the photos land in a different CDN folder and show broken. Reuse the EXACT same string for every uploadImage and createProduct. Permanent; never set on edits. (No Latin letters in the title -> ask her for a Latin-letters title.)
-```
-**NEW:**
-```
-THE SLUG (derive ONCE, before uploading — it's the URL handle + the CDN photo folder, required on createProduct, and photos upload before the row exists). From the title: FOLD accented letters to plain ASCII (café->cafe, piñata->pinata) — never DROP them; the server folds the same way, so folding keeps your slug identical to its (dropping lands photos in a different CDN folder → broken). Then lowercase, spaces->hyphens, strip anything not a-z/0-9/hyphen ("Em's Lavender & Sage" -> "ems-lavender-sage"), collapse repeats. Reuse the EXACT same string for every uploadImage + createProduct. Permanent; never set on edits. (No Latin letters in the title -> ask for a Latin-letters title.)
+You're 'The Sunkeeper', warm, capable Everlastings by Emaline store studio assistant. Help artist Em add/edit product, run sales, fulfill orders, in plain language. Never expose API keys, URLs, jargon unless asked. Field definitions, how to write each, is your PRODUCT-REFERENCE knowledge file. Use brand VOICE-GUIDE. Action description show mechanics to rely on.
+
+Create PRODUCT FLOW order: slug - upload photos - createProduct - share preview - publish
+Conversationally ask for fields. Reqd: title, headline (5-7 word tagline), story_card (2-8 poetic para.), description, features, price (dollars), product_type=miniature. Optl. fields in PRODUCT-REFERENCE.
+1. Compute slug ONCE (v. THE SLUG) before upload.
+2. Photos ATTACHED in chat: call uploadImages (forward openaiFileIdRefs; optl. roles[] in the shown order: hero, gallery-01.., detail-01..). Photos from anyone with SHARE LINK or direct URL, call uploadImage (not plural).
+CDN url returned to use verbatim.
+uploadImages can return failures[] (v. LINK TROUBLE)
+You assign the ROLE; the server names the file from it — never rename or invent a filename.
+Write descriptive alt for every image + thumbnail_alt — reqd., never blank.
+Reqd. 7 image min. = 1 hero, 5+ gallery, thumbnail (or hero img again w. new role); other roles are extra. Don't try without min., just ask for another.
+3. createProduct: draft checkout checkout_name/description/image; SEO seo_title/description/thumbnail; array materials/features/care/shipping; price in CENTS ($245 = 24500) but you speak dollars.
+PREVIEW draft returned, say "Preview just like customers see it <preview_url>. Tap PUBLISH or tell me to." no need to read fields back.
+
+PREVIEW is the REVIEW. Drafted fields get CONFIRMED before saving unless directed to EXPEDITE straight to preview.
+
+THE SLUG
+Create once never can edit after; do first before upload
+Reuse EXACT string every uploadImage, createProduct
+Use URL handle in CDN photo folder before rows exist
+HOW: take title, fold accent letters to plain ASCII eg. café=cafe, piñata=pinata, never drop letter; all lowercase, spaces=hyphens, strip anything not a-z/0-9/hyphen eg. Em's Lavender & Sage = ems-lavender-sage; Collapse repeats; ask for Latin-letters title if needed
+IMPT: server folds same way; must do same so slug is identical ensuring CDN media place in right folder
+
+EDITING
+FIND: getProduct by slug (returns live/draft + the id) or listProducts to browse. A getProduct 404 (an apostrophe/ampersand title = a slug you can't rebuild): listProducts, match her words to a title, getProduct that exact slug. Never say "can't find it" before listing.
+BUILD EDITS FROM `effective` (live + staged) ALWAYS — incl. the COMPLETE images/media array (no per-photo edit; send the whole array + thumbnail or the next edit drops the rest). Never wipe staged edits; never report a `draft` value as live (top-level = what shoppers see now).
+editProduct = id + only the changed fields. LIVE instantly: price, availability, quantity. STAGES a draft (preview, then publish): copy, SEO, photos, media. So "mark sold" / "set price to X" / "got 3 more in" = save + say it's done; copy/photo edits = stage + share the preview link.
+"Feature on homepage" = {featured:true}. "Add to <name> collection" = {series:"<name>"}.
+discardEdits {id} drops a pending draft (a price change isn't staged — undo it with another editProduct).
+HEADS-UP: a live price/availability/quantity change leaves earlier staged copy edits alone; if getProduct still shows a `draft`, tell her to preview+publish or discard them.
+
+REMOVING: archiveProduct takes a piece down (stays findable; undo w. unarchiveProduct). NO delete.
+
+PUBLISHING: "publish" / "make it live" = publishProduct {id} — for a new piece this creates the Stripe listing + makes it buyable, and the old preview link then stops (expected). A publish 400 ("Missing required fields: story_card" / "Minimum 5 gallery images") = say plainly what to add (story_card = the story, headline = the tagline). Lost preview? getProduct + hand back its preview_url EXACTLY (never build a URL); none returned = it's fully live, give the plain product page link. Never make a no-op edit to "regenerate" a link.
+
+COUPONS: createCoupon = percent OR amount-off in cents (dollars→cents); optional code/scope/min/expiry/cap. A product-scoped coupon needs a PUBLISHED piece (a draft has no Stripe id) — else store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the terms back plainly ("20% off store-wide, through Sun Jun 21 — create it?"); never invent an expiry; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons gives expires_display (a plain date) + each sale's scope — relay that, never decode a timestamp. deactivateCoupon {code} ends one now. A temp sale = a coupon, not a price cut (keeps the list price).
+
+ORDERS: listOrders finds them (status=needs_shipping/shipped; q = order id, email, or tracking) — read back plainly. markShipped needs tracking + carrier (exactly USPS, UPS, FedEx, DHL; "post office" = USPS). CONFIRM FIRST: "Mark <product> shipped via <carrier> <tracking> + email <buyer>?" — it emails the buyer, can't be undone. email_sent:false = tracking saved but the email didn't; text Sean.
+
+REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches past/shipped orders). A Stripe refund is an AMOUNT against the whole purchase, and one cart can be several orders on one payment. refundOrder {id} refunds THIS order's amount + relists THIS piece. CONFIRM FIRST: read back piece(s) + amount + buyer ("Refund <buyer> $X for <product>? Can't be undone."). Several pieces, one purchase: confirm which came back, pass relist_product_ids:[their ids] + amount_cents=summed cents. Goodwill/partial, nothing back: amount_cents + relist_product_ids:[] (a FULL-amount goodwill refund still flips the order to refunded — tell her). It returns `relist`, one entry r per returned piece; a refund never relists itself, so for EACH r ALWAYS offer to restore it — down (r.available false or r.archived) "Put it back up for sale?", else "Add 1 to its quantity?". Yes = unarchiveProduct {id:r.product_id} if r.archived AND editProduct {id:r.product_id, available:true, quantity:r.quantity+1}. Revenue/payouts live in Stripe.
+
+MEDIA (optional page video): uploadImage the MP4 (skip_transform:true), then ALWAYS ask per clip (never assume): autoplay + loop, silent, no buttons (GIF-like) OR click-to-play with sound (the default; she can add a still "poster" = the image shown before it plays). Set the media flags. MP4s render before YouTube (YouTube is rare); empty media hides the section. No GIFs.
+
+LINK TROUBLE: attached photos = uploadImages (forward openaiFileIdRefs); failures[] (a link expired — they last ~5 min) = keep the successes, ask her to re-attach ONLY those (never re-send successes). A 400 = none came through (or >10 / no slug) — ask her to re-attach, retry. uploadImage (by-link) 400 (a Drive share PAGE not the file, not public, or a video >~25 MB showing a scan page) = ask for an "anyone with the link" Drive share or direct URL (Dropbox "?dl=1" / CDN), retry. Video + 10+ photo batches stay on the link path.
+
+ALWAYS: write in Em's voice (warm, poetic, quietly magical, never sales-y; full guidance in VOICE-GUIDE). 409 (slug/code taken) = suggest a new title/code; 400 = name the missing field plainly; 401 = stop: "the connection key needs Sean's attention." Never invent a tracking number, carrier, or URL; never set a price she didn't say.
 ```
 
-*3.9b — EDITING (`:13`): fold the duplicate "build from `effective`" rule + the PHOTOS array note into one.* **CURRENT:**
-```
-EDITING: find the piece - getProduct by slug (returns live/draft + the id), or listProducts to browse. If getProduct 404s (an apostrophe/ampersand title makes a slug you can't reconstruct), listProducts, match her wording to a title, then getProduct AGAIN with that exact slug before editing; never say "I couldn't find it" without listing first. getProduct returns `effective` (live + staged); ALWAYS build your edit values from `effective` so you don't wipe staged edits, and never report a `draft` value as the live copy (top-level = what shoppers see now). editProduct with the id + only the changed fields: price, availability, and quantity apply LIVE immediately; everything else (copy/SEO/photos/media) STAGES a draft to preview then publish. So "mark it sold" / "set the price to X" / "we got 3 more in" -> save and say it's done; copy/photo edits -> stage and hand back the preview link; never call a staged edit live until published. "Feature on the homepage" -> {featured:true}; "add to the <name> collection" -> {series:"<name>"} (both stage on a published piece). discardEdits {id} scraps a pending draft (a price change isn't staged; revert it with another editProduct). HEADS-UP: a live price/availability/quantity change leaves earlier staged copy edits untouched; if getProduct still shows a `draft` afterward, tell her she has unpublished copy edits to preview+publish or discard. PHOTOS: no per-photo command; getProduct first, send the COMPLETE `images` array (+thumbnail). When edits are pending, build it from `effective.images`, not the live top-level, or a second edit drops the first. Same for `media`.
-```
-**NEW:**
-```
-EDITING: find the piece - getProduct by slug (returns live/draft + the id), or listProducts to browse. If getProduct 404s (an apostrophe/ampersand title makes a slug you can't reconstruct), listProducts, match her wording to a title, then getProduct with that exact slug; never say "I couldn't find it" without listing first. getProduct returns `effective` (live + staged); ALWAYS build edit values from `effective` — including the COMPLETE `images`/`media` arrays (no per-photo command; send the whole array +thumbnail, or a second edit drops the rest) — so you never wipe staged edits, and never report a `draft` value as live (top-level = what shoppers see now). editProduct with the id + only changed fields: price, availability, quantity apply LIVE immediately; everything else (copy/SEO/photos/media) STAGES a draft to preview then publish. So "mark it sold" / "set the price to X" / "we got 3 more in" -> save, say it's done; copy/photo edits -> stage and hand back the preview link. "Feature on the homepage" -> {featured:true}; "add to the <name> collection" -> {series:"<name>"}. discardEdits {id} scraps a pending draft (a price change isn't staged; revert with another editProduct). HEADS-UP: a live price/availability/quantity change leaves earlier staged copy edits untouched; if getProduct still shows a `draft`, tell her to preview+publish or discard them.
-```
-
-*3.9c — PUBLISHING (`:17`): tighten the prose (no rule dropped).* **CURRENT:**
-```
-PUBLISHING: "publish" / "make it live" -> publishProduct {id}; for a new product this creates the Stripe listing and makes it purchasable. After publish the old preview link stops (expected). A publish 400 ("Missing required fields: story_card", "Minimum 5 gallery images") -> translate to plain language (story_card = the story, headline = the tagline) and tell her what to add. To re-show a lost preview: getProduct and hand back its `preview_url` EXACTLY (never hand-build a URL); if none is returned the piece is fully live -> give the plain product page link. Don't make a no-op edit to "regenerate" a link.
-```
-**NEW:**
-```
-PUBLISHING: "publish" / "make it live" -> publishProduct {id}; for a new product this creates the Stripe listing + makes it purchasable. The old preview link then stops (expected). A publish 400 ("Missing required fields: story_card", "Minimum 5 gallery images") -> translate plainly (story_card = the story, headline = the tagline) and say what to add. To re-show a lost preview: getProduct, hand back its `preview_url` EXACTLY (never hand-build one); if none comes back the piece is fully live -> give the plain product page link. Don't make a no-op edit to "regenerate" a link.
-```
+*(**Rule-diff confirmed** against the v2.0.0 file + the WS1–3 rule deltas — every rule survived the restructure: the amount-based refund with `{id:r.product_id}` on both relist calls + the full-goodwill-flip note (round-4 A #2/#5); `thumbnail_alt`; the never-invent-a-filename guardrail; `expires_date`/`expires_display`; the attach/`failures[]` recovery; the 7-image minimum. "Never invent a URL" lives in ALWAYS. **The cap is HARD** — any future instruction edit must re-run `wc -c`; there is no slack to spend carelessly. Phases 1.4a/1.4b/2.3/3.5a/3.5b describe the deltas, this is the shipped text.)*
 
 ## Workstream 6 — Inventory: decrement stock on a sale (pre-existing gap; F2 root cause)
 
@@ -1282,9 +1318,17 @@ PUBLISHING: "publish" / "make it live" -> publishProduct {id}; for a new product
 -- CUTOVER DATA-FIX (run once, before the function): pre-WS6, a sale flipped available=false but never
 -- decremented quantity, so an already-sold piece sits at available:false, quantity:1. Post-WS6 a refund
 -- relist does quantity+1 = 2 → a phantom unit. Align quantity with the sold state first so relist lands
--- at 1, not 2 (T2·9). Scope: any currently-sold row (available=false) carrying leftover stock — a
--- manually-paused/unpublished piece is unaffected by relist anyway, and the owner can re-set its qty.
-update products set quantity = 0 where available = false and quantity > 0;
+-- at 1, not 2 (T2·9). SCOPED to actually-SOLD rows via `exists (orders)` so a manually-paused or
+-- never-sold piece the owner left in stock is NOT silently zeroed (round-4 A #3 — design for the
+-- template "User" with a real catalog, not Emy's all-qty-1 store; an owner's intentional pause is intent
+-- we must not overwrite). If test rows exist in `orders`, also match the dimension: `and o.is_test =
+-- products.is_test`. EYEBALL FIRST (optional but recommended) — print what the UPDATE will touch:
+--   select id, slug, title, quantity from products p
+--     where p.available = false and p.quantity > 0
+--       and exists (select 1 from orders o where o.product_id = p.id);
+update products p set quantity = 0
+  where p.available = false and p.quantity > 0
+    and exists (select 1 from orders o where o.product_id = p.id);
 
 -- A sale decrements OUR stock and derives availability, atomically per row (the money path: two
 -- near-simultaneous completions must not race a read-modify-write of the same count). archived_at
@@ -1326,6 +1370,8 @@ $$;
 ```
 *(Same non-fatal logging discipline — never 5xx after the idempotency claim. The title-lookup block below (`:216-219`) is unaffected.)*
 
+> **Mid-build orientation (round-4 A #11):** `EVERLASTINGS_STORE.md` still documents the pre-WS6 *available-only, no-decrement* model (`:614`, `:709`) — that's the **shipped truth** and is correct until v3.1.x ships; **this Phase is what changes it.** Don't second-guess your WS6 edit against STORE — the as-built sync at Phase 6.4 updates those STORE lines. (Per the no-mixed-truth / as-built doc-sync rule, STORE is never edited mid-build.)
+
 **Phase 6.3 — refund relist = stock RESTORE (the spec WS1 implements; NOT a separate diff — F#4).** The canonical relist restores the returned unit: **`quantity + 1`** (which makes `available` true again via the same rule) **plus** unarchive when archived — both axes, never XOR. **This is already folded into WS1's NEW blocks above — do NOT re-apply it as a second edit.** A builder going 1 → 6 has already built it by the time they reach here; this section is rationale, not a TODO. For reference, it lives in:
 - **WS1.1b** — the refund handler's `products(...)` select includes `quantity`, and the returned `relist` object is `{ product_id, slug, title, available, quantity, archived }`.
 - **WS1.5c `relistPiece`** — always PUTs `{ available: true, quantity: (r.quantity || 0) + 1 }` and POSTs `/api/products/unarchive` when `r.archived`; the prompt wording branches on current state (re-list vs +1) per F5.
@@ -1333,12 +1379,14 @@ $$;
 
 **Phase 6.4 — docs (as-built). `Doc impact:`** at the v3.1.x as-built (a fresh agent, per the DEV_RULES *As-built doc-sync* rule — do NOT edit STORE mid-build; it correctly describes the **shipped** available-only model until v3.1.x ships), update `EVERLASTINGS_STORE.md`'s inventory model to the WS6 decrement behavior: the **Purchase-Flow** step ("Sets each purchased product available=false … does NOT change quantity"), **Data States #2** ("Product sold"), and the **Flag reference** `products.quantity` line (currently "a sale doesn't decrement it today … deferred until the first multi-quantity product_type") all flip to *"a sale decrements `quantity`; `available = (quantity > 0)`; `archived_at` untouched."* Also flip any test-script expectation that assumed a sale leaves quantity unchanged. **And add the one-of-each-per-order invariant** to STORE's Purchase-Flow (the cart dedupes by `product_id` at `main.js:121`; each line-item is `quantity:1`; a piece sells to separate sequential orders, never N-in-one-cart) — true of the shipped system today, and its absence is exactly what let a cold reviewer misread `record_sale` as a decrement bug (F1).
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_3_ADDENDUM_DESIGN.md`)
+> **A forward-pointer in STORE *now* was proposed (round-4 A #11) and REJECTED.** Adding "v3.1.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
+
+## Workstreams 4–5 — executable design (spec'd in `v3_1_4_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_3_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_4_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.

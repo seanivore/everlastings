@@ -1,6 +1,6 @@
-# v3.1.3 — Design Addendum
+# v3.1.4 — Design Addendum
 
-**Addendum to**: `v3_1_3_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_1_4_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
 **Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 
@@ -116,7 +116,17 @@ function wireProductSubtabs() {                    // call once from init/attach
 ```
 In `renderProductList`, filter the already-fetched list: `const shown = (state.products || []).filter(matchesProductFilter);` then render `shown` (and show the `.empty` state when `shown.length === 0`). Pure additive UI; no backend change.
 - **P1 · Editor form sectioning.** `#product-form` (`index.html:119-239`) is ~20 stacked `.field`s with only 2 fieldsets. Wrap into **5 labeled `<fieldset>`s** in workflow order: **Essentials** (title, slug, headline, description, price, qty, type, available, featured) · **Story & Details** (story, features, materials, care, shipping, dimensions, weight, power, series, artist note) · **Media** (P3) · **Checkout (Stripe)** (existing `167-171`, keep verbatim, restyle legend) · **SEO & Sharing** (seo title/desc/thumbnail). Remove the inline `style="border:1px solid #ddd…"` on `166`/`173`; add one reusable rule: `fieldset { border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-4); background:var(--c-surface); } fieldset>legend { font-size:var(--fs-md); font-weight:var(--fw-semibold); padding:0 var(--s-2); } .product-form { gap:var(--s-5); }`. Pure HTML+CSS; `openEditor` targets the same `#p-*` IDs.
-- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12), available→neutral-bg; and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state; T3·3); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class.
+- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12), available→neutral-bg; and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state; T3·3); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class. **Concrete per-state rules (round-4 A #4 — a status pill is load-bearing, not pure render-tune, so it ships a concrete default; emit these literally rather than leaving the builder to translate the prose mapping, and note `.pill.refunded` was the one with no rule at all):**
+```css
+.pill.live      { background: var(--c-success-bg); color: var(--c-success); }
+.pill.draft     { background: var(--c-warn-bg);    color: var(--c-warn); }
+.pill.edits     { background: var(--c-info-bg);    color: var(--c-info); }
+.pill.sold      { background: var(--c-accent-soft); color: var(--c-accent); }   /* a sale is GOOD — not a red error (F12) */
+.pill.archived  { background: var(--c-neutral-bg); color: var(--c-neutral-tx); }
+.pill.available { background: var(--c-neutral-bg); color: var(--c-neutral-tx); }
+.pill.refunded  { background: var(--c-neutral-bg); color: var(--c-neutral-tx); } /* its OWN class — never reuse .unsent (an email-not-sent state); T3·3 */
+```
+*(Tokens are the real ones at §4.1 `:42` — `--c-neutral-bg`/`--c-neutral-tx`, NOT `--c-text-muted`, though they share `#5b6573`. Color/saturation is still render-tune; the mapping is the concrete default.)*
 - **P3 · Media (the biggest win — removes the only raw-JSON field).**
   - **3a Image-list previews.** `addImageRow` (`admin.js:331-345`) renders URL+alt+Remove only. Prepend a 40×40 `<img class="img-thumb">` (`object-fit:cover; var(--r-sm); background:var(--c-surface-2)`) whose `src` tracks the URL input, + a role-prefix tag from the filename covering **all 7 roles** (`hero`/`thumbnail`/`seo_thumbnail`/`checkout_image`/`gallery-NN`/`detail-NN`/`video-NN` — matches IMPLEMENT 3.7a's regex; the earlier 5-role version dropped `seo_thumbnail`/`checkout_image`, F6). Regrid `.img-url-row` → `40px 64px 1fr 1fr auto` (thumb, role, url, alt, remove) — matches IMPLEMENT 3.7a (F12).
   - **3b "Still need" coverage hint.** The "≥1 hero + 5 gallery" requirement is static prose (`index.html:182-184`). Add a live `#img-coverage` line above the Add button counting rows by role prefix → `Hero ✓ · Gallery 3 / 5 needed · Thumbnail ✓` (`--c-success` met / `--c-warn` unmet). New `updateCoverage()` called from add/remove/url-change. Additive JS.
@@ -170,7 +180,15 @@ async function wireUploadZone(zoneEl, role) {
       if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
       msg.textContent = `Added ${resolvedRole}.`;
       if (role === 'video') addMediaRow({ type: 'video', url: body.url });
-      else { if (role === 'thumbnail' && !$('p-thumbnail').value.trim()) $('p-thumbnail').value = body.url; addImageRow(body.url, ''); }
+      else {
+        if (role === 'thumbnail' && !$('p-thumbnail').value.trim()) $('p-thumbnail').value = body.url;
+        addImageRow(body.url, '');
+        // Alt-text parity nudge (round-4 A #8): the GPT writes a descriptive alt for every image
+        // (IMPLEMENT 3.5a); /admin should hold the same bar, so focus + prompt the new row's alt input.
+        // Soft, not a publish gate (validateProductRules doesn't require alt) — just stops blank alts slipping by.
+        const altInput = $('p-images').lastElementChild?.querySelector('.img-alt');
+        if (altInput) { altInput.placeholder = 'alt — what the photo shows'; altInput.focus(); }
+      }
       fileInput.value = ''; // ready for the next drop in this zone
     } catch (err) { msg.textContent = `Failed: ${err.message}`; }
   });
@@ -235,7 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
       path: '/assets/lottie/hero-title-writeon.json',
       rendererSettings: { progressiveLoad: false, preserveAspectRatio: 'xMidYMid meet' },
     });
-    anim.addEventListener('DOMLoaded', () => el.closest('.hero__title').classList.add('has-lottie'));
+    // Async fetch/parse failure (404, blocked, bad JSON) fires data_failed, never DOMLoaded → leave the
+    // real <h1> visible. (round-4 A #7)
+    anim.addEventListener('data_failed', () => { /* never add .has-lottie → static <h1> stays */ });
+    // Only hide the real <h1> once the SVG has ACTUALLY mounted shape content. A JSON that parses but
+    // renders empty (no layers, or a Skottie-subset lottie-web can't draw) still fires DOMLoaded — guard
+    // against that "blank hero" case instead of relying on the manual lottie-web preview gate (round-4 A #7).
+    anim.addEventListener('DOMLoaded', () => {
+      const svg = el.querySelector('svg');
+      if (svg && svg.querySelector('path, g')) el.closest('.hero__title').classList.add('has-lottie');
+      // else: nothing visible mounted → leave the static <h1> showing
+    });
   } catch { /* lottie threw synchronously → leave the real <h1> visible (never add .has-lottie); F15 */ }
 });
 ```
