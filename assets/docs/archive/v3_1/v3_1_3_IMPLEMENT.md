@@ -1,11 +1,11 @@
-# v3.1.2 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.3 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
-**Revision driven by**: round-2 cold Angle-A fold (v3.1.1 → v3.1.2 — GPT coupon-date parity, collapse 3.7c into P3d, WS6.3 cross-ref, always-offer relist with state-wording, coupon multi-select, P3d functional rules, canonical `productState`, GPT-instructions budget, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
+**Revision driven by**: round-3 cold Angle-A fold (v3.1.2 → v3.1.3 — **amount-based refund composer** for multi-item carts [headline: one cart = N orders on one PaymentIntent], concrete GPT-instruction trims [Phase 3.9], drop the unused `reason` param, concrete P3d upload-zone markup + `wireUploadZone`, verified `processOne` externals, honest hero→thumbnail coverage, `controls` round-trip, batch partial-success `{uploads,failures}`, WS6 cutover data-fix; rejected with rationale notes the opaque-200-schema, auth-already-at-POST-top, and tokens-missing misfires). Earlier: round-2 fold (v3.1.1 → v3.1.2 — coupon-date parity, P3d functional rules, canonical `productState`, coupon multi-select, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_2_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_2_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 cold Angle-A have folded (→ v3.1.2); **next = an in-house breadth pass → a fresh cold Angle-A on v3.1.2, looped until it passes, then B/C/D in parallel.**
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_3_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_3_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 + round-3 cold Angle-A have folded (→ v3.1.3); **next = an in-house breadth pass → a fresh cold Angle-A on v3.1.3, looped until it passes, then B/C/D in parallel.**
 
 ---
 
@@ -31,15 +31,15 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.2 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.3 ships on its own, separately, when Sean chooses.
 
-> **GPT instructions char budget — hard cap 8000 (F#14).** `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` is **7781 / 8000** today (~219 free). The WS1–3 instruction edits (1.4a/1.4b REFUNDS+poster, 2.3 COUPONS+`expires_date`, 3.5a/3.5b attach+alt+roles) net-add **≈ +1086 chars → ~8867, OVER the cap** (measured per block: REFUNDS +346, COUPONS +293, step-3 +249, LINK TROUBLE +158, poster aside ~+40). So the build MUST trim **~870 chars** to fit — the TESTING static gate (assembled file < 8000) fails the deploy otherwise; over-cap = the GPT silently truncates its own instructions. **`wc -c` the file after applying the edits**, then tighten these three (most verbose + most redundant, safe to compress *without dropping any rule*): **THE SLUG** (~738 chars — the "FOLD not DROP accents" rationale is stated twice — say it once), **EDITING** (~1627 chars — the "build from `effective` so you don't wipe staged edits" rule is restated ~3× across the paragraph + the PHOTOS sub-note — consolidate to one), **PUBLISHING** (~612 chars — the lost-preview + 400-example prose). Those three total ~2977 chars of mostly-repetitive source, so cutting ~870 (≈29%) is ample headroom. Cut repetition only; keep every distinct rule.
+> **GPT instructions char budget — hard cap 8000 (F#14 / T1·1).** `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` is **7781 / 8000** today. The WS1–3 instruction edits net-grow it well over the cap: the v3.1.2 set (1.4a/1.4b REFUNDS+poster, 2.3 COUPONS+`expires_date`, 3.5a/3.5b attach+alt+roles) was ≈ +1086, and the round-3 folds add more (REFUNDS reframed to amount-based + multi-piece; 3.5a/3.5b a partial-success clause — the `reason` removal claws a little back). Over-cap = the GPT **silently truncates its own instructions**, and the TESTING static gate (assembled file < 8000) fails the deploy. **The concrete trims live in Phase 3.9** (CURRENT→NEW for THE SLUG / EDITING / PUBLISHING — repetition cut, every distinct rule kept; ≈ 500+ chars reclaimed) — no "consolidate-and-decide" left to the builder. **Apply ALL the WS1–3 instruction edits, then `wc -c` the file:** under 8000 → done; still over → ORDERS/MEDIA carry further compressible repetition, trim there too until green. Cut repetition only; keep every distinct rule.
 
 ---
 
 ## Roadmap (coarse direction — NOT a build queue)
 
-1. **Refund** — `refundOrder` in /admin + GPT (confirm → full refund → state-aware relist prompt).
+1. **Refund** — `refundOrder` in /admin + GPT (confirm → amount-based refund against the purchase → mark which pieces came back → state-aware relist prompt).
 2. **Coupons in /admin** — a coupon UI over the existing `/api/coupons` endpoints (no backend change).
 3. **Chat-attach upload + admin upload UX** — fold `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md`; add admin upload previews, remaining-role hints, and a structured MP4 editor.
 4. **Admin polish** — clean, professional, **brand-neutral** redesign (NOT august.style-tokened) + /admin↔GPT parity, nav, and product-list state-filter fixes.
@@ -49,12 +49,13 @@
 ## Locked decisions (confirmed — the builder chooses nothing)
 
 **Refund**
-- **Full refund only.** Partial refunds stay in the Stripe dashboard (matches the webhook's full-only status flip). The GPT/admin say so.
+- **Amount-based, Stripe-faithful (the headline fold).** A Stripe refund is an *amount* against the PaymentIntent (not line-item-aware), and **one cart = one PI spanning N sibling `orders` rows** (`webhook.ts:185` writes one row per product). So the in-app refund refunds `amount_cents` (default = the clicked order's line amount) and flips + relists **only the pieces the owner marks returned** — never the whole cart by surprise. Per-line refund (the common single-item case) is the trivial special case (one piece, amount pre-filled). A goodwill/partial amount (nothing marked returned) refunds money without relisting.
 - **Route:** a new `POST` handler in `api/orders.ts` (it has only `GET` + `PATCH` today, and `PATCH` hard-requires `tracking_number`, so refund cannot overload it). Rewrite `/api/orders/:id/refund` → `/api/orders?id=:id&_action=refund`, placed **before** the existing `/api/orders/:id` rewrite (`vercel.json:12`).
-- **Stripe call:** `stripe.refunds.create({ payment_intent }, { idempotencyKey: \`refund-${id}\` })` — reuses `api/_lib/stripe.ts` (`import { stripe }`). Idempotency key off the order id so a retry can't double-refund.
-- **Guards:** order not found → 404; `status === 'refunded'` → 409 (already refunded); missing `stripe_payment_intent` → 409; order fetched scoped by `isTest`.
-- **Status:** the action optimistically sets `orders.status = 'refunded'` for instant UI; the `charge.refunded` webhook (`api/webhook.ts:60-89`) also flips it on Stripe's event (idempotent — both set the same value).
-- **Relist is NOT automatic.** The action returns the product's relist state (`{ product_id, slug, available, archived_at }`) so the caller can prompt. Relist path is **state-aware:** `editProduct {available:true}` if published-but-sold, `unarchiveProduct` if archived.
+- **Body (optional):** `{ amount_cents?, relist_product_ids? }`. No body = refund this order's `amount` + relist this piece (back-compat for the GPT's simple `refundOrder {id}` call); explicit `relist_product_ids: []` = goodwill, nothing relisted.
+- **Stripe call:** `stripe.refunds.create({ payment_intent, amount: refundAmount }, { idempotencyKey: \`refund-${pi}-${refundAmount}-${ids.sort().join('.')}\` })` — reuses `api/_lib/stripe.ts` (`import { stripe }`). The key includes the amount + relisted ids so a double-click is idempotent, but refunding two same-priced pieces in turn isn't blocked. Stripe enforces amount ≤ the refundable balance (surface its error as 502).
+- **Guards:** order not found → 404; `status === 'refunded'` → 409; missing `stripe_payment_intent` → 409; no determinable amount → 400; order fetched scoped by `isTest`.
+- **Status:** the action flips the **returned pieces'** sibling orders to `refunded` (optimistic, instant UI); the `charge.refunded` webhook (`api/webhook.ts:60-89`) also flips on a **full-PI** refund (idempotent where they overlap). A partial/goodwill amount with nothing returned does **not** flip status.
+- **Relist is NOT automatic.** The action returns `relist: [{ product_id, slug, title, available, quantity, archived }, …]` (an array — one per returned piece) so the caller prompts. Relist path is **state-aware + restores stock both axes:** `unarchiveProduct` if archived AND `editProduct {available:true, quantity: relist.quantity + 1}`.
 
 **Coupons in /admin** — reuse the existing endpoints verbatim: create + list via `/api/coupons` (`?_action=coupon`, `products.ts:689-798`), end via `/api/coupons/deactivate` (`?_action=coupon_deactivate`, `products.ts:800-829`). Expose the **full** surface for true parity: `type` (percent/amount), `value`, `code`, `product_ids` (these are **`stripe_product_id`**, not the Supabase id — the UI maps published products → their `stripe_product_id`), `min_amount`, `expires_at`, `max_redemptions`; plus the list (with `times_redeemed` / scope / expiry) and deactivate-by-code. **Human-friendly dates (from `FEEDBACK_COUPON_v2_1_0.md` — the GPT misread a raw Unix `expires_at` as July when the coupon was correctly set to June; the coupon was never wrong):** the one backend add — `handleCouponList` (+ the `createCoupon` response) returns a human `expires_display` (e.g. "Ends after Sun, Jun 21, 2026", store TZ America/New_York) **alongside** the raw `expires_at`, so the GPT never decodes a timestamp; plus a GPT **read-back-before-create** beat and a date input (not a raw timestamp) in the /admin coupon UI. *(Optional stretch: `campaign_note`/`intended_dates` in the coupon `metadata`.)*
 
@@ -98,9 +99,13 @@ import { sendEmail, trackingEmailHtml, trackingUrl } from './_emails/index';
   return jsonResponse(request, { ok: true, order: stamped, email_sent: true });
 }
 
-// POST /api/orders/:id/refund  (vercel rewrite → ?id=:id&_action=refund) — owner-issued FULL refund.
-// Stripe also fires charge.refunded (webhook.ts:60) which flips status; we set it optimistically here
-// for instant admin/GPT feedback — idempotent, both write 'refunded'. Partial refunds stay in Stripe.
+// POST /api/orders/:id/refund  (vercel rewrite → ?id=:id&_action=refund) — owner-issued refund.
+// A Stripe refund is an AMOUNT against the PaymentIntent (refunds aren't line-item-aware), and one
+// cart = one PI spanning N sibling `orders` rows (webhook.ts:185 writes one row per product). So we
+// refund `amount_cents` (default = THIS order's line amount → the common single-item case) and
+// flip+relist ONLY the pieces the caller marks returned via `relist_product_ids` (default = this
+// order's piece). charge.refunded (webhook.ts:60) also flips status, but only on a FULL-PI refund —
+// for a partial we own the per-order flip here (idempotent: both write 'refunded' where they overlap).
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if ('error' in auth) return auth.error;
@@ -115,9 +120,15 @@ export async function POST(request: Request) {
     return jsonResponse(request, { error: 'Invalid order id' }, 400);
   }
 
+  // Optional JSON body: amount_cents (a custom/partial amount) + relist_product_ids (which pieces
+  // came back → flip + relist them). No body = refund this order's full line amount + relist this
+  // one piece. An explicit empty relist_product_ids = a goodwill/partial amount, nothing returned.
+  let body: { amount_cents?: unknown; relist_product_ids?: unknown } = {};
+  try { body = (await request.json()) as typeof body; } catch { /* no body → per-line defaults */ }
+
   const { data: order, error: loadErr } = await supabase
     .from('orders')
-    .select('id, status, stripe_payment_intent, products(id, slug, title, available, quantity, archived_at)')
+    .select('id, status, amount, product_id, stripe_payment_intent')
     .eq('id', id)
     .eq('is_test', isTest)
     .single();
@@ -129,33 +140,63 @@ export async function POST(request: Request) {
     return jsonResponse(request, { error: 'This order has no payment to refund.' }, 409);
   }
 
+  const refundAmount = typeof body.amount_cents === 'number' && Number.isInteger(body.amount_cents) && body.amount_cents > 0
+    ? body.amount_cents
+    : (order.amount as number | null);
+  if (typeof refundAmount !== 'number' || refundAmount <= 0) {
+    return jsonResponse(request, { error: 'Could not determine the refund amount — pass amount_cents.' }, 400);
+  }
+  // Returned pieces (→ flip + relist). Explicit [] = goodwill/partial, nothing returned.
+  // Undefined (the GPT's simple {id} call) = just this order's piece.
+  const relistIds = Array.isArray(body.relist_product_ids)
+    ? (body.relist_product_ids as unknown[]).filter((x): x is string => typeof x === 'string')
+    : [order.product_id as string];
+
+  const pi = order.stripe_payment_intent as string;
   try {
     await stripe.refunds.create(
-      { payment_intent: order.stripe_payment_intent as string },
-      { idempotencyKey: `refund-${id}` },
+      { payment_intent: pi, amount: refundAmount },
+      { idempotencyKey: `refund-${pi}-${refundAmount}-${[...relistIds].sort().join('.')}` },
     );
   } catch (err) {
-    console.error(`Refund failed for order ${id}:`, err);
-    return jsonResponse(request, { error: 'Stripe refund failed — check the Stripe dashboard.' }, 502);
+    console.error(`Refund failed for order ${id} (PI ${pi}):`, err);
+    return jsonResponse(request, { error: 'Stripe refund failed — check the amount, then the Stripe dashboard.' }, 502);
   }
 
-  // Optimistic flip (the webhook will also set it). Non-fatal if it lags — the refund already succeeded.
-  const { error: updErr } = await supabase.from('orders').update({ status: 'refunded' }).eq('id', id);
-  if (updErr) console.error(`Refund status flip lagged for ${id}:`, updErr.message);
-
-  const p = (order as unknown as {
-    products?: { id: string; slug: string; title: string; available: boolean; quantity: number | null; archived_at: string | null };
-  }).products ?? null;
-  return jsonResponse(request, {
-    ok: true,
-    status: 'refunded',
-    relist: p
-      ? { product_id: p.id, slug: p.slug, title: p.title, available: p.available, quantity: p.quantity ?? 0, archived: !!p.archived_at }
-      : null,
-  });
+  // Flip + relist only the returned pieces: their sibling orders on this PI (product_ids are unique
+  // per cart, so one row each). The embed resolves for archived pieces too (service-role client).
+  const relist: Array<{ product_id: string; slug: string; title: string; available: boolean; quantity: number; archived: boolean }> = [];
+  if (relistIds.length) {
+    const { data: siblings } = await supabase
+      .from('orders')
+      .select('id, products(id, slug, title, available, quantity, archived_at)')
+      .eq('stripe_payment_intent', pi)
+      .eq('is_test', isTest)
+      .in('product_id', relistIds);
+    const rows = (siblings ?? []) as unknown as Array<{
+      id: string;
+      products?: { id: string; slug: string; title: string; available: boolean; quantity: number | null; archived_at: string | null };
+    }>;
+    const refundedIds = rows.map((r) => r.id);
+    if (refundedIds.length) {
+      // Optimistic flip (the webhook also flips on a full-PI refund). Non-fatal if it lags.
+      const { error: updErr } = await supabase.from('orders').update({ status: 'refunded' }).in('id', refundedIds);
+      if (updErr) console.error(`Refund status flip lagged for PI ${pi}:`, updErr.message);
+    }
+    for (const r of rows) {
+      if (!r.products) continue;
+      relist.push({
+        product_id: r.products.id, slug: r.products.slug, title: r.products.title,
+        available: r.products.available, quantity: r.products.quantity ?? 0, archived: !!r.products.archived_at,
+      });
+    }
+  }
+  // (relistIds empty = goodwill/partial, nothing returned → NO status flip, empty relist. A full-PI
+  // refund still flips every sibling order via charge.refunded.)
+  return jsonResponse(request, { ok: true, status: 'refunded', relist });
 }
 ```
-*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65`/`:172` → `order.products?.title`) — **verify the shape against a real refund response, not just `tsc`**: a wrong assumption here doesn't crash, it just returns a malformed `relist` and the "put it back up for sale?" prompt silently never fires. **`requireAdmin` returns the service-role client (`adminAuth.ts:27-31` — `SUPABASE_SECRET_KEY` on both auth paths), so the embed resolves for an archived product too** (it bypasses the `archived_at IS NULL` RLS — needed for the WS6 relist). `tsc --noEmit` clean.)*
+*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported; `orders.amount`/`product_id`/`stripe_payment_intent` are real columns (`webhook.ts:185-201` writes them). The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65` → `order.products?.title`) — **verify the relist shape against a real multi-item refund response, not just `tsc`**: a wrong assumption doesn't crash, it just returns a malformed `relist[]` and the "put it back up for sale?" prompt silently never fires. **`requireAdmin` returns the service-role client (`adminAuth.ts:27-31` — `SUPABASE_SECRET_KEY` on both auth paths), so the embed resolves for an archived product too** (bypasses the `archived_at IS NULL` RLS — needed for the WS6 relist). `tsc --noEmit` clean.)*
 
 **Phase 1.2 — `vercel.json`: the refund rewrite (more specific path first).** **CURRENT (`vercel.json:12`):**
 ```json
@@ -181,7 +222,7 @@ export async function POST(request: Request) {
   /api/orders/{id}/refund:
     post:
       operationId: refundOrder
-      summary: Issue a FULL refund on an order via Stripe (emails the buyer automatically) and mark it refunded. Returns the piece's relist state — a refund does NOT relist it. Partial refunds are done in the Stripe dashboard, not here.
+      summary: "Refund an order via Stripe (emails the buyer) and mark it refunded. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders sharing a payment. By default refunds THIS order's amount + relists THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
       parameters:
         - in: path
           name: id
@@ -195,10 +236,14 @@ export async function POST(request: Request) {
             schema:
               type: object
               properties:
-                reason: { type: string, description: "Optional note, e.g. 'Customer requested' or 'Damaged in transit'." }
+                amount_cents: { type: integer, description: "Refund amount in CENTS. Omit to refund this order's full line amount. For several pieces, sum their amounts. Stripe rejects more than the purchase total." }
+                relist_product_ids:
+                  type: array
+                  items: { type: string }
+                  description: "The Supabase product ids (NOT stripe ids) of the pieces that came back — they get marked refunded and offered for relist. Omit to default to this order's piece; pass [] for a goodwill/partial refund where nothing is returned."
       responses:
         '200':
-          description: Refund issued; order marked refunded. `relist` carries the piece's current state so you can offer to re-list it.
+          description: Refund issued. `relist` carries each returned piece's current state so you can offer to restore it (empty if nothing was returned).
           content:
             application/json:
               schema:
@@ -207,17 +252,19 @@ export async function POST(request: Request) {
                   ok: { type: boolean }
                   status: { type: string }
                   relist:
-                    type: object
-                    description: The piece's current state so you can offer to restore the returned unit. Null if the order had no product.
-                    properties:
-                      product_id: { type: string }
-                      slug: { type: string }
-                      title: { type: string }
-                      available: { type: boolean }
-                      quantity: { type: integer }
-                      archived: { type: boolean }
+                    type: array
+                    description: One entry per returned piece — its current state, so you can offer to restore each returned unit. Empty for a goodwill/partial refund.
+                    items:
+                      type: object
+                      properties:
+                        product_id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        archived: { type: boolean }
 ```
-*(`summary` ≈ 230 chars, under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. The `relist` shape is enumerated — the GPT reads `relist.archived`/`.quantity`/`.available`/`.title` in instruction 1.4a, so spell it out rather than an opaque `{type:object}` — F16. No char cap on the schema file, only the per-`summary` 300.)*
+*(`summary` ≈ 295 chars, just under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a — F16. `reason` is gone (T1·3: the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
 **Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.**
 
@@ -227,29 +274,60 @@ REFUNDS: you can SEE order status but have NO refund Action. Walk her through St
 ```
 **NEW:**
 ```
-REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches shipped/past orders, not just the needs-shipping queue). refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (state + quantity); a refund never relists itself, so ALWAYS offer to restore the returned unit — if it's down (relist.available false or archived) "Put it back up for sale?", else "Add 1 to its available quantity?". Yes -> unarchiveProduct if relist.archived AND editProduct {available:true, quantity: relist.quantity + 1} (both if both). PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
+REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches shipped/past orders, not just needs-shipping). A Stripe refund is an AMOUNT against the whole purchase, and one cart can be several orders sharing a payment. refundOrder {id} refunds THIS order's amount and relists THIS piece. CONFIRM FIRST: read back piece(s) + amount + buyer ("Refund <buyer> $X for <product>? Can't be undone."). For several pieces from one purchase: confirm which came back, pass relist_product_ids:[their ids] + amount_cents=summed cents. For a goodwill/partial amount with nothing returned: pass amount_cents + relist_product_ids:[]. It returns `relist` (an array, one per returned piece); a refund never relists itself, so for EACH entry ALWAYS offer to restore the unit — down (available false or archived) "Put it back up for sale?", else "Add 1 to its available quantity?". Yes -> unarchiveProduct if archived AND editProduct {available:true, quantity: quantity + 1} (both if both). Revenue/payouts live in Stripe.
 ```
-*(The relist offer is **always** made now (Sean's call — minimize friction, never leave stock un-restored), with wording by state: a down piece gets re-listed, an in-stock multi-qty piece gets +1 — F5. `listOrders q=` is the EXISTING orders search param (`orders.ts:60`/`:76-87` — matches id/email/tracking), already documented in the ORDERS instruction; no new capability — F12.)*
+*(Amount-based now (Sean's call — headline fold): a refund is an amount against the PaymentIntent, and a multi-item cart is N sibling orders on one payment, so refunding "the order" must NOT silently refund the whole cart. `refundOrder {id}` keeps the simple per-line path; `amount_cents` + `relist_product_ids` cover multi-piece + partial. The relist offer is **always** made, wording by state — down piece re-listed, in-stock piece +1 — and loops the `relist[]` array; `reason` removed (Stripe's is an enum; the human reason lives in the read-back). `listOrders q=` is the EXISTING search param (`orders.ts:60`/`:76-87`), already documented; no new capability.)*
 
 *1.4b — poster aside (the v2.1 testing clarification).* **CURRENT (`:25`):** `…click-to-play with sound (the default; she can add a still "poster"). Set the media flags accordingly.` → **NEW:** `…click-to-play with sound (the default; she can add a still "poster" — the image shown before the video plays). Set the media flags accordingly.`
 
-**Phase 1.5 — `/admin`: refund button + confirm + in-place state-aware relist** (`assets/js/admin.js`; order cards are built in `buildOrderCard`).
+**Phase 1.5 — `/admin`: refund composer panel + always-offer relist** (`assets/js/admin.js`; order cards are built in `buildOrderCard`). The single `window.confirm` is replaced by an inline **refund panel**: it lists every piece in the purchase (the sibling orders sharing one `stripe_payment_intent`), checkboxes mark which came back (→ relist), and an auto-summing but **freely editable** amount drives the Stripe refund (Sean's call — Stripe-faithful, amount-based; per-line is the one-piece special case). Concrete-default + render-tune; WS4 restyles with tokens.
 
-*1.5a — the button, in the order-info block.* **CURRENT (`admin.js:770-771`):**
+*1.5a — store the loaded orders so the panel can group a purchase's sibling pieces.* **CURRENT (`admin.js:681-691`):**
+```js
+function renderOrders(orders) {
+  const list = $('orders-list');
+  if (!orders.length) {
+    list.innerHTML = '<div class="empty">No orders match this view.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const order of orders) {
+    list.appendChild(buildOrderCard(order));
+  }
+}
+```
+**NEW (stash the list on `state` — the GET already returns `*` incl. `stripe_payment_intent`/`amount`/`product_id` + `products.title`, so grouping is client-side; no new endpoint, no GET change):**
+```js
+function renderOrders(orders) {
+  const list = $('orders-list');
+  state.orders = orders; // for the refund panel's sibling-piece grouping (by stripe_payment_intent)
+  if (!orders.length) {
+    list.innerHTML = '<div class="empty">No orders match this view.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const order of orders) {
+    list.appendChild(buildOrderCard(order));
+  }
+}
+```
+
+*1.5b — the Refund button + the (initially hidden) panel container, in the order-info block.* **CURRENT (`admin.js:770-771`):**
 ```js
       ${formHtml}
       <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
 ```
-**NEW (a Refund button, or a Refunded pill when already refunded):**
+**NEW (a Refund button — or a Refunded pill when already refunded — plus an empty panel the handler fills):**
 ```js
       ${formHtml}
       ${order.status === 'refunded'
-        ? '<p style="margin-top:6px"><span class="pill unsent">Refunded</span></p>'
+        ? '<p style="margin-top:6px"><span class="pill refunded">Refunded</span></p>'
         : '<button type="button" class="refund-order" style="margin-top:6px">Refund order</button>'}
+      <div class="refund-panel" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--c-border,#ddd);border-radius:6px"></div>
       <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
 ```
 
-*1.5b — wire it, after the resend handler.* **CURRENT (`admin.js:799-804`):**
+*1.5c — wire it, after the resend handler.* **CURRENT (`admin.js:799-804`):**
 ```js
   const resendBtn = card.querySelector('.resend-tracking');
   if (resendBtn) {
@@ -258,7 +336,7 @@ REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches ship
     });
   }
 ```
-**NEW (append a refund-button handler):**
+**NEW (append a refund-button handler — opens the composer panel, doesn't refund directly):**
 ```js
   const resendBtn = card.querySelector('.resend-tracking');
   if (resendBtn) {
@@ -269,29 +347,74 @@ REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches ship
 
   const refundBtn = card.querySelector('.refund-order');
   if (refundBtn) {
-    refundBtn.addEventListener('click', () => {
-      const confirmed = window.confirm(
-        `Refund ${customerEmail || 'the buyer'} ${totalLabel} for "${productTitle}"? This issues a full Stripe refund and can't be undone.`,
-      );
-      if (!confirmed) return;
-      submitRefund(order.id, card);
-    });
+    refundBtn.addEventListener('click', () => openRefundPanel(order, card));
   }
 ```
 
-*1.5c — the two functions, beside `submitShip`.* **CURRENT (the close of `submitShip`, `admin.js:830-832`):**
+*1.5d — the composer + submit + relist, beside `submitShip`.* **CURRENT (the close of `submitShip`, `admin.js:830-832`):**
 ```js
     buttons.forEach((b) => { b.disabled = false; });
   }
 }
 ```
-**NEW (same, then add `submitRefund` + `relistPiece`):**
+**NEW (same, then add `openRefundPanel` + `submitRefund` + `relistPiece`):**
 ```js
     buttons.forEach((b) => { b.disabled = false; });
   }
 }
 
-async function submitRefund(orderId, card) {
+// A Stripe refund is an AMOUNT against the whole purchase (one cart = N orders sharing a payment),
+// so the panel shows every piece in THIS purchase: CHECK the ones that came back (they get relisted),
+// and the amount auto-sums but stays freely EDITABLE (goodwill / restocking). Checkmarks drive relist;
+// the amount drives the refund. A single-item order = one piece, pre-checked, amount pre-filled.
+function openRefundPanel(order, card) {
+  const panel = card.querySelector('.refund-panel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; } // toggle closed
+  const pi = order.stripe_payment_intent;
+  const pieces = (state.orders || []).filter((o) => pi && o.stripe_payment_intent === pi && o.status !== 'refunded');
+  const list = pieces.length ? pieces : [order];
+  panel.innerHTML = `
+    <p style="font-size:13px;margin:0 0 6px">Check the pieces that came back (they'll be re-listed). The amount fills in — edit it for a partial/goodwill refund.</p>
+    <div class="refund-pieces" style="display:grid;gap:4px;margin-bottom:8px">
+      ${list.map((o) => {
+        const cents = typeof o.amount === 'number' ? o.amount : 0;
+        const checked = o.id === order.id ? ' checked' : '';
+        return `<label class="checkbox-row" style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" class="refund-piece" value="${escapeHtml(o.product_id)}" data-cents="${cents}"${checked} />
+          <span>${escapeHtml(o.products?.title ?? '(piece)')} — $${centsToDollars(cents)}</span>
+        </label>`;
+      }).join('')}
+    </div>
+    <label class="field" style="margin:0 0 8px"><span>Refund amount ($)</span>
+      <input type="number" class="refund-amount" step="0.01" min="0" /></label>
+    <button type="button" class="refund-confirm primary">Refund</button>
+    <button type="button" class="refund-cancel">Cancel</button>
+  `;
+  const amountInput = panel.querySelector('.refund-amount');
+  const checks = [...panel.querySelectorAll('.refund-piece')];
+  const sumChecked = () => checks.filter((c) => c.checked).reduce((s, c) => s + Number(c.dataset.cents || 0), 0);
+  const syncAmount = () => { amountInput.value = centsToDollars(sumChecked()); };
+  checks.forEach((c) => c.addEventListener('change', syncAmount));
+  syncAmount(); // pre-fill from the pre-checked clicked piece
+  panel.querySelector('.refund-cancel').addEventListener('click', () => { panel.style.display = 'none'; });
+  panel.querySelector('.refund-confirm').addEventListener('click', () => {
+    const amountCents = Math.round(Number.parseFloat(amountInput.value || '0') * 100);
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      card.querySelector('.order-msg').textContent = 'Enter a refund amount.'; return;
+    }
+    const checked = checks.filter((c) => c.checked);
+    const relistIds = checked.map((c) => c.value);
+    const who = order.customers?.email || order.customer_email || 'the buyer';
+    const what = checked.length ? checked.map((c) => c.nextElementSibling.textContent.split(' — ')[0]).join(', ') : 'this purchase';
+    if (!window.confirm(`Refund ${who} $${centsToDollars(amountCents)} for ${what}? This issues a Stripe refund and can't be undone.`)) return;
+    panel.style.display = 'none';
+    submitRefund(order.id, amountCents, relistIds, card);
+  });
+  panel.style.display = 'block';
+}
+
+async function submitRefund(orderId, amountCents, relistIds, card) {
   const msg = card.querySelector('.order-msg');
   msg.textContent = 'Issuing refund...';
   const buttons = card.querySelectorAll('button');
@@ -300,16 +423,15 @@ async function submitRefund(orderId, card) {
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/refund`, {
       method: 'POST',
       headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ amount_cents: amountCents, relist_product_ids: relistIds }),
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     msg.textContent = 'Refunded.';
-    const r = body.relist;
-    if (r) {
-      // ALWAYS offer to restore the returned unit (Sean's call — never leave stock un-restored).
-      // Wording by current state: a down piece (sold-out or archived) gets re-listed; an in-stock
-      // multi-qty piece just gets +1 back. Either way relistPiece restores both axes (F5).
+    // ALWAYS offer to restore EACH returned piece (Sean's call — never leave stock un-restored).
+    // Wording by state: a down piece (sold-out/archived) gets re-listed; an in-stock piece just +1.
+    // relistPiece restores both axes either way (F5).
+    for (const r of (Array.isArray(body.relist) ? body.relist : [])) {
       const down = r.archived || r.available === false;
       const ask = down
         ? `Re-list "${r.title}" and make it available for purchase again?`
@@ -323,7 +445,7 @@ async function submitRefund(orderId, card) {
   }
 }
 
-// Relist = RESTORE the refunded unit (WS6.3): unarchive when archived AND put it back in stock
+// Relist = RESTORE the returned unit (WS6.3): unarchive when archived AND put it back in stock
 // (quantity + 1 → available follows the quantity>0 rule). BOTH axes, not XOR. Mirrors the admin's
 // own calls: POST /api/products/unarchive (admin.js:634) + PUT /api/products?id=… (:474).
 // `down` only tweaks the success copy (re-listed vs +1) — the restore is identical either way.
@@ -344,15 +466,15 @@ async function relistPiece(r, down, msg) {
       body: JSON.stringify({ available: true, quantity: (r.quantity || 0) + 1 }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    msg.textContent = down ? 'Refunded + relisted.' : 'Refunded + stock +1.';
+    msg.textContent = down ? `Refunded + relisted "${r.title}".` : `Refunded + "${r.title}" stock +1.`;
   } catch (err) {
     msg.textContent = `Refunded, but relist failed (${err.message}) — relist it from the product editor.`;
   }
 }
 ```
-*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` already exist in `admin.js`; `customerEmail`, `totalLabel`, `productTitle` are already in `buildOrderCard`'s scope.)*
+*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` / `state` already exist in `admin.js`; `customerEmail` (`:701`), `totalLabel` (`:711`), `productTitle` (`:698`) are confirmed in `buildOrderCard`'s scope — T3·9. `centsToDollars` returns a plain dollar string (e.g. "50.00"), fine for the number input value. The panel reads sibling pieces from `state.orders` (set in 1.5a); a single-item order shows one pre-checked piece, so it's one extra reveal + the amount-edit affordance Sean asked for.)*
 
-**Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; it asks about relisting") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note + test-script **R15** flips from "can't issue refunds" → "issues + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
+**Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; pick the amount + which pieces came back; it asks about relisting each") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note (**document that one cart = N `orders` rows sharing one `stripe_payment_intent`, so a refund is an AMOUNT against the PaymentIntent and flips/relists only the marked pieces** — the substrate fact a cold reviewer missed, headline T) + test-script **R15** flips from "can't issue refunds" → "issues an amount-based refund + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
 ## Workstream 2 — Coupons in /admin (detailed)
 
@@ -501,14 +623,13 @@ if (document.readyState === 'loading') {
 ```js
 async function loadCoupons() {
   setStatus('coupons-status', '', 'info');
-  // The product-scope picker needs published products' stripe_product_id; fetch once if not loaded.
-  if (!state.products || !state.products.length) {
-    try {
-      const pr = await fetch('/api/products', { headers: { ...authHeader() } });
-      const pb = await pr.json().catch(() => ({}));
-      if (pr.ok && Array.isArray(pb.products)) state.products = pb.products;
-    } catch { /* non-fatal — the picker just shows Store-wide */ }
-  }
+  // The scope picker needs published products' stripe_product_id. Refetch on each open so a piece
+  // published earlier this session shows up (T3·2); keep any prior list as a fallback on error.
+  try {
+    const pr = await fetch('/api/products', { headers: { ...authHeader() } });
+    const pb = await pr.json().catch(() => ({}));
+    if (pr.ok && Array.isArray(pb.products)) state.products = pb.products;
+  } catch { /* non-fatal — the picker keeps the last list, or shows Store-wide */ }
   populateCouponProducts();
   const list = $('coupons-list');
   list.innerHTML = '<div class="empty">Loading...</div>';
@@ -667,6 +788,8 @@ if (document.readyState === 'loading') {
 
 **Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
 
+> **No `listCoupons`/`createCoupon` response-schema edit needed (round-3 T1·2, REJECTED).** A cold reviewer flagged that `expires_display` must be declared in the Action response schema or the GPT can't see it. Checked: both ops declare an **opaque 200** — `'200': { description: … }` with **no `schema.properties`** (`v2_0_0_GPT_SCHEMA.txt:233-239`). With no declared response schema the platform passes the **raw JSON body** to the model, so `expires_display` on the wire (2.2b) + the relay instruction (2.3) are sufficient; declaring it would be inert. (Contrast `refundOrder`, which *does* enumerate its `relist` response — there the shape is declared, so additions there must be too.) Do **not** add a coupon response schema.
+
 *2.2a — a formatter, above `handleCouponList`.* **CURRENT (`api/products.ts:751-752`):**
 ```ts
 // ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
@@ -763,6 +886,8 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
 ```
 The single-file POST path then ends by calling it (replacing the inlined `:195–316` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);` *(`processOne` is module-level — place it beside `normalizeMediaUrl`/`isPublicHttpUrl`, above `export async function POST`, alongside the 3.2 helpers.)*
 
+> **Verified externals (round-3 T1·5 — so this isn't "move verbatim, trust me").** The `:195–316` body references ONLY: the four params `{file, slug, role, skipTransformField}` + module-level declarations already in `upload.ts` — `ALLOWED_MIME` (`:34`), `MIME_TO_EXT` (`:43`), `ROLE_PATTERN` (`:52`), `getCloudinaryConfig` (`:62`), `sha1Hex` (`:69`), `isTest`/`env` (imports `:4`), `s3` (`:6`). After the two return-swaps (`jsonResponse(request, …)` → plain result objects) it references **no** `request`, `corsHeaders`, or `formData`, so the 4-param signature is sufficient — no `tsc "X is not defined"` cascade. `handleAttachedRefs` (3.2) likewise reads only module-level `ROLE_PATTERN`/`ALLOWED_MIME`/`MIME_TO_EXT`/`isPublicHttpUrl` — all confirmed module-scope. If the working tree has drifted, re-confirm before extracting.
+
 **Phase 3.2 — `api/upload.ts`: branch the JSON intake + add `handleAttachedRefs`.** **CURRENT (`:129-138`):**
 ```ts
   if ((request.headers.get('content-type') ?? '').includes('application/json')) {
@@ -813,33 +938,40 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   const slug = slugRaw.trim();
   const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
   const uploads: Array<{ url: string; filename: string; role: string }> = [];
+  const failures: Array<{ index: number; error: string }> = [];
   for (let i = 0; i < refs.length; i++) {
     const ref = refs[i] as FileRef;
     const link = typeof ref?.download_link === 'string' ? ref.download_link : '';
     const role = (typeof roles[i] === 'string' && ROLE_PATTERN.test((roles[i] as string).trim()))
       ? (roles[i] as string).trim()
       : positionalRole(i);
+    // Collect per-file failures instead of bailing on the first — else an already-uploaded batch is
+    // orphaned when file N is bad, and Em re-attaches all 7 (double R2 cost). The GPT reuses the
+    // successes + asks her to re-attach only the failures (T2·2).
     if (!isPublicHttpUrl(link)) {
-      return jsonResponse(request, { error: `File ${i + 1} had no usable download link (links last ~5 min — re-attach and try again).` }, 400);
+      failures.push({ index: i + 1, error: 'no usable download link (links last ~5 min — re-attach)' });
+      continue;
     }
     let mediaRes: Response;
     try { mediaRes = await fetch(link, { redirect: 'follow' }); }
-    catch { return jsonResponse(request, { error: `Could not fetch attached file ${i + 1}.` }, 400); }
+    catch { failures.push({ index: i + 1, error: 'could not fetch the attached file' }); continue; }
     const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
-      return jsonResponse(request, { error: `Attached file ${i + 1} wasn't an allowed image/video (got "${fetchedType || 'unknown'}").` }, 400);
+      failures.push({ index: i + 1, error: `not an allowed image/video (got "${fetchedType || 'unknown'}")` });
+      continue;
     }
     const bytes = Buffer.from(await mediaRes.arrayBuffer());
     const file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
     const isVid = fetchedType.startsWith('video/');
     const r = await processOne(file, slug, role, isVid ? 'true' : null);
-    if (!r.ok) return jsonResponse(request, { error: `File ${i + 1}: ${r.error}` }, r.status);
+    if (!r.ok) { failures.push({ index: i + 1, error: r.error }); continue; }
     uploads.push({ url: r.url, filename: r.filename, role });
   }
-  return jsonResponse(request, { uploads });
+  // 200 with both arrays — partial success IS success: the GPT uses uploads[] and surfaces failures[].
+  return jsonResponse(request, { uploads, failures });
 }
 ```
-*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence; F12.)*
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence; F12. **Auth is already enforced (round-3 T2·4):** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
 
 **Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
 ```json
@@ -883,8 +1015,8 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
                   items: { type: string }
                   description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
       responses:
-        '200': { description: "Returns { uploads: [{ url, role, filename }, …] } — one per attached file. Use each url verbatim in the product fields." }
-        '400': { description: "No files attached, a link expired (re-attach — links last ~5 min), more than 10 files, or a file wasn't an allowed image. Relay plainly and ask Em to re-attach." }
+        '200': { description: "Returns { uploads: [{ url, role, filename }, …], failures: [{ index, error }, …] }. Use each uploaded url verbatim in the product fields; if failures is non-empty, keep the successes and ask Em to re-attach just those." }
+        '400': { description: "No files attached, more than 10 files, or a missing slug (whole-request errors). Per-file problems come back in failures[], not here. Relay plainly." }
   /api/orders:
 ```
 *(**Keep `openaiFileIdRefs` as `items: { type: string }` — F9.** That is OpenAI's **documented** Custom-GPT contract: the platform recognizes the property name and substitutes the string array with `{name,id,mime_type,download_link}` objects at runtime, which the 3.2 handler then reads. Declaring the object shape in the schema would fight the documented substitution — and a stricter Action validator could reject a placeholder that no longer looks like a string array. We favor the documented mechanism over guessing at platform internals; the real-preview smoke test (TESTING item 14) is what proves the round-trip, and would catch a future contract change.)*
@@ -899,7 +1031,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 ```
 **NEW:**
 ```
-3. Photos: if she ATTACHES them to the chat, call uploadImages (pass openaiFileIdRefs; optionally roles[] in the shown order — hero, gallery-01.., detail-01..). If she gives a Drive "anyone with the link" share or a direct URL (or it's a video), call uploadImage instead. Either returns CDN urls — use them verbatim, never invent one. You assign the ROLE; the server names each file (never rename or invent a filename). Write a short descriptive ALT for every image (and thumbnail_alt) — never leave alt blank. REQUIRED or the create fails: at least 1 hero + at least 5 gallery + a thumbnail (you may reuse the hero url) = 7 minimum; other roles are extras. If she cannot give 5 gallery angles, say so plainly; do not retry.
+3. Photos: if she ATTACHES them to the chat, call uploadImages (pass openaiFileIdRefs; optionally roles[] in the shown order — hero, gallery-01.., detail-01..). If she gives a Drive "anyone with the link" share or a direct URL (or it's a video), call uploadImage instead. Either returns CDN urls — use them verbatim, never invent one. uploadImages returns uploads[] + failures[]; if any failed, keep the ones that worked and ask her to re-attach ONLY those (never re-send the successes). You assign the ROLE; the server names each file (never rename or invent a filename). Write a short descriptive ALT for every image (and thumbnail_alt) — never leave alt blank. REQUIRED or the create fails: at least 1 hero + at least 5 gallery + a thumbnail (you may reuse the hero url) = 7 minimum; other roles are extras. If she cannot give 5 gallery angles, say so plainly; do not retry.
 ```
 *3.5b — LINK TROUBLE (`:27`).* **CURRENT:**
 ```
@@ -907,7 +1039,7 @@ LINK TROUBLE: if uploadImage 400s (a Drive share PAGE not the file, not public, 
 ```
 **NEW:**
 ```
-LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If uploadImages 400s (no files came through, or a link expired — they last ~5 min), ask her to re-attach and retry. If uploadImage (by-link) 400s (a Drive share PAGE not the file, not public, or a video over ~25 MB showing a scan page), ask for an "anyone with the link" Drive share or a direct URL (Dropbox "?dl=1" / CDN), then retry. Video + 10+ photo batches stay on the link path.
+LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If it returns failures[] (a link expired — they last ~5 min), keep the successes and ask her to re-attach just those. A 400 means none came through (or >10 / no slug) -> ask her to re-attach and retry. If uploadImage (by-link) 400s (a Drive share PAGE not the file, not public, or a video over ~25 MB showing a scan page), ask for an "anyone with the link" Drive share or a direct URL (Dropbox "?dl=1" / CDN), then retry. Video + 10+ photo batches stay on the link path.
 ```
 
 **Phase 3.6 — `product-reference.md`: both intake methods + alt.** **CURRENT (`:61`):**
@@ -979,11 +1111,23 @@ function updateCoverage() {
   const urls = [...$('p-images').querySelectorAll('.img-url')].map((i) => i.value.trim()).filter(Boolean);
   const hero = urls.some((u) => /\/(?:test_)?hero-/.test(u));
   const gallery = urls.filter((u) => /\/(?:test_)?gallery-/.test(u)).length;
-  const thumb = !!$('p-thumbnail').value.trim() || hero; // hero may be reused as the thumbnail
+  const thumb = !!$('p-thumbnail').value.trim() || hero; // hero IS reused as the thumbnail at submit (buildProductPayload, below) — so this ✓ is honest (T1·6)
   const part = (ok, label) => `<span style="color:${ok ? '#2f7d52' : '#8a5a00'}">${ok ? '✓' : '•'} ${label}</span>`;
   el.innerHTML = [part(hero, 'hero'), part(gallery >= 5, `gallery ${gallery}/5`), part(thumb, 'thumbnail')].join(' &nbsp; ');
 }
 ```
+
+*3.7a-thumb — make the `✓ thumbnail` truthful (T1·6).* The coverage hint counts a thumbnail as satisfied when only a hero exists (`|| hero` above), but `buildProductPayload` sends `#p-thumbnail` verbatim — so publish (AR#24 requires a thumbnail) would reject *after* a green ✓ that just told her she's good. Mirror the GPT's "you may reuse the hero url" server-side from the admin. **CURRENT (`admin.js:433`):**
+```js
+    thumbnail: $('p-thumbnail').value.trim(),
+```
+**NEW (fall back to the hero image url when the field is blank, so the ✓ matches what's saved):**
+```js
+    thumbnail: $('p-thumbnail').value.trim()
+      || [...$('p-images').querySelectorAll('.img-url')].map((i) => i.value.trim()).find((u) => /\/(?:test_)?hero-/.test(u))
+      || '',
+```
+
 Plus the markup + CSS:
 - **`admin/index.html` CURRENT (`:185-186`):**
 ```html
@@ -1035,6 +1179,7 @@ function addMediaRow(m) {
   row.querySelector('.m-autoplay').checked = m?.autoplay === true;
   row.querySelector('.m-poster').value = m?.poster || '';
   row.querySelector('.m-alt').value = m?.alt || '';
+  if (m?.controls === false) row.dataset.controls = 'false'; // carry a pre-existing button-less click-to-play through the round-trip — the editor has no controls toggle (T2·1)
   const opts = row.querySelector('.m-video-opts');
   const syncOpts = () => { opts.style.display = row.querySelector('.m-type').value === 'video' ? 'flex' : 'none'; };
   syncOpts();
@@ -1054,7 +1199,8 @@ function collectMedia() {
       return;
     }
     const item = { type: 'video', url };
-    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset; controls omitted on purpose — populateMedia derives no-controls from autoplay (product.js:254), so it renders button-less (F10)
+    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset; controls omitted on purpose — populateMedia derives no-controls from autoplay (product.js:252-254), so it renders button-less (F10)
+    else if (row.dataset.controls === 'false') { item.controls = false; } // preserve a pre-existing button-less click-to-play (product.js:258 reads m.controls!==false) — T2·1 round-trip
     const poster = row.querySelector('.m-poster').value.trim();
     if (poster) item.poster = poster;
     if (alt) item.alt = alt;
@@ -1096,14 +1242,50 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
+**Phase 3.9 — GPT-instruction trims to fit the 8000 cap (T1·1 — concrete NEW text, not "consolidate").** The exclusively-executable rule wants the bytes, not a "tighten these" instruction. These three CURRENT→NEW edits to `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` cut **repetition only** — every distinct rule is preserved (verify against the CURRENT). Apply them, then `wc -c` the assembled file (see the budget callout). If it's still over, ORDERS/MEDIA carry further slack — but these three should clear it.
+
+*3.9a — THE SLUG (`:11`): state the FOLD-not-DROP rule once (it's said twice today).* **CURRENT:**
+```
+THE SLUG (derive ONCE, before uploading): it is the URL handle and the CDN photo folder, required on createProduct, and photos upload before the row exists, so derive it first. From the title: FOLD accented letters to plain ASCII (café->cafe, piñata->pinata), lowercase, spaces->hyphens, strip anything not a-z/0-9/hyphen ("Em's Lavender & Sage" -> "ems-lavender-sage"), collapse repeats. FOLD, do NOT DROP, accents: the server folds the same way, so folding keeps your slug identical to its; dropping makes the photos land in a different CDN folder and show broken. Reuse the EXACT same string for every uploadImage and createProduct. Permanent; never set on edits. (No Latin letters in the title -> ask her for a Latin-letters title.)
+```
+**NEW:**
+```
+THE SLUG (derive ONCE, before uploading — it's the URL handle + the CDN photo folder, required on createProduct, and photos upload before the row exists). From the title: FOLD accented letters to plain ASCII (café->cafe, piñata->pinata) — never DROP them; the server folds the same way, so folding keeps your slug identical to its (dropping lands photos in a different CDN folder → broken). Then lowercase, spaces->hyphens, strip anything not a-z/0-9/hyphen ("Em's Lavender & Sage" -> "ems-lavender-sage"), collapse repeats. Reuse the EXACT same string for every uploadImage + createProduct. Permanent; never set on edits. (No Latin letters in the title -> ask for a Latin-letters title.)
+```
+
+*3.9b — EDITING (`:13`): fold the duplicate "build from `effective`" rule + the PHOTOS array note into one.* **CURRENT:**
+```
+EDITING: find the piece - getProduct by slug (returns live/draft + the id), or listProducts to browse. If getProduct 404s (an apostrophe/ampersand title makes a slug you can't reconstruct), listProducts, match her wording to a title, then getProduct AGAIN with that exact slug before editing; never say "I couldn't find it" without listing first. getProduct returns `effective` (live + staged); ALWAYS build your edit values from `effective` so you don't wipe staged edits, and never report a `draft` value as the live copy (top-level = what shoppers see now). editProduct with the id + only the changed fields: price, availability, and quantity apply LIVE immediately; everything else (copy/SEO/photos/media) STAGES a draft to preview then publish. So "mark it sold" / "set the price to X" / "we got 3 more in" -> save and say it's done; copy/photo edits -> stage and hand back the preview link; never call a staged edit live until published. "Feature on the homepage" -> {featured:true}; "add to the <name> collection" -> {series:"<name>"} (both stage on a published piece). discardEdits {id} scraps a pending draft (a price change isn't staged; revert it with another editProduct). HEADS-UP: a live price/availability/quantity change leaves earlier staged copy edits untouched; if getProduct still shows a `draft` afterward, tell her she has unpublished copy edits to preview+publish or discard. PHOTOS: no per-photo command; getProduct first, send the COMPLETE `images` array (+thumbnail). When edits are pending, build it from `effective.images`, not the live top-level, or a second edit drops the first. Same for `media`.
+```
+**NEW:**
+```
+EDITING: find the piece - getProduct by slug (returns live/draft + the id), or listProducts to browse. If getProduct 404s (an apostrophe/ampersand title makes a slug you can't reconstruct), listProducts, match her wording to a title, then getProduct with that exact slug; never say "I couldn't find it" without listing first. getProduct returns `effective` (live + staged); ALWAYS build edit values from `effective` — including the COMPLETE `images`/`media` arrays (no per-photo command; send the whole array +thumbnail, or a second edit drops the rest) — so you never wipe staged edits, and never report a `draft` value as live (top-level = what shoppers see now). editProduct with the id + only changed fields: price, availability, quantity apply LIVE immediately; everything else (copy/SEO/photos/media) STAGES a draft to preview then publish. So "mark it sold" / "set the price to X" / "we got 3 more in" -> save, say it's done; copy/photo edits -> stage and hand back the preview link. "Feature on the homepage" -> {featured:true}; "add to the <name> collection" -> {series:"<name>"}. discardEdits {id} scraps a pending draft (a price change isn't staged; revert with another editProduct). HEADS-UP: a live price/availability/quantity change leaves earlier staged copy edits untouched; if getProduct still shows a `draft`, tell her to preview+publish or discard them.
+```
+
+*3.9c — PUBLISHING (`:17`): tighten the prose (no rule dropped).* **CURRENT:**
+```
+PUBLISHING: "publish" / "make it live" -> publishProduct {id}; for a new product this creates the Stripe listing and makes it purchasable. After publish the old preview link stops (expected). A publish 400 ("Missing required fields: story_card", "Minimum 5 gallery images") -> translate to plain language (story_card = the story, headline = the tagline) and tell her what to add. To re-show a lost preview: getProduct and hand back its `preview_url` EXACTLY (never hand-build a URL); if none is returned the piece is fully live -> give the plain product page link. Don't make a no-op edit to "regenerate" a link.
+```
+**NEW:**
+```
+PUBLISHING: "publish" / "make it live" -> publishProduct {id}; for a new product this creates the Stripe listing + makes it purchasable. The old preview link then stops (expected). A publish 400 ("Missing required fields: story_card", "Minimum 5 gallery images") -> translate plainly (story_card = the story, headline = the tagline) and say what to add. To re-show a lost preview: getProduct, hand back its `preview_url` EXACTLY (never hand-build one); if none comes back the piece is fully live -> give the plain product page link. Don't make a no-op edit to "regenerate" a link.
+```
+
 ## Workstream 6 — Inventory: decrement stock on a sale (pre-existing gap; F2 root cause)
 
 > Surfaced by Gap-A F2 (mis-described there as "the webhook zeroes quantity") + Sean's Stripe trace. **Stock lives only in `products.quantity` (Supabase); Stripe holds no inventory** — verified against Stripe's docs: Products/Prices have **no** stock field; you pass a *transactional* line-item `quantity` per Checkout and Stripe forgets it after charging. Stripe's own limited-inventory guidance = keep stock in your DB, decrement on `checkout.session.completed`. Today the webhook flips `available=false` on **any** sale and never touches `quantity`, so a multi-stock piece is stranded after one sale and `quantity` goes stale. Byte-anchored.
 
 **The rule — one place, applied everywhere `quantity` changes:** on a sale `quantity = max(quantity − 1, 0)` and `available = (quantity > 0)`. That derivation *is* the entire "when to make it unavailable" logic. A sale **never archives** — `archived_at` stays an independent, manual owner action. The checkout gate is already correct (`available && quantity >= 1`, `checkout.ts:79`/`:205`) and the line-item quantity stays `1` (one of each piece per order). One-of-a-kind pieces (qty 1) behave exactly as today (1 → 0 → `available:false`).
 
-**Phase 6.1 — migration: an atomic stock-decrement RPC.** New `supabase/migrations/20260616000001_v3_1_inventory_decrement.sql` (apply via the Supabase CLI — the MCP rejects writes):
+**Phase 6.1 — migration: cutover data-fix + an atomic stock-decrement RPC.** New `supabase/migrations/20260616000001_v3_1_inventory_decrement.sql` (apply via the Supabase CLI — the MCP rejects writes). **Renumber the timestamp prefix to be monotonic at apply time** if a later migration already exists (Supabase orders by filename — T3·4):
 ```sql
+-- CUTOVER DATA-FIX (run once, before the function): pre-WS6, a sale flipped available=false but never
+-- decremented quantity, so an already-sold piece sits at available:false, quantity:1. Post-WS6 a refund
+-- relist does quantity+1 = 2 → a phantom unit. Align quantity with the sold state first so relist lands
+-- at 1, not 2 (T2·9). Scope: any currently-sold row (available=false) carrying leftover stock — a
+-- manually-paused/unpublished piece is unaffected by relist anyway, and the owner can re-set its qty.
+update products set quantity = 0 where available = false and quantity > 0;
+
 -- A sale decrements OUR stock and derives availability, atomically per row (the money path: two
 -- near-simultaneous completions must not race a read-modify-write of the same count). archived_at
 -- is untouched — a sale is never an archive. available follows the POST-decrement quantity.
@@ -1151,12 +1333,12 @@ $$;
 
 **Phase 6.4 — docs (as-built). `Doc impact:`** at the v3.1.x as-built (a fresh agent, per the DEV_RULES *As-built doc-sync* rule — do NOT edit STORE mid-build; it correctly describes the **shipped** available-only model until v3.1.x ships), update `EVERLASTINGS_STORE.md`'s inventory model to the WS6 decrement behavior: the **Purchase-Flow** step ("Sets each purchased product available=false … does NOT change quantity"), **Data States #2** ("Product sold"), and the **Flag reference** `products.quantity` line (currently "a sale doesn't decrement it today … deferred until the first multi-quantity product_type") all flip to *"a sale decrements `quantity`; `available = (quantity > 0)`; `archived_at` untouched."* Also flip any test-script expectation that assumed a sale leaves quantity unchanged. **And add the one-of-each-per-order invariant** to STORE's Purchase-Flow (the cart dedupes by `product_id` at `main.js:121`; each line-item is `quantity:1`; a piece sells to separate sequential orders, never N-in-one-cart) — true of the shipped system today, and its absence is exactly what let a cold reviewer misread `record_sale` as a decrement bug (F1).
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_2_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_1_3_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_2_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_3_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.

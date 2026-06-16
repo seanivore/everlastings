@@ -1,6 +1,6 @@
-# v3.1.2 — Design Addendum
+# v3.1.3 — Design Addendum
 
-**Addendum to**: `v3_1_2_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_1_3_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
 **Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 
@@ -84,7 +84,7 @@ function productState(p) {
   return 'live';
 }
 ```
-P0's filter tabs = **All / Live / Draft / Sold / Archived** ("Edits" pieces list under **Live** with the edits badge — no separate tab, so the Live filter matches `live` **or** `edits`). P2's card badge renders `productState(p)` directly; `available`/`quantity` show as quiet meta, not a second status axis. **Both call the same function** — no divergent predicates for the builder to invent.
+P0's filter tabs = **All / Live / Draft / Sold / Archived** ("Edits" pieces list under **Live** with the edits badge — no separate tab, so the Live filter matches `live` **or** `edits`). P2's card badge renders `productState(p)` directly; `available`/`quantity` show as quiet meta, not a second status axis. **Both call the same function** — no divergent predicates for the builder to invent. *(T3·10 — edits-precedence is deliberate: a sold piece that also has staged copy edits returns `'edits'` (checked before `sold`), so it lists under **Live**, not **Sold**. Kept that way because the unpublished staged edit is the actionable state the owner needs to act on; the badge still reads "edits". Flagged for Sean's render-tune eye — flip the precedence if a sold-first view reads better.)*
 
 - **P0 · Navigation + product-list state-filter (parity/usability — do first; from `FEEDBACK_ADMIN_v2_1_0.md`).** (a) **In-admin back/nav:** the browser Back button leaves /admin entirely and clicking into a product gives no obvious return — add a clear **"← Products"** control in the editor header + an obvious active-tab state. (The editor is a view-swap in `admin.js` — `openEditor`/`closeEditor` — not a route, so this is a button calling the existing list view, NOT `history.back()`.) (b) **Product-list state-filter:** subtabs over the product list, mirroring the orders subtabs (`admin/index.html:243-256`). Concrete shape (F8 — written out so two builders don't diverge):
 ```html
@@ -116,7 +116,7 @@ function wireProductSubtabs() {                    // call once from init/attach
 ```
 In `renderProductList`, filter the already-fetched list: `const shown = (state.products || []).filter(matchesProductFilter);` then render `shown` (and show the `.empty` state when `shown.length === 0`). Pure additive UI; no backend change.
 - **P1 · Editor form sectioning.** `#product-form` (`index.html:119-239`) is ~20 stacked `.field`s with only 2 fieldsets. Wrap into **5 labeled `<fieldset>`s** in workflow order: **Essentials** (title, slug, headline, description, price, qty, type, available, featured) · **Story & Details** (story, features, materials, care, shipping, dimensions, weight, power, series, artist note) · **Media** (P3) · **Checkout (Stripe)** (existing `167-171`, keep verbatim, restyle legend) · **SEO & Sharing** (seo title/desc/thumbnail). Remove the inline `style="border:1px solid #ddd…"` on `166`/`173`; add one reusable rule: `fieldset { border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-4); background:var(--c-surface); } fieldset>legend { font-size:var(--fs-md); font-weight:var(--fw-semibold); padding:0 var(--s-2); } .product-form { gap:var(--s-5); }`. Pure HTML+CSS; `openEditor` targets the same `#p-*` IDs.
-- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12), available→neutral-bg); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class.
+- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12), available→neutral-bg; and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state; T3·3); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class.
 - **P3 · Media (the biggest win — removes the only raw-JSON field).**
   - **3a Image-list previews.** `addImageRow` (`admin.js:331-345`) renders URL+alt+Remove only. Prepend a 40×40 `<img class="img-thumb">` (`object-fit:cover; var(--r-sm); background:var(--c-surface-2)`) whose `src` tracks the URL input, + a role-prefix tag from the filename covering **all 7 roles** (`hero`/`thumbnail`/`seo_thumbnail`/`checkout_image`/`gallery-NN`/`detail-NN`/`video-NN` — matches IMPLEMENT 3.7a's regex; the earlier 5-role version dropped `seo_thumbnail`/`checkout_image`, F6). Regrid `.img-url-row` → `40px 64px 1fr 1fr auto` (thumb, role, url, alt, remove) — matches IMPLEMENT 3.7a (F12).
   - **3b "Still need" coverage hint.** The "≥1 hero + 5 gallery" requirement is static prose (`index.html:182-184`). Add a live `#img-coverage` line above the Add button counting rows by role prefix → `Hero ✓ · Gallery 3 / 5 needed · Thumbnail ✓` (`--c-success` met / `--c-warn` unmet). New `updateCoverage()` called from add/remove/url-change. Additive JS.
@@ -127,10 +127,64 @@ In `renderProductList`, filter the already-fetched list: `const shown = (state.p
       - **Video zone `skip_transform`:** every Video-zone upload POSTs `skip_transform=true` **unconditionally** (a video always skips the Cloudinary crop) — this is the home for the old 3.7c rule (IMPLEMENT 3.7c is collapsed into here; do NOT edit the removed `#upload-role` handler).
       - **Landing order:** each upload appends an `addImageRow` to `#p-images` (the existing single image list) — the zones are just role-routers, not separate stores; the final `images[]` order = `#p-images` DOM order (so a Hero zone can prepend if you want hero first, but the payload shape is unchanged). Video uploads append to the `#p-media-list` (3c), not `#p-images`.
       - **Per-zone errors + empty state:** an upload failure renders inline in that zone (reuse `setStatus`/a zone `.zone-msg`), not a global alert; an empty zone shows a quiet "Drop or choose a {role} image" placeholder. No silent failures.
+    - **Concrete default (markup + JS skeleton — T1·4; render-tune the look, not the routing).** P0 ships exact markup; so does this, so two builders don't diverge on the load-bearing role routing. Replace `admin/index.html:195` (the file input + `#upload-role` select + `admin.js:onUploadImage`) with seven zones — one shown verbatim, the other six identical but for `data-role` + label (`gallery`, `detail`, `thumbnail`, `seo_thumbnail`, `checkout_image`, `video`; the Video zone's input is `accept="video/*"`):
+```html
+<div class="upload-zones">
+  <div class="upload-zone" id="upload-zone-hero" data-role="hero">
+    <label>Hero</label>
+    <input type="file" class="zone-file" accept="image/*" />
+    <div class="zone-msg" style="font-size:12px;color:var(--c-text-muted)">Drop or choose a hero image</div>
+  </div>
+  <!-- …six more: gallery · detail · thumbnail · seo_thumbnail · checkout_image · video -->
+</div>
+```
+A shared wirer + a numbered-role resolver (gallery/detail/video number per-upload; single roles use the base). Mirrors the existing `onUploadImage` POST (`admin.js:358-400`) — `deriveSlug`/`addImageRow`/`addMediaRow`/`authHeader` already exist:
+```js
+function nextNumberedRole(base) {
+  // base = 'gallery' | 'detail' | 'video'. Scan the relevant list for the highest base-NN, IGNORE
+  // holes, return base-0(N+1). NEVER renumber an existing file (the CDN filename is the role).
+  const sel = base === 'video' ? '#p-media-list .m-url' : '#p-images .img-url';
+  const re = new RegExp(`\\/(?:test_)?${base}-(\\d+)[-.]`);
+  let max = 0;
+  document.querySelectorAll(sel).forEach((i) => { const m = i.value.match(re); if (m) max = Math.max(max, +m[1]); });
+  return `${base}-${String(max + 1).padStart(2, '0')}`;
+}
+
+async function wireUploadZone(zoneEl, role) {
+  const fileInput = zoneEl.querySelector('.zone-file');
+  const msg = zoneEl.querySelector('.zone-msg');
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const slug = $('p-slug').value.trim() || deriveSlug($('p-title').value);
+    if (!slug) { msg.textContent = 'Enter a title or slug first.'; return; }
+    const numbered = role === 'gallery' || role === 'detail' || role === 'video';
+    const resolvedRole = numbered ? nextNumberedRole(role) : role;
+    const fd = new FormData();
+    fd.append('file', file); fd.append('slug', slug); fd.append('role', resolvedRole);
+    if (role === 'video') fd.append('skip_transform', 'true'); // a video always skips the Cloudinary crop (old 3.7c rule)
+    msg.textContent = 'Uploading…';
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', headers: { ...authHeader() }, body: fd });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      msg.textContent = `Added ${resolvedRole}.`;
+      if (role === 'video') addMediaRow({ type: 'video', url: body.url });
+      else { if (role === 'thumbnail' && !$('p-thumbnail').value.trim()) $('p-thumbnail').value = body.url; addImageRow(body.url, ''); }
+      fileInput.value = ''; // ready for the next drop in this zone
+    } catch (err) { msg.textContent = `Failed: ${err.message}`; }
+  });
+}
+
+function wireUploadZones() { // call once from init/attachEventListeners
+  document.querySelectorAll('.upload-zone').forEach((z) => wireUploadZone(z, z.dataset.role));
+}
+```
+The zones are role-routers into the same `#p-images`/`#p-media-list` (3a/3b/3c read them) — no separate store, payload shape unchanged. Sean render-tunes the visual (drop targets, grid, hover); the routing is fixed.
 - **P4 · Loading / error / empty states.** Orders loading is bare text (`admin.js:651`); products has no loading state (`218-232`). Add **skeleton** cards (`.skeleton{background:linear-gradient(90deg,var(--c-surface-2) 25%,#e9ecef 37%,var(--c-surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r-sm)}` + `@keyframes shimmer{to{background-position:-200% 0}}` + `@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}`). Empty states: `.empty{color:var(--c-text-faint);padding:var(--s-7);text-align:center;border:1px dashed var(--c-border);border-radius:var(--r-md)}` + a CTA where one exists. Errors keep `.status-msg.error` + token colors + a `border-left:3px solid var(--c-danger)` accent (success/info likewise) so they're distinguishable beyond tint.
 - **P5 · Mobile (zero breakpoints today).** One block at the stylesheet end: `@media (max-width:640px){ .container{padding:var(--s-4)} .row-2,.row-3,.ship-form{grid-template-columns:1fr} .order-card{grid-template-columns:1fr} .order-card img{height:180px} .img-url-row{grid-template-columns:40px 1fr;grid-auto-flow:row} .upload-row{grid-template-columns:1fr} .product-list{grid-template-columns:1fr 1fr} .tabs,.subtabs{overflow-x:auto} }`. Pure CSS.
 - **P6 · Address block.** `formatAddress` (`admin.js:669-678`) renders a monospace `<pre class="address-block">` (`index.html:52`) — reads as debug output. Restyle to the body font: `.address-block{background:var(--c-surface-2);border:1px solid var(--c-border);border-radius:var(--r-md);padding:var(--s-3);font-size:var(--fs-sm);line-height:var(--lh-base);white-space:pre-wrap;font-family:var(--font)}`. Pair the existing "Copy address" button (`admin.js:775-783`) top-right as a ghost button. Reserve `var(--font-mono)` for the tracking number only.
-- **P7 · Tabs / topbar / login chrome (CSS-only, high showcase value).** Topbar → `background:var(--c-surface);border-bottom:1px solid var(--c-border);box-shadow:var(--sh-sm)`, `h1` `var(--fs-lg)/600/-0.01em`. Tabs → underline indicator (`.tab-btn.active{color:var(--c-accent);box-shadow:inset 0 -2px 0 var(--c-accent);font-weight:var(--fw-semibold)}`, drop the `-1px` margin hack). Subtabs → pill toggle group. Login card → `background:var(--c-surface);box-shadow:var(--sh-lg);border-radius:var(--r-lg);border:none;margin-top:12vh`.
+- **P7 · Tabs / topbar / login chrome (CSS-only, high showcase value).** Topbar → `background:var(--c-surface);border-bottom:1px solid var(--c-border);box-shadow:var(--sh-sm)`, `h1` `var(--fs-lg)/600/-0.01em`. Tabs → underline indicator (`.tab-btn.active{color:var(--c-accent);box-shadow:inset 0 -2px 0 var(--c-accent);font-weight:var(--fw-semibold)}`, drop the `-1px` margin hack). Subtabs → pill toggle group. Login card (`.login-card` confirmed real — CSS `admin/index.html:16`, markup `:78`; T2·10) → `background:var(--c-surface);box-shadow:var(--sh-lg);border-radius:var(--r-lg);border:none;margin-top:12vh`.
 
 **Constraints honored:** vanilla HTML/CSS/JS, same `#p-*` IDs + `state`/`fetch` flow, identical backend payload shape (image + media arrays unchanged → `api/products` needs no change), incremental re-skin + restructure. Only `admin/index.html` + `assets/js/admin.js` change; `styles.css` is never imported.
 
@@ -166,7 +220,7 @@ In `renderProductList`, filter the already-fetched list: `const shown = (state.p
 @media (prefers-reduced-motion: reduce) { .hero__title-lottie { display: none; } }  /* static <h1> only */
 ```
 
-**Embed (init in `homepage.js` — confirmed loaded at `index.html:89`; pin the lottie-web version).**
+**Embed (init in `homepage.js` — confirmed loaded at `index.html:89`; pin the lottie-web version). Insert the lottie `<script defer>` BEFORE the existing `homepage.js` tag (`index.html:89`):** `defer` scripts run in document order, so lottie must precede `homepage.js` or `window.lottie` is undefined when `homepage.js`'s `DOMContentLoaded` fires → silent static-`<h1>` fallback even when motion is wanted (T2·7).
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js" defer></script>
 ```
@@ -189,7 +243,7 @@ The static `<h1>` paints immediately (no FOUC / no blank hero); `.has-lottie` hi
 
 **Gotchas:** outline-paths only (no baked font); SVG renderer (not canvas); author in the skill's supported subset (shape/stroke/trim/fill — no exotic AE effects/expressions) so Skottie-harness and lottie-web agree, and **verify the final JSON once in lottie-web's SVG renderer** before shipping (Skottie coverage is broader). File is small (low-tens-of-kB); lottie-web runtime ~84 kB gz, load `defer`.
 
-**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script), `assets/css/styles.css` (`.hero__title*` near the existing `.hero h1` rule + the hero's reduced-motion block — locate by content; the line hints have drifted; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
+**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script before `homepage.js`), `assets/css/styles.css` (`.hero__title*` near the existing `.hero h1` rule + the hero's reduced-motion block — locate by content; the line hints have drifted; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches — **both tokens confirmed present (`styles.css:51` `--font-display`, `:63` `--text-5xl`, used by `.hero h1:975`); if ever renamed, hardcode `font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(2rem,5vw,3.5rem)` on `.hero__title-text` so the swap-in isn't jarring** — T2·8), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
 
 ## 5.2 — Old-film hero (HyperFrames) — DECISION: build-time re-rendered MP4
 
