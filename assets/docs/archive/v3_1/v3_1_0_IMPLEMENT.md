@@ -652,10 +652,184 @@ COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; 
 COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give. listCoupons returns expires_display (a plain date) beside each sale's scope (store-wide vs specific) — relay THAT; never decode a raw timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
 ```
 
+## Workstream 3 — Chat-attach upload + admin media UX (detailed)
+
+*Folds `assets/docs/archive/v3_0/v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` (its CURRENT anchors re-verified against the working tree) + the round-2 alt-text + filename/role folds. The brief stays as provenance. **Mechanism:** OpenAI's `openaiFileIdRefs` — Em attaches photos in the chat, the GPT forwards them, the server fetches each `download_link` through the EXISTING `api/upload.ts` pipeline. **Dual-path by design:** the by-link `uploadImage` stays as the backstop (Drive / video / 10+ bulk). No DB change, no new Vercel function.*
+
+**Phase 3.1 — `api/upload.ts`: extract the per-file tail into `processOne`.** The single-file validation + Cloudinary/R2 pipeline + success return (the block **from `if (!slug || !role)` at `:195` through the success `return jsonResponse(request, { url: publicUrl, filename })` at `:316`**) **moves verbatim** into a module-level helper that returns a result object instead of a `Response`: swap each `return jsonResponse(request, { error: … }, status)` for `return { ok: false as const, error: …, status }`, and the final success return for `return { ok: true as const, url: publicUrl, filename }`.
+```ts
+type UploadResult = { ok: true; url: string; filename: string } | { ok: false; error: string; status: number };
+
+async function processOne(file: File, slug: string, role: string, skipTransformField: string | null): Promise<UploadResult> {
+  if (!slug || !role) return { ok: false, error: 'Missing file, slug, or role', status: 400 };
+  if (!ROLE_PATTERN.test(role)) return { ok: false, error: 'Invalid role', status: 400 };
+  // … the existing :202–316 body, verbatim, with the two return-swaps above …
+}
+```
+The single-file POST path then ends by calling it (replacing the inlined `:195–316` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);`
+
+**Phase 3.2 — `api/upload.ts`: branch the JSON intake + add `handleAttachedRefs`.** **CURRENT (`:129-138`):**
+```ts
+  if ((request.headers.get('content-type') ?? '').includes('application/json')) {
+    let body: { url?: unknown; slug?: unknown; role?: unknown; skip_transform?: unknown };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return jsonResponse(request, { error: 'Invalid JSON body' }, 400);
+    }
+    if (typeof body.url !== 'string' || typeof body.slug !== 'string' || typeof body.role !== 'string') {
+      return jsonResponse(request, { error: 'Missing url, slug, or role' }, 400);
+    }
+```
+**NEW (widen the body type + branch to the batch path when `openaiFileIdRefs` is present):**
+```ts
+  if ((request.headers.get('content-type') ?? '').includes('application/json')) {
+    let body: {
+      url?: unknown; slug?: unknown; role?: unknown; skip_transform?: unknown;
+      openaiFileIdRefs?: unknown; roles?: unknown;
+    };
+    try {
+      body = (await request.json()) as typeof body;
+    } catch {
+      return jsonResponse(request, { error: 'Invalid JSON body' }, 400);
+    }
+    // Custom GPT chat-attach path: OpenAI populates `openaiFileIdRefs` with { name, id, mime_type,
+    // download_link } objects (download_link ~5-min, <=10 files). Fetch each through the SAME pipeline.
+    if (Array.isArray(body.openaiFileIdRefs)) {
+      return await handleAttachedRefs(request, body.openaiFileIdRefs, body.slug, body.roles);
+    }
+    if (typeof body.url !== 'string' || typeof body.slug !== 'string' || typeof body.role !== 'string') {
+      return jsonResponse(request, { error: 'Missing url, slug, or role' }, 400);
+    }
+```
+Plus the new module-level helpers (beside `normalizeMediaUrl`/`isPublicHttpUrl`, above `export async function POST`):
+```ts
+type FileRef = { name?: string; id?: string; mime_type?: string; download_link?: string };
+
+function positionalRole(i: number): string {
+  if (i === 0) return 'hero';
+  return `gallery-${String(i).padStart(2, '0')}`; // 1 → gallery-01 …
+}
+
+async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: unknown, rolesRaw: unknown): Promise<Response> {
+  if (typeof slugRaw !== 'string' || !slugRaw.trim()) return jsonResponse(request, { error: 'Missing slug' }, 400);
+  if (refs.length === 0) return jsonResponse(request, { error: 'No files attached. Ask Em to attach the photos to the message.' }, 400);
+  if (refs.length > 10) return jsonResponse(request, { error: 'Up to 10 files per message — send them in batches.' }, 400);
+  const slug = slugRaw.trim();
+  const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
+  const uploads: Array<{ url: string; filename: string; role: string }> = [];
+  for (let i = 0; i < refs.length; i++) {
+    const ref = refs[i] as FileRef;
+    const link = typeof ref?.download_link === 'string' ? ref.download_link : '';
+    const role = (typeof roles[i] === 'string' && ROLE_PATTERN.test((roles[i] as string).trim()))
+      ? (roles[i] as string).trim()
+      : positionalRole(i);
+    if (!isPublicHttpUrl(link)) {
+      return jsonResponse(request, { error: `File ${i + 1} had no usable download link (links last ~5 min — re-attach and try again).` }, 400);
+    }
+    let mediaRes: Response;
+    try { mediaRes = await fetch(link, { redirect: 'follow' }); }
+    catch { return jsonResponse(request, { error: `Could not fetch attached file ${i + 1}.` }, 400); }
+    const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
+      return jsonResponse(request, { error: `Attached file ${i + 1} wasn't an allowed image/video (got "${fetchedType || 'unknown'}").` }, 400);
+    }
+    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    const file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
+    const isVid = fetchedType.startsWith('video/');
+    const r = await processOne(file, slug, role, isVid ? 'true' : null);
+    if (!r.ok) return jsonResponse(request, { error: `File ${i + 1}: ${r.error}` }, r.status);
+    uploads.push({ url: r.url, filename: r.filename, role });
+  }
+  return jsonResponse(request, { uploads });
+}
+```
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything.)*
+
+**Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
+```json
+    { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
+```
+**NEW (add after it):**
+```json
+    { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
+    { "source": "/api/upload/attach", "destination": "/api/upload" },
+```
+
+**Phase 3.4 — GPT schema: add `uploadImages` + point `uploadImage` at it.**
+
+*3.4a — insert the new op before `/api/orders`.* **CURRENT (`v2_0_0_GPT_SCHEMA.txt:284-285`):**
+```yaml
+        '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
+  /api/orders:
+```
+**NEW (insert the op between them):**
+```yaml
+        '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
+  /api/upload/attach:
+    post:
+      operationId: uploadImages
+      summary: "Upload one or more photos the owner ATTACHED to this chat (not a link). Call this with their attached images, then put each returned url into images[]/thumbnail on createProduct/editProduct. For media she gives as a Drive/direct LINK, or for video, use uploadImage instead."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openaiFileIdRefs, slug]
+              properties:
+                openaiFileIdRefs:
+                  type: array
+                  items: { type: string }
+                  description: "The photos the owner attached to the chat. Leave the values to the platform — just include this property so the attached files are forwarded. Up to 10 per call."
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the files on the CDN. Same value you'll use on createProduct." }
+                roles:
+                  type: array
+                  items: { type: string }
+                  description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
+      responses:
+        '200': { description: "Returns { uploads: [{ url, role, filename }, …] } — one per attached file. Use each url verbatim in the product fields." }
+        '400': { description: "No files attached, a link expired (re-attach — links last ~5 min), more than 10 files, or a file wasn't an allowed image. Relay plainly and ask Em to re-attach." }
+  /api/orders:
+```
+*3.4b — point `uploadImage` at the new op.* **CURRENT (`:269`):** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."` → **NEW:** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Use this for media given as a LINK (a Drive share or direct URL) or for video. If she ATTACHED photos to the chat, use uploadImages instead."` *(keep < 300 chars)*
+
+**Phase 3.5 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.**
+
+*3.5a — step 3 (`:6`).* **CURRENT:**
+```
+3. Photos/videos arrive as LINKS only (a Google Drive "anyone with the link" share, or a direct file URL); you cannot use a file pasted into chat. uploadImage each (roles are in the uploadImage Action); it returns a CDN url, use that verbatim, never invent one. REQUIRED or the create fails: at least 1 hero + at least 5 gallery + a thumbnail (you may reuse the hero url) = 7 minimum; other roles are extras. If she cannot give 5 gallery angles, say so plainly; do not retry.
+```
+**NEW:**
+```
+3. Photos: if she ATTACHES them to the chat, call uploadImages (pass openaiFileIdRefs; optionally roles[] in the shown order — hero, gallery-01.., detail-01..). If she gives a Drive "anyone with the link" share or a direct URL (or it's a video), call uploadImage instead. Either returns CDN urls — use them verbatim, never invent one. You assign the ROLE; the server names each file (never rename or invent a filename). Write a short descriptive ALT for every image (and thumbnail_alt) — never leave alt blank. REQUIRED or the create fails: at least 1 hero + at least 5 gallery + a thumbnail (you may reuse the hero url) = 7 minimum; other roles are extras. If she cannot give 5 gallery angles, say so plainly; do not retry.
+```
+*3.5b — LINK TROUBLE (`:27`).* **CURRENT:**
+```
+LINK TROUBLE: if uploadImage 400s (a Drive share PAGE not the file, not public, or a video over ~25 MB showing a scan page), ask her for an "anyone with the link" Drive share or a direct URL (Dropbox "?dl=1" / CDN), then retry. A photo pasted in chat -> say you can't use a pasted file; ask for a link.
+```
+**NEW:**
+```
+LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If uploadImages 400s (no files came through, or a link expired — they last ~5 min), ask her to re-attach and retry. If uploadImage (by-link) 400s (a Drive share PAGE not the file, not public, or a video over ~25 MB showing a scan page), ask for an "anyone with the link" Drive share or a direct URL (Dropbox "?dl=1" / CDN), then retry. Video + 10+ photo batches stay on the link path.
+```
+
+**Phase 3.6 — `product-reference.md`: both intake methods + alt.** **CURRENT (`:61`):**
+```
+- The system crops to 4:5, converts to WebP, and puts each on the CDN — Em just sends the photos.
+```
+**NEW:**
+```
+- Two ways photos come in: Em **attaches** them to the chat (→ uploadImages) or gives a **link** (Drive share / direct URL, or any video → uploadImage). Either way she never renames anything — you assign the role, the server names + crops to 4:5, converts to WebP, and puts each on the CDN. Write a short descriptive **alt** for every image (and `thumbnail_alt`).
+```
+
+**Phase 3.7 — admin media UX (DIRECTION → byte-anchored next).** Per the design addendum §WS4 P3: image-list **preview thumbnails** + a **remaining-role hint** ("need 1 hero + 5 gallery") + a **structured MP4/YouTube editor** replacing the raw-JSON `#p-media` textarea (`admin/index.html:159`) + **auto-infer `skip_transform`** from the file type. Anchors against `admin.js` `addImageRow` (`:331`), `collectImages` (`:347`), `onUploadImage` (`:358`), `openEditor`'s media line (`:298`), and `buildProductPayload`'s media parse (`:449-455`) — read those when detailing.
+
+**Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
+
 ## Later (direction only) — Workstreams 2–5
 
 - **2 · Coupons in /admin** — see the **Workstream 2 (detailing)** section above: 2.2 (human `expires_display`) + 2.3 (read-back beat) are byte-anchored; 2.1 (the /admin Coupons UI) is anchored next.
-- **3 · Chat-attach + admin upload UX** — fold the `v3_0_0` brief's phases (upload.ts intake, schema `uploadImages`, vercel rewrite, instructions flip) + the admin upload previews / remaining-role hint / structured MP4 editor / auto-skip_transform **+ the alt-text requirement + the filename/role clarification** (server names from role; frontend reads role from the filename).
+- **3 · Chat-attach + admin media UX** — see the detailed **Workstream 3** section above: 3.1–3.6 (chat-attach `uploadImages` + schema + instructions flip + alt-text + filename/role) are byte-anchored; 3.7 (admin media UX: previews + remaining-role hint + structured MP4 editor + auto-skip_transform) is anchored next; 3.8 premise-sweep at as-built.
 - **4 · Admin polish** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §WS4 (token system + P1–P7 with a de-risking fold order) **+ in-admin nav/back + product-list state-filter tabs**; byte-anchor to `admin/index.html` + `assets/js/admin.js` next. Execution captures live /admin screenshots (Claude-in-Chrome) for multiple fresh-instance design passes; optional `improve` skill audit.
 - **5 · Homepage experience** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §5 (Lottie title §5.1; old-film hero §5.2, build-time resolved); byte-anchor next.
 
