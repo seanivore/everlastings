@@ -822,7 +822,188 @@ LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If u
 - Two ways photos come in: Em **attaches** them to the chat (→ uploadImages) or gives a **link** (Drive share / direct URL, or any video → uploadImage). Either way she never renames anything — you assign the role, the server names + crops to 4:5, converts to WebP, and puts each on the CDN. Write a short descriptive **alt** for every image (and `thumbnail_alt`).
 ```
 
-**Phase 3.7 — admin media UX (DIRECTION → byte-anchored next).** Per the design addendum §WS4 P3: image-list **preview thumbnails** + a **remaining-role hint** ("need 1 hero + 5 gallery") + a **structured MP4/YouTube editor** replacing the raw-JSON `#p-media` textarea (`admin/index.html:159`) + **auto-infer `skip_transform`** from the file type. Anchors against `admin.js` `addImageRow` (`:331`), `collectImages` (`:347`), `onUploadImage` (`:358`), `openEditor`'s media line (`:298`), and `buildProductPayload`'s media parse (`:449-455`) — read those when detailing.
+**Phase 3.7 — admin media UX** (the design addendum §WS4 P3, byte-anchored). Removes the only raw-JSON field a non-technical owner faces + brings the admin to media parity with the GPT.
+
+*3.7a — image previews + role tag + a live coverage hint.* Rewrite `addImageRow` (`admin.js:331-345`). **CURRENT:**
+```js
+function addImageRow(url, alt) {
+  const list = $('p-images');
+  const row = document.createElement('div');
+  row.className = 'img-url-row';
+  row.innerHTML = `
+    <span style="font-size:11px;color:#666">URL</span>
+    <input type="url" class="img-url" placeholder="https://cdn.../products/slug/hero-slug.webp" />
+    <input type="text" class="img-alt" placeholder="alt text" />
+    <button type="button" class="remove-row">Remove</button>
+  `;
+  row.querySelector('.img-url').value = url || '';
+  row.querySelector('.img-alt').value = alt || '';
+  row.querySelector('.remove-row').addEventListener('click', () => row.remove());
+  list.appendChild(row);
+}
+```
+**NEW (adds a thumbnail + role tag that track the URL, + recompute coverage):**
+```js
+function addImageRow(url, alt) {
+  const list = $('p-images');
+  const row = document.createElement('div');
+  row.className = 'img-url-row';
+  row.innerHTML = `
+    <img class="img-thumb" alt="" />
+    <span class="img-role" style="font-size:11px;color:#666"></span>
+    <input type="url" class="img-url" placeholder="https://cdn.../products/slug/hero-slug.webp" />
+    <input type="text" class="img-alt" placeholder="alt text" />
+    <button type="button" class="remove-row">Remove</button>
+  `;
+  const urlInput = row.querySelector('.img-url');
+  const thumb = row.querySelector('.img-thumb');
+  const roleTag = row.querySelector('.img-role');
+  const sync = () => {
+    const v = urlInput.value.trim();
+    thumb.src = v;
+    thumb.style.visibility = v ? 'visible' : 'hidden';
+    const m = v.match(/\/(?:test_)?(hero|thumbnail|gallery-\d+|detail-\d+|video-\d+)[-.]/);
+    roleTag.textContent = m ? m[1] : '';
+    updateCoverage();
+  };
+  urlInput.value = url || '';
+  row.querySelector('.img-alt').value = alt || '';
+  urlInput.addEventListener('input', sync);
+  row.querySelector('.remove-row').addEventListener('click', () => { row.remove(); updateCoverage(); });
+  list.appendChild(row);
+  sync();
+}
+
+function updateCoverage() {
+  const el = $('img-coverage');
+  if (!el) return;
+  const urls = [...$('p-images').querySelectorAll('.img-url')].map((i) => i.value.trim()).filter(Boolean);
+  const hero = urls.some((u) => /\/(?:test_)?hero-/.test(u));
+  const gallery = urls.filter((u) => /\/(?:test_)?gallery-/.test(u)).length;
+  const thumb = !!$('p-thumbnail').value.trim() || hero; // hero may be reused as the thumbnail
+  const part = (ok, label) => `<span style="color:${ok ? '#2f7d52' : '#8a5a00'}">${ok ? '✓' : '•'} ${label}</span>`;
+  el.innerHTML = [part(hero, 'hero'), part(gallery >= 5, `gallery ${gallery}/5`), part(thumb, 'thumbnail')].join(' &nbsp; ');
+}
+```
+Plus the markup + CSS:
+- **`admin/index.html` CURRENT (`:185-186`):**
+```html
+                  <div id="p-images" class="img-url-list"></div>
+                  <button type="button" id="add-image-row" style="margin-top:6px">Add image URL</button>
+```
+**NEW (a coverage line between them):**
+```html
+                  <div id="p-images" class="img-url-list"></div>
+                  <div id="img-coverage" style="font-size:12px;margin:6px 0"></div>
+                  <button type="button" id="add-image-row" style="margin-top:6px">Add image URL</button>
+```
+- **`admin/index.html` CSS CURRENT (`:61`):** `      .img-url-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; }` → **NEW:** `      .img-url-row { display: grid; grid-template-columns: 40px 64px 1fr 1fr auto; gap: 6px; align-items: center; }` + add `      .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; }` right after it.
+
+*3.7b — structured MP4/YouTube editor (replaces the raw-JSON `#p-media` textarea).* **`admin/index.html` CURRENT (`:159`):**
+```html
+              <label class="field"><span>Media (JSON array — optional MP4 / YouTube, in order)</span><textarea id="p-media" rows="3" placeholder='[{"type":"video","url":"https://cdn.../video-01-slug.mp4","loop":true,"autoplay":true},{"type":"youtube","url":"https://youtu.be/ID"}]'></textarea></label>
+```
+**NEW:**
+```html
+              <div>
+                <strong style="font-size:13px">Media (optional — MP4 clips + YouTube, in order)</strong>
+                <p style="font-size:12px;color:#666;margin:4px 0 8px">MP4s render before YouTube. Per clip, choose how it plays.</p>
+                <div id="p-media-list" class="img-url-list"></div>
+                <button type="button" id="add-media-row" style="margin-top:6px">Add video</button>
+              </div>
+```
+`admin.js` — add `addMediaRow` + `collectMedia` (beside `addImageRow`/`collectImages`):
+```js
+function addMediaRow(m) {
+  const list = $('p-media-list');
+  const row = document.createElement('div');
+  row.className = 'media-row';
+  row.style.cssText = 'border:1px solid #eee;border-radius:4px;padding:8px;display:grid;gap:6px';
+  row.innerHTML = `
+    <div style="display:grid;grid-template-columns:110px 1fr auto;gap:6px;align-items:center">
+      <select class="m-type"><option value="video">MP4 clip</option><option value="youtube">YouTube</option></select>
+      <input type="url" class="m-url" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+      <button type="button" class="remove-row">Remove</button>
+    </div>
+    <div class="m-video-opts" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px">
+      <label class="checkbox-row"><input type="checkbox" class="m-autoplay" /><span>Autoplay + loop, silent (GIF-like)</span></label>
+      <input type="url" class="m-poster" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+    </div>
+    <input type="text" class="m-alt" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+  `;
+  row.querySelector('.m-type').value = m?.type === 'youtube' ? 'youtube' : 'video';
+  row.querySelector('.m-url').value = m?.url || '';
+  row.querySelector('.m-autoplay').checked = m?.autoplay === true;
+  row.querySelector('.m-poster').value = m?.poster || '';
+  row.querySelector('.m-alt').value = m?.alt || '';
+  const opts = row.querySelector('.m-video-opts');
+  const syncOpts = () => { opts.style.display = row.querySelector('.m-type').value === 'video' ? 'flex' : 'none'; };
+  syncOpts();
+  row.querySelector('.m-type').addEventListener('change', syncOpts);
+  row.querySelector('.remove-row').addEventListener('click', () => row.remove());
+  list.appendChild(row);
+}
+
+function collectMedia() {
+  const out = [];
+  $('p-media-list').querySelectorAll('.media-row').forEach((row) => {
+    const url = row.querySelector('.m-url').value.trim();
+    if (!url) return;
+    const alt = row.querySelector('.m-alt').value.trim();
+    if (row.querySelector('.m-type').value === 'youtube') {
+      out.push(alt ? { type: 'youtube', url, alt } : { type: 'youtube', url });
+      return;
+    }
+    const item = { type: 'video', url };
+    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset
+    const poster = row.querySelector('.m-poster').value.trim();
+    if (poster) item.poster = poster;
+    if (alt) item.alt = alt;
+    out.push(item);
+  });
+  return out;
+}
+```
+`openEditor` — build rows instead of stringifying. **CURRENT (`admin.js:298`):** `  $('p-media').value = eff?.media ? JSON.stringify(eff.media) : '';` → **NEW:**
+```js
+  const mediaList = $('p-media-list');
+  mediaList.innerHTML = '';
+  if (Array.isArray(eff?.media)) eff.media.forEach((m) => addMediaRow(m));
+```
+`buildProductPayload` — collect instead of parse. **CURRENT (`admin.js:449-455`):**
+```js
+  const mediaRaw = $('p-media').value.trim();
+  if (mediaRaw) {
+    try { payload.media = JSON.parse(mediaRaw); }
+    catch { throw new Error('Media must be a valid JSON array or empty'); }
+  } else {
+    payload.media = null;
+  }
+```
+**NEW (the JSON.parse throw path is now structurally impossible; same array shape out):**
+```js
+  const media = collectMedia();
+  payload.media = media.length ? media : null;
+```
+`attachEventListeners` — wire the add button. **CURRENT (`admin.js:152`):** `  $('add-image-row').addEventListener('click', () => addImageRow('', ''));` → **NEW (add the line after it):**
+```js
+  $('add-image-row').addEventListener('click', () => addImageRow('', ''));
+  $('add-media-row').addEventListener('click', () => addMediaRow(null));
+```
+
+*3.7c — auto-infer `skip_transform` from the file type (the footgun fix).* **`admin.js` CURRENT (`:371-372`):**
+```js
+  const role = $('upload-role').value;
+  const skip = $('upload-skip-transform').checked ? 'true' : '';
+```
+**NEW (a video always skips the Cloudinary crop, checkbox or not):**
+```js
+  const role = $('upload-role').value;
+  const isVideo = (file.type || '').startsWith('video/');
+  const skip = ($('upload-skip-transform').checked || isVideo) ? 'true' : '';
+```
+
+*(Same `media` array shape the frontend `populateMedia` already reads — `{type, url, autoplay?, loop?, poster?, alt?}` — so `api/products` + `product.js` are untouched. WS4 restyles these rows with tokens.)*
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
@@ -830,8 +1011,8 @@ LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If u
 
 - **2 · Coupons in /admin** — see the **Workstream 2 (detailing)** section above: 2.2 (human `expires_display`) + 2.3 (read-back beat) are byte-anchored; 2.1 (the /admin Coupons UI) is anchored next.
 - **3 · Chat-attach + admin media UX** — see the detailed **Workstream 3** section above: 3.1–3.6 (chat-attach `uploadImages` + schema + instructions flip + alt-text + filename/role) are byte-anchored; 3.7 (admin media UX: previews + remaining-role hint + structured MP4 editor + auto-skip_transform) is anchored next; 3.8 premise-sweep at as-built.
-- **4 · Admin polish** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §WS4 (token system + P1–P7 with a de-risking fold order) **+ in-admin nav/back + product-list state-filter tabs**; byte-anchor to `admin/index.html` + `assets/js/admin.js` next. Execution captures live /admin screenshots (Claude-in-Chrome) for multiple fresh-instance design passes; optional `improve` skill audit.
-- **5 · Homepage experience** — **now spec'd** in `…_ADDENDUM_DESIGN.md` §5 (Lottie title §5.1; old-film hero §5.2, build-time resolved); byte-anchor next.
+- **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
+- **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
 ## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_0_ADDENDUM_DESIGN.md`)
 
