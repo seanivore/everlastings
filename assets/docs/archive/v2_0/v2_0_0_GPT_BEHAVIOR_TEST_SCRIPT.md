@@ -35,118 +35,36 @@ Across these six test posts are a variety of images and videos. These have been 
      - **Gallery Images Only** 
      - With no video or other images, it proves the media section hides cleanly.
 
-### Scope 
-
-  - Image workflow that crops, resizes, changes file type, and compresses
-  - Video workflow that asks how to present the MP4, looping or to play 
-  - Media handoff by Google Drive share link, added to CDN for website hosting
-  - Show AI walk-through covering all necessary product entry fields 
-  - Show AI helping to generate on-brand copy and SEO text that follows best practices
-  - Finish and AI provides user with preview link 
-  - User reviews at preview URL and then publishes from preview 
-  - Move to website to show homepage animation and layout 
-  - Shift to shop and find products that were just created with AI's help 
-  - Add products to cart and showcase the custom UI Stripe payment integration 
-  - Show email receipt about the website order 
-  - Move back to AI and get shipping information 
-  - Give AI a tracking number indicating package has been shipped 
-  - Show subsequent shipping confirmation email sent to user 
-  - Move through admin backend to show available standard usage 
-
-### When Testing 
-
-  - Use actual personal email for checkout shipping 
-  - Use Stripe debit card settings `4242 4242 4242 4242`, any future expiry, any CVC, any ZIP
-  - There is a **PASTE-READY** section for each product listing
-  - Recommended to try pasting just the **opening line + details** to let GPT write headline/story copy in Em's voice
-  - There is **FINISHED COPY** as a fallback and a source for the edit tests
-  - When GPT asks for MP4 specifics, use plain words to describe the behavior (e.g. "loop it silently with no buttons")
-  - GPT should handle everything else like the flags, etc.
-  - The drive folder contains must have media files and optional files:
-    - ≥ 6 gallery images (thumbnail can be one)
-    - 1 hero image
-    - 1 thumbnail image
-    - MP4 video files
-    - Poster images
-  - YouTube to embed is shared using the YouTube share link
-  - GPT should never set a price you didn't say; never invents a URL, tracking number, or carrier.
-  - GPT should never surfaces API keys, server URLs, or jargon unless you ask.
-  - On a publish that's missing a field, it should translate the error to plain language ("it still needs the story").
-  - If it ever says **"the connection key needs Sean's attention,"** that's the 401 path — stop and tell Sean.
-
 ---
 
 ## Workflow
 
 ### Clip 1 — "A whole store, run by chat" (GPT screen)
 
-  + [x] **R1 · Recon: Show all products**
-  + [x] **R2 · Clear the placeholders.** 
-  + [x] **R3 · Add the first piece, live.** 
-  + [x] **R4 · Add the rest (2–6).** 
-
-  + [ ] **R5 · The slug edge (optional, great detail).** 
-    - Create **"Em's Lavender & Sage"**, then later say "edit the Lavender Sage piece, set it to $110." 
-    - **Expect:** if the direct lookup misses, it **lists and matches your wording** rather than saying "couldn't find it."
-
-  + [ ] **R6 · A few edits, live vs. staged.** 
-    - "Set The Lantern Keeper's Cottage to $289" 
-    - → **live immediately**. "Mark The Tide Library sold" 
-    - → **live**. "We made 3 more of the Reading Hour" 
-    - → **live** (qty 3). "Change the Cottage headline to 'Someone left the light on for you'" 
-    - → **stages** a draft + preview link → "publish that." 
-    - **Expect:** price/availability/quantity apply instantly; copy stages until you publish.
-
-  + [ ] **R7 · The lingering-draft heads-up (the subtle one).** 
-    - Stage a copy edit on a piece (don't publish), then "set its price to $300." 
-    - **Expect:** the price goes live **and** it flags you still have unpublished copy edits — offers to publish or discard. 
-    - *(Verify it actually mentions the leftover draft.)*
-
-  + [ ] **R8 · A coupon.** 
-    - "Make a code for 20% off everything this weekend." 
-    - → it creates it and reads the code back. Then "what sales are running?" 
-    - → lists code + scope. 
-    - *(Try "buy-one-get-one?" → it should decline; Stripe can't do buy-N.)*
-
-  + [ ] **R9 · Show the result.** 
-    - "What's live now?" → **listProducts** shows the real, finished store. 
-    - Clean transition point to the website.
+  + [x] **R1: Show all products**
+  + [x] **R2: Clear old placeholders** 
+  + [x] **R3: Add the first piece** 
+  + [x] **R4: Add the rest of the new test pieces** 
+  + [x] **R5: Look-up using word and not full name** 
+    - *EDIT*: Should try testing & in slug still.
+  + [x] **R6: Price, sale, qty. changes live now, copy change not** 
+  + [x] **R7: The lingering-draft heads-up** 
+  + [x] **R8: Create a coupon, then new window, see what sales are running** 
+    - *EDIT*: With caveat `assets/docs/archive/v3_0/FEEDBACK_FROM_v2_1_0.md`
+  + [x] **R9: What's live now?** 
 
 ### Clip 2 — "The storefront" (website)
 
-  + [ ] **R10 · The shop.** 
-    - Open the dev-preview site. 
-    - Show the shop full of the new pieces — real images, the featured carousel, the collections.
-
-  + [ ] **R11 · Media variants rendering.** 
-    - Open a few product pages to show the dynamic media: the **Reading Hour** auto-looping silently 
-    - **First Snow** click-to-play with its poster, **The Tide Library** with two clips, 
-    - **The Clockmaker's Window** (MP4 then YouTube), **The Night Train** (embed only), 
-    - **the Cottage** with no media section at all. 
-    - *(This is the "it shows only what's there" proof.)*
-
-  + [ ] **R12 · Checkout.** 
-    - Buy 1–2 pieces with the Stripe test card `4242 4242 4242 4242` (any future expiry/CVC/ZIP). 
-    - Complete the purchase through to the `/complete` page. 
-    - *(Use an email that's yours — you'll ship to it next.)*
+  + [x] **R10 · The shop.** 
+  + [x] **R11 · Media variants rendering.** 
+  + [x] **R12 · Checkout.** 
 
 ### Clip 3 — "Fulfillment, by chat" (GPT screen)
 
-  + [ ] **R13 · Orders.** 
-    - "What orders need shipping?" 
-    - → **listOrders** reads back your fresh purchase(s) plainly (who, what, address, total).
-
-  + [ ] **R14 · Ship it + close the loop.** 
-    - "Mark that one shipped — it went out with the post office, tracking 9400 1112 2233 4455 6677 88." 
-    - **Expect:** it normalizes "post office" → USPS, **confirms before sending** 
-    - ("Mark <piece> shipped via USPS <tracking> and email <buyer>?"), 
-    - then on your yes marks it shipped and the **buyer (you) gets the tracking email.** 
-
-  + [ ] **R15 · Refund walk-through (optional).** 
-    - "I need to refund the customer who bought The Reading Hour." 
-    - **Expect:** it can't issue refunds — it walks you through the Stripe dashboard 
-    - (and may web-search to confirm current steps), and notes a refund doesn't auto-relist.
-
+  + [x] **R13 · Orders.** 
+  + [x] **R14 · Ship it + close the loop.** 
+  + [x] **R15 · Refund walk-through (optional).** 
+    - *EDIT*: Holding off on this because we have updates for refunds being planned for the v3.1.0 update. 
 ---
 
 ## 1. The Lantern Keeper's Cottage
@@ -487,7 +405,7 @@ A small country railway platform, late, the last train of the night just arrivin
 
 ### Finished Copy
 
-  - **HEADLINE**: The last train, and someone waiting
+  - **HEADLINE**: The last train, and someone is waiting
   - **DESCRIPTION**: A miniature platform at night, the last train arriving with its windows lit and one person waiting on the bench. For the people who wait up for you.
   - **FEATURES**: Warm LED platform lamp and lit train windows · Hand-built miniature train and country platform · A single bench, and someone waiting · Resin and reclaimed-wood build · USB-C powered (adapter included)
   - **STORY CARD**:
