@@ -11,10 +11,10 @@
 > (Code Interpreter has no network), so **media arrives by link** (the GPT fetches a Drive/direct URL),
 > and the GPT asks for a link when a file is pasted.
 
-**Created**: 2026-03-16 **Updated**: 2026-06-07 — **v1.4.9 BUILT + VERIFIED LIVE** on the dev preview (`v1_4_9_BUILD_REPORT.md`): the full buy→order→merchant-email→admin-ship→buyer-tracking-email loop works end-to-end (checkout repaired — the real bug was `phone_number_collection` forcing an unsatisfiable phone field). Launch to-dos: re-enable preview SSO (Sean), Custom GPT setup, content placeholders, C5 cutover. **Next: v1.5.0** — AI store-management (GPT edit + draft/preview/publish + coupons + admin unify), then design; single living plan at `archive/v1_5/v1_5_9_IMPLEMENT.md`. _(Per-version build history lives in the `archive/v1_4/` + `archive/v1_5/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_ **Version**: v1.4.9 **Status**: Tracks A/B/C **built and verified end-to-end on the dev preview** (`v1_4_9_BUILD_REPORT.md`) — checkout repaired (single-phase), order→merchant-email→admin-ship→buyer-tracking-email loop confirmed. Pre-launch tasks remain (re-enable preview SSO; Custom GPT setup; content placeholders; C5 cutover). **v1.5.0 in planning** (AI store-management then design — single living plan `archive/v1_5/v1_5_9_IMPLEMENT.md`, in the gap-review gate). Preview-only; not yet launched. **Build Guide** (current, exclusively-executable):
-  - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` — checkout repair (single-phase), merchant email, admin/GPT fulfillment, Supabase keep-alive cron, end-to-end verification (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` retained in the same folder for history)
-  - `assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md` — what actually shipped in v1.4.9 + deviations (phone-collection removal, `friendlyPaymentError`, the two launch findings)
-  - `assets/docs/archive/v1_5/v1_5_9_IMPLEMENT.md` — **next**: AI store-management (GPT edit + draft/preview/publish + coupons + admin unify) then design; the single living, exclusively-executable plan (build + spec merged; v1_5_0…v1_5_8 superseded). Reviews: `v1_5_9_REVIEW_PROMPTS.md` **Operating docs** (living; how the store is run day-to-day):
+**Created**: 2026-03-16 **Updated**: 2026-06-16 — **v2.0.0 BUILT + VERIFIED** on the dev preview (`archive/v2_0/v2_0_0_BUILD_REPORT.md`), with v2.1 post-review visual polish on top. v2.0.0 shipped the **AI store-management layer** (the whole "she runs it by chat" thesis): GPT/admin **create → preview → publish** with a real preview-token link; **edit stages a draft** (publish XOR discard) with live-compare change-detection; **price / `available` / `quantity` apply live**, copy/SEO stage; **same-product Stripe-price rotation**; **coupons** (create/list/deactivate, owner-tagged); **archive** (reversible, never hard-delete); **media-by-link** upload (Drive/direct URL → Cloudinary→R2); **`charge.refunded` order-status reflection**; strict `is_test` isolation on the public path; per-`product_type` validation (miniatures-only today). Everything folded into the existing functions (still 11/12 on Vercel Hobby). **Version**: v2.0.0 (+ v2.1 polish) **Status**: **built and verified on the dev preview** — every build-exercisable functionality + design check is green. Sean's remaining on-camera tests: the Custom GPT behaviour, a full Stripe checkout, and the refund-status flip. Launch/cutover to-dos remain (live Stripe keys + live-mode coupon bootstrap, point the GPT at production, remaining admin logins, content-placeholder gate, `charge.refunded` on the live endpoint, DNS, then `dev → main` ff-merge + tag). _(Per-version build history lives in the `archive/v1_4/`, `archive/v1_5/`, `archive/v1_6/`, `archive/v2_0/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_ **Build Guide** (the as-built source for v2.x):
+  - `assets/docs/archive/v2_0/v2_0_0_IMPLEMENT.md` — the exclusively-executable build (AI store-management + design); `v2_0_0_ADDENDUM_DESIGN.md` + `v2_0_0_ADDENDUM_TESTING.md` are its addenda (the v1_5/v1_6 packets are its gap-review changelog)
+  - `assets/docs/archive/v2_0/v2_0_0_BUILD_REPORT.md` — what actually shipped in v2.0.0 + deviations (this doc is reconciled against it)
+  - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` + `v1_4_9_BUILD_REPORT.md` — the prior wave (checkout repair, merchant email, admin/GPT fulfillment, Supabase keep-alive cron), retained for history **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
   - `assets/docs/gpt/` — curated Custom-GPT Knowledge uploads (`voice-guide.md`, `product-reference.md`) **History** (archived; not required reading):
@@ -106,13 +106,15 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │  POST   /api/checkout/reserve  → availability + 15-min soft hold    │
 │  POST   /api/checkout          → create Stripe session (post-hold)  │
 │  GET    /api/session-status    → return page payment verification   │
-│  POST   /api/webhook           → handle Stripe payment events       │
+│  POST   /api/webhook           → Stripe events: paid + charge.refund│
 │  POST   /api/stripe-sync       → create Stripe Product+Price (DB    │
 │                                  trigger, published inserts only;   │
 │                                  Stripe normally made at publish)   │
 │  POST   /api/upload            → signed Cloudinary transform → R2   │
+│                                  (multipart OR JSON {url} by-link)  │
 │  POST   /api/cart-recovery     → sold-in-cart promo code + email    │
-│  GET/POST/PUT /api/products    → CRUD for AI-assisted creation      │
+│  GET/POST/PUT /api/products    → product CRUD + draft→publish +     │
+│                                  coupon/archive ?_action= sub-routes│
 │  GET    /api/orders            → admin: list orders by ship status  │
 │  PATCH  /api/orders/:id        → admin: record tracking + fire email│
 │  POST   /api/cart-activity     → product interest notification      │
@@ -136,10 +138,10 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │                          │   │                                    │
 │  Tables (8):             │   │  /products/{slug}/                 │
 │    products              │   │    hero-{slug}.webp                │
-│    customers             │   │    gallery-{slug}-01.webp          │
+│    customers             │   │    gallery-01-{slug}.webp          │
 │    orders                │   │    thumbnail-{slug}.webp           │
-│    subscribers           │   │    video-{slug}-01.mp4             │
-│    site_config           │   │    detail-{slug}-01.gif            │
+│    subscribers           │   │    video-01-{slug}.mp4             │
+│    site_config           │   │    checkout_image-{slug}.webp      │
 │    webhook_events        │   │                                    │
 │    product_interests     │   │  /brand/                           │
 │    cart_holds            │   │    logo.svg, favicon, etc.         │
@@ -181,7 +183,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
-  10. **AI-assisted product creation** — `POST /api/products` + `POST /api/upload` enable any AI assistant (ChatGPT, Claude) to create products programmatically. See `GPT_SETUP.md`.
+  10. **AI-assisted store management (v2.0.0)** — the Custom GPT (and any AI assistant) runs the whole store by chat via the `api/products.ts` action set: `createProduct` (→ draft + preview link), `editProduct` (stages a draft / live-applies price·available·quantity), `publishProduct`, `discardEdits`, `listProducts` / `getProduct`, `archiveProduct` / `unarchiveProduct`, `createCoupon` / `listCoupons` / `deactivateCoupon`, plus `uploadImage` (by-link). Orders (`listOrders` / `markShipped`) shipped in v1.4.9. See `GPT_SETUP.md`.
 
   11. **Environment-based Stripe keys** — Vercel env vars scoped by environment. Preview deployments use test keys, production uses live keys. Frontend Stripe key served via `api/config.ts` (not hardcoded).
 
@@ -231,8 +233,8 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
   6. **Image aspect ratio**: 4:5
      - Prevents messy grids.
      - Enforced via Cloudinary transform on upload
-  7. **Slug rules**: immutable after creation
-     - `title.toLowerCase().replaceAll(' ', '-')`
+  7. **Slug rules**: GPT-derived, server-normalized, immutable after creation
+     - The GPT/caller derives the slug from the title (ASCII-fold accents, lowercase, spaces→`-`, strip non-`[a-z0-9-]`, collapse repeats) and sends it as a **required** create field — photos upload under that slug **before** the row exists, so the caller must own it at upload time. `api/products.ts` re-normalizes it identically on create (belt-and-suspenders). The `set_slug` DB trigger is the **empty-input fallback only**. (Superseded the old naive `title.toLowerCase().replaceAll(' ','-')` API-side generation.)
      - URL stability, SEO preservation
   8. **Stripe metadata**: `items` field
      - JSON array of `{ id, slug }`
@@ -283,15 +285,15 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - Stripe = payment mirror only
       - R2 = asset storage only
       - Frontend = read-only consumer
-  23. **Slug generated API-side before image upload**
-      - Compute `title.toLowerCase().replaceAll(' ', '-')` BEFORE uploading images
-      - DB trigger is fallback only (for manual Supabase Studio inserts)
-      - Order: generate slug → upload images → create product record
-  24. **Image role enforcement**
-      - Exactly 1 hero image required
-      - Exactly 1 thumbnail required
-      - Minimum 5 gallery images required
-      - Validated by `api/products.ts` before INSERT
+  23. **Slug derived by the GPT/caller before image upload (v1.5)**
+      - The GPT computes the slug (ASCII-fold accents → lowercase → spaces→`-` → strip non-`[a-z0-9-]` → collapse repeats) and reuses that **same** string for every `uploadImage` call AND `createProduct` — photos upload BEFORE the row exists, so the caller owns the slug at upload time (a required create field). `api/products.ts` re-normalizes identically on create.
+      - The `set_slug` DB trigger is the **empty-input fallback only** (e.g. a manual Supabase Studio insert with no slug); it stores the raw title, so never rely on it for a well-formed slug.
+      - Order: derive slug → upload images under it → create product record (as a draft)
+  24. **Image role enforcement (per `product_type`)**
+      - At least 1 hero image required (role prefix `hero-`)
+      - A thumbnail URL required
+      - Minimum 5 gallery images required (role prefix `gallery-`)
+      - Enforced by the shared `validateProductRules` in `api/products.ts` — run at **create** AND at **both publish branches** (first-publish + edit-publish), so a published product is always well-formed even if an edit blanked `story_card`/`images`. Rules are keyed by `product_type` (only `miniature` today; new types are a config entry, not a validator rewrite — unknown types fall back to the miniature shape).
   25. **Meta Pixel for retargeting + Instagram Shopping attribution**
       - Base pixel code in `<head>` alongside GA4. Events fire in parallel
       - Server-side CAPI for Purchase deduplication via webhook
@@ -354,6 +356,12 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
   37. **`is_test=true` filename namespacing for R2 + product image URLs**
       - In test mode (`VERCEL_ENV !== 'production'`), `/api/upload` writes objects under `test/{slug}/test_{role}-{slug}.{ext}` and returns the corresponding URL. Live mode writes under `products/{slug}/{role}-{slug}.{ext}` with no prefix.
       - Image-role validation in `api/products.ts` strips the leading `test_` before matching `hero-` / `gallery-` so URLs returned by `/api/upload` validate identically in both modes.
+      - **The role set** (assigned by **both** the /admin upload control and the GPT; the server names each file `{role}-{slug}`): `hero`, `gallery-NN`, `detail-NN`, `thumbnail`, `checkout_image`, `seo_thumbnail`, and `video-NN`. So /admin *can* upload a video under a proper `video-NN` role (it skips the Cloudinary image crop). The frontend derives an image's role from this filename prefix — there is no stored role field, so passing the correct role is load-bearing. (`checkout_image` is cropped 1:1, `seo_thumbnail` 1.91:1, thumbnail 600px / others 1200px wide at 4:5; `ROLE_PATTERN` still admits a legacy `gif-NN`, but GIFs are retired — use an MP4 `video-NN`.)
+
+  38. **`/api/upload` dual intake — by-link JSON for the GPT (v2.0.0)**
+      - `api/upload.ts` accepts **either** a multipart form (admin drag-drop / curl) **or** a JSON body `{url, slug, role, skip_transform}`. A Custom GPT Action can't forward a file pasted into the chat, so media arrives by **link**: the owner shares a Google Drive "anyone with the link" URL (or any direct file URL), the GPT sends the link, and the server fetches it. Both intakes converge on the same `File` → Cloudinary→R2 pipeline.
+      - A Drive *share* URL is rewritten to its direct-download form; the fetch is guarded — role + auth are validated **before** the fetch, and an SSRF check rejects non-https / loopback / private / link-local hosts (auth-gated, body never echoed). A link that returns an HTML page (e.g. Drive's virus-scan interstitial on a large video, or a non-public share) fails the content-type check with a plain "share as a direct link" error.
+      - Videos pass `skip_transform:true` (streamed to R2 as-is, 50 MB cap; images 10 MB).
 
 ---
 
@@ -405,8 +413,8 @@ The safety UX that lets the owner run the store by chat without a "test mode": e
 
   * **Database-driven static site with custom on-site checkout**
 
-    + Products live in Supabase, not in code — client edits content, site reflects instantly
-    + Stripe catalog auto-syncs when products are added (via database webhook)
+    + Products live in Supabase, not in code — client edits content, site reflects on publish
+    + Stripe catalog is created when a product is **published** (inline in `handlePublish`); a create makes an unpublished draft with no Stripe object
     + No CMS subscription, no framework overhead, no git knowledge required
     + Vercel free tier + Supabase free tier + R2 ≈ $15-75/year total
 
@@ -602,11 +610,13 @@ stripe listen --forward-to localhost:3000/api/webhook
   * **`api/webhook.ts`** — Stripe event handler
     + Reads raw body via `request.text()` for signature verification
     + Validates webhook signature with `stripe.webhooks.constructEvent()`
-    + Idempotency: checks `webhook_events` table for duplicate `event.id`, skips if already processed
-    + On `checkout.session.completed`: extracts metadata, upserts customer record, marks products sold, creates order records, records event.id
+    + Idempotency: INSERT-as-claim into `webhook_events` on `event.id` **before** any side effect (`webhook.ts:50`); a `23505` unique-violation short-circuits a duplicate delivery
+    + On `checkout.session.completed`: extracts metadata, upserts customer record, sets each purchased product `available=false` (`webhook.ts:159` — **`available` only; it does NOT change `quantity` and never touches Stripe**), creates one order row per product, fires the merchant new-order email + Meta CAPI Purchase (both non-blocking)
+    + On `charge.refunded` (`webhook.ts:60`): on a **full** refund, sets `orders.status='refunded'` for the matching `stripe_payment_intent` (terminal — overwrites a prior `shipped`/`delivered`). A **partial** refund is logged, not reflected (the enum has no partial state). Requires the `charge.refunded` event enabled on the webhook endpoint in **both** Stripe test + live mode.
+    + Every other event type is a logged no-op (`webhook.ts:91`)
 
-  * **`api/products.ts`** — Product CRUD for AI assistants
-    + GET: fetch product by slug (public for live products; bearer-gated for test mode)
+  * **`api/products.ts`** — Product CRUD + draft/publish/coupon/archive for AI assistants (service-role client, so it bypasses RLS and can read drafts/archived)
+    + GET: by slug, by id, list, or **preview-by-token**. A public (unauthorized) read returns only live, non-archived, non-test rows, **column-stripped via `publicView`** (never `draft`/`preview_token`/`is_test`/checkout/status fields). An authorized read returns the full row, plus an `effective` view (live + staged draft) and an origin-correct `preview_url` when a draft/token exists. A valid `?preview=<token>` grants a one-off read of the draft with `draft` overlaid (the preview page).
     + POST: create product as an **unpublished draft** (`PRODUCT_API_KEY` or Supabase JWT auth; per-type validation; server-normalizes the GPT-derived slug; allow-listed fields only; **no Stripe** — created at publish). Also routes the `?_action=` sub-routes: publish / coupon / coupon_deactivate / archive / unarchive / discard.
     + PUT: edit — stages copy/SEO into `draft` on a published row, or applies to live columns on an unpublished draft; `price`/`available`/`quantity` apply live immediately; `checkout_*` frozen after publish (price rotates).
 
@@ -675,7 +685,9 @@ stripe listen --forward-to localhost:3000/api/webhook
     ↓
   (11) Webhook validates signature, extracts items from metadata
     ↓
-  (12) Updates each product: available=false, quantity=0
+  (12) Sets each purchased product available=false in Supabase (the sold flag). It does NOT
+       change quantity, and it does NOT touch any Stripe object — the Stripe Product/Price stay
+       active; a sale never deactivates a Price. (See "Flag reference" below.)
     ↓
   (13) Creates order record per product in Supabase orders table
     ↓
@@ -684,10 +696,20 @@ stripe listen --forward-to localhost:3000/api/webhook
 
 ### Data States
 
-  1. **Product available**: `available=true, quantity>0` — Add to Cart button active
-  2. **Product sold**: `available=false, quantity=0` — "Sold" badge, buttons disabled, appears in Sold Archive
+  1. **Product available**: `available=true` AND `quantity>0` (both gate purchasability, `checkout.ts:79`) — Add to Cart active
+  2. **Product sold**: `available=false` in Supabase — "Sold" badge, buttons disabled, appears in Sold Archive. A sale does **not** zero `quantity` (owner-managed stock), and the Stripe Product/Price are untouched (stay active).
   3. **Product featured**: `featured=true` — Appears in homepage carousel
   4. **In cart**: Product stored in localStorage cart — availability re-checked at checkout creation
+
+### Flag reference — which "on/off" flips, and exactly when
+
+Three places hold an on/off flag. **A sale only ever writes our Supabase columns — it never touches Stripe.** Inventory lives only in Supabase; Stripe has no stock field (the Checkout line-item `quantity` is transactional and forgotten after charging).
+
+- **`products.available`** (Supabase — the storefront sold flag the frontend reads): **true** on publish / relist / restock; **false** on a sale, or when the owner pulls a piece off sale. This is the *only* flag a sale flips.
+- **`products.quantity`** (Supabase — stock count, the only inventory record anywhere): owner-set; applied live on an admin/GPT edit. **A sale does NOT decrement it today** — every product is qty-1 (`miniature`), so the `available` flag does the real work. The purchase webhook decrementing `quantity` (and zeroing `available` at 0) is deferred until the first multi-quantity `product_type` ships (see the build's Open items); flagged so it's wired with that type.
+- **`products.archived_at`** (Supabase — retire): set on archive, cleared on unarchive. Independent of a sale.
+- **Stripe Product `active`**: **true** on publish + unarchive; **false** only on archive. **Never** on a sale.
+- **Stripe Price `active`**: **true** when created (publish); **false** only on **price rotation** (a price-amount change creates a new Price + archives the old) or on archive. **Never** on a sale — the same Price sells unlimited times, so **re-selling a sold-out piece needs no new Price**.
 
 ---
 
@@ -795,12 +817,12 @@ stripe listen --forward-to localhost:3000/api/webhook
     + All client-facing operations happen through admin UI or Supabase Studio web interface.
 
   * **Don't create Stripe Products/Prices manually**
-    + The database webhook handles this automatically. Manual creation causes ID mismatches.
+    + `publishProduct` creates them inline at publish (`handlePublish` → `syncProductToStripe`); a published price change rotates the Price in place. Manual creation causes ID mismatches. Also: never *publish* from Supabase Studio (see Pitfall #7).
 
 ### Important Conventions
 
   + **Price is always in cents** — $245.00 = 24500 in the database and Stripe
-  + **Slug is auto-generated** from title — "The Sunkeeper" → "the-sunkeeper"
+  + **Slug is GPT/caller-derived from title, server-normalized** — "The Sunkeeper" → "the-sunkeeper" (the create API re-normalizes; the `set_slug` trigger is an empty-input fallback only). Immutable after create.
   + **Images follow CDN path pattern** — `{R2_PUBLIC_URL}/products/{slug}/hero-{slug}.webp`
   + **All API functions are TypeScript** — frontend is vanilla JS
   + **Database trigger vs Stripe webhooks** — different purposes. The `notify_stripe_sync` DB trigger fires the **publish-time** Stripe sync path and **skips drafts** (not "on every INSERT"). The Stripe webhook updates the DB on payment (and flips order status on `charge.refunded`).
@@ -999,7 +1021,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | images            | jsonb       | Array of {url, alt} objects                    |
 | thumbnail         | text        | CDN URL                                        |
 | thumbnail_alt     | text        |                                                |
-| media             | jsonb       | Array of {type, url, alt, loop, autoplay, controls, poster}; MP4 + YouTube (no GIF); renders via populateMedia, hides when absent |
+| media             | jsonb       | Array of {type, url, alt, loop, autoplay, controls, poster}; MP4 + YouTube (no GIF). Rendered by `populateMedia` (`product.js`): a click-to-play clip shows controls **by default** — omit `controls`; pass `controls:false` to hide them. `autoplay`+`loop` = silent GIF-like, no controls. Hides when absent. |
 | seo_title         | text        |                                                |
 | seo_description   | text        |                                                |
 | artist_note       | text        | Nullable                                       |
@@ -1132,7 +1154,7 @@ Compared to v1.3.1:
   - **Brand Guide**: `assets/docs/BRAND.md`
   - **Store Administration (client how-to)**: `assets/docs/STORE_ADMINISTRATION.md`
   - **AI pipeline + Custom GPT**: `assets/docs/GPT_SETUP.md`
-  - **Current build guide**: `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` (prior `v1_4_7` / `v1_4_8_FINISH_TRACK_C.md` kept for history)
+  - **Current build guide (v2.x as-built)**: `assets/docs/archive/v2_0/v2_0_0_IMPLEMENT.md` + `v2_0_0_BUILD_REPORT.md` (prior `archive/v1_4/v1_4_9_FINISH_TRACK_C.md` kept for history)
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`
