@@ -2,13 +2,15 @@
 
 **Addendum to**: `v3_1_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
-**Status**: WS4 (admin) authored from the design-review research pass. WS5 (Lottie title + HyperFrames hero) **pending** its two research passes — appended when they land.
+**Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 
 > **Executable-design bar.** Design is planned exactly like functionality: concrete defaults + a render-tune note, tested + feedback'd, never frozen-no-feedback. Real content is never a build/test gate (production-grade placeholders). Storefront brand is **untouched**; the admin gets a **neutral/template** aesthetic (NOT Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 
 ---
 
 # Workstream 4 — Admin polish (brand-neutral / reusable-template)
+
+**Aesthetic bar (Sean).** Clean, professional, genuinely **polished + smart, high-appeal** (it can have a vibe) — brand-**neutral**, NOT the Everlastings storefront brand and **not** anchored to august.style tokens; the bar is "looks excellent + ports to any future client," not "matches a palette." Two fronts, in order: (1) full /admin↔GPT parity made obvious (**P0**), then (2) make it pleasant (**P1–P7**). The slate + indigo-slate accent below is the working default to *refine*, not a constraint.
 
 **Current state.** The admin is one self-contained file: `admin/index.html` carries the entire stylesheet inline in a `<style>` block (~lines 8-74) — hardcoded hex literals (`#222`, `#ddd`, `#f5f5f5`, `#b00`…), **no CSS custom properties**, **no `@media` breakpoints**, fixed-px grids (`.order-card` `120px 1fr`; `.img-url-row` `140px 1fr 1fr auto`; `.ship-form` `2fr 1fr auto`) with no mobile fallback. Type is `system-ui` (already neutral — keep). All components are built in vanilla DOM in `assets/js/admin.js`. So this is a **re-skin + restructure, not a rewrite**, touching only `admin/index.html` + `assets/js/admin.js`. The storefront `styles.css` is referenced only for its *scale conventions* (radius 4/8/12, shadow sm/md/lg, spacing 4/8/16/24/32/48/64) — its palette/serif never import.
 
@@ -63,8 +65,9 @@
 
 ## 4.2 — Prioritized component changes (ranked; each is apply-not-decide)
 
-**Fold order (de-risk visual-only first, move logic last):** §4.1 tokens+base → P1 → P7 → P5 → P6 → P2 → P4 → P3 (3a→3b→3c).
+**Fold order (parity/usability first, then visual de-risk, logic last):** §4.1 tokens+base → **P0** → P1 → P7 → P5 → P6 → P2 → P4 → P3 (3a→3b→3c).
 
+- **P0 · Navigation + product-list state-filter (parity/usability — do first; from `FEEDBACK_ADMIN_v2_1_0.md`).** (a) **In-admin back/nav:** the browser Back button leaves /admin entirely and clicking into a product gives no obvious return — add a clear **"← Products"** control in the editor header + an obvious active-tab state. (The editor is a view-swap in `admin.js` — `openEditor`/`closeEditor` — not a route, so this is a button calling the existing list view, NOT `history.back()`.) (b) **Product-list state-filter:** add subtabs over the product list (**All / Live / Draft / Sold / Archived**) mirroring the orders subtabs (`admin/index.html:243-256` + the orders filter in `admin.js`); filter the already-fetched `state.products` client-side by `is_published` / `draft` / `available` / `archived_at`. Pure additive UI; no backend change.
 - **P1 · Editor form sectioning.** `#product-form` (`index.html:119-239`) is ~20 stacked `.field`s with only 2 fieldsets. Wrap into **5 labeled `<fieldset>`s** in workflow order: **Essentials** (title, slug, headline, description, price, qty, type, available, featured) · **Story & Details** (story, features, materials, care, shipping, dimensions, weight, power, series, artist note) · **Media** (P3) · **Checkout (Stripe)** (existing `167-171`, keep verbatim, restyle legend) · **SEO & Sharing** (seo title/desc/thumbnail). Remove the inline `style="border:1px solid #ddd…"` on `166`/`173`; add one reusable rule: `fieldset { border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-4); background:var(--c-surface); } fieldset>legend { font-size:var(--fs-md); font-weight:var(--fw-semibold); padding:0 var(--s-2); } .product-form { gap:var(--s-5); }`. Pure HTML+CSS; `openEditor` targets the same `#p-*` IDs.
 - **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→danger, available→neutral-bg); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class.
 - **P3 · Media (the biggest win — removes the only raw-JSON field).**
