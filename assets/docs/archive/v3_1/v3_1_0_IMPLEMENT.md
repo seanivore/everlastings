@@ -329,9 +329,277 @@ async function relistPiece(r, msg) {
 
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; it asks about relisting") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note + test-script **R15** flips from "can't issue refunds" → "issues + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
-## Workstream 2 — Coupons in /admin (detailing)
+## Workstream 2 — Coupons in /admin (detailed)
 
-**Phase 2.1 — /admin Coupons UI (DIRECTION; byte-anchored next — needs the admin tab-structure read).** A new "Coupons" tab/section in `admin/index.html` + `admin.js` handlers over the existing `/api/coupons` create/list/deactivate: full field surface (type/value/code/product-scope by **`stripe_product_id`**/min/expiry as a **date input**/max), a list showing `expires_display` + scope + redemptions, and deactivate-by-code. No backend change beyond 2.2.
+**Phase 2.1 — /admin Coupons UI.** A 3rd tab over the existing `/api/coupons` endpoints (GET list · POST create · POST `/api/coupons/deactivate`). Reuses `setStatus`/`authHeader`/`escapeHtml`/`centsToDollars`/`dollarsToCents` + the `.product-form`/`.row-3`/`.field`/`.form-actions` classes. The `.tab-btn` loop (`admin.js:143`) auto-wires the new button; `switchTab`/`refreshActiveTab` need the coupons branch.
+
+*2.1a — the tab button.* **CURRENT (`admin/index.html:104-107`):**
+```html
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="products">Products</button>
+          <button class="tab-btn" data-tab="orders">Orders</button>
+        </div>
+```
+**NEW:**
+```html
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="products">Products</button>
+          <button class="tab-btn" data-tab="orders">Orders</button>
+          <button class="tab-btn" data-tab="coupons">Coupons</button>
+        </div>
+```
+
+*2.1b — the section (after `#tab-orders`).* **CURRENT (`admin/index.html:256-257` — the orders `</section>` then the `.container` close):**
+```html
+        </section>
+      </div>
+```
+**NEW:**
+```html
+        </section>
+
+        <section id="tab-coupons" class="hidden">
+          <div id="coupons-status"></div>
+          <form id="coupon-form" class="product-form">
+            <div class="row-3">
+              <label class="field"><span>Discount</span>
+                <select id="c-type"><option value="percent">% off</option><option value="amount">$ off</option></select>
+              </label>
+              <label class="field"><span>Amount *</span><input id="c-value" type="number" step="0.01" min="0" required placeholder="20" /></label>
+              <label class="field"><span>Code (optional — auto if blank)</span><input id="c-code" placeholder="HOLIDAY20" /></label>
+            </div>
+            <div class="row-3">
+              <label class="field"><span>Minimum order ($, optional)</span><input id="c-min" type="number" step="0.01" min="0" /></label>
+              <label class="field"><span>Ends after (optional)</span><input id="c-expires" type="date" /></label>
+              <label class="field"><span>Max redemptions (optional)</span><input id="c-max" type="number" min="1" step="1" /></label>
+            </div>
+            <label class="field"><span>Limit to one product (optional)</span>
+              <select id="c-product"><option value="">Store-wide</option></select>
+            </label>
+            <div class="form-actions">
+              <span class="spacer"></span>
+              <button type="submit" class="primary" id="create-coupon">Create sale</button>
+            </div>
+          </form>
+          <div class="toolbar">
+            <strong style="font-size:14px">Running sales</strong>
+            <button id="coupons-refresh-btn">Refresh</button>
+          </div>
+          <div id="coupons-list"></div>
+        </section>
+      </div>
+```
+
+*2.1c — `switchTab` shows/hides it.* **CURRENT (`admin.js:196-201`):**
+```js
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  $('tab-products').classList.toggle('hidden', tab !== 'products');
+  $('tab-orders').classList.toggle('hidden', tab !== 'orders');
+  refreshActiveTab();
+}
+```
+**NEW:**
+```js
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  $('tab-products').classList.toggle('hidden', tab !== 'products');
+  $('tab-orders').classList.toggle('hidden', tab !== 'orders');
+  $('tab-coupons').classList.toggle('hidden', tab !== 'coupons');
+  refreshActiveTab();
+}
+```
+
+*2.1d — `refreshActiveTab` loads the active tab (now 3-way).* **CURRENT (`admin.js:203-211`):**
+```js
+function refreshActiveTab() {
+  if (!state.session) return;
+  const productsActive = !$('tab-products').classList.contains('hidden');
+  if (productsActive) {
+    loadProducts();
+  } else {
+    loadOrders();
+  }
+}
+```
+**NEW:**
+```js
+function refreshActiveTab() {
+  if (!state.session) return;
+  if (!$('tab-products').classList.contains('hidden')) loadProducts();
+  else if (!$('tab-coupons').classList.contains('hidden')) loadCoupons();
+  else loadOrders();
+}
+```
+
+*2.1e — wire the form + refresh (end of `attachEventListeners`).* **CURRENT (`admin.js:164-170`):**
+```js
+  $('orders-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      loadOrders();
+    }
+  });
+}
+```
+**NEW:**
+```js
+  $('orders-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      loadOrders();
+    }
+  });
+
+  $('coupon-form').addEventListener('submit', onCreateCoupon);
+  $('coupons-refresh-btn').addEventListener('click', loadCoupons);
+}
+```
+
+*2.1f — the coupon functions (insert before the init-call).* **CURRENT (`admin.js:834-838`, the file's tail):**
+```js
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+```
+**NEW (prepend the functions, keep the init-call):**
+```js
+async function loadCoupons() {
+  setStatus('coupons-status', '', 'info');
+  // The product-scope picker needs published products' stripe_product_id; fetch once if not loaded.
+  if (!state.products || !state.products.length) {
+    try {
+      const pr = await fetch('/api/products', { headers: { ...authHeader() } });
+      const pb = await pr.json().catch(() => ({}));
+      if (pr.ok && Array.isArray(pb.products)) state.products = pb.products;
+    } catch { /* non-fatal — the picker just shows Store-wide */ }
+  }
+  populateCouponProducts();
+  const list = $('coupons-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    const res = await fetch('/api/coupons', { headers: { ...authHeader() } });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    renderCoupons(Array.isArray(body.coupons) ? body.coupons : []);
+  } catch (err) {
+    list.innerHTML = '';
+    setStatus('coupons-status', `Failed to load sales: ${err.message}`, 'error');
+  }
+}
+
+function populateCouponProducts() {
+  const sel = $('c-product');
+  if (!sel) return;
+  const current = sel.value;
+  const published = (state.products || []).filter((p) => p.is_published && !p.archived_at && p.stripe_product_id);
+  sel.innerHTML = '<option value="">Store-wide</option>' +
+    published.map((p) => `<option value="${escapeHtml(p.stripe_product_id)}">${escapeHtml(p.title || '(untitled)')}</option>`).join('');
+  sel.value = current; // keep selection across refreshes if still present
+}
+
+function renderCoupons(coupons) {
+  const list = $('coupons-list');
+  if (!coupons.length) {
+    list.innerHTML = '<div class="empty">No sales running. Create one above.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const c of coupons) {
+    const off = c.percent_off ? `${c.percent_off}% off`
+      : c.amount_off ? `$${centsToDollars(c.amount_off)} off` : 'discount';
+    const scope = c.store_wide ? 'store-wide' : `${(c.product_ids || []).length} product(s)`;
+    const used = `${c.times_redeemed ?? 0}${c.max_redemptions ? ` / ${c.max_redemptions}` : ''} used`;
+    const ends = c.expires_display ? ` · ends ${escapeHtml(c.expires_display)}` : '';
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:8px';
+    row.innerHTML = `
+      <p><span class="label">${escapeHtml(c.code)}</span> — ${escapeHtml(off)} · ${escapeHtml(scope)} · ${escapeHtml(used)}${ends}</p>
+      <button type="button" class="end-sale">End sale</button>
+      <div class="coupon-msg" style="margin-top:6px;font-size:13px"></div>
+    `;
+    row.querySelector('.end-sale').addEventListener('click', () => onDeactivateCoupon(c.code, row));
+    list.appendChild(row);
+  }
+}
+
+async function onCreateCoupon(e) {
+  e.preventDefault();
+  setStatus('coupons-status', '', 'info');
+  const type = $('c-type').value;
+  const rawValue = Number.parseFloat($('c-value').value);
+  if (!Number.isFinite(rawValue) || rawValue <= 0) {
+    setStatus('coupons-status', 'Enter a discount amount.', 'error');
+    return;
+  }
+  if (type === 'percent' && rawValue > 100) {
+    setStatus('coupons-status', 'Percent off cannot exceed 100.', 'error');
+    return;
+  }
+  const payload = { type, value: type === 'amount' ? Math.round(rawValue * 100) : rawValue };
+  const code = $('c-code').value.trim();
+  if (code) payload.code = code;
+  const min = Number.parseFloat($('c-min').value);
+  if (Number.isFinite(min) && min > 0) payload.min_amount = Math.round(min * 100);
+  const max = Number.parseInt($('c-max').value, 10);
+  if (Number.isInteger(max) && max > 0) payload.max_redemptions = max;
+  const expires = $('c-expires').value; // YYYY-MM-DD or ''
+  if (expires) payload.expires_at = Math.floor(new Date(`${expires}T23:59:59`).getTime() / 1000); // end of that day, local
+  const product = $('c-product').value;
+  if (product) payload.product_ids = [product];
+
+  const offLabel = type === 'percent' ? `${rawValue}% off` : `$${rawValue.toFixed(2)} off`;
+  const scopeLabel = product ? ($('c-product').selectedOptions[0]?.text || 'one product') : 'store-wide';
+  const endsLabel = expires ? `, ends after ${expires}` : '';
+  if (!window.confirm(`Create sale: ${offLabel}, ${scopeLabel}${endsLabel}${code ? `, code ${code}` : ' (auto code)'}?`)) return;
+
+  $('create-coupon').disabled = true;
+  try {
+    const res = await fetch('/api/coupons', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    setStatus('coupons-status', `Created ${body.code}${body.expires_display ? ` — ends ${body.expires_display}` : ''}.`, 'success');
+    $('coupon-form').reset();
+    loadCoupons();
+  } catch (err) {
+    setStatus('coupons-status', `Failed: ${err.message}`, 'error');
+  } finally {
+    $('create-coupon').disabled = false;
+  }
+}
+
+async function onDeactivateCoupon(code, row) {
+  if (!window.confirm(`End the sale "${code}" now? Shoppers can no longer use it.`)) return;
+  const msg = row.querySelector('.coupon-msg');
+  msg.textContent = 'Ending...';
+  try {
+    const res = await fetch('/api/coupons/deactivate', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    msg.textContent = 'Ended.';
+    setTimeout(loadCoupons, 600);
+  } catch (err) {
+    msg.textContent = `Failed: ${err.message}`;
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+```
+*(`expires` uses end-of-day in the owner's local time; the backend's `formatExpiry` (2.2) displays it in store TZ, which is what prevents the misread. List rows use a plain bordered div — WS4 restyles with tokens. `.label`/`.toolbar`/`.empty`/`.product-form` classes already exist.)*
 
 **Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
 
