@@ -83,12 +83,7 @@ Across these six test posts are a variety of images and videos. These have been 
   + [x] **R1 · Recon: Show all products**
   + [x] **R2 · Clear the placeholders.** 
   + [x] **R3 · Add the first piece, live.** 
-
-  + [ ] **R4 · Add the rest (2–6).** 
-    - Work through Pieces 2–6 — mix "let it write" with pasting finished copy to keep pace. 
-    - For each, give photos and, when asked, the **video behavior** in plain words (see each piece). 
-    - This is where the **media variants** get proven:
-    - 2 GIF-like MP4 · 3 click-to-play MP4 + poster · 4 two MP4s in order · 5 MP4-then-YouTube · 6 YouTube only · 1 images-only.
+  + [x] **R4 · Add the rest (2–6).** 
 
   + [ ] **R5 · The slug edge (optional, great detail).** 
     - Create **"Em's Lavender & Sage"**, then later say "edit the Lavender Sage piece, set it to $110." 
@@ -241,8 +236,6 @@ It's a tiny stone cottage at the end of a path you almost didn't take, the eveni
 
 ### Script
 
-Okay, I have the rest of these all organized to optimize our workflow. When presenting me with the preview links, please include the proposed SEO Title and SEO Description text so that I can review it before I publish what I can't see on the preview or live page. 
-
 I want to add a new piece called "The Reading Hour". It's a "A little book nook that tucks between the real books on your shelf, with a tiny lamp that actually lights up" for $185.
 
 #### More Info.
@@ -302,7 +295,7 @@ That pocket of late afternoon when the light goes amber and the house holds its 
   - Video:
     - `https://drive.google.com/file/d/1_SS04zQH7FWCIwAjjZhdTDtc7q3OTsGv/view?usp=sharing`
 
-### Script
+### About
 
 And a seasonal one — First Snow, Stillwood. A tiny cabin in the woods the morning after the first snow, windows lit warm against the blue. $295.
 
@@ -360,7 +353,7 @@ The morning after the first real snow, the whole world soft and soundless, the o
     - LOOP `https://drive.google.com/file/d/1P4EkwMvI9ep_Tm9te1z4RgT4iG2pRTbY/view?usp=sharing`
     - CLICK-TO-PLAY `https://drive.google.com/file/d/1mnX0LK-iXrYPotGNcwBLZ7uJWcSJsqog/view?usp=sharing`
 
-### Script
+### About
 
 Add The Tide Library — a tiny lighthouse-keeper's desk where the sea comes in through the window. $240.
 
@@ -419,7 +412,7 @@ The desk of a lighthouse keeper who reads more than he sleeps. Books stacked to 
   - YouTube:
     - `https://youtu.be/PCZR34lX-9w`
 
-### Script
+### About
 
 Next — The Clockmaker's Window. A tiny watchmaker's bench where it's always golden hour. $310.
 
@@ -474,7 +467,7 @@ A watchmaker's bench at the end of the day, when the low sun comes through the s
   - Thumbnail:
     - `https://drive.google.com/file/d/1KLxN2IS6GW9EOu4_k0J6vFLQtSsxzaZy/view?usp=sharing`
 
-### Script
+### About
 
 And The Night Train — a tiny lit platform with the last train pulling in at night. $220.
 
