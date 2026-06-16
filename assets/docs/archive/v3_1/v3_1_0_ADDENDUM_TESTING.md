@@ -2,16 +2,17 @@
 
 **Addendum to**: `v3_1_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Where**: the **dev preview** URL (NOT localhost) — Preview env, Preview `PRODUCT_API_KEY`, Deployment Protection (SSO) **off** for the run so Stripe webhooks + the GPT can reach it. Stripe **test mode**. The GPT pointed at the dev preview with the Preview key.
+**Stripe prerequisites (F11):** the preview webhook endpoint must subscribe **`charge.refunded`** (else the reconciliation check, item 6, never fires) in addition to `checkout.session.completed`. Buyer refund emails are **Stripe-sent and live-gated** — do **not** assert email delivery in test mode.
 **Bar**: every assertion green before promotion. Design is tested + feedback'd like functionality (concrete default + render-tune with Sean). Real content is never a gate — production-grade placeholders stand in.
 
-> **Static gate (first):** `npx tsc --noEmit -p tsconfig.json` clean · `ls api/*.ts` count unchanged (refund folds into `orders.ts`, attach into `upload.ts` — no new function) · `node --check` clean on `admin.js` / `product.js` / `homepage.js` · `vercel.json` valid JSON with the 2 new rewrites (`/api/orders/:id/refund`, `/api/upload/attach`) · GPT schema valid + every `summary` < 300 chars.
+> **Static gate (first):** `npx tsc --noEmit -p tsconfig.json` clean · `ls api/*.ts` count unchanged (refund folds into `orders.ts`, attach into `upload.ts` — no new function) · `node --check` clean on `admin.js` / `product.js` / `homepage.js` · `vercel.json` valid JSON with the 2 new rewrites (`/api/orders/:id/refund`, `/api/upload/attach`) · GPT schema valid + every `summary` < 300 chars · **the assembled `…_GPT_INSTRUCTIONS_TRIMMED.txt` is < 8000 chars after all WS1–3 edits** (over the cap → the GPT silently truncates its instructions — F5) · the `record_sale` migration is applied (WS6 inventory).
 
 ---
 
 ## WS1 — Refund (both surfaces)
 
-1. **/admin, published-but-sold piece:** a test order exists for it → Orders tab → **Refund order** → confirm → "Refunded"; the order flips to the **Refunded** pill (re-list prompt appears) → accept → "Refunded + relisted"; the product shows **available** again on `/shop`. Verify in Stripe test dashboard the refund exists.
-2. **/admin, archived piece:** refund → relist prompt → accept → the piece **unarchives** (back in `/shop`); decline on another → stays archived.
+1. **/admin, published-but-sold piece — from the All Orders / Shipped subtab** (a refunded order drops out of Needs Shipping's `status=completed` filter, so use a view where it persists — F1): a test order exists for it → Orders tab → **Refund order** → confirm → "Refunded"; the order shows the **Refunded** pill (re-list prompt appears) → accept → "Refunded + relisted"; the product shows **available** again on `/shop` **and a real test checkout completes on it** (proves buyability restored, not just the listing — F2). Verify the refund in the Stripe test dashboard.
+2. **/admin, archived piece (incl. archived-AND-sold):** refund → relist prompt → accept → the piece **unarchives AND its stock is restored** (`quantity + 1`) so it's back on `/shop` **and buyable**; decline on another → stays archived/down. (Exercises the F2 both-axes relist.)
 3. **GPT:** "refund <buyer>'s order for <product>" → it **reads back** piece + amount + buyer and waits → confirm → `refundOrder` → it reports refunded + **asks** relist-or-leave → "relist" → `editProduct {available:true}` (or `unarchiveProduct`) runs.
 4. **Idempotency:** trigger a refund twice fast (double-click / retry) → exactly **one** Stripe refund (idempotency key `refund-<id>`); second returns the already-refunded 409, no double-refund.
 5. **Guards:** refund a non-existent id → 404; an already-refunded order → 409; an order with no `payment_intent` → 409; refund a piece that is **still `available`** (e.g. multi-qty) → refund succeeds, **no relist prompt** (nothing to relist), no error.
@@ -29,7 +30,7 @@
 
 ## WS3 — Chat-attach upload + admin media UX
 
-14. **Attach 1 photo (desktop ChatGPT):** GPT calls `uploadImages`; one CDN url back; it lands under `test/<slug>/hero-<slug>.webp`.
+14. **Attach 1 photo (desktop ChatGPT):** GPT calls `uploadImages`; one CDN url back; it lands under `test/<slug>/test_hero-<slug>.webp` (test mode prefixes `test_` — F12).
 15. **Attach a 7-photo batch:** 7 uploads; first = `hero`, rest = `gallery-0N`; `createProduct` succeeds reusing the hero url for thumbnail.
 16. **`roles[]` honored:** attach 3 + tell the GPT which is the hero / a detail → returned roles match.
 17. **> 10 / expiry / fallback:** > 10 in one call → friendly "batch it"; a stalled (expired) link → friendly "re-attach"; blank `openaiFileIdRefs` → GPT falls back to asking for a Drive/direct link (`uploadImage` still works).
@@ -53,6 +54,13 @@
 
 30. **Lottie title:** the hero title writes itself in on load (lottie-web SVG); a real `<h1>` is in the DOM (view-source / a11y tree) for SEO; `prefers-reduced-motion: reduce` → static styled `<h1>`, no Lottie; a blocked/404 JSON → static `<h1>` still shows (no blank hero).
 31. **Old-film hero:** the re-rendered MP4 (versioned CDN key) plays with the grade/grain/flare; the poster re-graded to match; parallax / overlay / spotlight / edge-glow + the reduced-motion poster fallback all still work; `npx hyperframes lint` clean on the composition.
+
+## WS6 — Inventory (stock decrement on a sale)
+
+32. **One-of-a-kind (qty 1):** buy it → the webhook runs `record_sale` → `quantity` 1→0 and `available` flips false → shows "Sold". Identical to pre-WS6 behavior.
+33. **Multi-stock (qty ≥ 2):** set a piece's quantity to 2 → buy one → `quantity` 2→1, **`available` stays true**, still listed + buyable; buy the second → `quantity`→0, `available`→false ("Sold"). Proves a sale no longer strands extra stock.
+34. **Atomicity:** two near-simultaneous completions on the same qty-1 piece never drive quantity negative (`greatest(…,0)`); the second is a no-op at 0.
+35. **A sale never archives / never touches Stripe:** after a sale, `archived_at` is unchanged and the Stripe Product/Price stay `active` (the piece is re-sellable with NO new Price — only our `available`/`quantity` gate it).
 
 ## Cross-cutting invariants
 

@@ -5,7 +5,7 @@
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_0_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_0_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_0_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_0_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
 
 ---
 
@@ -26,7 +26,9 @@
 - **`is_test` isolation holds.** Scope every order/refund lookup by `isTest` (`api/_lib/env.ts`) so a test-env action can never touch a live order; Stripe secret key is already env-scoped (test vs live).
 - **Auth unchanged.** `requireAdmin` (orders) / `authorize` (products) already accept `PRODUCT_API_KEY` **or** an admin Supabase JWT — both surfaces, no new auth.
 - **Refund is owner-confirmed, never auto-issued.** /admin: `window.confirm`; GPT: an explicit confirm beat before calling `refundOrder`.
-- **Refund never auto-relists** (the safe default — a damaged-item refund must not silently re-list the piece). Relisting is a separate, **state-aware**, confirmed step.
+- **Refund never auto-relists** (the safe default — a damaged-item refund must not silently re-list the piece). Relisting is a separate, **state-aware**, confirmed step that **restores stock** (`quantity + 1`).
+- **Parity (the standing rule).** Every store-management capability must be **equally doable via the Custom GPT chat AND the /admin panel** — neither surface is second-class. Judge every feature both ways.
+- **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (`styles.css:376`) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
 - **The go-live version is untouched.** v3.1.0 ships on its own, separately, when Sean chooses.
@@ -40,6 +42,7 @@
 3. **Chat-attach upload + admin upload UX** — fold `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md`; add admin upload previews, remaining-role hints, and a structured MP4 editor.
 4. **Admin polish** — clean, professional, **brand-neutral** redesign (NOT august.style-tokened) + /admin↔GPT parity, nav, and product-list state-filter fixes.
 5. **Homepage experience** — `text-to-lottie` title write-on + `hyperframes` old-film/lens-flare hero; from research subagents.
+6. **Inventory** — decrement `products.quantity` on a sale; `available = (quantity > 0)`; refund relist restores the unit. Stock is ours (Supabase); Stripe holds none.
 
 ## Locked decisions (confirmed — the builder chooses nothing)
 
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
 
   const { data: order, error: loadErr } = await supabase
     .from('orders')
-    .select('id, status, stripe_payment_intent, products(id, slug, title, available, archived_at)')
+    .select('id, status, stripe_payment_intent, products(id, slug, title, available, quantity, archived_at)')
     .eq('id', id)
     .eq('is_test', isTest)
     .single();
@@ -139,18 +142,18 @@ export async function POST(request: Request) {
   if (updErr) console.error(`Refund status flip lagged for ${id}:`, updErr.message);
 
   const p = (order as unknown as {
-    products?: { id: string; slug: string; title: string; available: boolean; archived_at: string | null };
+    products?: { id: string; slug: string; title: string; available: boolean; quantity: number | null; archived_at: string | null };
   }).products ?? null;
   return jsonResponse(request, {
     ok: true,
     status: 'refunded',
     relist: p
-      ? { product_id: p.id, slug: p.slug, title: p.title, available: p.available, archived: !!p.archived_at }
+      ? { product_id: p.id, slug: p.slug, title: p.title, available: p.available, quantity: p.quantity ?? 0, archived: !!p.archived_at }
       : null,
   });
 }
 ```
-*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65`/`:172` → `order.products?.title`) — **verify the shape against a real refund response, not just `tsc`**: a wrong assumption here doesn't crash, it just returns a malformed `relist` and the "put it back up for sale?" prompt silently never fires. `tsc --noEmit` clean.)*
+*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`orders.ts:65`/`:172` → `order.products?.title`) — **verify the shape against a real refund response, not just `tsc`**: a wrong assumption here doesn't crash, it just returns a malformed `relist` and the "put it back up for sale?" prompt silently never fires. **`requireAdmin` returns the service-role client (`adminAuth.ts:27-31` — `SUPABASE_SECRET_KEY` on both auth paths), so the embed resolves for an archived product too** (it bypasses the `archived_at IS NULL` RLS — needed for the WS6 relist). `tsc --noEmit` clean.)*
 
 **Phase 1.2 — `vercel.json`: the refund rewrite (more specific path first).** **CURRENT (`vercel.json:12`):**
 ```json
@@ -213,7 +216,7 @@ REFUNDS: you can SEE order status but have NO refund Action. Walk her through St
 ```
 **NEW:**
 ```
-REFUNDS: refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back the piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (the piece's state); a refund does NOT relist it, so ASK "Want it back up for sale, or leave it down?" If yes: editProduct {available:true} when relist.available is false (published-but-sold), or unarchiveProduct when relist.archived. PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
+REFUNDS: find the order first (listOrders q=<buyer email or id> — it reaches shipped/past orders, not just the needs-shipping queue). refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back the piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (the piece's state + quantity); a refund does NOT relist it, so ASK "Want it back up for sale, or leave it down?" If yes, restore the refunded unit: unarchiveProduct when relist.archived AND/OR editProduct {available:true, quantity: relist.quantity + 1} — do both if both apply. PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
 ```
 
 *1.4b — poster aside (the v2.1 testing clarification).* **CURRENT (`:25`):** `…click-to-play with sound (the default; she can add a still "poster"). Set the media flags accordingly.` → **NEW:** `…click-to-play with sound (the default; she can add a still "poster" — the image shown before the video plays). Set the media flags accordingly.`
@@ -303,21 +306,25 @@ async function submitRefund(orderId, card) {
   }
 }
 
-// archived → unarchive; published-but-sold → editProduct {available:true}. Mirrors the admin's own
-// product-mutation calls: PUT /api/products?id=… (admin.js:474) and POST /api/products/unarchive (:634).
+// Relist = RESTORE the refunded unit (WS6.3): unarchive when archived AND put it back in stock
+// (quantity + 1 → available follows the quantity>0 rule). BOTH axes, not XOR. Mirrors the admin's
+// own calls: POST /api/products/unarchive (admin.js:634) + PUT /api/products?id=… (:474).
 async function relistPiece(r, msg) {
   try {
-    const res = r.archived
-      ? await fetch('/api/products/unarchive', {
-          method: 'POST',
-          headers: { ...authHeader(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: r.product_id }),
-        })
-      : await fetch(`/api/products?id=${encodeURIComponent(r.product_id)}`, {
-          method: 'PUT',
-          headers: { ...authHeader(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ available: true }),
-        });
+    if (r.archived) {
+      const ua = await fetch('/api/products/unarchive', {
+        method: 'POST',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: r.product_id }),
+      });
+      if (!ua.ok) throw new Error(`HTTP ${ua.status}`);
+    }
+    // Return the refunded unit to stock; available follows from quantity > 0.
+    const res = await fetch(`/api/products?id=${encodeURIComponent(r.product_id)}`, {
+      method: 'PUT',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ available: true, quantity: (r.quantity || 0) + 1 }),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     msg.textContent = 'Refunded + relisted.';
   } catch (err) {
@@ -330,6 +337,10 @@ async function relistPiece(r, msg) {
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; it asks about relisting") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note + test-script **R15** flips from "can't issue refunds" → "issues + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
 ## Workstream 2 — Coupons in /admin (detailed)
+
+> **Verified I/O contract (the anchor — confirmed against `api/products.ts`, so the admin field names aren't a guess).**
+> - **List** (`handleCouponList`, `products.ts:779-789`) returns, per coupon: `{ code, promotion_code_id, percent_off, amount_off, times_redeemed, max_redemptions, expires_at, store_wide, product_ids }` (+ `expires_display` added in 2.2). `renderCoupons` reads exactly these.
+> - **Create** (`handleCoupon`, `products.ts:694-739`) accepts: `type` (`'percent'`|`'amount'`), `value` (percent = the number; **amount = CENTS**, `Math.round(value)` `:724`), `code?`, `product_ids?` (**Stripe** product ids → `applies_to.products`), `min_amount?` (cents → `restrictions.minimum_amount`), `expires_at?` (unix → `redeem_by` + promo `expires_at`), `max_redemptions?`. Returns `{ success, code, coupon_id, promotion_code_id }` (+ `expires_display` in 2.2c). `onCreateCoupon` posts exactly these.
 
 **Phase 2.1 — /admin Coupons UI.** A 3rd tab over the existing `/api/coupons` endpoints (GET list · POST create · POST `/api/coupons/deactivate`). Reuses `setStatus`/`authHeader`/`escapeHtml`/`centsToDollars`/`dollarsToCents` + the `.product-form`/`.row-3`/`.field`/`.form-actions` classes. The `.tab-btn` loop (`admin.js:143`) auto-wires the new button; `switchTab`/`refreshActiveTab` need the coupons branch.
 
@@ -546,7 +557,7 @@ async function onCreateCoupon(e) {
   const max = Number.parseInt($('c-max').value, 10);
   if (Number.isInteger(max) && max > 0) payload.max_redemptions = max;
   const expires = $('c-expires').value; // YYYY-MM-DD or ''
-  if (expires) payload.expires_at = Math.floor(new Date(`${expires}T23:59:59`).getTime() / 1000); // end of that day, local
+  if (expires) payload.expires_date = expires; // raw date; the backend builds end-of-day in the STORE timezone (no browser-TZ drift — F9)
   const product = $('c-product').value;
   if (product) payload.product_ids = [product];
 
@@ -599,7 +610,7 @@ if (document.readyState === 'loading') {
   init();
 }
 ```
-*(`expires` uses end-of-day in the owner's local time; the backend's `formatExpiry` (2.2) displays it in store TZ, which is what prevents the misread. List rows use a plain bordered div — WS4 restyles with tokens. `.label`/`.toolbar`/`.empty`/`.product-form` classes already exist.)*
+*(`expires_date` is the raw YYYY-MM-DD; the backend (2.2) builds end-of-day in the store TZ so the stored instant, the confirm label, and `expires_display` all agree regardless of the owner's locale (F9). List rows use a plain bordered div — WS4 restyles with tokens. `.label`/`.toolbar`/`.empty`/`.product-form` classes already exist.)*
 
 **Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
 
@@ -618,6 +629,18 @@ function formatExpiry(unixSeconds: number): string {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   }).format(new Date(unixSeconds * 1000));
+}
+
+// End-of-day (23:59:59) on a YYYY-MM-DD calendar date, interpreted in the STORE timezone, as a Unix
+// timestamp — so a coupon's stored expiry matches the date the owner picked regardless of their
+// browser locale (F9). Offset derived by round-tripping the naive instant through the TZ; Vercel
+// functions run in UTC, so `new Date(localized)` reads the ET wall-clock back as UTC for the diff.
+function endOfDayET(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const naiveUTC = Date.UTC(y, m - 1, d, 23, 59, 59);
+  const localized = new Date(naiveUTC).toLocaleString('en-US', { timeZone: 'America/New_York' });
+  const offsetMs = naiveUTC - new Date(localized).getTime();
+  return Math.floor((naiveUTC + offsetMs) / 1000);
 }
 
 // ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
@@ -642,6 +665,14 @@ async function handleCouponList(request: Request): Promise<Response> {
 ```ts
     return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id, expires_display: typeof body.expires_at === 'number' ? formatExpiry(body.expires_at) : null });
 ```
+
+**Phase 2.2d — `handleCoupon` builds the expiry in the store TZ (F9 — kills browser-TZ drift).** Add `expires_date?: string` to the request-body type, and at the top of `handleCoupon` (before `couponParams`) normalize it to a store-TZ end-of-day timestamp so the rest of the handler + the 2.2c `formatExpiry` echo work unchanged:
+```ts
+  if (typeof body.expires_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expires_date)) {
+    body.expires_at = endOfDayET(body.expires_date); // store-TZ end-of-day → redeem_by + promo.expires_at + the echo
+  }
+```
+The admin sends `expires_date` (the raw date); the GPT may still send `expires_at` directly (back-compat — both resolve to the same store-TZ instant for an Eastern owner). `endOfDayET` is the helper from 2.2a.
 
 **Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
 ```
@@ -744,7 +775,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   return jsonResponse(request, { uploads });
 }
 ```
-*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything.)*
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence; F12.)*
 
 **Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
 ```json
@@ -823,6 +854,8 @@ LINK TROUBLE: an attached photo -> uploadImages (forward openaiFileIdRefs). If u
 ```
 
 **Phase 3.7 — admin media UX** (the design addendum §WS4 P3, byte-anchored). Removes the only raw-JSON field a non-technical owner faces + brings the admin to media parity with the GPT.
+
+> **Upload control = role-sectioned per DESIGN P3d (U2).** The single `#upload-role` select is replaced by per-role upload zones (role = the zone you drop into — closes F6's video-role gap and kills the wrong-role footgun); 3.7c's video auto-skip moves into the **Video** zone's handler. The image previews (3.7a) + structured media editor (3.7b) stand as byte-anchored. The sectioned control itself is executable-design (concrete default + render-tune), not byte-anchored here.
 
 *3.7a — image previews + role tag + a live coverage hint.* Rewrite `addImageRow` (`admin.js:331-345`). **CURRENT:**
 ```js
@@ -1006,6 +1039,56 @@ function collectMedia() {
 *(Same `media` array shape the frontend `populateMedia` already reads — `{type, url, autoplay?, loop?, poster?, alt?}` — so `api/products` + `product.js` are untouched. WS4 restyles these rows with tokens.)*
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
+
+## Workstream 6 — Inventory: decrement stock on a sale (pre-existing gap; F2 root cause)
+
+> Surfaced by Gap-A F2 (mis-described there as "the webhook zeroes quantity") + Sean's Stripe trace. **Stock lives only in `products.quantity` (Supabase); Stripe holds no inventory** — verified against Stripe's docs: Products/Prices have **no** stock field; you pass a *transactional* line-item `quantity` per Checkout and Stripe forgets it after charging. Stripe's own limited-inventory guidance = keep stock in your DB, decrement on `checkout.session.completed`. Today the webhook flips `available=false` on **any** sale and never touches `quantity`, so a multi-stock piece is stranded after one sale and `quantity` goes stale. Byte-anchored.
+
+**The rule — one place, applied everywhere `quantity` changes:** on a sale `quantity = max(quantity − 1, 0)` and `available = (quantity > 0)`. That derivation *is* the entire "when to make it unavailable" logic. A sale **never archives** — `archived_at` stays an independent, manual owner action. The checkout gate is already correct (`available && quantity >= 1`, `checkout.ts:79`/`:205`) and the line-item quantity stays `1` (one of each piece per order). One-of-a-kind pieces (qty 1) behave exactly as today (1 → 0 → `available:false`).
+
+**Phase 6.1 — migration: an atomic stock-decrement RPC.** New `supabase/migrations/20260616000001_v3_1_inventory_decrement.sql` (apply via the Supabase CLI — the MCP rejects writes):
+```sql
+-- A sale decrements OUR stock and derives availability, atomically per row (the money path: two
+-- near-simultaneous completions must not race a read-modify-write of the same count). archived_at
+-- is untouched — a sale is never an archive. available follows the POST-decrement quantity.
+create or replace function record_sale(p_ids uuid[])
+returns void language sql as $$
+  update products
+  set quantity  = greatest(coalesce(quantity, 0) - 1, 0),
+      available = greatest(coalesce(quantity, 0) - 1, 0) > 0
+  where id = any(p_ids);
+$$;
+```
+*(One row per distinct product id; each piece appears once per order — `any(p_ids)` decrements each matched row by 1. `tsc` n/a — SQL.)*
+
+**Phase 6.2 — `api/webhook.ts`: decrement instead of the blind `available` flip.** **CURRENT (`webhook.ts:156-163`):**
+```ts
+    const productIds = items.map((i) => i.id);
+    const { error: productUpdateErr } = await supabase
+      .from('products')
+      .update({ available: false })
+      .in('id', productIds);
+    if (productUpdateErr) {
+      console.error(`Product mark-sold failed for ${event.id}:`, productUpdateErr);
+    }
+```
+**NEW (atomic decrement; `available` derived from the new count):**
+```ts
+    const productIds = items.map((i) => i.id);
+    const { error: productUpdateErr } = await supabase.rpc('record_sale', { p_ids: productIds });
+    if (productUpdateErr) {
+      console.error(`Stock decrement failed for ${event.id}:`, productUpdateErr);
+    }
+```
+*(Same non-fatal logging discipline — never 5xx after the idempotency claim. The title-lookup block below (`:216-219`) is unaffected.)*
+
+**Phase 6.3 — refund relist = stock RESTORE (this is the canonical relist; updates WS1's F2 relist).** A refunded unit returns to stock when the owner confirms "put it back up for sale," so relist is **`quantity + 1`** (which makes `available` true again via the same rule) **plus** unarchive when archived — both axes, never XOR. This supersedes WS1's `available:true`-only relist:
+- **WS1.1b** — add `quantity` to the refund handler's `products(...)` select and to the returned `relist` object (`{ product_id, slug, title, quantity, available, archived }`).
+- **WS1.5c `relistPiece`** — PUT `{ quantity: r.quantity + 1, available: true }` (and POST `/api/products/unarchive` when `r.archived`).
+- **GPT instruction 1.4a** — relist via `editProduct {quantity: <current+1>, available:true}` and/or `unarchiveProduct` — both if both.
+*(These WS1 edits land with the F2 fold so WS1 stays the one home for the refund code; WS6.3 is the spec they follow.)*
+
+**Phase 6.4 — docs (as-built):** the corrected inventory model is written into `EVERLASTINGS_STORE.md` so `:678`/`:688` stop describing a never-built `quantity=0`-on-sale behavior (see the EVERLASTINGS_STORE doc-correction fold). Also flip test-script expectations that assumed a sale zeroes quantity.
 
 ## Workstreams 4–5 — executable design (spec'd in `v3_1_0_ADDENDUM_DESIGN.md`)
 
