@@ -1088,7 +1088,7 @@ $$;
 - **GPT instruction 1.4a** — relist via `editProduct {quantity: <current+1>, available:true}` and/or `unarchiveProduct` — both if both.
 *(These WS1 edits land with the F2 fold so WS1 stays the one home for the refund code; WS6.3 is the spec they follow.)*
 
-**Phase 6.4 — docs (as-built):** the corrected inventory model is written into `EVERLASTINGS_STORE.md` so `:678`/`:688` stop describing a never-built `quantity=0`-on-sale behavior (see the EVERLASTINGS_STORE doc-correction fold). Also flip test-script expectations that assumed a sale zeroes quantity.
+**Phase 6.4 — docs (as-built). `Doc impact:`** at the v3.1.x as-built (a fresh agent, per the DEV_RULES *As-built doc-sync* rule — do NOT edit STORE mid-build; it correctly describes the **shipped** available-only model until v3.1.x ships), update `EVERLASTINGS_STORE.md`'s inventory model to the WS6 decrement behavior: the **Purchase-Flow** step ("Sets each purchased product available=false … does NOT change quantity"), **Data States #2** ("Product sold"), and the **Flag reference** `products.quantity` line (currently "a sale doesn't decrement it today … deferred until the first multi-quantity product_type") all flip to *"a sale decrements `quantity`; `available = (quantity > 0)`; `archived_at` untouched."* Also flip any test-script expectation that assumed a sale leaves quantity unchanged.
 
 ## Workstreams 4–5 — executable design (spec'd in `v3_1_1_ADDENDUM_DESIGN.md`)
 
