@@ -1,11 +1,11 @@
-# v3.1.1 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.2 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
-**Revision driven by**: initial draft. Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
+**Revision driven by**: round-2 cold Angle-A fold (v3.1.1 → v3.1.2 — GPT coupon-date parity, collapse 3.7c into P3d, WS6.3 cross-ref, always-offer relist with state-wording, coupon multi-select, P3d functional rules, canonical `productState`, GPT-instructions budget, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_1_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_1_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_2_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_2_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 cold Angle-A have folded (→ v3.1.2); **next = an in-house breadth pass → a fresh cold Angle-A on v3.1.2, looped until it passes, then B/C/D in parallel.**
 
 ---
 
@@ -27,11 +27,13 @@
 - **Auth unchanged.** `requireAdmin` (orders) / `authorize` (products) already accept `PRODUCT_API_KEY` **or** an admin Supabase JWT — both surfaces, no new auth.
 - **Refund is owner-confirmed, never auto-issued.** /admin: `window.confirm`; GPT: an explicit confirm beat before calling `refundOrder`.
 - **Refund never auto-relists** (the safe default — a damaged-item refund must not silently re-list the piece). Relisting is a separate, **state-aware**, confirmed step that **restores stock** (`quantity + 1`).
-- **Parity (the standing rule).** Every store-management capability must be **equally doable via the Custom GPT chat AND the /admin panel** — neither surface is second-class. Judge every feature both ways.
+- **Parity (the standing rule — full, both directions, no single point of failure).** Every store-management capability must be **equally doable via the Custom GPT chat AND the /admin panel** — neither surface is second-class, and **/admin must be complete as if the GPT didn't exist (and vice versa)**. We never leave the owner dependent on a single external service: a Custom GPT outage must not strand her, so /admin carries the *full* capability set (and the GPT carries it too). Design for the reusable-template **"User,"** not for Emy specifically — every time we optimized for "how Emy will use it" we doubled back (e.g. by-link image share vs. a real attach/upload). Judge every feature both ways; a capability present in one surface but not the other is a real gap, not a nicety.
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (`styles.css:376`) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.1 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.2 ships on its own, separately, when Sean chooses.
+
+> **GPT instructions char budget — hard cap 8000 (F#14).** `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` is **7781 / 8000** today (~219 free). The WS1–3 instruction edits (1.4a/1.4b REFUNDS+poster, 2.3 COUPONS+`expires_date`, 3.5a/3.5b attach+alt+roles) net-add **≈ +760 chars → ~8540, OVER the cap.** So the build MUST trim to fit — the TESTING static gate (assembled file < 8000) fails the deploy otherwise; over-cap = the GPT silently truncates its own instructions. **`wc -c` the file after applying the edits**, then tighten these three (most verbose + most redundant, safe to compress *without dropping any rule*): **THE SLUG** (the "FOLD not DROP accents" rationale is stated twice — say it once), **EDITING** (the "build from `effective` so you don't wipe staged edits" rule is restated ~3× across the paragraph + the PHOTOS sub-note — consolidate to one), **PUBLISHING** (the lost-preview + 400-example prose). ~500–600 chars of slack lives in those three. Cut repetition only; keep every distinct rule.
 
 ---
 
@@ -204,9 +206,18 @@ export async function POST(request: Request) {
                 properties:
                   ok: { type: boolean }
                   status: { type: string }
-                  relist: { type: object }
+                  relist:
+                    type: object
+                    description: The piece's current state so you can offer to restore the returned unit. Null if the order had no product.
+                    properties:
+                      product_id: { type: string }
+                      slug: { type: string }
+                      title: { type: string }
+                      available: { type: boolean }
+                      quantity: { type: integer }
+                      archived: { type: boolean }
 ```
-*(`summary` ≈ 230 chars, under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`.)*
+*(`summary` ≈ 230 chars, under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. The `relist` shape is enumerated — the GPT reads `relist.archived`/`.quantity`/`.available`/`.title` in instruction 1.4a, so spell it out rather than an opaque `{type:object}` — F16. No char cap on the schema file, only the per-`summary` 300.)*
 
 **Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.**
 
@@ -216,8 +227,9 @@ REFUNDS: you can SEE order status but have NO refund Action. Walk her through St
 ```
 **NEW:**
 ```
-REFUNDS: find the order first (listOrders q=<buyer email or id> — it reaches shipped/past orders, not just the needs-shipping queue). refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back the piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (the piece's state + quantity); a refund does NOT relist it, so ASK "Want it back up for sale, or leave it down?" If yes, restore the refunded unit: unarchiveProduct when relist.archived AND/OR editProduct {available:true, quantity: relist.quantity + 1} — do both if both apply. PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
+REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches shipped/past orders, not just the needs-shipping queue). refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (state + quantity); a refund never relists itself, so ALWAYS offer to restore the returned unit — if it's down (relist.available false or archived) "Put it back up for sale?", else "Add 1 to its available quantity?". Yes -> unarchiveProduct if relist.archived AND editProduct {available:true, quantity: relist.quantity + 1} (both if both). PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
 ```
+*(The relist offer is **always** made now (Sean's call — minimize friction, never leave stock un-restored), with wording by state: a down piece gets re-listed, an in-stock multi-qty piece gets +1 — F5. `listOrders q=` is the EXISTING orders search param (`orders.ts:60`/`:76-87` — matches id/email/tracking), already documented in the ORDERS instruction; no new capability — F12.)*
 
 *1.4b — poster aside (the v2.1 testing clarification).* **CURRENT (`:25`):** `…click-to-play with sound (the default; she can add a still "poster"). Set the media flags accordingly.` → **NEW:** `…click-to-play with sound (the default; she can add a still "poster" — the image shown before the video plays). Set the media flags accordingly.`
 
@@ -294,10 +306,15 @@ async function submitRefund(orderId, card) {
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     msg.textContent = 'Refunded.';
     const r = body.relist;
-    if (r && (r.available === false || r.archived)) {
-      if (window.confirm(`Refunded. Put "${r.title}" back up for sale?`)) {
-        await relistPiece(r, msg);
-      }
+    if (r) {
+      // ALWAYS offer to restore the returned unit (Sean's call — never leave stock un-restored).
+      // Wording by current state: a down piece (sold-out or archived) gets re-listed; an in-stock
+      // multi-qty piece just gets +1 back. Either way relistPiece restores both axes (F5).
+      const down = r.archived || r.available === false;
+      const ask = down
+        ? `Re-list "${r.title}" and make it available for purchase again?`
+        : `Increase "${r.title}"'s available quantity by 1?`;
+      if (window.confirm(ask)) await relistPiece(r, down, msg);
     }
     setTimeout(loadOrders, 800);
   } catch (err) {
@@ -309,7 +326,8 @@ async function submitRefund(orderId, card) {
 // Relist = RESTORE the refunded unit (WS6.3): unarchive when archived AND put it back in stock
 // (quantity + 1 → available follows the quantity>0 rule). BOTH axes, not XOR. Mirrors the admin's
 // own calls: POST /api/products/unarchive (admin.js:634) + PUT /api/products?id=… (:474).
-async function relistPiece(r, msg) {
+// `down` only tweaks the success copy (re-listed vs +1) — the restore is identical either way.
+async function relistPiece(r, down, msg) {
   try {
     if (r.archived) {
       const ua = await fetch('/api/products/unarchive', {
@@ -326,7 +344,7 @@ async function relistPiece(r, msg) {
       body: JSON.stringify({ available: true, quantity: (r.quantity || 0) + 1 }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    msg.textContent = 'Refunded + relisted.';
+    msg.textContent = down ? 'Refunded + relisted.' : 'Refunded + stock +1.';
   } catch (err) {
     msg.textContent = `Refunded, but relist failed (${err.message}) — relist it from the product editor.`;
   }
@@ -384,9 +402,12 @@ async function relistPiece(r, msg) {
               <label class="field"><span>Ends after (optional)</span><input id="c-expires" type="date" /></label>
               <label class="field"><span>Max redemptions (optional)</span><input id="c-max" type="number" min="1" step="1" /></label>
             </div>
-            <label class="field"><span>Limit to one product (optional)</span>
-              <select id="c-product"><option value="">Store-wide</option></select>
-            </label>
+            <div class="field">
+              <span>Limit to products (optional — leave all unchecked for store-wide)</span>
+              <input type="search" id="c-product-search" placeholder="Filter products by title…" autocomplete="off" />
+              <div id="c-product-list" class="coupon-product-list" style="max-height:180px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px;margin-top:4px"></div>
+              <p id="c-product-selected" style="font-size:12px;color:#666;margin:4px 0 0">Store-wide (no products selected)</p>
+            </div>
             <div class="form-actions">
               <span class="spacer"></span>
               <button type="submit" class="primary" id="create-coupon">Create sale</button>
@@ -464,6 +485,7 @@ function refreshActiveTab() {
 
   $('coupon-form').addEventListener('submit', onCreateCoupon);
   $('coupons-refresh-btn').addEventListener('click', loadCoupons);
+  $('c-product-search').addEventListener('input', populateCouponProducts); // re-filter the scope picker live
 }
 ```
 
@@ -501,14 +523,43 @@ async function loadCoupons() {
   }
 }
 
+// A searchable, checkbox product picker so a coupon can be scoped to MANY products — true parity
+// with the GPT's product_ids array (F13; createCoupon already accepts an array, contract line above).
+// Selection lives in a module Set so it PERSISTS as the owner filters by different terms: search
+// "loft", check a few, search "vessel", check more — the earlier checks stay. (Sean: think the
+// template "User" with a large catalog, not Emy's tiny one — full /admin capability, GPT-down-proof.)
+const couponSelectedProducts = new Set(); // stripe_product_ids
+
 function populateCouponProducts() {
-  const sel = $('c-product');
-  if (!sel) return;
-  const current = sel.value;
+  const list = $('c-product-list');
+  if (!list) return;
+  const term = ($('c-product-search')?.value || '').trim().toLowerCase();
   const published = (state.products || []).filter((p) => p.is_published && !p.archived_at && p.stripe_product_id);
-  sel.innerHTML = '<option value="">Store-wide</option>' +
-    published.map((p) => `<option value="${escapeHtml(p.stripe_product_id)}">${escapeHtml(p.title || '(untitled)')}</option>`).join('');
-  sel.value = current; // keep selection across refreshes if still present
+  // Drop any selection that's no longer a valid scope target (unpublished/archived since checking).
+  const validIds = new Set(published.map((p) => p.stripe_product_id));
+  [...couponSelectedProducts].forEach((id) => { if (!validIds.has(id)) couponSelectedProducts.delete(id); });
+  const shown = term ? published.filter((p) => (p.title || '').toLowerCase().includes(term)) : published;
+  list.innerHTML = shown.length
+    ? shown.map((p) => {
+        const id = escapeHtml(p.stripe_product_id);
+        const checked = couponSelectedProducts.has(p.stripe_product_id) ? ' checked' : '';
+        return `<label class="checkbox-row"><input type="checkbox" class="c-product-cb" value="${id}"${checked} /><span>${escapeHtml(p.title || '(untitled)')}</span></label>`;
+      }).join('')
+    : '<p class="empty" style="padding:8px">No matching published products.</p>';
+  list.querySelectorAll('.c-product-cb').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) couponSelectedProducts.add(cb.value); else couponSelectedProducts.delete(cb.value);
+      updateCouponScopeNote();
+    });
+  });
+  updateCouponScopeNote();
+}
+
+function updateCouponScopeNote() {
+  const note = $('c-product-selected');
+  if (!note) return;
+  const n = couponSelectedProducts.size;
+  note.textContent = n === 0 ? 'Store-wide (no products selected)' : `${n} product${n === 1 ? '' : 's'} selected`;
 }
 
 function renderCoupons(coupons) {
@@ -558,11 +609,11 @@ async function onCreateCoupon(e) {
   if (Number.isInteger(max) && max > 0) payload.max_redemptions = max;
   const expires = $('c-expires').value; // YYYY-MM-DD or ''
   if (expires) payload.expires_date = expires; // raw date; the backend builds end-of-day in the STORE timezone (no browser-TZ drift — F9)
-  const product = $('c-product').value;
-  if (product) payload.product_ids = [product];
+  const selectedProducts = [...couponSelectedProducts];
+  if (selectedProducts.length) payload.product_ids = selectedProducts; // omit → store-wide
 
   const offLabel = type === 'percent' ? `${rawValue}% off` : `$${rawValue.toFixed(2)} off`;
-  const scopeLabel = product ? ($('c-product').selectedOptions[0]?.text || 'one product') : 'store-wide';
+  const scopeLabel = selectedProducts.length ? `${selectedProducts.length} product${selectedProducts.length === 1 ? '' : 's'}` : 'store-wide';
   const endsLabel = expires ? `, ends after ${expires}` : '';
   if (!window.confirm(`Create sale: ${offLabel}, ${scopeLabel}${endsLabel}${code ? `, code ${code}` : ' (auto code)'}?`)) return;
 
@@ -576,6 +627,8 @@ async function onCreateCoupon(e) {
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     setStatus('coupons-status', `Created ${body.code}${body.expires_display ? ` — ends ${body.expires_display}` : ''}.`, 'success');
+    couponSelectedProducts.clear();
+    if ($('c-product-search')) $('c-product-search').value = '';
     $('coupon-form').reset();
     loadCoupons();
   } catch (err) {
@@ -672,7 +725,18 @@ async function handleCouponList(request: Request): Promise<Response> {
     body.expires_at = endOfDayET(body.expires_date); // store-TZ end-of-day → redeem_by + promo.expires_at + the echo
   }
 ```
-The admin sends `expires_date` (the raw date); the GPT may still send `expires_at` directly (back-compat — both resolve to the same store-TZ instant for an Eastern owner). `endOfDayET` is the helper from 2.2a.
+Both surfaces send `expires_date`: /admin already does, and **the GPT does too now** (Phase 2.2e adds it to the `createCoupon` schema + instruction). That closes the v2.1 timestamp-misread regression on **both** surfaces, not just /admin — leaving the GPT to compute a Unix end-of-day itself was the exact failure class (F#2). `expires_at` stays accepted for back-compat. `endOfDayET` is the helper from 2.2a.
+
+**Phase 2.2e — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): prefer `expires_date` on `createCoupon` (parity + regression-class closure — F#2).** **CURRENT (`:231`):**
+```yaml
+                expires_at: { type: integer, description: Unix timestamp when the code expires. Optional. }
+```
+**NEW (add `expires_date` as the preferred field; demote `expires_at` to legacy):**
+```yaml
+                expires_date: { type: string, description: "End date as YYYY-MM-DD (e.g. 2026-06-21). PREFER THIS — the server sets end-of-day in the store's timezone, so you never compute a timestamp. Optional." }
+                expires_at: { type: integer, description: "Unix timestamp (legacy — use expires_date instead). Optional." }
+```
+*(`handleCoupon`'s 2.2d normalization already accepts `expires_date`, so the backend is ready — only the schema + instruction needed exposing. Each `description` < 300 chars.)*
 
 **Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
 ```
@@ -680,7 +744,7 @@ COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; 
 ```
 **NEW (read the full terms back in plain dates before creating; never decode a timestamp):**
 ```
-COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give. listCoupons returns expires_display (a plain date) beside each sale's scope (store-wide vs specific) — relay THAT; never decode a raw timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
+COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons returns expires_display (a plain date) beside each sale's scope (store-wide vs specific) — relay THAT; never decode a raw timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
 ```
 
 ## Workstream 3 — Chat-attach upload + admin media UX (detailed)
@@ -823,6 +887,8 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
         '400': { description: "No files attached, a link expired (re-attach — links last ~5 min), more than 10 files, or a file wasn't an allowed image. Relay plainly and ask Em to re-attach." }
   /api/orders:
 ```
+*(**Keep `openaiFileIdRefs` as `items: { type: string }` — F9.** That is OpenAI's **documented** Custom-GPT contract: the platform recognizes the property name and substitutes the string array with `{name,id,mime_type,download_link}` objects at runtime, which the 3.2 handler then reads. Declaring the object shape in the schema would fight the documented substitution — and a stricter Action validator could reject a placeholder that no longer looks like a string array. We favor the documented mechanism over guessing at platform internals; the real-preview smoke test (TESTING item 14) is what proves the round-trip, and would catch a future contract change.)*
+
 *3.4b — point `uploadImage` at the new op.* **CURRENT (`:269`):** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."` → **NEW:** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Use this for media given as a LINK (a Drive share or direct URL) or for video. If she ATTACHED photos to the chat, use uploadImages instead."` *(keep < 300 chars)*
 
 **Phase 3.5 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.**
@@ -895,7 +961,7 @@ function addImageRow(url, alt) {
     const v = urlInput.value.trim();
     thumb.src = v;
     thumb.style.visibility = v ? 'visible' : 'hidden';
-    const m = v.match(/\/(?:test_)?(hero|thumbnail|gallery-\d+|detail-\d+|video-\d+)[-.]/);
+    const m = v.match(/\/(?:test_)?(hero|thumbnail|seo_thumbnail|checkout_image|gallery-\d+|detail-\d+|video-\d+)[-.]/); // all 7 roles (AR#37) — was missing seo_thumbnail/checkout_image (F6)
     roleTag.textContent = m ? m[1] : '';
     updateCoverage();
   };
@@ -988,7 +1054,7 @@ function collectMedia() {
       return;
     }
     const item = { type: 'video', url };
-    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset
+    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset; controls omitted on purpose — populateMedia derives no-controls from autoplay (product.js:254), so it renders button-less (F10)
     const poster = row.querySelector('.m-poster').value.trim();
     if (poster) item.poster = poster;
     if (alt) item.alt = alt;
@@ -1024,17 +1090,7 @@ function collectMedia() {
   $('add-media-row').addEventListener('click', () => addMediaRow(null));
 ```
 
-*3.7c — auto-infer `skip_transform` from the file type (the footgun fix).* **`admin.js` CURRENT (`:371-372`):**
-```js
-  const role = $('upload-role').value;
-  const skip = $('upload-skip-transform').checked ? 'true' : '';
-```
-**NEW (a video always skips the Cloudinary crop, checkbox or not):**
-```js
-  const role = $('upload-role').value;
-  const isVideo = (file.type || '').startsWith('video/');
-  const skip = ($('upload-skip-transform').checked || isVideo) ? 'true' : '';
-```
+*3.7c — video auto-skip is owned by P3d, NOT a standalone edit to the old control (F#3).* The single `#upload-role` control is **removed** by DESIGN P3d (role-sectioned zones), so byte-anchoring an `isVideo` skip onto its handler (`admin.js:371`) would be applied-then-stripped — the exact hazard the byte-anchored discipline exists to prevent. Instead **the rule lives in P3d's Video zone**: every upload from the Video zone POSTs `skip_transform=true` unconditionally (a video always skips the Cloudinary crop — replaces the old global checkbox/auto-infer). The chat-attach path already enforces it server-side (3.2's `handleAttachedRefs` passes `isVid ? 'true' : null`), so **both** surfaces skip transform on video with no checkbox and no wrong-role footgun. **Do not apply a standalone `#upload-role` edit** — there's no such control after P3d.
 
 *(Same `media` array shape the frontend `populateMedia` already reads — `{type, url, autoplay?, loop?, poster?, alt?}` — so `api/products` + `product.js` are untouched. WS4 restyles these rows with tokens.)*
 
@@ -1053,13 +1109,19 @@ function collectMedia() {
 -- is untouched — a sale is never an archive. available follows the POST-decrement quantity.
 create or replace function record_sale(p_ids uuid[])
 returns void language sql as $$
-  update products
-  set quantity  = greatest(coalesce(quantity, 0) - 1, 0),
-      available = greatest(coalesce(quantity, 0) - 1, 0) > 0
-  where id = any(p_ids);
+  -- Count each id's multiplicity so an N-of-one-piece line would decrement by N, not 1. Today p_ids
+  -- never has duplicates (see the invariant note below) — grouping is identical for unique ids — but
+  -- this is strictly correct if a multi-buy cart is ever added, at zero cost.
+  with counts as (select id, count(*)::int as n from unnest(p_ids) as id group by id)
+  update products p
+  -- both SET expressions read the OLD row (Postgres UPDATE semantics) → available = (new_qty > 0). F17.
+  set quantity  = greatest(coalesce(p.quantity, 0) - c.n, 0),
+      available = greatest(coalesce(p.quantity, 0) - c.n, 0) > 0
+  from counts c
+  where p.id = c.id;
 $$;
 ```
-*(One row per distinct product id; each piece appears once per order — `any(p_ids)` decrements each matched row by 1. `tsc` n/a — SQL.)*
+*(**Invariant — `p_ids` has no duplicates today**, so the simpler `- 1` would also be correct: the cart dedupes by `product_id` (`main.js:121` returns early on a re-add), there is no quantity selector, and each checkout line-item is hardcoded `quantity: 1` (`checkout.ts:96`) with one `metadata.items` entry per distinct piece — a piece is sold to **separate sequential orders**, never N-in-one-cart. The `unnest`/`count(*)` form is adopted as zero-cost hardening + to document that invariant: a cold reviewer (round-2 F1) read the old `- 1` as a live decrement bug — it can't fire under the current cart, but the grouped form is unambiguously right and future-proofs a quantity selector. `tsc` n/a — SQL.)*
 
 **Phase 6.2 — `api/webhook.ts`: decrement instead of the blind `available` flip.** **CURRENT (`webhook.ts:156-163`):**
 ```ts
@@ -1082,20 +1144,19 @@ $$;
 ```
 *(Same non-fatal logging discipline — never 5xx after the idempotency claim. The title-lookup block below (`:216-219`) is unaffected.)*
 
-**Phase 6.3 — refund relist = stock RESTORE (this is the canonical relist; updates WS1's F2 relist).** A refunded unit returns to stock when the owner confirms "put it back up for sale," so relist is **`quantity + 1`** (which makes `available` true again via the same rule) **plus** unarchive when archived — both axes, never XOR. This supersedes WS1's `available:true`-only relist:
-- **WS1.1b** — add `quantity` to the refund handler's `products(...)` select and to the returned `relist` object (`{ product_id, slug, title, quantity, available, archived }`).
-- **WS1.5c `relistPiece`** — PUT `{ quantity: r.quantity + 1, available: true }` (and POST `/api/products/unarchive` when `r.archived`).
-- **GPT instruction 1.4a** — relist via `editProduct {quantity: <current+1>, available:true}` and/or `unarchiveProduct` — both if both.
-*(These WS1 edits land with the F2 fold so WS1 stays the one home for the refund code; WS6.3 is the spec they follow.)*
+**Phase 6.3 — refund relist = stock RESTORE (the spec WS1 implements; NOT a separate diff — F#4).** The canonical relist restores the returned unit: **`quantity + 1`** (which makes `available` true again via the same rule) **plus** unarchive when archived — both axes, never XOR. **This is already folded into WS1's NEW blocks above — do NOT re-apply it as a second edit.** A builder going 1 → 6 has already built it by the time they reach here; this section is rationale, not a TODO. For reference, it lives in:
+- **WS1.1b** — the refund handler's `products(...)` select includes `quantity`, and the returned `relist` object is `{ product_id, slug, title, available, quantity, archived }`.
+- **WS1.5c `relistPiece`** — always PUTs `{ available: true, quantity: (r.quantity || 0) + 1 }` and POSTs `/api/products/unarchive` when `r.archived`; the prompt wording branches on current state (re-list vs +1) per F5.
+- **GPT instruction 1.4a** — always offers, then `editProduct {available:true, quantity: relist.quantity + 1}` and/or `unarchiveProduct` (both if both).
 
-**Phase 6.4 — docs (as-built). `Doc impact:`** at the v3.1.x as-built (a fresh agent, per the DEV_RULES *As-built doc-sync* rule — do NOT edit STORE mid-build; it correctly describes the **shipped** available-only model until v3.1.x ships), update `EVERLASTINGS_STORE.md`'s inventory model to the WS6 decrement behavior: the **Purchase-Flow** step ("Sets each purchased product available=false … does NOT change quantity"), **Data States #2** ("Product sold"), and the **Flag reference** `products.quantity` line (currently "a sale doesn't decrement it today … deferred until the first multi-quantity product_type") all flip to *"a sale decrements `quantity`; `available = (quantity > 0)`; `archived_at` untouched."* Also flip any test-script expectation that assumed a sale leaves quantity unchanged.
+**Phase 6.4 — docs (as-built). `Doc impact:`** at the v3.1.x as-built (a fresh agent, per the DEV_RULES *As-built doc-sync* rule — do NOT edit STORE mid-build; it correctly describes the **shipped** available-only model until v3.1.x ships), update `EVERLASTINGS_STORE.md`'s inventory model to the WS6 decrement behavior: the **Purchase-Flow** step ("Sets each purchased product available=false … does NOT change quantity"), **Data States #2** ("Product sold"), and the **Flag reference** `products.quantity` line (currently "a sale doesn't decrement it today … deferred until the first multi-quantity product_type") all flip to *"a sale decrements `quantity`; `available = (quantity > 0)`; `archived_at` untouched."* Also flip any test-script expectation that assumed a sale leaves quantity unchanged. **And add the one-of-each-per-order invariant** to STORE's Purchase-Flow (the cart dedupes by `product_id` at `main.js:121`; each line-item is `quantity:1`; a piece sells to separate sequential orders, never N-in-one-cart) — true of the shipped system today, and its absence is exactly what let a cold reviewer misread `record_sale` as a decrement bug (F1).
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_1_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_1_2_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_1_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_2_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
