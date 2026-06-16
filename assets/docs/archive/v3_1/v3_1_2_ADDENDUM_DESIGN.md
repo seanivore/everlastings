@@ -189,7 +189,7 @@ The static `<h1>` paints immediately (no FOUC / no blank hero); `.has-lottie` hi
 
 **Gotchas:** outline-paths only (no baked font); SVG renderer (not canvas); author in the skill's supported subset (shape/stroke/trim/fill — no exotic AE effects/expressions) so Skottie-harness and lottie-web agree, and **verify the final JSON once in lottie-web's SVG renderer** before shipping (Skottie coverage is broader). File is small (low-tens-of-kB); lottie-web runtime ~84 kB gz, load `defer`.
 
-**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script), `assets/css/styles.css` (`.hero__title*` near `.hero h1` ~975 + the reduced-motion block ~668; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
+**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script), `assets/css/styles.css` (`.hero__title*` near the existing `.hero h1` rule + the hero's reduced-motion block — locate by content; the line hints have drifted; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
 
 ## 5.2 — Old-film hero (HyperFrames) — DECISION: build-time re-rendered MP4
 
