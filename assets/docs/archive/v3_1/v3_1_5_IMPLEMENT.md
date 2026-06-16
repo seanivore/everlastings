@@ -1,11 +1,11 @@
-# v3.1.4 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.5 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
-**Revision driven by**: round-4 cold Angle-A fold (v3.1.3 → v3.1.4 — **GPT-instruction file fully restructured** to fit the hard 8000-char cap [headline #1: trims alone bottomed at 8538, so a 3-pass copywriting rewrite → **Phase 3.9, 7526/8000**], `endOfDayET`→`formatToParts` [no brittle locale round-trip], WS6 cutover scoped to actually-sold rows [no zeroing of paused stock], concrete `.pill` state CSS incl. `.pill.refunded`, Lottie `data_failed`+SVG-content guard [no blank hero], `/admin` alt-text parity nudge, refund relist names `{id:r.product_id}` + a full-amount-goodwill-flip note, TESTING seeds/asserts [controls round-trip, multi-piece `relist[]`, full-goodwill branch]; **rejected** the STORE-edit-now with a rationale note [no-mixed-truth — orientation moved to the WS6 build phase]). Earlier: round-3 fold (v3.1.2 → v3.1.3 — **amount-based refund composer** for multi-item carts [one cart = N orders on one PaymentIntent], concrete P3d upload-zone markup + `wireUploadZone`, verified `processOne` externals, honest hero→thumbnail coverage, `controls` round-trip, batch partial-success `{uploads,failures}`, WS6 cutover data-fix, drop the unused `reason`; rejected the opaque-200-schema / auth-at-POST-top / tokens-missing misfires). round-2 fold (v3.1.1 → v3.1.2 — coupon-date parity, P3d functional rules, canonical `productState`, coupon multi-select, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
+**Revision driven by**: round-5 cold Angle-A fold (v3.1.4 → v3.1.5 — **2 small blockers + self-containment polish**: `refundOrder` schema summary trimmed 314→**286** to clear the `<300` static gate [#1]; attached **video** now routes by-link only via BOTH a MEDIA instruction line AND a server guard in `handleAttachedRefs` [#2 — Phase 3.9 re-measured 7651/8000]; SLUG names `uploadImage/uploadImages` [#3]; WS6 cutover SQL hard-scopes the `is_test` dimension + the eyeball SELECT is now a required step [#4/#15]; P0 nav+subtabs byte-anchored [#8]; P4 skeleton emission concrete [#9]; refund button no-PI guard [#11] + `.pill.refunded` cross-ref [#13]; coupon body-type CURRENT/NEW [#12]; refund confirm reads `data-title` not a `' — '` split [#14]; TESTING Before-you-start preconditions + Studio-only controls seed [#10/#17]; **rejected-as-bug but recorded** the three code-contradicted false alarms [#5/#6/#7 — `#222` is accent-bg, `homepage.js` is `defer`, `.hero h1` is a descendant selector]). Earlier: round-4 cold Angle-A fold (v3.1.3 → v3.1.4 — **GPT-instruction file fully restructured** to fit the hard 8000-char cap [headline #1: trims alone bottomed at 8538, so a 3-pass copywriting rewrite → **Phase 3.9, 7526/8000**], `endOfDayET`→`formatToParts` [no brittle locale round-trip], WS6 cutover scoped to actually-sold rows [no zeroing of paused stock], concrete `.pill` state CSS incl. `.pill.refunded`, Lottie `data_failed`+SVG-content guard [no blank hero], `/admin` alt-text parity nudge, refund relist names `{id:r.product_id}` + a full-amount-goodwill-flip note, TESTING seeds/asserts [controls round-trip, multi-piece `relist[]`, full-goodwill branch]; **rejected** the STORE-edit-now with a rationale note [no-mixed-truth — orientation moved to the WS6 build phase]). Earlier: round-3 fold (v3.1.2 → v3.1.3 — **amount-based refund composer** for multi-item carts [one cart = N orders on one PaymentIntent], concrete P3d upload-zone markup + `wireUploadZone`, verified `processOne` externals, honest hero→thumbnail coverage, `controls` round-trip, batch partial-success `{uploads,failures}`, WS6 cutover data-fix, drop the unused `reason`; rejected the opaque-200-schema / auth-at-POST-top / tokens-missing misfires). round-2 fold (v3.1.1 → v3.1.2 — coupon-date parity, P3d functional rules, canonical `productState`, coupon multi-select, robust `record_sale`). Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_4_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_4_ADDENDUM_TESTING.md`. **Gate status:** round-1 + round-2 + round-3 + round-4 cold Angle-A have folded (→ v3.1.4, breadth-passed); **next = a fresh cold Angle-A on v3.1.4, looped until it passes, then B/C/D in parallel.**
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_5_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_5_ADDENDUM_TESTING.md`. **Gate status:** rounds 1–5 cold Angle-A have folded (→ v3.1.5, breadth-passed). Round-5's severity collapsed (worst find = a char-trim; 3 findings were code-contradicted false alarms), so **next = a deliberate end-to-end condense → v3.1.6** (cut the surgical-edit archaeology, preserve every anchor), **then ONE final cold Angle-A on v3.1.6** to confirm the condense created no gaps, then B/C/D in parallel.
 
 ---
 
@@ -31,9 +31,9 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.4 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.5 ships on its own, separately, when Sean chooses.
 
-> **GPT instructions char budget — hard cap 8000 (F#14 / T1·1 / round-4 A #1) — RESOLVED.** The four v3.1 capability adds (amount-based REFUNDS, chat-attach, COUPONS dates, LINK TROUBLE) take the shipped file from 7781 → **8921**, and section-by-section trims bottom out at **8538** — so the cap **cannot** be met by patching; over-cap = the GPT silently truncates its own instructions + the static gate fails the deploy. The file was therefore **fully restructured** (cut → restructure → remove-redundancy; every distinct rule kept) → **verified `wc -c` = 7526 / 8000**. **The final file is in Phase 3.9 — ship that verbatim** (the per-workstream phases 1.4/2.3/3.5 document the rule deltas, not the final wording). No "trim until green" left to the builder; the count is closed. The cap stays hard — any future instruction add must re-run `wc -c`.
+> **GPT instructions char budget — hard cap 8000 (F#14 / T1·1 / round-4 A #1) — RESOLVED.** The four v3.1 capability adds (amount-based REFUNDS, chat-attach, COUPONS dates, LINK TROUBLE) take the shipped file from 7781 → **8921**, and section-by-section trims bottom out at **8538** — so the cap **cannot** be met by patching; over-cap = the GPT silently truncates its own instructions + the static gate fails the deploy. The file was therefore **fully restructured** (cut → restructure → remove-redundancy; every distinct rule kept) → **verified `wc -c` = 7651 / 8000** (round-4 restructured to 7526; round-5 A #2 added the attached-video routing line → **7651, 349 headroom**). **The final file is in Phase 3.9 — ship that verbatim** (the per-workstream phases 1.4/2.3/3.5 document the rule deltas, not the final wording). No "trim until green" left to the builder; the count is closed. The cap stays hard — any future instruction add must re-run `wc -c`.
 
 ---
 
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
   /api/orders/{id}/refund:
     post:
       operationId: refundOrder
-      summary: "Refund an order via Stripe (emails the buyer) and mark it refunded. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders sharing a payment. By default refunds THIS order's amount + relists THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
+      summary: "Refund an order via Stripe; emails the buyer. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders on one payment. Default = refund THIS order's amount + relist THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
       parameters:
         - in: path
           name: id
@@ -287,9 +287,9 @@ export async function POST(request: Request) {
                         quantity: { type: integer }
                         archived: { type: boolean }
 ```
-*(`summary` ≈ 295 chars, just under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a — F16. `reason` is gone (T1·3: the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
+*(`summary` = **286 chars** (verified `wc`/byte-count), under the 300 cap — the earlier "≈295" estimate undercounted by ~20 and would have tripped the testing static gate (`every summary < 300`); count it, don't estimate (round-5 A #1). The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a — F16. `reason` is gone (T1·3: the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure, 7526/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
+**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7651/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
 
 *1.4a — REFUNDS.* **CURRENT (`:23`):**
 ```
@@ -312,15 +312,18 @@ REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches ship
       ${formHtml}
       <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
 ```
-**NEW (a Refund button — or a Refunded pill when already refunded — plus an empty panel the handler fills):**
+**NEW (a Refund button — or a Refunded pill when already refunded, or a quiet tag when there's no payment to refund — plus an empty panel the handler fills):**
 ```js
       ${formHtml}
       ${order.status === 'refunded'
         ? '<p style="margin-top:6px"><span class="pill refunded">Refunded</span></p>'
-        : '<button type="button" class="refund-order" style="margin-top:6px">Refund order</button>'}
+        : !order.stripe_payment_intent
+          ? '<p style="margin-top:6px;font-size:13px;color:var(--c-text-muted,#666)">No payment on file to refund.</p>'
+          : '<button type="button" class="refund-order" style="margin-top:6px">Refund order</button>'}
       <div class="refund-panel" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--c-border,#ddd);border-radius:6px"></div>
       <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
 ```
+*(The no-PI tag (round-5 A #11) suppresses the button on a legacy order missing `stripe_payment_intent` — opening the panel on one would just 409 at submit (the handler guards it). Healthy orders always carry a PI from the webhook, so this is belt-and-suspenders for old/imported rows. The `Refunded` pill uses **`.pill.refunded`**, styled concretely in WS4 P2 (DESIGN §4.2); until WS4 lands it renders with the generic `.pill` rule that exists today — functional, just visually plain (round-5 A #13).)*
 
 *1.5c — wire it, after the resend handler.* **CURRENT (`admin.js:799-804`):**
 ```js
@@ -387,9 +390,10 @@ async function openRefundPanel(order, card) {
       ${list.map((o) => {
         const cents = typeof o.amount === 'number' ? o.amount : 0;
         const checked = o.id === order.id ? ' checked' : '';
+        const pieceTitle = o.products?.title ?? '(piece)';
         return `<label class="checkbox-row" style="display:flex;gap:8px;align-items:center">
-          <input type="checkbox" class="refund-piece" value="${escapeHtml(o.product_id)}" data-cents="${cents}"${checked} />
-          <span>${escapeHtml(o.products?.title ?? '(piece)')} — $${centsToDollars(cents)}</span>
+          <input type="checkbox" class="refund-piece" value="${escapeHtml(o.product_id)}" data-cents="${cents}" data-title="${escapeHtml(pieceTitle)}"${checked} />
+          <span>${escapeHtml(pieceTitle)} — $${centsToDollars(cents)}</span>
         </label>`;
       }).join('')}
     </div>
@@ -413,7 +417,9 @@ async function openRefundPanel(order, card) {
     const checked = checks.filter((c) => c.checked);
     const relistIds = checked.map((c) => c.value);
     const who = order.customers?.email || order.customer_email || 'the buyer';
-    const what = checked.length ? checked.map((c) => c.nextElementSibling.textContent.split(' — ')[0]).join(', ') : 'this purchase';
+    // Read the title from the checkbox's own dataset — NOT by splitting the label text on ' — ', which
+    // truncates a piece whose title itself contains ' — ' (the brand's titles are poetic; round-5 A #14).
+    const what = checked.length ? checked.map((c) => c.dataset.title).join(', ') : 'this purchase';
     if (!window.confirm(`Refund ${who} $${centsToDollars(amountCents)} for ${what}? This issues a Stripe refund and can't be undone.`)) return;
     panel.style.display = 'none';
     submitRefund(order.id, amountCents, relistIds, card);
@@ -852,7 +858,32 @@ async function handleCouponList(request: Request): Promise<Response> {
     return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id, expires_display: typeof body.expires_at === 'number' ? formatExpiry(body.expires_at) : null });
 ```
 
-**Phase 2.2d — `handleCoupon` builds the expiry in the store TZ (F9 — kills browser-TZ drift).** Add `expires_date?: string` to the request-body type, and at the top of `handleCoupon` (before `couponParams`) normalize it to a store-TZ end-of-day timestamp so the rest of the handler + the 2.2c `formatExpiry` echo work unchanged:
+**Phase 2.2d — `handleCoupon` builds the expiry in the store TZ (F9 — kills browser-TZ drift).** First add `expires_date?: string` to the inline request-body type. **CURRENT (`products.ts:694-702`):**
+```ts
+  let body: {
+    type?: 'percent' | 'amount';
+    value?: number;
+    code?: string;
+    product_ids?: string[];
+    min_amount?: number;
+    expires_at?: number;
+    max_redemptions?: number;
+  };
+```
+**NEW (add `expires_date?`):**
+```ts
+  let body: {
+    type?: 'percent' | 'amount';
+    value?: number;
+    code?: string;
+    product_ids?: string[];
+    min_amount?: number;
+    expires_date?: string;   // YYYY-MM-DD — preferred; normalized to a store-TZ end-of-day below
+    expires_at?: number;     // Unix (legacy/back-compat)
+    max_redemptions?: number;
+  };
+```
+Then, at the top of `handleCoupon` (before `couponParams`), normalize `expires_date` to a store-TZ end-of-day timestamp so the rest of the handler + the 2.2c `formatExpiry` echo work unchanged:
 ```ts
   if (typeof body.expires_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expires_date)) {
     body.expires_at = endOfDayET(body.expires_date); // store-TZ end-of-day → redeem_by + promo.expires_at + the echo
@@ -967,13 +998,20 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
     catch { failures.push({ index: i + 1, error: 'could not fetch the attached file' }); continue; }
     const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
-      failures.push({ index: i + 1, error: `not an allowed image/video (got "${fetchedType || 'unknown'}")` });
+      failures.push({ index: i + 1, error: `not an allowed image (got "${fetchedType || 'unknown'}")` });
+      continue;
+    }
+    // Attach is IMAGES-ONLY. A video routed here would be named with an image role (positional default
+    // `hero`) and the GPT would drop its url into images[] → the page renders a broken <img src=.mp4> and
+    // the clip never shows (populateMedia reads media[], not images[]). Reject it loudly so the misroute
+    // can NEVER be silent, even if the GPT slips past the instruction (round-5 A #2). Video = by-link only.
+    if (fetchedType.startsWith('video/')) {
+      failures.push({ index: i + 1, error: 'video must be sent as a LINK, not attached — ask Em for a Drive share or direct URL and use uploadImage' });
       continue;
     }
     const bytes = Buffer.from(await mediaRes.arrayBuffer());
     const file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
-    const isVid = fetchedType.startsWith('video/');
-    const r = await processOne(file, slug, role, isVid ? 'true' : null);
+    const r = await processOne(file, slug, role, null); // attach is images-only → never skip_transform
     if (!r.ok) { failures.push({ index: i + 1, error: r.error }); continue; }
     uploads.push({ url: r.url, filename: r.filename, role });
   }
@@ -981,7 +1019,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   return jsonResponse(request, { uploads, failures });
 }
 ```
-*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence; F12. **Auth is already enforced (round-3 T2·4):** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. `new File([bytes], …)` is a **Node 20+ global** — Vercel's default runtime is Node ≥20, so it's present at runtime even though `tsc` wouldn't flag its absence; F12. **Attach is images-only (round-5 A #2):** a `video/*` MIME is rejected with a clear per-file failure ("send it as a link, use uploadImage"), so an attached video can never be silently named with an image role + dropped into `images[]` (which would render a broken `<img src=.mp4>` and never show as media). The GPT instruction (MEDIA) tells it not to attach video; this guard is the belt-and-suspenders so a slip surfaces loudly, not as a broken page. **Auth is already enforced (round-3 T2·4):** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
 
 **Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
 ```json
@@ -1246,13 +1284,13 @@ function collectMedia() {
   $('add-media-row').addEventListener('click', () => addMediaRow(null));
 ```
 
-*3.7c — video auto-skip is owned by P3d, NOT a standalone edit to the old control (F#3).* The single `#upload-role` control is **removed** by DESIGN P3d (role-sectioned zones), so byte-anchoring an `isVideo` skip onto its handler (`admin.js:371`) would be applied-then-stripped — the exact hazard the byte-anchored discipline exists to prevent. Instead **the rule lives in P3d's Video zone**: every upload from the Video zone POSTs `skip_transform=true` unconditionally (a video always skips the Cloudinary crop — replaces the old global checkbox/auto-infer). The chat-attach path already enforces it server-side (3.2's `handleAttachedRefs` passes `isVid ? 'true' : null`), so **both** surfaces skip transform on video with no checkbox and no wrong-role footgun. **Do not apply a standalone `#upload-role` edit** — there's no such control after P3d.
+*3.7c — video auto-skip is owned by P3d, NOT a standalone edit to the old control (F#3).* The single `#upload-role` control is **removed** by DESIGN P3d (role-sectioned zones), so byte-anchoring an `isVideo` skip onto its handler (`admin.js:371`) would be applied-then-stripped — the exact hazard the byte-anchored discipline exists to prevent. Instead **the rule lives in P3d's Video zone**: every upload from the Video zone POSTs `skip_transform=true` unconditionally (a video always skips the Cloudinary crop — replaces the old global checkbox/auto-infer). The chat-attach path takes **no** video at all — 3.2's `handleAttachedRefs` **rejects** `video/*` with a "send it as a link" failure (round-5 A #2), so attach is images-only and video skip-transform only ever happens on the by-link `uploadImage` path + the admin Video zone. **Do not apply a standalone `#upload-role` edit** — there's no such control after P3d.
 
 *(Same `media` array shape the frontend `populateMedia` already reads — `{type, url, autoplay?, loop?, poster?, alt?}` — so `api/products` + `product.js` are untouched. WS4 restyles these rows with tokens.)*
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-**Phase 3.9 — FINAL GPT instructions file (complete restructure — round-4 A #1).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7526 / 8000** (474 headroom).
+**Phase 3.9 — FINAL GPT instructions file (complete restructure — round-4 A #1).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7651 / 8000** (349 headroom; round-5 A #2 added the attached-video routing line to MEDIA — re-measured).
 
 **This is the artifact to ship: replace `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
 
@@ -1275,7 +1313,7 @@ PREVIEW is the REVIEW. Drafted fields get CONFIRMED before saving unless directe
 
 THE SLUG
 Create once never can edit after; do first before upload
-Reuse EXACT string every uploadImage, createProduct
+Reuse EXACT string every uploadImage/uploadImages, createProduct
 Use URL handle in CDN photo folder before rows exist
 HOW: take title, fold accent letters to plain ASCII eg. café=cafe, piñata=pinata, never drop letter; all lowercase, spaces=hyphens, strip anything not a-z/0-9/hyphen eg. Em's Lavender & Sage = ems-lavender-sage; Collapse repeats; ask for Latin-letters title if needed
 IMPT: server folds same way; must do same so slug is identical ensuring CDN media place in right folder
@@ -1298,7 +1336,7 @@ ORDERS: listOrders finds them (status=needs_shipping/shipped; q = order id, emai
 
 REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches past/shipped orders). A Stripe refund is an AMOUNT against the whole purchase, and one cart can be several orders on one payment. refundOrder {id} refunds THIS order's amount + relists THIS piece. CONFIRM FIRST: read back piece(s) + amount + buyer ("Refund <buyer> $X for <product>? Can't be undone."). Several pieces, one purchase: confirm which came back, pass relist_product_ids:[their ids] + amount_cents=summed cents. Goodwill/partial, nothing back: amount_cents + relist_product_ids:[] (a FULL-amount goodwill refund still flips the order to refunded — tell her). It returns `relist`, one entry r per returned piece; a refund never relists itself, so for EACH r ALWAYS offer to restore it — down (r.available false or r.archived) "Put it back up for sale?", else "Add 1 to its quantity?". Yes = unarchiveProduct {id:r.product_id} if r.archived AND editProduct {id:r.product_id, available:true, quantity:r.quantity+1}. Revenue/payouts live in Stripe.
 
-MEDIA (optional page video): uploadImage the MP4 (skip_transform:true), then ALWAYS ask per clip (never assume): autoplay + loop, silent, no buttons (GIF-like) OR click-to-play with sound (the default; she can add a still "poster" = the image shown before it plays). Set the media flags. MP4s render before YouTube (YouTube is rare); empty media hides the section. No GIFs.
+MEDIA (optional page video): video is ALWAYS by-link — even if she ATTACHES it, don't uploadImages; ask for a Drive share/direct link, then uploadImage the MP4 (skip_transform:true). Then ALWAYS ask per clip (never assume): autoplay + loop, silent, no buttons (GIF-like) OR click-to-play with sound (the default; she can add a still "poster" = the image shown before it plays). Set the media flags. MP4s render before YouTube (YouTube is rare); empty media hides the section. No GIFs.
 
 LINK TROUBLE: attached photos = uploadImages (forward openaiFileIdRefs); failures[] (a link expired — they last ~5 min) = keep the successes, ask her to re-attach ONLY those (never re-send successes). A 400 = none came through (or >10 / no slug) — ask her to re-attach, retry. uploadImage (by-link) 400 (a Drive share PAGE not the file, not public, or a video >~25 MB showing a scan page) = ask for an "anyone with the link" Drive share or direct URL (Dropbox "?dl=1" / CDN), retry. Video + 10+ photo batches stay on the link path.
 
@@ -1321,14 +1359,18 @@ ALWAYS: write in Em's voice (warm, poetic, quietly magical, never sales-y; full 
 -- at 1, not 2 (T2·9). SCOPED to actually-SOLD rows via `exists (orders)` so a manually-paused or
 -- never-sold piece the owner left in stock is NOT silently zeroed (round-4 A #3 — design for the
 -- template "User" with a real catalog, not Emy's all-qty-1 store; an owner's intentional pause is intent
--- we must not overwrite). If test rows exist in `orders`, also match the dimension: `and o.is_test =
--- products.is_test`. EYEBALL FIRST (optional but recommended) — print what the UPDATE will touch:
+-- we must not overwrite). The `exists` is HARD-SCOPED to the env dimension too — `and o.is_test =
+-- p.is_test` (both columns are `NOT NULL DEFAULT false`; initial_schema :172 products / :174 orders) —
+-- because the shared Supabase project always carries test orders, so the dimension match must be in the
+-- SQL, not a comment the operator might skip (round-5 A #4). EYEBALL FIRST — this is a REQUIRED step,
+-- not optional (TESTING static gate): run the SELECT, confirm the rows it lists are genuinely sold (not
+-- a paused-with-stock piece), THEN run the UPDATE.
 --   select id, slug, title, quantity from products p
 --     where p.available = false and p.quantity > 0
---       and exists (select 1 from orders o where o.product_id = p.id);
+--       and exists (select 1 from orders o where o.product_id = p.id and o.is_test = p.is_test);
 update products p set quantity = 0
   where p.available = false and p.quantity > 0
-    and exists (select 1 from orders o where o.product_id = p.id);
+    and exists (select 1 from orders o where o.product_id = p.id and o.is_test = p.is_test);
 
 -- A sale decrements OUR stock and derives availability, atomically per row (the money path: two
 -- near-simultaneous completions must not race a read-modify-write of the same count). archived_at
@@ -1381,12 +1423,12 @@ $$;
 
 > **A forward-pointer in STORE *now* was proposed (round-4 A #11) and REJECTED.** Adding "v3.1.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_4_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_1_5_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_4_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_5_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.

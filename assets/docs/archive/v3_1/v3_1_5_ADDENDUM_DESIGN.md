@@ -1,6 +1,6 @@
-# v3.1.4 — Design Addendum
+# v3.1.5 — Design Addendum
 
-**Addendum to**: `v3_1_4_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_1_5_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
 **Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 
@@ -61,7 +61,7 @@
 - `body` → `background:var(--c-bg); color:var(--c-text); font-family:var(--font); font-size:var(--fs-base); line-height:var(--lh-base);`
 - inputs/textareas/selects → `border:1px solid var(--c-border-strong); border-radius:var(--r-sm); background:var(--c-surface);` + a shared **focus state** (none exists today — a11y gap): `:focus-visible { outline:none; border-color:var(--c-accent); box-shadow:0 0 0 3px var(--c-accent-ring); }`
 - buttons → base `background:var(--c-surface); border:1px solid var(--c-border-strong); border-radius:var(--r-sm);`; `.primary`→accent (hover `--c-accent-hover`); `.danger`→`--c-danger`.
-- Replace every literal with a token (`#ddd`→`--c-border`, `#222`→`--c-accent`, `#666`→`--c-text-muted`, `#f7f7f7`→`--c-surface-2`…) so no raw hex remains.
+- Replace every literal with a token **by the property's role**, not a blind find-replace (text→`--c-text`, surface fills→`--c-surface*`, hairlines→`--c-border`, accents→`--c-accent`) so no raw hex remains. The current literals map cleanly: `#ddd`→`--c-border`, `#666`→`--c-text-muted`, `#f7f7f7`→`--c-surface-2`, and **`#222`→`--c-accent`** — verified (round-5 A #5): the only two `#222` usages are `button.primary` and `.subtab-btn.active` **backgrounds** (`admin/index.html:25,34`), both accent fills, so `--c-accent` is correct; body text is already `--c-text` via the global base. (Role-match guards a future `#222`-as-text from being mis-swept to the accent color.)
 
 ## 4.2 — Prioritized component changes (ranked; each is apply-not-decide)
 
@@ -87,13 +87,14 @@ function productState(p) {
 P0's filter tabs = **All / Live / Draft / Sold / Archived** ("Edits" pieces list under **Live** with the edits badge — no separate tab, so the Live filter matches `live` **or** `edits`). P2's card badge renders `productState(p)` directly; `available`/`quantity` show as quiet meta, not a second status axis. **Both call the same function** — no divergent predicates for the builder to invent. *(T3·10 — edits-precedence is deliberate: a sold piece that also has staged copy edits returns `'edits'` (checked before `sold`), so it lists under **Live**, not **Sold**. Kept that way because the unpublished staged edit is the actionable state the owner needs to act on; the badge still reads "edits". Flagged for Sean's render-tune eye — flip the precedence if a sold-first view reads better.)*
 
 - **P0 · Navigation + product-list state-filter (parity/usability — do first; from `FEEDBACK_ADMIN_v2_1_0.md`).** (a) **In-admin back/nav:** the browser Back button leaves /admin entirely and clicking into a product gives no obvious return — add a clear **"← Products"** control in the editor header + an obvious active-tab state. (The editor is a view-swap in `admin.js` — `openEditor`/`closeEditor` — not a route, so this is a button calling the existing list view, NOT `history.back()`.) (b) **Product-list state-filter:** subtabs over the product list, mirroring the orders subtabs (`admin/index.html:243-256`). Concrete shape (F8 — written out so two builders don't diverge):
+Reuse the **shipped** subtab classes (`.subtab-btn` / `.subtab-btn.active`, already styled at `admin/index.html:34` and what the orders subtabs use) so the product subtabs are styled immediately and the two tab strips stay consistent — NOT a new `.subtab` class:
 ```html
 <div class="subtabs" id="product-subtabs">
-  <button class="subtab active" data-pstate="all">All</button>
-  <button class="subtab" data-pstate="live">Live</button>
-  <button class="subtab" data-pstate="draft">Draft</button>
-  <button class="subtab" data-pstate="sold">Sold</button>
-  <button class="subtab" data-pstate="archived">Archived</button>
+  <button class="subtab-btn active" data-pstate="all">All</button>
+  <button class="subtab-btn" data-pstate="live">Live</button>
+  <button class="subtab-btn" data-pstate="draft">Draft</button>
+  <button class="subtab-btn" data-pstate="sold">Sold</button>
+  <button class="subtab-btn" data-pstate="archived">Archived</button>
 </div>
 ```
 ```js
@@ -105,16 +106,81 @@ function matchesProductFilter(p) {
   return s === activeProductFilter;
 }
 function wireProductSubtabs() {                    // call once from init/attachEventListeners
-  document.querySelectorAll('#product-subtabs .subtab').forEach((b) => {
+  document.querySelectorAll('#product-subtabs .subtab-btn').forEach((b) => {
     b.addEventListener('click', () => {
       activeProductFilter = b.dataset.pstate;
-      document.querySelectorAll('#product-subtabs .subtab').forEach((x) => x.classList.toggle('active', x === b));
+      document.querySelectorAll('#product-subtabs .subtab-btn').forEach((x) => x.classList.toggle('active', x === b));
       renderProductList();                         // re-render from the already-fetched state.products — NO refetch
     });
   });
 }
 ```
 In `renderProductList`, filter the already-fetched list: `const shown = (state.products || []).filter(matchesProductFilter);` then render `shown` (and show the `.empty` state when `shown.length === 0`). Pure additive UI; no backend change.
+
+**Byte-anchored insertion points (round-5 A #8 — P0 is load-bearing parity, so it's anchored to the WS1-3 standard, not left as a pattern):**
+
+*(i) `#product-subtabs` mounts in the products tab, after the status line and before the toolbar (mirroring the orders subtabs, which sit above their toolbar at `admin/index.html:243-248`).* **CURRENT (`admin/index.html:109-115`):**
+```html
+        <section id="tab-products">
+          <div id="products-status"></div>
+          <div class="toolbar">
+            <button id="new-product-btn" class="primary">New Product</button>
+            <button id="refresh-products-btn">Refresh</button>
+          </div>
+          <div id="products-list" class="product-list"></div>
+```
+**NEW (insert the subtabs strip after the status line):**
+```html
+        <section id="tab-products">
+          <div id="products-status"></div>
+          <div class="subtabs" id="product-subtabs">
+            <button class="subtab-btn active" data-pstate="all">All</button>
+            <button class="subtab-btn" data-pstate="live">Live</button>
+            <button class="subtab-btn" data-pstate="draft">Draft</button>
+            <button class="subtab-btn" data-pstate="sold">Sold</button>
+            <button class="subtab-btn" data-pstate="archived">Archived</button>
+          </div>
+          <div class="toolbar">
+            <button id="new-product-btn" class="primary">New Product</button>
+            <button id="refresh-products-btn">Refresh</button>
+          </div>
+          <div id="products-list" class="product-list"></div>
+```
+
+*(ii) the `← Products` back control mounts in the editor header (`openEditor` swaps to this view — `admin.js:263`; the back button calls the existing `closeEditor()` at `admin.js:325`, NOT `history.back()`).* **CURRENT (`admin/index.html:116-117`):**
+```html
+          <div id="product-editor" class="hidden">
+            <h2 id="editor-heading">New Product</h2>
+```
+**NEW (a back control above the heading; styled as a ghost button in WS4 P7):**
+```html
+          <div id="product-editor" class="hidden">
+            <button type="button" id="editor-back" class="link-btn">← Products</button>
+            <h2 id="editor-heading">New Product</h2>
+```
+Wire it once (beside `wireProductSubtabs`): `$('editor-back').addEventListener('click', closeEditor);`
+
+*(iii) scope the SHIPPED orders-subtab handler so the product subtabs don't trigger it (round-5 breadth pass — the product subtabs reuse `.subtab-btn`, and the shipped handler binds `.subtab-btn` **globally**, so a product-subtab click would also set `state.ordersStatus = undefined`, strip the orders `.active`, and fire `loadOrders()`).* **CURRENT (`admin.js:155-161`):**
+```js
+  document.querySelectorAll('.subtab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.ordersStatus = btn.dataset.status;
+      document.querySelectorAll('.subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      loadOrders();
+    });
+  });
+```
+**NEW (scope both selectors to the orders tab):**
+```js
+  document.querySelectorAll('#tab-orders .subtab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.ordersStatus = btn.dataset.status;
+      document.querySelectorAll('#tab-orders .subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      loadOrders();
+    });
+  });
+```
+`wireProductSubtabs` is already scoped to `#product-subtabs .subtab-btn`, so once the orders handler is scoped to `#tab-orders .subtab-btn` the two strips never cross-fire.
 - **P1 · Editor form sectioning.** `#product-form` (`index.html:119-239`) is ~20 stacked `.field`s with only 2 fieldsets. Wrap into **5 labeled `<fieldset>`s** in workflow order: **Essentials** (title, slug, headline, description, price, qty, type, available, featured) · **Story & Details** (story, features, materials, care, shipping, dimensions, weight, power, series, artist note) · **Media** (P3) · **Checkout (Stripe)** (existing `167-171`, keep verbatim, restyle legend) · **SEO & Sharing** (seo title/desc/thumbnail). Remove the inline `style="border:1px solid #ddd…"` on `166`/`173`; add one reusable rule: `fieldset { border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-4); background:var(--c-surface); } fieldset>legend { font-size:var(--fs-md); font-weight:var(--fw-semibold); padding:0 var(--s-2); } .product-form { gap:var(--s-5); }`. Pure HTML+CSS; `openEditor` targets the same `#p-*` IDs.
 - **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12), available→neutral-bg; and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state; T3·3); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class. **Concrete per-state rules (round-4 A #4 — a status pill is load-bearing, not pure render-tune, so it ships a concrete default; emit these literally rather than leaving the builder to translate the prose mapping, and note `.pill.refunded` was the one with no rule at all):**
 ```css
@@ -135,8 +201,9 @@ In `renderProductList`, filter the already-fetched list: `const shown = (state.p
     - **Functional rules — lock these (they're behavior, not visual; F7 / F3):**
       - **Gallery auto-numbering:** next `N = max(existing gallery-NN in #p-images) + 1`; **ignore holes** (deleting `gallery-02` leaves `gallery-01` + `gallery-03`, and the next upload becomes `gallery-04`) — **never renumber/rename an existing file** (the CDN filename is the role; renaming breaks the "nobody renames a file" invariant + orphans the object). Same scheme for `detail-NN`/`video-NN`.
       - **Video zone `skip_transform`:** every Video-zone upload POSTs `skip_transform=true` **unconditionally** (a video always skips the Cloudinary crop) — this is the home for the old 3.7c rule (IMPLEMENT 3.7c is collapsed into here; do NOT edit the removed `#upload-role` handler).
+      - **Remove the dangling wiring (round-5 breadth pass — else init throws):** replacing the upload control deletes `#upload-btn` from the markup, so ALSO delete its event wiring `$('upload-btn').addEventListener('click', onUploadImage);` (`admin.js:153`) and the now-dead `onUploadImage` fn. If the wiring stays, `$('upload-btn')` is `null` at init → `.addEventListener` throws → the rest of `attachEventListeners` never binds (the orders subtabs, search, refund + coupon handlers that follow it). Wire `wireUploadZones()` in its place.
       - **Landing order:** each upload appends an `addImageRow` to `#p-images` (the existing single image list) — the zones are just role-routers, not separate stores; the final `images[]` order = `#p-images` DOM order (so a Hero zone can prepend if you want hero first, but the payload shape is unchanged). Video uploads append to the `#p-media-list` (3c), not `#p-images`.
-      - **Per-zone errors + empty state:** an upload failure renders inline in that zone (reuse `setStatus`/a zone `.zone-msg`), not a global alert; an empty zone shows a quiet "Drop or choose a {role} image" placeholder. No silent failures.
+      - **Per-zone errors + empty state:** an upload failure renders inline in that zone — write to the zone's own `.zone-msg` (the JS skeleton below does exactly this; NOT the global `setStatus` — round-5 A #16), not a global alert; an empty zone shows a quiet "Drop or choose a {role} image" placeholder. No silent failures.
     - **Concrete default (markup + JS skeleton — T1·4; render-tune the look, not the routing).** P0 ships exact markup; so does this, so two builders don't diverge on the load-bearing role routing. Replace `admin/index.html:195` (the file input + `#upload-role` select + `admin.js:onUploadImage`) with seven zones — one shown verbatim, the other six identical but for `data-role` + label (`gallery`, `detail`, `thumbnail`, `seo_thumbnail`, `checkout_image`, `video`; the Video zone's input is `accept="video/*"`):
 ```html
 <div class="upload-zones">
@@ -200,6 +267,23 @@ function wireUploadZones() { // call once from init/attachEventListeners
 ```
 The zones are role-routers into the same `#p-images`/`#p-media-list` (3a/3b/3c read them) — no separate store, payload shape unchanged. Sean render-tunes the visual (drop targets, grid, hover); the routing is fixed.
 - **P4 · Loading / error / empty states.** Orders loading is bare text (`admin.js:651`); products has no loading state (`218-232`). Add **skeleton** cards (`.skeleton{background:linear-gradient(90deg,var(--c-surface-2) 25%,#e9ecef 37%,var(--c-surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r-sm)}` + `@keyframes shimmer{to{background-position:-200% 0}}` + `@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}`). Empty states: `.empty{color:var(--c-text-faint);padding:var(--s-7);text-align:center;border:1px dashed var(--c-border);border-radius:var(--r-md)}` + a CTA where one exists. Errors keep `.status-msg.error` + token colors + a `border-left:3px solid var(--c-danger)` accent (success/info likewise) so they're distinguishable beyond tint.
+  - **Concrete default — where the skeletons render (round-5 A #9 — the CSS alone left the emission point unstated; this is behavioral, so it's anchored).** `loadProducts` clears the status then awaits the fetch with the list area blank — paint skeleton cards there during the await. **CURRENT (`admin.js:218-220`):**
+```js
+async function loadProducts() {
+  setStatus('products-status', '', 'info');
+  closeEditor();
+```
+**NEW (fill `#products-list` with a few skeleton cards while the fetch is in flight; `renderProductList()` overwrites them on success, the `catch` shows the error):**
+```js
+async function loadProducts() {
+  setStatus('products-status', '', 'info');
+  closeEditor();
+  $('products-list').innerHTML = Array.from({ length: 6 }, () =>
+    '<div class="product-card"><div class="skeleton" style="aspect-ratio:1/1"></div>'
+    + '<div class="skeleton" style="height:14px;margin:8px 0 6px"></div>'
+    + '<div class="skeleton" style="height:12px;width:60%"></div></div>').join('');
+```
+  Render-tune the count/shape; the behavior (skeletons during fetch, not a blank/"Loading…" gap) is the fix. **Orders:** `loadOrders` (`admin.js:651`) already paints a `<div class="empty">Loading...</div>` — that's functional, so it's the concrete default for orders; extending the skeleton treatment to the orders list is optional render-tune (the order-card grid differs from the product-card grid), NOT a required edit. The skeleton concrete default above is products-only.
 - **P5 · Mobile (zero breakpoints today).** One block at the stylesheet end: `@media (max-width:640px){ .container{padding:var(--s-4)} .row-2,.row-3,.ship-form{grid-template-columns:1fr} .order-card{grid-template-columns:1fr} .order-card img{height:180px} .img-url-row{grid-template-columns:40px 1fr;grid-auto-flow:row} .upload-row{grid-template-columns:1fr} .product-list{grid-template-columns:1fr 1fr} .tabs,.subtabs{overflow-x:auto} }`. Pure CSS.
 - **P6 · Address block.** `formatAddress` (`admin.js:669-678`) renders a monospace `<pre class="address-block">` (`index.html:52`) — reads as debug output. Restyle to the body font: `.address-block{background:var(--c-surface-2);border:1px solid var(--c-border);border-radius:var(--r-md);padding:var(--s-3);font-size:var(--fs-sm);line-height:var(--lh-base);white-space:pre-wrap;font-family:var(--font)}`. Pair the existing "Copy address" button (`admin.js:775-783`) top-right as a ghost button. Reserve `var(--font-mono)` for the tracking number only.
 - **P7 · Tabs / topbar / login chrome (CSS-only, high showcase value).** Topbar → `background:var(--c-surface);border-bottom:1px solid var(--c-border);box-shadow:var(--sh-sm)`, `h1` `var(--fs-lg)/600/-0.01em`. Tabs → underline indicator (`.tab-btn.active{color:var(--c-accent);box-shadow:inset 0 -2px 0 var(--c-accent);font-weight:var(--fw-semibold)}`, drop the `-1px` margin hack). Subtabs → pill toggle group. Login card (`.login-card` confirmed real — CSS `admin/index.html:16`, markup `:78`; T2·10) → `background:var(--c-surface);box-shadow:var(--sh-lg);border-radius:var(--r-lg);border:none;margin-top:12vh`.
@@ -238,7 +322,12 @@ The zones are role-routers into the same `#p-images`/`#p-media-list` (3a/3b/3c r
 @media (prefers-reduced-motion: reduce) { .hero__title-lottie { display: none; } }  /* static <h1> only */
 ```
 
-**Embed (init in `homepage.js` — confirmed loaded at `index.html:89`; pin the lottie-web version). Insert the lottie `<script defer>` BEFORE the existing `homepage.js` tag (`index.html:89`):** `defer` scripts run in document order, so lottie must precede `homepage.js` or `window.lottie` is undefined when `homepage.js`'s `DOMContentLoaded` fires → silent static-`<h1>` fallback even when motion is wanted (T2·7).
+**Embed (init in `homepage.js`; pin the lottie-web version). Insert the lottie `<script defer>` BEFORE the existing `homepage.js` tag.** The current tag is verbatim (round-5 A #6 — `homepage.js` **is** loaded `defer`, so the defer-ordering premise holds):
+```html
+<!-- index.html:89 (CURRENT) -->
+<script src="/assets/js/homepage.js" defer></script>
+```
+`defer` scripts run in document order, so a `defer` lottie tag inserted before this one runs first → `window.lottie` is defined when `homepage.js`'s `DOMContentLoaded` fires. (If `homepage.js` were ever made synchronous, the lottie tag would have to move with it; today both are `defer` — ordering is safe. A mis-order would silently fall back to the static `<h1>` even when motion is wanted — T2·7.)
 ```html
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js" defer></script>
 ```
@@ -271,7 +360,7 @@ The static `<h1>` paints immediately (no FOUC / no blank hero); `.has-lottie` hi
 
 **Gotchas:** outline-paths only (no baked font); SVG renderer (not canvas); author in the skill's supported subset (shape/stroke/trim/fill — no exotic AE effects/expressions) so Skottie-harness and lottie-web agree, and **verify the final JSON once in lottie-web's SVG renderer** before shipping (Skottie coverage is broader). File is small (low-tens-of-kB); lottie-web runtime ~84 kB gz, load `defer`.
 
-**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script before `homepage.js`), `assets/css/styles.css` (`.hero__title*` near the existing `.hero h1` rule + the hero's reduced-motion block — locate by content; the line hints have drifted; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches — **both tokens confirmed present (`styles.css:51` `--font-display`, `:63` `--text-5xl`, used by `.hero h1:975`); if ever renamed, hardcode `font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(2rem,5vw,3.5rem)` on `.hero__title-text` so the swap-in isn't jarring** — T2·8), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
+**Files touched:** `index.html` (`.hero__title` wrapper + the `defer` script before `homepage.js`), `assets/css/styles.css` (`.hero__title*` near the existing `.hero h1` rule + the hero's reduced-motion block — locate by content; the line hints have drifted; `.hero__title-text` inherits `--font-display`/`--text-5xl` so the fallback matches — **the rule is `.hero h1` at `styles.css:975` (a DESCENDANT selector, not `.hero > h1` — verified round-5 A #7), so wrapping the `<h1>` in `.hero__title` keeps it matching; both tokens confirmed present (`styles.css:51` `--font-display`, `:63` `--text-5xl`); if either is ever renamed OR the selector is ever tightened to a direct child, hardcode `font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(2rem,5vw,3.5rem)` on `.hero__title-text` so the swap-in isn't jarring** — T2·8), `assets/js/homepage.js` (init), `assets/lottie/hero-title-writeon.json` (new — authored + bg-transparentized).
 
 ## 5.2 — Old-film hero (HyperFrames) — DECISION: build-time re-rendered MP4
 
