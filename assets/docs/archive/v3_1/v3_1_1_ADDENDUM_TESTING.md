@@ -1,6 +1,6 @@
-# v3.1.0 — Testing Addendum
+# v3.1.1 — Testing Addendum
 
-**Addendum to**: `v3_1_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_1_1_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Where**: the **dev preview** URL (NOT localhost) — Preview env, Preview `PRODUCT_API_KEY`, Deployment Protection (SSO) **off** for the run so Stripe webhooks + the GPT can reach it. Stripe **test mode**. The GPT pointed at the dev preview with the Preview key.
 **Stripe prerequisites (F11):** the preview webhook endpoint must subscribe **`charge.refunded`** (else the reconciliation check, item 6, never fires) in addition to `checkout.session.completed`. Buyer refund emails are **Stripe-sent and live-gated** — do **not** assert email delivery in test mode.
 **Bar**: every assertion green before promotion. Design is tested + feedback'd like functionality (concrete default + render-tune with Sean). Real content is never a gate — production-grade placeholders stand in.

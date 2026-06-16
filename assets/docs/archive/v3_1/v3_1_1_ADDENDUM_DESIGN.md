@@ -1,6 +1,6 @@
-# v3.1.0 — Design Addendum
+# v3.1.1 — Design Addendum
 
-**Addendum to**: `v3_1_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_1_1_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
 **Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 

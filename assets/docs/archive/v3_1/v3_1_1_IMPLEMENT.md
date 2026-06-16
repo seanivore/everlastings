@@ -1,11 +1,11 @@
-# v3.1.0 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.1.1 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
 **Revision driven by**: initial draft. Promotes `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` + `v3_0_0_HOMEPAGE_EXPERIENCE.md`; folds the v2.1 testing finds (poster = no-fix doc clarification) + the /admin↔GPT parity audit.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md` once split) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_0_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_0_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_1_1_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_1_1_ADDENDUM_TESTING.md`. **Next: the gap-review gate** — the in-house breadth pass → cold A/B/C/D fresh instances — has **not** run yet.
 
 ---
 
@@ -31,7 +31,7 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (`styles.css:376`) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.1.0 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.1.1 ships on its own, separately, when Sean chooses.
 
 ---
 
@@ -1090,12 +1090,12 @@ $$;
 
 **Phase 6.4 — docs (as-built):** the corrected inventory model is written into `EVERLASTINGS_STORE.md` so `:678`/`:688` stop describing a never-built `quantity=0`-on-sale behavior (see the EVERLASTINGS_STORE doc-correction fold). Also flip test-script expectations that assumed a sale zeroes quantity.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_1_0_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_1_1_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_0_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_1_1_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
