@@ -1,0 +1,207 @@
+# v3.1.0 — Gap-review prompts (cold A/B/C/D; fresh instances)
+
+**The build under review** = `assets/docs/archive/v3_1/v3_1_0_IMPLEMENT.md` **plus its same-version addenda** `v3_1_0_ADDENDUM_DESIGN.md` (presentation: WS4 admin redesign + WS5 homepage) + `v3_1_0_ADDENDUM_TESTING.md` (verification). **The three are one build; every addendum is always in scope.** Effort: maximum. **A new instance per pass** (no context contamination). Reviewers change **nothing** — output is findings only, written to the named `GAP_REVIEW` file.
+
+**Why 4 this round:** v3.1.0 carries a substantial design surface (a full /admin re-skin — token system + P0–P7 — and a homepage Lottie title + old-film hero), so **D (design-correctness) gets its own lens** (per DEV_RULES, D is conditional on substantial design/UX). Collapse to A/B/C only if you'd rather — but then B+C must not skip the design addendum.
+
+**Sequencing:** run **A** (cold / out-of-repo, holistic) first and loop it until READY; then **B + C + D** in parallel (orthogonal: fidelity / integration / design-correctness). Fold all findings → bump (`v3_1_0` → `v3_1_1` …) → regenerate this file (carry any new landmines) → re-run an angle only if it found something load-bearing. All clean → Sean approves → a fresh agent executes on a `feat/` branch off `dev`.
+
+**What to hand each reviewer:** A = the three docs only, NO repo. B/C/D = the repo + the three docs; **C** also reads `assets/docs/EVERLASTINGS_STORE.md` first; **D** also reads the design addendum's research sources + the `FEEDBACK_ADMIN_v2_1_0.md` screenshots. The lens + landmines are **inlined in every block below — no separate paste.**
+
+---
+
+## ⭐ The review lens (in every block — both parts)
+
+**(a) North Star / thesis:** minimize Em's friction to manage her store — **every management capability must be doable in BOTH the /admin panel AND her Custom GPT, equally** (we can't rely on the GPT always being there). The GPT should do what a capable agent (Claude Code + skills/MCPs) could. A capability that reads "covered" in the docs but that Em can't actually trigger (in either surface) is a **real gap**, not a nitpick.
+
+**(b) Broader mandate — the lens must NOT shrink the scope:** the North Star is the primary *functionality* lens, but it is **not** the filter for what counts as a gap. Across the **whole build (IMPLEMENT + BOTH addenda), every element**, also catch anything not truly **exclusively-executable** (the builder would have to discover/decide), any **unvalidated assumption**, and any **design-correctness** failure (the "columns-bug" class: a spec that *applies* cleanly but *renders wrong/incomplete*). Do not neglect the design addendum because the functionality lens feels primary — that exact mistake dropped the design review in v1.6's first round.
+
+## Landmines — validate against reality, not training data (inlined into each block)
+
+1. **Vercel `api/*.ts` must compile to CommonJS** (the project `tsconfig`); ES-module output crashes the deployed runtime and **only surfaces on a real preview URL** (masked by `vercel dev`). The new `orders.ts` `POST` + the `upload.ts` changes must stay tsc-clean AND CJS-safe.
+2. **No new Vercel function** — refund folds into `api/orders.ts` (new `POST` + a `vercel.json` rewrite); chat-attach folds into `api/upload.ts` (a rewrite). `ls api/*.ts` count unchanged (Hobby cap 11/12).
+3. **`is_test` is never user-editable;** every new read/write stays scoped to `isTest` (`api/_lib/env.ts`). The refund order-lookup is `is_test`-scoped; Stripe's secret key is env-scoped (test vs live).
+4. **The frontend derives an image's ROLE from its filename prefix** — `product.js:415` (`/\/(?:test_)?gallery-/`) + `:576` (`hero-`). There is **no stored role field**: the server names files `{role}-{slug}.{ext}` from the `role` param, and the page reads role back off that name. So passing the **correct role** is load-bearing; a wrong/missing role silently mis-categorizes or drops an image. Nobody renames a file.
+5. **`openaiFileIdRefs` is documented but finicky** (blank arrays / 422s in the wild) — the by-link `uploadImage` is the **deliberate backstop** and must stay. `files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`; `download_link`s expire ~5 min; ≤10 files/call.
+6. **The GPT Instructions have an ~8k-char cap** — the v3.1 edits (refund flip, attach-first, alt-text, coupon read-back, poster aside) must fit; flag if the NEW text plausibly blows the budget.
+7. **Refund is FULL-only**; partials stay in the Stripe dashboard. `stripe.refunds.create({ payment_intent }, { idempotencyKey: 'refund-'+id })` (server-side). The `charge.refunded` webhook (`api/webhook.ts:60-89`) **also** flips `orders.status='refunded'` — the action's optimistic flip + the webhook are idempotent (both write the same value); don't introduce a double-write hazard.
+8. **Refund never auto-relists** (a damaged-item refund mustn't silently re-list). Relist is a separate, **state-aware**, confirmed step (`available:true` if published-but-sold; `unarchive` if archived). **The refund's `products(...)` Supabase embed must deserialize to a to-one OBJECT** (read like the GET at `orders.ts:65`/`:172`) — if it's wrong the refund still succeeds but `relist` is malformed and the "put it back up for sale?" prompt **silently never fires** (a parity hole `tsc` won't catch — verify against a real response).
+9. **The /admin upload control already uses the SAME `/api/upload` pipeline** (multipart → Cloudinary per-role crop → R2/CDN). The authorized admin `GET /api/products` returns **full** rows, so `stripe_product_id` / `is_published` / `archived_at` are present for the coupon scope picker + product-state filter.
+10. **Coupons: never make the GPT decode a raw Unix timestamp** (the `FEEDBACK_COUPON_v2_1_0` regression — it misread July for June). The backend returns `expires_display` (human, store TZ America/New_York) **alongside** `expires_at`; the GPT relays that. `product_ids` are **`stripe_product_id`** (NOT the Supabase id); a product-scoped coupon needs a **published** product.
+11. **The structured admin media editor must emit the SAME shape** `product.js`'s `populateMedia` reads — `{ type:'video'|'youtube', url, autoplay?, loop?, poster?, alt? }` — so `api/products` + `product.js` stay untouched; MP4s render before YouTube; empty media hides the section.
+12. **`cleanUrls: true`** — `vercel.json` rewrite *destinations* must drop `.html` (silent 404s otherwise). The two new rewrites are API→API (no `.html`), but confirm.
+13. **Storefront brand is untouched.** /admin gets a **neutral/template** aesthetic (the addendum's `:root` tokens) — NOT the Everlastings plum/lavender/serif, and not anchored to august.style tokens. The token literal-sweep must not leak storefront brand into /admin (or vice-versa).
+14. **Reduced-motion + a11y preserved.** The hero's `prefers-reduced-motion` fallback (`styles.css:376`) stays; the new Lottie title is `aria-hidden` decoration over a **real `<h1>`** (SEO + screen-reader + no-JS + reduced-motion fallback to the static title).
+15. **The hero CDN objects are served `immutable, max-age=1yr`** — the old-film hero swap needs a **versioned key** (e.g. `homepage-hero-animation-v2.mp4`) + URL edits, never an in-place overwrite (cache won't bust).
+16. **The go-live (`main`) version is untouched** by v3.1.0 — it's a separate `dev` cycle that ships on its own later. Don't entangle them.
+17. **WS4/WS5 are spec'd as executable DESIGN (concrete default + render-tune), not byte-anchored like WS1–3.** Judge the design addendum by "concrete enough that the builder never guesses + Sean can render-tune on the live preview," not by final-pixel values. Real content (the Lottie JSON, the HyperFrames render) is a content-creation step, never a build/test gate. The two remaining mechanical bits flagged in WS4 (the token literal-sweep + P0's product-list state-filter JS / back-nav) must be concrete enough to apply without deciding.
+
+---
+
+## Angle A — cold / out-of-repo (self-containment + completeness)
+
+```
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change anything — your only output is findings (write them to v3_1_0_GAP_REVIEW_A.md, or print the full file contents if you have no filesystem).
+
+THE REVIEW LENS — judge every gap against BOTH, not against doc-internal consistency:
+(a) North Star: minimize Em's friction to manage her store; EVERY management capability must be doable in BOTH the /admin panel AND her Custom GPT, equally (the GPT should do what a capable agent could). A capability that reads "covered" but that Em can't actually trigger in either surface is a REAL gap.
+(b) Broader mandate (don't let the lens shrink the scope): the North Star is the primary functionality lens, NOT the filter for what counts as a gap. Across the WHOLE build (the IMPLEMENT + BOTH addenda — design + testing — every element), also catch anything not truly exclusively-executable, any unvalidated assumption, and any design-correctness failure (a spec that APPLIES cleanly but RENDERS wrong/incomplete). Do not neglect the design addendum.
+
+CONTEXT
+- You are given THREE documents and NO repository: v3_1_0_IMPLEMENT.md (the plan — WS1-3 byte-anchored with CURRENT/NEW; WS4-5 spec'd as executable design), v3_1_0_ADDENDUM_DESIGN.md (WS4 admin redesign + WS5 homepage), v3_1_0_ADDENDUM_TESTING.md (the E2E plan). A FRESH agent executes ALL of it against the everlastings repo, then tests on the dev preview. "Exclusively executable" = it embeds the exact current code + exact replacement for every edit, so the builder LOCATES and APPLIES, never DISCOVERS or DECIDES.
+- LANDMINES (validate the plan against these, not training data):
+  1. Vercel api/*.ts must compile to CommonJS or the deployed runtime crashes (only shows on a real preview URL). The new orders.ts POST + upload.ts changes must stay tsc-clean + CJS-safe.
+  2. No new Vercel function — refund folds into orders.ts (POST + a vercel.json rewrite), chat-attach into upload.ts (a rewrite); function count unchanged (cap 11/12).
+  3. is_test is never user-editable; the refund order-lookup is is_test-scoped; Stripe secret key is env-scoped (test vs live).
+  4. The frontend derives an image's ROLE from its filename prefix (product.js:415 gallery, :576 hero) — no stored role field; the server names {role}-{slug} from the role param. So the correct role is load-bearing; a wrong role silently mis-places/drops an image. Nobody renames a file.
+  5. openaiFileIdRefs is documented-but-finicky (blank arrays / 422s) — the by-link uploadImage is the deliberate backstop and stays; files.oaiusercontent.com is public https; links expire ~5 min; ≤10/call.
+  6. The GPT Instructions have an ~8k-char cap — the v3.1 edits must fit.
+  7. Refund is FULL-only (partials stay in Stripe); stripe.refunds.create with idempotencyKey 'refund-'+id; the charge.refunded webhook ALSO flips status (idempotent with the action's optimistic flip).
+  8. Refund never auto-relists; relist is a separate, state-aware (available:true vs unarchive), confirmed step. The refund's products(...) embed must be a to-one OBJECT or relist is malformed + the prompt silently never fires.
+  9. /admin upload uses the SAME /api/upload pipeline; the authorized admin GET returns full rows (stripe_product_id / is_published / archived_at present).
+  10. Coupons: never make the GPT decode a raw Unix timestamp (the FEEDBACK_COUPON regression) — expires_display (human, store TZ) is returned alongside expires_at; product_ids are stripe_product_id (not Supabase id); a product-scoped coupon needs a published product.
+  11. The structured admin media editor must emit the SAME {type,url,autoplay?,loop?,poster?,alt?} shape product.js's populateMedia reads (so api/products + product.js are untouched); MP4s render before YouTube.
+  12. cleanUrls:true — rewrite destinations drop .html (the two new rewrites are API→API; confirm).
+  13. Storefront brand untouched; /admin gets a neutral/template aesthetic (NOT the storefront brand, NOT august.style-tokened).
+  14. Reduced-motion + a11y preserved — the hero fallback stays; the Lottie title is aria-hidden over a REAL <h1> with a reduced-motion/no-JS fallback to the static title.
+  15. The hero CDN objects are immutable/max-age=1yr — the old-film swap needs a VERSIONED key, not an in-place overwrite.
+  16. The go-live (main) version is untouched by v3.1.0 (a separate dev cycle).
+  17. WS4/WS5 are executable DESIGN (concrete default + render-tune), not byte-anchored like WS1-3 — judge "concrete enough the builder never guesses," not final pixels; real content is never a build gate; the two flagged mechanical bits (token sweep, P0 state-filter JS) must be concrete enough to apply.
+
+ANGLE A — cold / out-of-repo. Your lack of a repo is the point. Two jobs:
+1. SELF-CONTAINMENT: find every place the builder would have to open a file, guess, recall a library's behavior, or make a decision the plan didn't make for it — across all three docs, including the design addendum.
+2. COMPLETENESS / PARITY (the holistic pass, through the lens): can Em FULLY run the store — refund (+ relist), coupons (create/list/end + human dates), photos by attach AND by link, MP4 config, edits, orders — in BOTH /admin AND the GPT? Cross-check every capability against both surfaces; flag any that's possible in one but not the other, or that reads covered but isn't actually drivable. Stress the design too: is the admin redesign + homepage spec complete enough to build, accessible, and honest about what's render-tune?
+
+OUTPUT
+- A gap list RANKED by how likely each is to derail the build or leave a capability missing: location (doc/section/phase), what's wrong/missing, the concrete fix.
+- The single most important "if you fix one thing" insight.
+- One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
+Be concrete: "WS1 returns relist.available but the GPT instruction never tells it to act on relist.archived" beats "refund flow looks thin."
+```
+
+---
+
+## Angle B — fidelity (repo)
+
+```
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v3_1_0_GAP_REVIEW_B.md).
+
+THE REVIEW LENS (both): (a) North Star — minimize Em's friction; every capability doable in BOTH /admin AND the GPT. (b) Broader mandate — the lens does NOT shrink the scope: search the WHOLE build (IMPLEMENT + BOTH addenda, every element) for anything not exclusively-executable, any unvalidated assumption, any design-correctness failure. Fidelity matters because a CURRENT block that no longer matches the tree means the builder DISCOVERS/DECIDES — breaking "exclusively executable."
+
+CONTEXT
+- The build = v3_1_0_IMPLEMENT.md (WS1-3 byte-anchored) + v3_1_0_ADDENDUM_DESIGN.md (WS4 admin redesign + WS5 homepage — CURRENT/NEW + render-tuned defaults) + v3_1_0_ADDENDUM_TESTING.md. A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every code edit quotes a CURRENT block (locator) + a NEW block. Byte-check the design addendum's DECIDED blocks at the same bar; for render-tuned defaults judge "concrete enough the builder never guesses," not whether it's the final value.
+- LANDMINES (validate against the repo, not training data):
+  1. Vercel api/*.ts must compile to CommonJS or the deployed runtime crashes (only shows on a real preview URL). The new orders.ts POST + upload.ts changes must stay tsc-clean + CJS-safe.
+  2. No new Vercel function — refund folds into orders.ts (POST + a vercel.json rewrite), chat-attach into upload.ts (a rewrite); function count unchanged (cap 11/12).
+  3. is_test is never user-editable; the refund order-lookup is is_test-scoped; Stripe secret key is env-scoped (test vs live).
+  4. The frontend derives an image's ROLE from its filename prefix (product.js:415 gallery, :576 hero) — no stored role field; the server names {role}-{slug} from the role param. So the correct role is load-bearing; a wrong role silently mis-places/drops an image. Nobody renames a file.
+  5. openaiFileIdRefs is documented-but-finicky (blank arrays / 422s) — the by-link uploadImage is the deliberate backstop and stays; files.oaiusercontent.com is public https; links expire ~5 min; ≤10/call.
+  6. The GPT Instructions have an ~8k-char cap — the v3.1 edits must fit.
+  7. Refund is FULL-only (partials stay in Stripe); stripe.refunds.create with idempotencyKey 'refund-'+id; the charge.refunded webhook ALSO flips status (idempotent with the action's optimistic flip).
+  8. Refund never auto-relists; relist is a separate, state-aware (available:true vs unarchive), confirmed step. The refund's products(...) embed must be a to-one OBJECT or relist is malformed + the prompt silently never fires.
+  9. /admin upload uses the SAME /api/upload pipeline; the authorized admin GET returns full rows (stripe_product_id / is_published / archived_at present).
+  10. Coupons: never make the GPT decode a raw Unix timestamp (the FEEDBACK_COUPON regression) — expires_display (human, store TZ) is returned alongside expires_at; product_ids are stripe_product_id (not Supabase id); a product-scoped coupon needs a published product.
+  11. The structured admin media editor must emit the SAME {type,url,autoplay?,loop?,poster?,alt?} shape product.js's populateMedia reads (so api/products + product.js are untouched); MP4s render before YouTube.
+  12. cleanUrls:true — rewrite destinations drop .html (the two new rewrites are API→API; confirm).
+  13. Storefront brand untouched; /admin gets a neutral/template aesthetic (NOT the storefront brand, NOT august.style-tokened).
+  14. Reduced-motion + a11y preserved — the hero fallback stays; the Lottie title is aria-hidden over a REAL <h1> with a reduced-motion/no-JS fallback to the static title.
+  15. The hero CDN objects are immutable/max-age=1yr — the old-film swap needs a VERSIONED key, not an in-place overwrite.
+  16. The go-live (main) version is untouched by v3.1.0 (a separate dev cycle).
+  17. WS4/WS5 are executable DESIGN (concrete default + render-tune), not byte-anchored like WS1-3 — judge "concrete enough the builder never guesses," not final pixels; real content is never a build gate; the two flagged mechanical bits (token sweep, P0 state-filter JS) must be concrete enough to apply.
+
+ANGLE B — fidelity. Open every file the plan edits and verify:
+- Every CURRENT block matches the working tree BYTE-FOR-BYTE (whitespace, content). Line numbers are hints; the quoted text is the anchor — flag any CURRENT that no longer matches. Cover: orders.ts (imports :5-8, PATCH close :237-238); vercel.json :12 + :19; the schema markShipped tail + the uploadImage op :266-284; the GPT instructions :6/:19/:23/:25/:27; products.ts coupon handlers (:741 create return, :751-752, :786); upload.ts (:129-138 JSON intake, :195-316 tail, the helpers); admin.js (:104-107 tabs are in index.html; :152, :196-211, :164-170, :298, :331-345, :371-372, :449-455, :770-771, :799-804, :830-832, :834-838); admin/index.html (:61, :159, :185-186, :256-257); product.js role regexes (:415, :576).
+- Every NEW block applies cleanly + references only things that exist: imports resolve (the new `stripe` import in orders.ts; `formatExpiry`); the refund POST's `products(...)` embed reads to-one like the GET (LANDMINE 8); the upload `processOne` refactor preserves the :202-316 body verbatim with the two return-swaps; `handleAttachedRefs`/`positionalRole`/`processOne` are module-level above POST; the new admin functions (submitRefund/relistPiece, loadCoupons/renderCoupons/onCreateCoupon/onDeactivateCoupon/populateCouponProducts, addMediaRow/collectMedia/updateCoverage) reference only existing helpers (authHeader, setStatus, escapeHtml, centsToDollars, $) + in-scope vars; every new CSS id/class used in JS exists in the markup; the schema YAML + vercel.json stay valid.
+- The tsc-clean + CommonJS + 11/12-function claims hold (no new api/*.ts; removed code isn't still referenced; the products(...) embed type cast compiles).
+
+OUTPUT
+- Ranked list: location, the mismatch, the corrected anchor/fix.
+- The single most important fix.
+- One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
+```
+
+---
+
+## Angle C — integration (repo + architecture)
+
+```
+You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v3_1_0_GAP_REVIEW_C.md).
+
+THE REVIEW LENS (both): (a) North Star — minimize Em's friction; every capability doable in BOTH /admin AND the GPT. (b) Broader mandate — the lens does NOT shrink the scope: the WHOLE build (IMPLEMENT + BOTH addenda, every element) for exclusively-executable / unvalidated-assumption / design-correctness gaps. Hunt INTEGRATION gaps through this lens: a locally-correct edit that, in the wider system, makes a by-chat/by-admin capability fail or leak, or breaks a render.
+
+CONTEXT
+- Read assets/docs/EVERLASTINGS_STORE.md FIRST, then the three v3.1.0 docs. A FRESH agent applies the WHOLE build to this repo + tests on the dev preview. DESIGN INTEGRATION IS IN SCOPE (the admin redesign touches the same admin.js/index.html the functional WS1-3 edits touch — check the edits compose; the homepage hero swap must preserve the existing overlay/spotlight/glow/parallax + reduced-motion layers).
+- LANDMINES (validate against reality, not training data):
+  1. Vercel api/*.ts must compile to CommonJS or the deployed runtime crashes (only shows on a real preview URL). The new orders.ts POST + upload.ts changes must stay tsc-clean + CJS-safe.
+  2. No new Vercel function — refund folds into orders.ts (POST + a vercel.json rewrite), chat-attach into upload.ts (a rewrite); function count unchanged (cap 11/12).
+  3. is_test is never user-editable; the refund order-lookup is is_test-scoped; Stripe secret key is env-scoped (test vs live).
+  4. The frontend derives an image's ROLE from its filename prefix (product.js:415 gallery, :576 hero) — no stored role field; the server names {role}-{slug} from the role param. So the correct role is load-bearing; a wrong role silently mis-places/drops an image. Nobody renames a file.
+  5. openaiFileIdRefs is documented-but-finicky (blank arrays / 422s) — the by-link uploadImage is the deliberate backstop and stays; files.oaiusercontent.com is public https; links expire ~5 min; ≤10/call.
+  6. The GPT Instructions have an ~8k-char cap — the v3.1 edits must fit.
+  7. Refund is FULL-only (partials stay in Stripe); stripe.refunds.create with idempotencyKey 'refund-'+id; the charge.refunded webhook ALSO flips status (idempotent with the action's optimistic flip).
+  8. Refund never auto-relists; relist is a separate, state-aware (available:true vs unarchive), confirmed step. The refund's products(...) embed must be a to-one OBJECT or relist is malformed + the prompt silently never fires.
+  9. /admin upload uses the SAME /api/upload pipeline; the authorized admin GET returns full rows (stripe_product_id / is_published / archived_at present).
+  10. Coupons: never make the GPT decode a raw Unix timestamp (the FEEDBACK_COUPON regression) — expires_display (human, store TZ) is returned alongside expires_at; product_ids are stripe_product_id (not Supabase id); a product-scoped coupon needs a published product.
+  11. The structured admin media editor must emit the SAME {type,url,autoplay?,loop?,poster?,alt?} shape product.js's populateMedia reads (so api/products + product.js are untouched); MP4s render before YouTube.
+  12. cleanUrls:true — rewrite destinations drop .html (the two new rewrites are API→API; confirm).
+  13. Storefront brand untouched; /admin gets a neutral/template aesthetic (NOT the storefront brand, NOT august.style-tokened).
+  14. Reduced-motion + a11y preserved — the hero fallback stays; the Lottie title is aria-hidden over a REAL <h1> with a reduced-motion/no-JS fallback to the static title.
+  15. The hero CDN objects are immutable/max-age=1yr — the old-film swap needs a VERSIONED key, not an in-place overwrite.
+  16. The go-live (main) version is untouched by v3.1.0 (a separate dev cycle).
+  17. WS4/WS5 are executable DESIGN (concrete default + render-tune), not byte-anchored like WS1-3 — judge "concrete enough the builder never guesses," not final pixels; real content is never a build gate; the two flagged mechanical bits (token sweep, P0 state-filter JS) must be concrete enough to apply.
+
+ANGLE C — integration. Hunt system-fit gaps:
+- The refund: the action's optimistic orders.status flip vs the charge.refunded webhook (webhook.ts:60-89) — no double-write hazard, both idempotent; is_test scope holds; the relistPiece reuse of PUT /api/products {available:true} + POST /api/products/unarchive matches the real endpoints + change-detect behavior; the products(...) embed shape (LANDMINE 8).
+- Parity: every capability genuinely drivable in BOTH /admin and the GPT (refund, coupons incl. scope-by-stripe_product_id + human dates, attach/by-link upload, MP4 config). Anything in one surface but not the other?
+- Chat-attach: openaiFileIdRefs → the SAME pipeline; the by-link backstop intact; the positional/roles[] mapping yields filenames product.js's regex reads (LANDMINE 4); the /api/upload/attach rewrite + the dispatch branch.
+- The admin redesign composes with WS1-3's same-file edits (the refund button, the coupons tab, the media editor) — no conflicting edits to the same blocks; the token literal-sweep doesn't break a selector something relies on; P0's state-filter reads the right product fields.
+- Homepage: the versioned-key swap + the Lottie wrapper preserve every existing hero layer + reduced-motion + the real <h1>.
+
+OUTPUT
+- Ranked list: location, the integration gap, the concrete fix.
+- The single most important fix.
+- One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
+```
+
+---
+
+## Angle D — design-correctness (repo + design addendum)
+
+```
+You are a senior engineer + design reviewer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v3_1_0_GAP_REVIEW_D.md).
+
+THE REVIEW LENS (both): (a) North Star — minimize Em's friction; the /admin panel must let her do everything the GPT can, and feel genuinely polished + clear doing it. (b) Broader mandate — you are the DESIGN-CORRECTNESS lens that A (no repo) and B/C (code-fidelity/integration) under-weight: does the UI actually RENDER right, is it ACCESSIBLE, RESPONSIVE, and does it MATCH the design addendum's spec? The "columns-bug" class is your home turf — a spec that applies cleanly but renders wrong/incomplete (e.g. removing an inline style assuming a stylesheet rule wins the cascade — does that rule exist and win?).
+
+CONTEXT
+- Read v3_1_0_ADDENDUM_DESIGN.md (WS4 admin token system + P0-P7; WS5 Lottie title + old-film hero) + the parts of v3_1_0_IMPLEMENT.md it depends on (WS2 coupons tab, WS3.7 admin media UX) + the repo (admin/index.html inline CSS :8-74, admin.js, styles.css hero region, index.html hero, product.js populateMedia). Also the FEEDBACK_ADMIN_v2_1_0.md screenshots. The bar: design ships as concrete-default + render-tune — judge "concrete enough to build + correct + accessible," NOT final pixels.
+- LANDMINES (validate against reality, not training data):
+  1. Vercel api/*.ts must compile to CommonJS or the deployed runtime crashes (only shows on a real preview URL). The new orders.ts POST + upload.ts changes must stay tsc-clean + CJS-safe.
+  2. No new Vercel function — refund folds into orders.ts (POST + a vercel.json rewrite), chat-attach into upload.ts (a rewrite); function count unchanged (cap 11/12).
+  3. is_test is never user-editable; the refund order-lookup is is_test-scoped; Stripe secret key is env-scoped (test vs live).
+  4. The frontend derives an image's ROLE from its filename prefix (product.js:415 gallery, :576 hero) — no stored role field; the server names {role}-{slug} from the role param. So the correct role is load-bearing; a wrong role silently mis-places/drops an image. Nobody renames a file.
+  5. openaiFileIdRefs is documented-but-finicky (blank arrays / 422s) — the by-link uploadImage is the deliberate backstop and stays; files.oaiusercontent.com is public https; links expire ~5 min; ≤10/call.
+  6. The GPT Instructions have an ~8k-char cap — the v3.1 edits must fit.
+  7. Refund is FULL-only (partials stay in Stripe); stripe.refunds.create with idempotencyKey 'refund-'+id; the charge.refunded webhook ALSO flips status (idempotent with the action's optimistic flip).
+  8. Refund never auto-relists; relist is a separate, state-aware (available:true vs unarchive), confirmed step. The refund's products(...) embed must be a to-one OBJECT or relist is malformed + the prompt silently never fires.
+  9. /admin upload uses the SAME /api/upload pipeline; the authorized admin GET returns full rows (stripe_product_id / is_published / archived_at present).
+  10. Coupons: never make the GPT decode a raw Unix timestamp (the FEEDBACK_COUPON regression) — expires_display (human, store TZ) is returned alongside expires_at; product_ids are stripe_product_id (not Supabase id); a product-scoped coupon needs a published product.
+  11. The structured admin media editor must emit the SAME {type,url,autoplay?,loop?,poster?,alt?} shape product.js's populateMedia reads (so api/products + product.js are untouched); MP4s render before YouTube.
+  12. cleanUrls:true — rewrite destinations drop .html (the two new rewrites are API→API; confirm).
+  13. Storefront brand untouched; /admin gets a neutral/template aesthetic (NOT the storefront brand, NOT august.style-tokened).
+  14. Reduced-motion + a11y preserved — the hero fallback stays; the Lottie title is aria-hidden over a REAL <h1> with a reduced-motion/no-JS fallback to the static title.
+  15. The hero CDN objects are immutable/max-age=1yr — the old-film swap needs a VERSIONED key, not an in-place overwrite.
+  16. The go-live (main) version is untouched by v3.1.0 (a separate dev cycle).
+  17. WS4/WS5 are executable DESIGN (concrete default + render-tune), not byte-anchored like WS1-3 — judge "concrete enough the builder never guesses," not final pixels; real content is never a build gate; the two flagged mechanical bits (token sweep, P0 state-filter JS) must be concrete enough to apply.
+
+ANGLE D — design-correctness. Check:
+- Admin token system: every literal mapped to a token; no raw hex left; the cascade actually wins (a removed inline style is replaced by a rule that exists + wins); product-state badges legible; the new coupon-list rows + media-editor rows + refund button inherit the tokens (or are flagged for the WS4 restyle).
+- Accessibility: the Lottie title keeps a real <h1> (SEO + SR) + a reduced-motion fallback to the static styled title; no-JS / 404-JSON still shows the <h1>; the old-film hero preserves the reduced-motion poster fallback; focus states + contrast in the admin redesign.
+- Responsive: the admin mobile breakpoint (none today) stacks the forms/cards/order-cards without overflow at ≤640px; the structured media editor + coupon form are usable on a phone.
+- Spec-match + completeness: P0 (nav/back + state-filter), P1-P7 are each concrete enough to build; the homepage integration (wrapper + a11y CSS + init; versioned-key swap + 3 URL edits) is concrete; render-tune items are honestly labeled (not pretending to be final).
+- Honesty: any place the design reads "done" but is actually undecided / would render wrong / skips a state (loading/empty/error).
+
+OUTPUT
+- Ranked list: location, the design-correctness gap, the concrete fix.
+- The single most important fix.
+- One-line verdict: READY TO BUILD or NEEDS ANOTHER PASS.
+```
