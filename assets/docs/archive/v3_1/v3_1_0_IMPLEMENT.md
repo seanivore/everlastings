@@ -63,23 +63,269 @@
 
 ## Imminent slice — Workstream 1: Refund (detailed)
 
-> Targets below are confirmed locations. CURRENT/NEW byte-anchors are added when this slice enters the gate (Phase 1.5 needs the `admin.js` order-card region read first).
+> **Byte-anchored.** Each phase quotes a **CURRENT** block (the locator) + a **NEW** block. Line numbers are hints; the quoted CURRENT text is the anchor — if it doesn't match the working tree byte-for-byte, STOP and reconcile. Run `npx tsc --noEmit` clean after the TS edits.
 
-**Phase 1.1 — `api/orders.ts`: new `POST` refund handler.**
-- `import { stripe } from './_lib/stripe';` (orders.ts doesn't import it yet).
-- `export async function POST(request)`: `requireAdmin` → 401 on error; read `_action` + `id` from the URL; require `_action === 'refund'` and a valid UUID (reuse `UUID_RE`, `orders.ts:10`).
-- Fetch the order scoped by `is_test`: `.select('id, status, stripe_payment_intent, product_id, products(id, slug, available, archived_at)').eq('id', id).eq('is_test', isTest).single()`.
-- Guards (return `jsonResponse` like the rest of the file): not found → 404; `status === 'refunded'` → 409; no `stripe_payment_intent` → 409.
-- `await stripe.refunds.create({ payment_intent: order.stripe_payment_intent }, { idempotencyKey: \`refund-${id}\` })`; catch Stripe errors → 502 with a plain message.
-- On success: `.update({ status: 'refunded' }).eq('id', id)` (optimistic); return `{ ok: true, order, relist: { product_id, slug, available, archived_at } }`.
+**Phase 1.1 — `api/orders.ts`: import Stripe + add the `POST` refund handler.**
 
-**Phase 1.2 — `vercel.json`: refund rewrite.** Add `{ "source": "/api/orders/:id/refund", "destination": "/api/orders?id=:id&_action=refund" }` immediately **before** the existing `/api/orders/:id` line (`vercel.json:12`) so the more specific path wins.
+*1.1a — add the import.* **CURRENT (`api/orders.ts:5-8`):**
+```ts
+import { corsHeaders, preflight } from './_lib/cors';
+import { requireAdmin } from './_lib/adminAuth';
+import { isTest } from './_lib/env';
+import { sendEmail, trackingEmailHtml, trackingUrl } from './_emails/index';
+```
+**NEW (add the stripe import):**
+```ts
+import { corsHeaders, preflight } from './_lib/cors';
+import { requireAdmin } from './_lib/adminAuth';
+import { isTest } from './_lib/env';
+import { stripe } from './_lib/stripe';
+import { sendEmail, trackingEmailHtml, trackingUrl } from './_emails/index';
+```
 
-**Phase 1.3 — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): add `refundOrder`.** New op `POST /api/orders/{id}/refund`, `operationId: refundOrder`, `summary` (≤300 chars): issues a **full** refund via Stripe (emails the buyer), marks the order refunded; returns the piece's relist state; partials go in Stripe. `requestBody`: optional `reason` string.
+*1.1b — append the handler after the `PATCH` export.* **CURRENT (the end of `PATCH`, `api/orders.ts:237-238`):**
+```ts
+  return jsonResponse(request, { ok: true, order: stamped, email_sent: true });
+}
+```
+**NEW (same, then the new function):**
+```ts
+  return jsonResponse(request, { ok: true, order: stamped, email_sent: true });
+}
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip the REFUNDS line.** Replace "no refund Action — walk her through Stripe" with: confirm the order + amount first → `refundOrder {id, reason}` (full refund; Stripe emails the buyer) → then **ask** relist-or-leave → relist via `editProduct {available:true}` (published-but-sold) or `unarchiveProduct` (archived); partial refunds still in Stripe. (Also drop the one-line "poster = the still shown before the video plays" into the MEDIA guidance here.)
+// POST /api/orders/:id/refund  (vercel rewrite → ?id=:id&_action=refund) — owner-issued FULL refund.
+// Stripe also fires charge.refunded (webhook.ts:60) which flips status; we set it optimistically here
+// for instant admin/GPT feedback — idempotent, both write 'refunded'. Partial refunds stay in Stripe.
+export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if ('error' in auth) return auth.error;
+  const { supabase } = auth;
 
-**Phase 1.5 — `/admin`: refund button + confirm + state-aware relist.** On each order card (orders tab), add a **Refund** button (shown when `status !== 'refunded'`); `window.confirm` the order + amount; `POST /api/orders/{id}/refund`; on success show "Refunded" and a **"Relist this piece?"** prompt that calls the right relist (available:true vs unarchive) per the returned `relist` state. *(Byte-anchor after reading `admin.js` order-card region ~700-840 + `admin/index.html:243-263`.)*
+  const url = new URL(request.url);
+  if (url.searchParams.get('_action') !== 'refund') {
+    return jsonResponse(request, { error: 'Unknown action' }, 400);
+  }
+  const id = url.searchParams.get('id') ?? '';
+  if (!id || !UUID_RE.test(id)) {
+    return jsonResponse(request, { error: 'Invalid order id' }, 400);
+  }
+
+  const { data: order, error: loadErr } = await supabase
+    .from('orders')
+    .select('id, status, stripe_payment_intent, products(id, slug, title, available, archived_at)')
+    .eq('id', id)
+    .eq('is_test', isTest)
+    .single();
+  if (loadErr || !order) return jsonResponse(request, { error: 'Order not found' }, 404);
+  if (order.status === 'refunded') {
+    return jsonResponse(request, { error: 'This order is already refunded.' }, 409);
+  }
+  if (!order.stripe_payment_intent) {
+    return jsonResponse(request, { error: 'This order has no payment to refund.' }, 409);
+  }
+
+  try {
+    await stripe.refunds.create(
+      { payment_intent: order.stripe_payment_intent as string },
+      { idempotencyKey: `refund-${id}` },
+    );
+  } catch (err) {
+    console.error(`Refund failed for order ${id}:`, err);
+    return jsonResponse(request, { error: 'Stripe refund failed — check the Stripe dashboard.' }, 502);
+  }
+
+  // Optimistic flip (the webhook will also set it). Non-fatal if it lags — the refund already succeeded.
+  const { error: updErr } = await supabase.from('orders').update({ status: 'refunded' }).eq('id', id);
+  if (updErr) console.error(`Refund status flip lagged for ${id}:`, updErr.message);
+
+  const p = (order as unknown as {
+    products?: { id: string; slug: string; title: string; available: boolean; archived_at: string | null };
+  }).products ?? null;
+  return jsonResponse(request, {
+    ok: true,
+    status: 'refunded',
+    relist: p
+      ? { product_id: p.id, slug: p.slug, title: p.title, available: p.available, archived: !!p.archived_at }
+      : null,
+  });
+}
+```
+*(`UUID_RE` `:10`, `jsonResponse` `:38`, `isTest` already imported. The `products(...)` embed returns a to-one object, read the same way the GET does (`order.products?.title`). `tsc --noEmit` clean — verify at build.)*
+
+**Phase 1.2 — `vercel.json`: the refund rewrite (more specific path first).** **CURRENT (`vercel.json:12`):**
+```json
+    { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
+```
+**NEW (insert the refund line directly above it):**
+```json
+    { "source": "/api/orders/:id/refund", "destination": "/api/orders?id=:id&_action=refund" },
+    { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
+```
+
+**Phase 1.3 — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): add the `refundOrder` op.** **CURRENT (the end of `markShipped` — the file's last lines, `:334-337`):**
+```yaml
+                properties:
+                  ok: { type: boolean }
+                  email_sent: { type: boolean }
+```
+**NEW (same, then append the new path):**
+```yaml
+                properties:
+                  ok: { type: boolean }
+                  email_sent: { type: boolean }
+  /api/orders/{id}/refund:
+    post:
+      operationId: refundOrder
+      summary: Issue a FULL refund on an order via Stripe (emails the buyer automatically) and mark it refunded. Returns the piece's relist state — a refund does NOT relist it. Partial refunds are done in the Stripe dashboard, not here.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: The order UUID (from listOrders).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, description: "Optional note, e.g. 'Customer requested' or 'Damaged in transit'." }
+      responses:
+        '200':
+          description: Refund issued; order marked refunded. `relist` carries the piece's current state so you can offer to re-list it.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  status: { type: string }
+                  relist: { type: object }
+```
+*(`summary` ≈ 230 chars, under the 300 cap. The path sits at 2-space indent like `/api/orders/{id}:` `:307`.)*
+
+**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.**
+
+*1.4a — REFUNDS.* **CURRENT (`:23`):**
+```
+REFUNDS: you can SEE order status but have NO refund Action. Walk her through Stripe (Payments -> find the payment -> Refund); Stripe emails the buyer. Stripe changes its dashboard, so if unsure of the current steps USE WEB SEARCH first. A full refund flips the order's status to "refunded" on its own; a partial one won't show (tell her to check Stripe). A refund does NOT relist the piece: getProduct, then editProduct {available:true} if still published-but-sold, or unarchiveProduct if archived. Revenue/payouts live in Stripe; point her there.
+```
+**NEW:**
+```
+REFUNDS: refundOrder {id, reason?} issues a FULL refund via Stripe (it emails the buyer) and marks the order refunded. CONFIRM FIRST: read back the piece + amount + buyer ("Refund <buyer> $X for <product>? This can't be undone."). It returns `relist` (the piece's state); a refund does NOT relist it, so ASK "Want it back up for sale, or leave it down?" If yes: editProduct {available:true} when relist.available is false (published-but-sold), or unarchiveProduct when relist.archived. PARTIAL refunds aren't supported here -> walk her through Stripe (Payments -> find the payment -> Refund; USE WEB SEARCH if unsure of the current steps). Revenue/payouts live in Stripe.
+```
+
+*1.4b — poster aside (the v2.1 testing clarification).* **CURRENT (`:25`):** `…click-to-play with sound (the default; she can add a still "poster"). Set the media flags accordingly.` → **NEW:** `…click-to-play with sound (the default; she can add a still "poster" — the image shown before the video plays). Set the media flags accordingly.`
+
+**Phase 1.5 — `/admin`: refund button + confirm + in-place state-aware relist** (`assets/js/admin.js`; order cards are built in `buildOrderCard`).
+
+*1.5a — the button, in the order-info block.* **CURRENT (`admin.js:770-771`):**
+```js
+      ${formHtml}
+      <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
+```
+**NEW (a Refund button, or a Refunded pill when already refunded):**
+```js
+      ${formHtml}
+      ${order.status === 'refunded'
+        ? '<p style="margin-top:6px"><span class="pill unsent">Refunded</span></p>'
+        : '<button type="button" class="refund-order" style="margin-top:6px">Refund order</button>'}
+      <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
+```
+
+*1.5b — wire it, after the resend handler.* **CURRENT (`admin.js:799-804`):**
+```js
+  const resendBtn = card.querySelector('.resend-tracking');
+  if (resendBtn) {
+    resendBtn.addEventListener('click', () => {
+      submitShip(order.id, order.tracking_number, order.tracking_carrier, card, true);
+    });
+  }
+```
+**NEW (append a refund-button handler):**
+```js
+  const resendBtn = card.querySelector('.resend-tracking');
+  if (resendBtn) {
+    resendBtn.addEventListener('click', () => {
+      submitShip(order.id, order.tracking_number, order.tracking_carrier, card, true);
+    });
+  }
+
+  const refundBtn = card.querySelector('.refund-order');
+  if (refundBtn) {
+    refundBtn.addEventListener('click', () => {
+      const confirmed = window.confirm(
+        `Refund ${customerEmail || 'the buyer'} ${totalLabel} for "${productTitle}"? This issues a full Stripe refund and can't be undone.`,
+      );
+      if (!confirmed) return;
+      submitRefund(order.id, card);
+    });
+  }
+```
+
+*1.5c — the two functions, beside `submitShip`.* **CURRENT (the close of `submitShip`, `admin.js:830-832`):**
+```js
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+```
+**NEW (same, then add `submitRefund` + `relistPiece`):**
+```js
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+async function submitRefund(orderId, card) {
+  const msg = card.querySelector('.order-msg');
+  msg.textContent = 'Issuing refund...';
+  const buttons = card.querySelectorAll('button');
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/refund`, {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    msg.textContent = 'Refunded.';
+    const r = body.relist;
+    if (r && (r.available === false || r.archived)) {
+      if (window.confirm(`Refunded. Put "${r.title}" back up for sale?`)) {
+        await relistPiece(r, msg);
+      }
+    }
+    setTimeout(loadOrders, 800);
+  } catch (err) {
+    msg.textContent = `Failed: ${err.message}`;
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+// archived → unarchive; published-but-sold → editProduct {available:true}. Mirrors the admin's own
+// product-mutation calls: PUT /api/products?id=… (admin.js:474) and POST /api/products/unarchive (:634).
+async function relistPiece(r, msg) {
+  try {
+    const res = r.archived
+      ? await fetch('/api/products/unarchive', {
+          method: 'POST',
+          headers: { ...authHeader(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: r.product_id }),
+        })
+      : await fetch(`/api/products?id=${encodeURIComponent(r.product_id)}`, {
+          method: 'PUT',
+          headers: { ...authHeader(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ available: true }),
+        });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    msg.textContent = 'Refunded + relisted.';
+  } catch (err) {
+    msg.textContent = `Refunded, but relist failed (${err.message}) — relist it from the product editor.`;
+  }
+}
+```
+*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` already exist in `admin.js`; `customerEmail`, `totalLabel`, `productTitle` are already in `buildOrderCard`'s scope.)*
 
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; it asks about relisting") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note + test-script **R15** flips from "can't issue refunds" → "issues + asks about relisting." (Do these in the as-built phase to avoid mid-build mixed truth.)
 
