@@ -10,6 +10,10 @@
 
 ---
 
+## The settled base — don't re-litigate what's shipped
+
+The current store — everything described in `EVERLASTINGS_STORE.md` and present in the repo today — is **built, tested, and approved to go live**; it's the fixed, proven substrate. **v3.1.0 is a delta layered on top** (refunds, coupons-in-admin, chat-attach upload, admin polish, homepage). Reviewers judge the **v3.1.0 changes** and whether they **fit** that base — they do **not** redesign or re-flag settled/shipped behavior, and a finding must be about what *this build* adds/changes (or a real conflict it creates with the base). This is inlined into every block so reviewers don't manufacture blockers out of proven code.
+
 ## ⭐ The review lens (in every block — both parts)
 
 **(a) North Star / thesis:** minimize Em's friction to manage her store — **every management capability must be doable in BOTH the /admin panel AND her Custom GPT, equally** (we can't rely on the GPT always being there). The GPT should do what a capable agent (Claude Code + skills/MCPs) could. A capability that reads "covered" in the docs but that Em can't actually trigger (in either surface) is a **real gap**, not a nitpick.
@@ -46,6 +50,8 @@ You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT 
 THE REVIEW LENS — judge every gap against BOTH, not against doc-internal consistency:
 (a) North Star: minimize Em's friction to manage her store; EVERY management capability must be doable in BOTH the /admin panel AND her Custom GPT, equally (the GPT should do what a capable agent could). A capability that reads "covered" but that Em can't actually trigger in either surface is a REAL gap.
 (b) Broader mandate (don't let the lens shrink the scope): the North Star is the primary functionality lens, NOT the filter for what counts as a gap. Across the WHOLE build (the IMPLEMENT + BOTH addenda — design + testing — every element), also catch anything not truly exclusively-executable, any unvalidated assumption, and any design-correctness failure (a spec that APPLIES cleanly but RENDERS wrong/incomplete). Do not neglect the design addendum.
+
+SETTLED BASE — don't re-litigate what's shipped: the current store (all of EVERLASTINGS_STORE.md + the repo as it stands today) is built, tested, and approved to go live — the fixed, proven substrate. This build (v3.1.0) is a DELTA on top. Review the v3.1.0 changes for gaps + whether they FIT the base; do NOT redesign or flag settled/shipped behavior — a finding must be about what THIS build adds/changes, or a real conflict it creates with the base.
 
 CONTEXT
 - You are given THREE documents and NO repository: v3_1_0_IMPLEMENT.md (the plan — WS1-3 byte-anchored with CURRENT/NEW; WS4-5 spec'd as executable design), v3_1_0_ADDENDUM_DESIGN.md (WS4 admin redesign + WS5 homepage), v3_1_0_ADDENDUM_TESTING.md (the E2E plan). A FRESH agent executes ALL of it against the everlastings repo, then tests on the dev preview. "Exclusively executable" = it embeds the exact current code + exact replacement for every edit, so the builder LOCATES and APPLIES, never DISCOVERS or DECIDES.
@@ -88,6 +94,8 @@ You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT 
 
 THE REVIEW LENS (both): (a) North Star — minimize Em's friction; every capability doable in BOTH /admin AND the GPT. (b) Broader mandate — the lens does NOT shrink the scope: search the WHOLE build (IMPLEMENT + BOTH addenda, every element) for anything not exclusively-executable, any unvalidated assumption, any design-correctness failure. Fidelity matters because a CURRENT block that no longer matches the tree means the builder DISCOVERS/DECIDES — breaking "exclusively executable."
 
+SETTLED BASE — don't re-litigate what's shipped: the current store (all of EVERLASTINGS_STORE.md + the repo as it stands today) is built, tested, and approved to go live — the fixed, proven substrate. This build (v3.1.0) is a DELTA on top. Review the v3.1.0 changes for gaps + whether they FIT the base; do NOT redesign or flag settled/shipped behavior — a finding must be about what THIS build adds/changes, or a real conflict it creates with the base.
+
 CONTEXT
 - The build = v3_1_0_IMPLEMENT.md (WS1-3 byte-anchored) + v3_1_0_ADDENDUM_DESIGN.md (WS4 admin redesign + WS5 homepage — CURRENT/NEW + render-tuned defaults) + v3_1_0_ADDENDUM_TESTING.md. A FRESH agent applies ALL of it to THIS repo, then tests on the dev preview. Every code edit quotes a CURRENT block (locator) + a NEW block. Byte-check the design addendum's DECIDED blocks at the same bar; for render-tuned defaults judge "concrete enough the builder never guesses," not whether it's the final value.
 - LANDMINES (validate against the repo, not training data):
@@ -128,6 +136,8 @@ OUTPUT
 You are a senior engineer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v3_1_0_GAP_REVIEW_C.md).
 
 THE REVIEW LENS (both): (a) North Star — minimize Em's friction; every capability doable in BOTH /admin AND the GPT. (b) Broader mandate — the lens does NOT shrink the scope: the WHOLE build (IMPLEMENT + BOTH addenda, every element) for exclusively-executable / unvalidated-assumption / design-correctness gaps. Hunt INTEGRATION gaps through this lens: a locally-correct edit that, in the wider system, makes a by-chat/by-admin capability fail or leak, or breaks a render.
+
+SETTLED BASE — don't re-litigate what's shipped: the current store (all of EVERLASTINGS_STORE.md + the repo as it stands today) is built, tested, and approved to go live — the fixed, proven substrate. This build (v3.1.0) is a DELTA on top. Review the v3.1.0 changes for gaps + whether they FIT the base; do NOT redesign or flag settled/shipped behavior — a finding must be about what THIS build adds/changes, or a real conflict it creates with the base.
 
 CONTEXT
 - Read assets/docs/EVERLASTINGS_STORE.md FIRST, then the three v3.1.0 docs. A FRESH agent applies the WHOLE build to this repo + tests on the dev preview. DESIGN INTEGRATION IS IN SCOPE (the admin redesign touches the same admin.js/index.html the functional WS1-3 edits touch — check the edits compose; the homepage hero swap must preserve the existing overlay/spotlight/glow/parallax + reduced-motion layers).
@@ -171,6 +181,8 @@ OUTPUT
 You are a senior engineer + design reviewer doing a pre-build gap review. Effort: maximum. Do NOT change code or docs — output findings only (write them to v3_1_0_GAP_REVIEW_D.md).
 
 THE REVIEW LENS (both): (a) North Star — minimize Em's friction; the /admin panel must let her do everything the GPT can, and feel genuinely polished + clear doing it. (b) Broader mandate — you are the DESIGN-CORRECTNESS lens that A (no repo) and B/C (code-fidelity/integration) under-weight: does the UI actually RENDER right, is it ACCESSIBLE, RESPONSIVE, and does it MATCH the design addendum's spec? The "columns-bug" class is your home turf — a spec that applies cleanly but renders wrong/incomplete (e.g. removing an inline style assuming a stylesheet rule wins the cascade — does that rule exist and win?).
+
+SETTLED BASE — don't re-litigate what's shipped: the current store (all of EVERLASTINGS_STORE.md + the repo as it stands today) is built, tested, and approved to go live — the fixed, proven substrate. This build (v3.1.0) is a DELTA on top. Review the v3.1.0 changes for gaps + whether they FIT the base; do NOT redesign or flag settled/shipped behavior — a finding must be about what THIS build adds/changes, or a real conflict it creates with the base.
 
 CONTEXT
 - Read v3_1_0_ADDENDUM_DESIGN.md (WS4 admin token system + P0-P7; WS5 Lottie title + old-film hero) + the parts of v3_1_0_IMPLEMENT.md it depends on (WS2 coupons tab, WS3.7 admin media UX) + the repo (admin/index.html inline CSS :8-74, admin.js, styles.css hero region, index.html hero, product.js populateMedia). Also the FEEDBACK_ADMIN_v2_1_0.md screenshots. The bar: design ships as concrete-default + render-tune — judge "concrete enough to build + correct + accessible," NOT final pixels.
