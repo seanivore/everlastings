@@ -1,10 +1,10 @@
-# v3.2.2 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.2.3 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md`) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_2_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_2_ADDENDUM_TESTING.md`.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_3_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_3_ADDENDUM_TESTING.md`.
 
 ---
 
@@ -31,9 +31,9 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.2.2 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.2.3 ships on its own, separately, when Sean chooses.
 
-> **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7732 / 8000** (268 headroom — the fenced-block extraction; the build re-counts the shipped `.txt`). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
+> **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7788 / 8000** (212 headroom after round 3's coupon `min_display`/`amount_display` relay — the fenced-block extraction; the build re-counts the shipped `.txt`). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
 
 ---
 
@@ -290,7 +290,7 @@ export async function POST(request: Request) {
 ```
 *(`summary` = **286 chars** (verified `wc`/byte-count), under the 300 cap — the earlier "≈295" estimate undercounted by ~20 and would have tripped the testing static gate (`every summary < 300`); count it, don't estimate. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a. `reason` is gone (the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7732/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
+**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7788/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
 
 *1.4a — REFUNDS.* **CURRENT (`:23`):**
 ```
@@ -503,7 +503,7 @@ async function relistPiece(r, down, msg) {
 ## Workstream 2 — Coupons in /admin (detailed)
 
 > **Verified I/O contract (the anchor — confirmed against `api/products.ts`, so the admin field names aren't a guess).**
-> - **List** (`handleCouponList`, `products.ts:779-789`) returns, per coupon: `{ code, promotion_code_id, percent_off, amount_off, times_redeemed, max_redemptions, expires_at, store_wide, product_ids }` (+ `expires_display` and `min_amount` added in 2.2). `renderCoupons` reads exactly these.
+> - **List** (`handleCouponList`, `products.ts:779-789`) returns, per coupon: `{ code, promotion_code_id, percent_off, amount_off, times_redeemed, max_redemptions, expires_at, store_wide, product_ids }` (+ `expires_display`, `min_amount`, and the decode-free dollar strings `min_display`/`amount_display` added in 2.2). `renderCoupons` reads exactly these.
 > - **Create** (`handleCoupon`, `products.ts:694-739`) accepts: `type` (`'percent'`|`'amount'`), `value` (percent = the number; **amount = CENTS**, `Math.round(value)` `:724`), `code?`, `product_ids?` (**Stripe** product ids → `applies_to.products`), `min_amount?` (cents → `restrictions.minimum_amount`), `expires_at?` (unix → `redeem_by` + promo `expires_at`), `max_redemptions?`. Returns `{ success, code, coupon_id, promotion_code_id }` (+ `expires_display` in 2.2c). `onCreateCoupon` posts exactly these.
 
 **Phase 2.1 — /admin Coupons UI.** A 3rd tab over the existing `/api/coupons` endpoints (GET list · POST create · POST `/api/coupons/deactivate`). Reuses `setStatus`/`authHeader`/`escapeHtml`/`centsToDollars`/`dollarsToCents` + the `.product-form`/`.row-3`/`.field`/`.form-actions` classes. The `.tab-btn` loop (`admin.js:143`) auto-wires the new button; `switchTab`/`refreshActiveTab` need the coupons branch.
@@ -811,7 +811,7 @@ if (document.readyState === 'loading') {
   init();
 }
 ```
-*(`expires_date` is the raw YYYY-MM-DD; the backend (2.2) builds end-of-day in the store TZ so the stored instant, the confirm label, and `expires_display` all agree regardless of the owner's locale. List rows use a plain bordered div — WS4 restyles with tokens. `.label`/`.toolbar`/`.empty`/`.product-form` classes already exist.)*
+*(`expires_date` is the raw YYYY-MM-DD; the backend (2.2) builds end-of-day in the store TZ so the stored instant, the confirm label, and `expires_display` all agree regardless of the owner's locale. List rows use a plain bordered div — WS4 restyles with tokens. `.toolbar`/`.empty`/`.product-form` classes already exist; `.label` exists too **but is scoped `.order-info .label`**, so it does NOT match the coupon code's `<span class="label">` in `#coupons-list` — DESIGN adds a standalone `.label` rule so the coupon code still gets the muted/uppercase affordance (AR#D-R3-2).)*
 
 **Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
 
@@ -857,7 +857,7 @@ function endOfDayET(dateStr: string): number {
 async function handleCouponList(request: Request): Promise<Response> {
 ```
 
-*2.2b — include `expires_display` + the **minimum** in each listed coupon (AR#C-R2-3: `min_amount` was settable on both surfaces but read back on neither — set a minimum and you couldn't confirm it from /admin **or** chat; relaying it here closes that, and a coupon is now fully verifiable on both. The GPT reads it off the opaque-200 raw body — so **no schema/instruction edit**, the same reasoning as `expires_display` in the note above).* **CURRENT (`api/products.ts:786`):**
+*2.2b — include `expires_display` + the **minimum** in each listed coupon (AR#C-R2-3: `min_amount` was settable on both surfaces but read back on neither — set a minimum and you couldn't confirm it from /admin **or** chat; relaying it here closes that, and a coupon is now fully verifiable on both. The GPT reads it off the opaque-200 raw body — so **no schema edit**, the same reasoning as `expires_display` in the note above. **AR#C-R3-1** then adds the decode-free dollar strings `min_display`/`amount_display` beside the raw cents `min_amount`/`amount_off` — the same `expires_display` pattern — so the GPT reports the minimum/amount in dollars instead of inferring cents (it otherwise sees `min_amount: 5000` next to a non-cents `percent_off: 20`); `/admin`'s `renderCoupons` keeps rendering the raw cents via `centsToDollars`, unchanged. The Phase 3.9 COUPONS instruction relays the display fields and TESTING item 13 asserts the GPT states dollars).* **CURRENT (`api/products.ts:786`):**
 ```ts
           expires_at: pc.expires_at ?? null,
 ```
@@ -866,6 +866,8 @@ async function handleCouponList(request: Request): Promise<Response> {
           expires_at: pc.expires_at ?? null,
           expires_display: pc.expires_at ? formatExpiry(pc.expires_at) : null,
           min_amount: pc.restrictions?.minimum_amount ?? null,
+          min_display: pc.restrictions?.minimum_amount != null ? '$' + (pc.restrictions.minimum_amount / 100).toFixed(2) : null,
+          amount_display: pc.coupon?.amount_off != null ? '$' + (pc.coupon.amount_off / 100).toFixed(2) : null,
 ```
 
 *2.2c — echo it on create too.* **CURRENT (`api/products.ts:741`):**
@@ -927,7 +929,7 @@ COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; 
 ```
 **NEW (read the full terms back in plain dates before creating; never decode a timestamp):**
 ```
-COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons returns expires_display (a plain date) beside each sale's scope (store-wide vs specific) — relay THAT; never decode a raw timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
+COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the full terms back in plain language before creating ("20% off store-wide, runs through Sun Jun 21 — create it?"); never invent an expiry she didn't give; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons returns expires_display (a plain date) + min_display/amount_display (plain dollars) beside each sale's scope (store-wide vs specific) — relay THOSE; never decode a raw cents value or timestamp yourself. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
 ```
 
 ## Workstream 3 — Chat-attach upload + admin media UX (detailed)
@@ -1340,7 +1342,7 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7732 / 8000** (268 headroom — fenced-block extraction; the build re-counts the shipped `.txt`. The round-7 fold reworded only the relist sentence for an unambiguous parse, +3 chars; AR#F3/F4).
+**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7788 / 8000** (212 headroom — fenced-block extraction; the build re-counts the shipped `.txt`. Round 3's AR#C-R3-1 added the coupon `min_display`/`amount_display` relay, +56 chars; the round-7 relist reword was +3; AR#F3/F4).
 
 **This is the artifact to ship: replace `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
 
@@ -1380,7 +1382,7 @@ REMOVING: archiveProduct takes a piece down (stays findable; undo w. unarchivePr
 
 PUBLISHING: "publish" / "make it live" = publishProduct {id} — for a new piece this creates the Stripe listing + makes it buyable, and the old preview link then stops (expected). A publish 400 ("Missing required fields: story_card" / "Minimum 5 gallery images") = say plainly what to add (story_card = the story, headline = the tagline). Lost preview? getProduct + hand back its preview_url EXACTLY (never build a URL); none returned = it's fully live, give the plain product page link. Never make a no-op edit to "regenerate" a link.
 
-COUPONS: createCoupon = percent OR amount-off in cents (dollars→cents); optional code/scope/min/expiry/cap. A product-scoped coupon needs a PUBLISHED piece (a draft has no Stripe id) — else store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the terms back plainly ("20% off store-wide, through Sun Jun 21 — create it?"); never invent an expiry; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons gives expires_display (a plain date) + each sale's scope — relay that, never decode a timestamp. deactivateCoupon {code} ends one now. A temp sale = a coupon, not a price cut (keeps the list price).
+COUPONS: createCoupon = percent OR amount-off in cents (dollars→cents); optional code/scope/min/expiry/cap. A product-scoped coupon needs a PUBLISHED piece (a draft has no Stripe id) — else store-wide. NEVER promise BOGO / "buy N". CONFIRM FIRST: read the terms back plainly ("20% off store-wide, through Sun Jun 21 — create it?"); never invent an expiry; pass her end date as expires_date (YYYY-MM-DD), never a Unix timestamp. listCoupons gives expires_display (a plain date) + min_display/amount_display (plain dollars) + each sale's scope — relay those, never decode a raw cents/timestamp. deactivateCoupon {code} ends one now. A temp sale = a coupon, not a price cut (keeps the list price).
 
 ORDERS: listOrders finds them (status=needs_shipping/shipped; q = order id, email, or tracking) — read back plainly. markShipped needs tracking + carrier (exactly USPS, UPS, FedEx, DHL; "post office" = USPS). CONFIRM FIRST: "Mark <product> shipped via <carrier> <tracking> + email <buyer>?" — it emails the buyer, can't be undone. email_sent:false = tracking saved but the email didn't; text Sean.
 
@@ -1476,12 +1478,12 @@ $$;
 
 > **A forward-pointer in STORE *now* was proposed and REJECTED.** Adding "v3.2.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_2_2_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_2_3_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_2_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_3_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
