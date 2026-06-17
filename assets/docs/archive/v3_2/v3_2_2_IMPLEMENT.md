@@ -1,10 +1,10 @@
-# v3.2.1 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.2.2 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md`) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_1_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_1_ADDENDUM_TESTING.md`.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_2_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_2_ADDENDUM_TESTING.md`.
 
 ---
 
@@ -31,7 +31,7 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.2.1 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.2.2 ships on its own, separately, when Sean chooses.
 
 > **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7732 / 8000** (268 headroom — the fenced-block extraction; the build re-counts the shipped `.txt`). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
 
@@ -308,6 +308,17 @@ REFUNDS: find the order first (listOrders q=<buyer email or id> — reaches ship
 
 *1.5a — (no change to `renderOrders`).* Earlier drafts stashed `state.orders = orders` here so the panel could group siblings from the loaded slice — the breadth-pass fix replaced that with a by-PaymentIntent fetch in `openRefundPanel` (Phase 1.1c + 1.5d), which is robust regardless of subtab. So **`renderOrders` is left exactly as shipped** — no stash (it would be dead code now). The clicked `order` already carries `stripe_payment_intent` (the GET returns `*`), which is all the panel needs to fetch the rest.
 
+*1.5 header — correct the stale auth-model comment (AR#C-R2-2).* The file header says `/api/orders` is JWT-only, but `requireAdmin` accepts `PRODUCT_API_KEY` too — which is exactly how the GPT's `refundOrder` (WS1, new this build) drives `/api/orders`. Behavior is already correct; only the comment lies. **CURRENT (`admin.js:6-7`):**
+```js
+// Supabase JWT (for this UI). `/api/orders` and `/api/orders/<id>` only
+// accept a Supabase JWT via requireAdmin.
+```
+**NEW:**
+```js
+// Supabase JWT (for this UI). `/api/orders` and `/api/orders/<id>` accept
+// either too via requireAdmin (the GPT drives refundOrder/listOrders/markShipped with PRODUCT_API_KEY).
+```
+
 *1.5b — the Refund button + the (initially hidden) panel container, in the order-info block.* **CURRENT (`admin.js:770-771`):**
 ```js
       ${formHtml}
@@ -425,7 +436,6 @@ async function openRefundPanel(order, card) {
     panel.style.display = 'none';
     submitRefund(order.id, amountCents, relistIds, card);
   });
-  panel.style.display = 'block';
 }
 
 async function submitRefund(orderId, amountCents, relistIds, card) {
@@ -486,14 +496,14 @@ async function relistPiece(r, down, msg) {
   }
 }
 ```
-*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` already exist in `admin.js`; `customerEmail` (`:701`), `totalLabel` (`:711`), `productTitle` (`:698`) are confirmed in `buildOrderCard`'s scope. `centsToDollars` returns a plain dollar string (e.g. "50.00"), fine for the number input value. `openRefundPanel` is **async** — it fetches the cart's full sibling set by PaymentIntent (Phase 1.1c), so it shows every piece regardless of the active orders subtab, then falls back to the single clicked order if the fetch fails. A single-item order shows one pre-checked piece, so it's one extra reveal + the amount-edit affordance Sean asked for.)*
+*(`authHeader` / `loadOrders` / `centsToDollars` / `escapeHtml` already exist in `admin.js`; the `buildOrderCard` locals `customerEmail` (`:701`), `totalLabel` (`:711`), `productTitle` (`:698`) are **not** referenced by the new refund fns — those re-derive from the `order` param (e.g. `order.customers?.email`); the line refs only confirm those source values exist in the file. `centsToDollars` returns a plain dollar string (e.g. "50.00"), fine for the number input value. `openRefundPanel` is **async** — it fetches the cart's full sibling set by PaymentIntent (Phase 1.1c), so it shows every piece regardless of the active orders subtab, then falls back to the single clicked order if the fetch fails. A single-item order shows one pre-checked piece, so it's one extra reveal + the amount-edit affordance Sean asked for.)*
 
 **Phase 1.6 — docs (as-built, after the build):** `STORE_ADMINISTRATION.md` refund section (now "issue it in /admin or via the Sunkeeper; pick the amount + which pieces came back; it asks about relisting each") + `GPT_SETUP.md` + `EVERLASTINGS_STORE.md` Stripe-sync note (**document that one cart = N `orders` rows sharing one `stripe_payment_intent`, so a refund is an AMOUNT against the PaymentIntent and flips/relists only the marked pieces** — the substrate fact a cold reviewer missed, headline T) + test-script **R15** flips from "can't issue refunds" → "issues an amount-based refund + asks about relisting." **Add a one-line "designed for one admin at a time" note** to `STORE_ADMINISTRATION.md` (the single-admin scope boundary in Invariants — so Em knows not to drive refunds/edits from two tabs/people at once; the GPT can say so if asked). (Do these in the as-built phase to avoid mid-build mixed truth.)
 
 ## Workstream 2 — Coupons in /admin (detailed)
 
 > **Verified I/O contract (the anchor — confirmed against `api/products.ts`, so the admin field names aren't a guess).**
-> - **List** (`handleCouponList`, `products.ts:779-789`) returns, per coupon: `{ code, promotion_code_id, percent_off, amount_off, times_redeemed, max_redemptions, expires_at, store_wide, product_ids }` (+ `expires_display` added in 2.2). `renderCoupons` reads exactly these.
+> - **List** (`handleCouponList`, `products.ts:779-789`) returns, per coupon: `{ code, promotion_code_id, percent_off, amount_off, times_redeemed, max_redemptions, expires_at, store_wide, product_ids }` (+ `expires_display` and `min_amount` added in 2.2). `renderCoupons` reads exactly these.
 > - **Create** (`handleCoupon`, `products.ts:694-739`) accepts: `type` (`'percent'`|`'amount'`), `value` (percent = the number; **amount = CENTS**, `Math.round(value)` `:724`), `code?`, `product_ids?` (**Stripe** product ids → `applies_to.products`), `min_amount?` (cents → `restrictions.minimum_amount`), `expires_at?` (unix → `redeem_by` + promo `expires_at`), `max_redemptions?`. Returns `{ success, code, coupon_id, promotion_code_id }` (+ `expires_display` in 2.2c). `onCreateCoupon` posts exactly these.
 
 **Phase 2.1 — /admin Coupons UI.** A 3rd tab over the existing `/api/coupons` endpoints (GET list · POST create · POST `/api/coupons/deactivate`). Reuses `setStatus`/`authHeader`/`escapeHtml`/`centsToDollars`/`dollarsToCents` + the `.product-form`/`.row-3`/`.field`/`.form-actions` classes. The `.tab-btn` loop (`admin.js:143`) auto-wires the new button; `switchTab`/`refreshActiveTab` need the coupons branch.
@@ -711,11 +721,12 @@ function renderCoupons(coupons) {
       : c.amount_off ? `$${centsToDollars(c.amount_off)} off` : 'discount';
     const scope = c.store_wide ? 'store-wide' : `${(c.product_ids || []).length} product(s)`;
     const used = `${c.times_redeemed ?? 0}${c.max_redemptions ? ` / ${c.max_redemptions}` : ''} used`;
+    const min = c.min_amount ? ` · min $${centsToDollars(c.min_amount)}` : '';
     const ends = c.expires_display ? ` · ends ${escapeHtml(c.expires_display)}` : '';
     const row = document.createElement('div');
     row.style.cssText = 'border:1px solid var(--c-border,#ddd);border-radius:6px;padding:10px;margin-bottom:8px';
     row.innerHTML = `
-      <p><span class="label">${escapeHtml(c.code)}</span> — ${escapeHtml(off)} · ${escapeHtml(scope)} · ${escapeHtml(used)}${ends}</p>
+      <p><span class="label">${escapeHtml(c.code)}</span> — ${escapeHtml(off)} · ${escapeHtml(scope)} · ${escapeHtml(used)}${min}${ends}</p>
       <button type="button" class="end-sale">End sale</button>
       <div class="coupon-msg" style="margin-top:6px;font-size:13px"></div>
     `;
@@ -846,7 +857,7 @@ function endOfDayET(dateStr: string): number {
 async function handleCouponList(request: Request): Promise<Response> {
 ```
 
-*2.2b — include it in each listed coupon.* **CURRENT (`api/products.ts:786`):**
+*2.2b — include `expires_display` + the **minimum** in each listed coupon (AR#C-R2-3: `min_amount` was settable on both surfaces but read back on neither — set a minimum and you couldn't confirm it from /admin **or** chat; relaying it here closes that, and a coupon is now fully verifiable on both. The GPT reads it off the opaque-200 raw body — so **no schema/instruction edit**, the same reasoning as `expires_display` in the note above).* **CURRENT (`api/products.ts:786`):**
 ```ts
           expires_at: pc.expires_at ?? null,
 ```
@@ -854,6 +865,7 @@ async function handleCouponList(request: Request): Promise<Response> {
 ```ts
           expires_at: pc.expires_at ?? null,
           expires_display: pc.expires_at ? formatExpiry(pc.expires_at) : null,
+          min_amount: pc.restrictions?.minimum_amount ?? null,
 ```
 
 *2.2c — echo it on create too.* **CURRENT (`api/products.ts:741`):**
@@ -1246,17 +1258,17 @@ function addMediaRow(m) {
   row.className = 'media-row';
   row.style.cssText = 'border:1px solid var(--c-border,#eee);border-radius:4px;padding:8px;display:grid;gap:6px';
   row.innerHTML = `
-    <div style="display:grid;grid-template-columns:110px 1fr auto;gap:6px;align-items:center">
+    <div class="media-row__head">
       <select class="m-type"><option value="video">MP4 clip</option><option value="youtube">YouTube</option></select>
-      <input type="url" class="m-url" aria-label="Video or YouTube URL" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+      <input type="url" class="m-url" aria-label="Video or YouTube URL" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="min-width:0;padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
       <button type="button" class="remove-row">Remove</button>
     </div>
     <div class="m-video-opts" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px">
       <label class="checkbox-row"><input type="checkbox" class="m-autoplay" /><span>Autoplay + loop, silent (GIF-like)</span></label>
       <label class="checkbox-row"><input type="checkbox" class="m-controls" checked /><span>Show play/pause buttons (uncheck = button-less click-to-play)</span></label>
-      <input type="url" class="m-poster" aria-label="Poster image URL" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+      <input type="url" class="m-poster" aria-label="Poster image URL" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
     </div>
-    <input type="text" class="m-alt" aria-label="Clip alt text" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+    <input type="text" class="m-alt" aria-label="Clip alt text" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
   `;
   row.querySelector('.m-type').value = m?.type === 'youtube' ? 'youtube' : 'video';
   row.querySelector('.m-url').value = m?.url || '';
@@ -1400,15 +1412,18 @@ ALWAYS: write in Em's voice (warm, poetic, quietly magical, never sales-y; full 
 -- we must not overwrite). The `exists` is HARD-SCOPED to the env dimension too — `and o.is_test =
 -- p.is_test` (both columns are `NOT NULL DEFAULT false`; initial_schema :172 products / :174 orders) —
 -- because the shared Supabase project always carries test orders, so the dimension match must be in the
--- SQL, not a comment the operator might skip. EYEBALL FIRST — this is a REQUIRED step,
--- not optional (TESTING static gate): run the SELECT, confirm the rows it lists are genuinely sold (not
--- a paused-with-stock piece), THEN run the UPDATE.
+-- SQL, not a comment the operator might skip. EYEBALL FIRST — and the UPDATE below ships COMMENTED on
+-- purpose (AR#C-R2-1): `supabase db push` then applies ONLY the safe record_sale function and never
+-- auto-zeroes stock. A doc-only "remember to eyeball" gate doesn't bind the template "User" the project
+-- designs for — a multi-stock catalog can hold an intentionally-paused-but-previously-sold piece that a
+-- blind apply would wrongly zero. So: run the SELECT, confirm the rows it lists are genuinely sold (not
+-- a paused-with-stock piece), THEN uncomment + run the UPDATE once, by hand.
 --   select id, slug, title, quantity from products p
 --     where p.available = false and p.quantity > 0
 --       and exists (select 1 from orders o where o.product_id = p.id and o.is_test = p.is_test);
-update products p set quantity = 0
-  where p.available = false and p.quantity > 0
-    and exists (select 1 from orders o where o.product_id = p.id and o.is_test = p.is_test);
+-- update products p set quantity = 0
+--   where p.available = false and p.quantity > 0
+--     and exists (select 1 from orders o where o.product_id = p.id and o.is_test = p.is_test);
 
 -- A sale decrements OUR stock and derives availability, atomically per row (the money path: two
 -- near-simultaneous completions must not race a read-modify-write of the same count). archived_at
@@ -1461,12 +1476,12 @@ $$;
 
 > **A forward-pointer in STORE *now* was proposed and REJECTED.** Adding "v3.2.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_2_1_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_2_2_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_1_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_2_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
