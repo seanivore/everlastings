@@ -1,8 +1,8 @@
 # Go-Live — ship the current store to production (`main`)
 
-Ships the current, tested version of the store (live on the `dev` preview) → `main` / production. This is **independent of the v3.1.0 build**, which keeps going on `dev` and ships the same way later. Versioning is **git-tag-only** (there is no `package.json` version to bump).
+Ships the current, tested version of the store (live on the `dev` preview) → `main` / production, tagged **`v2.0.0`** (the repo's first tag). This is **independent of the v3.3.0 build**, which keeps going on `dev` and ships the same way later. Versioning is **git-tag-only** (there is no `package.json` version to bump).
 
-> **Heads-up on the merge:** `main` is *not* a clean fast-forward from `dev` — `main` carries one throwaway README commit (`ff4829a`) and `dev` is 272 commits ahead. Per your call we **overwrite** `main` with `dev` (your showcase README wins). That's a force-push, handled in §2.
+> **Heads-up on the merge:** `main` is *not* a clean fast-forward from `dev` — `main` carries one older README commit (`ff4829a`, a v1.4.9-era showcase draft) and `dev` is ~313 commits ahead. **dev's README is the current public-facing v2.0 version** (confirmed — already rewritten for launch), so we **overwrite** `main` with `dev` (dev's README wins, main's older draft is discarded). That's a force-push, handled in §2.
 
 ---
 
@@ -30,14 +30,14 @@ First make sure `dev` is clean: **commit or stash any in-progress work** (otherw
 git fetch origin && git checkout main
 git reset --hard dev                       # main := dev (discards main's README-only ff4829a)
 git push --force-with-lease origin main     # safe overwrite — refuses if origin moved under you
-git tag v2.1.1 && git push origin v2.1.1    # git-tag-only versioning
-git checkout dev                            # back to dev to keep building v3.1.0
+git tag v2.0.0 && git push origin v2.0.0    # git-tag-only versioning — the repo's first tag
+git checkout dev                            # back to dev to keep building v3.3.0
 ```
 
 - `--force-with-lease` overwrites remote `main` but **refuses** if someone else pushed since your last `fetch` (safer than `--force`).
 - After this, `main == dev`; Vercel deploys `main` → production.
-- Confirm `dev`'s README is the public version you want (it replaces main's `ff4829a`).
-- Adjust the tag (`v2.1.1`) if you want a different launch number.
+- `dev`'s README is the public version (the v2.0 showcase) — it replaces main's older `ff4829a` draft, which is what you want.
+- The launch tag is **`v2.0.0`** (your call — simple, the repo's first tag).
 
 ---
 
@@ -50,11 +50,12 @@ git checkout dev                            # back to dev to keep building v3.1.
 
 ---
 
-## 4. Your touchpoints for the v3.1.0 build (later, when prompted)
+## 4. After this — the v3.3.0 build (full runbook in its own doc)
 
-The v3.1.0 work happens on `dev` and is mostly hands-off for you until each piece is ready to bless or deploy. Your touchpoints:
+The v3.3.0 build happens on `dev` and is mostly hands-off until each piece is ready to bless or deploy. **Your full, chronological build + test runbook is `assets/docs/archive/v3_3/v3_3_0_HUMAN_STEPS.md`** — the migration you run by hand, the GPT re-paste, the homepage renders to bless, the preview test-env setup, and the re-ship. The short version:
 
-- **GPT builder re-paste** — when the refund + chat-attach Actions land, re-paste the updated Action **schema** + **Instructions** into the GPT (test against the **preview** first; prod on the next ship).
-- **Bless the homepage renders** — the Lottie title write-on and the old-film hero MP4 each ship a concrete default + a render-tune pass with your eye before going live.
+- **One GPT, one server URL — you repoint it three times.** Now (this go-live) → **production**. To test v3.3.0's new Actions → **preview**. After v3.3.0 ships → **production** again. While it points at preview, manage the live store via /admin (not the GPT), so keep that test window tight.
+- **GPT builder re-paste** — when the refund + chat-attach Actions land, re-paste the updated Action **schema** + **Instructions** into the GPT (test against **preview** first; prod on the next ship).
+- **Bless the homepage renders** — the Lottie title write-on + the old-film hero MP4 each ship a concrete default + a render-tune pass with your eye before going live.
 - **Re-test parity** — refunds + coupons from **both** /admin and the GPT on the dev preview.
-- Then ship `dev → main` again the same way (§2) when v3.1.0 is ready.
+- Then ship `dev → main` again the same way (§2) when v3.3.0 is ready (next tag bumps from `v2.0.0`).
