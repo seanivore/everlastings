@@ -1,6 +1,6 @@
-# v3.2.0 — Design Addendum
+# v3.2.1 — Design Addendum
 
-**Addendum to**: `v3_2_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_2_1_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for **Workstream 4 (admin polish)** and **Workstream 5 (homepage experience)**.
 **Status**: WS4 (admin) + WS5 (Lottie title + HyperFrames hero) both authored from their research passes; byte-anchored to source files during execution.
 
@@ -26,7 +26,7 @@
   --c-border-strong:#cdd2d9;  /* input borders */
   --c-text:        #1c2530;   /* primary text (near-black, slightly cool) */
   --c-text-muted:  #5b6573;   /* labels, meta */
-  --c-text-faint:  #8a929e;   /* placeholders, empty states */
+  --c-text-faint:  #8a929e;   /* TRUE input placeholders only (~3:1 on the light surfaces — below AA; empty-state copy is real content → uses --c-text-muted; AR#D7) */
 
   /* === Accent (single, restrained: indigo-slate — distinct from storefront plum) === */
   --c-accent:      #3a4a63;   /* primary buttons, active tab, focus ring base */
@@ -61,7 +61,7 @@
 - `body` → `background:var(--c-bg); color:var(--c-text); font-family:var(--font); font-size:var(--fs-base); line-height:var(--lh-base);`
 - inputs/textareas/selects → `border:1px solid var(--c-border-strong); border-radius:var(--r-sm); background:var(--c-surface);` + a shared **focus state** (none exists today — a11y gap): `:focus-visible { outline:none; border-color:var(--c-accent); box-shadow:0 0 0 3px var(--c-accent-ring); }`
 - buttons → base `background:var(--c-surface); border:1px solid var(--c-border-strong); border-radius:var(--r-sm);`; `.primary`→accent (hover `--c-accent-hover`); `.danger`→`--c-danger`.
-- Replace every literal with a token **by the property's role**, not a blind find-replace (text→`--c-text`, surface fills→`--c-surface*`, hairlines→`--c-border`, accents→`--c-accent`) so no raw hex remains. The current literals map cleanly: `#ddd`→`--c-border`, `#666`→`--c-text-muted`, `#f7f7f7`→`--c-surface-2`, and **`#222`→`--c-accent`** — verified: the only two `#222` usages are `button.primary` and `.subtab-btn.active` **backgrounds** (`admin/index.html:25,34`), both accent fills, so `--c-accent` is correct; body text is already `--c-text` via the global base. (Role-match guards a future `#222`-as-text from being mis-swept to the accent color.)
+- Replace every literal with a token **by the property's role**, not a blind find-replace (text→`--c-text`, surface fills→`--c-surface*`, hairlines→`--c-border`, accents→`--c-accent`) so no raw hex remains. The current literals map cleanly: `#ddd`→`--c-border`, `#666`→`--c-text-muted`, `#f7f7f7`→`--c-surface-2`, and **`#222`→`--c-accent`** — verified: the only two `#222` usages are `button.primary` and `.subtab-btn.active` **backgrounds** (`admin/index.html:25,34`), both accent fills, so `--c-accent` is correct; body text is already `--c-text` via the global base. (Role-match guards a future `#222`-as-text from being mis-swept to the accent color.) **The sweep also reaches the WS3.7 `admin.js` template-string inline styles** (`addImageRow`'s `.img-role`, `updateCoverage`, `addMediaRow`) + the new `.img-thumb` CSS — but since those build in WS3 *before* §4.1's `:root` lands, they use the **`var(--c-token, #hexfallback)` form** (e.g. `var(--c-text-muted,#666)`, `var(--c-success,#2f7d52)`, `var(--c-border,#ccc)`) so they render correctly either way and the `updateCoverage` token/literal duplication is gone (AR#D4). After the build the **only** hex left anywhere is inside such fallbacks — *bare* hex is the violation the TESTING item-24 grep catches.
 
 ## 4.2 — Prioritized component changes (ranked; each is apply-not-decide)
 
@@ -160,7 +160,7 @@ In `renderProductList`, filter the already-fetched list: `const shown = (state.p
 ```
 Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor-back').addEventListener('click', closeEditor);`).
 
-*(iii) the consolidated `attachEventListeners` wiring — ALL FOUR WS4 init deltas in ONE diff, held to the WS1-3 byte-anchor standard. This is load-bearing: a missed delta throws at init (`$('upload-btn')` is `null`, or a new wirer is forgotten) and **every handler registered after it — the orders subtabs, search, refund, and coupons — silently never binds**, so the build looks clean while WS1/2/3 capabilities are dead. One block, so 1→6 can't miss any.* **CURRENT (`admin.js:152-161`):**
+*(iii) the consolidated `attachEventListeners` wiring — ALL FOUR WS4 init deltas **plus the WS3.7b `add-media-row` wiring** in ONE diff, held to the WS1-3 byte-anchor standard. This is load-bearing: a missed delta throws at init (`$('upload-btn')` is `null`, or a new wirer is forgotten) and **every handler registered after it — the orders subtabs, search, refund, and coupons — silently never binds**, so the build looks clean while WS1/2/3 capabilities are dead. The `add-media-row` wiring lives **here, not in 3.7b** (AR#B1/C2/D8): three reviewers flagged that a separate 3.7b `:152` edit + this block both touch the same region, and applied in 1→6 build order the 3.7b insert would drift this CURRENT — so the `:152-161` region is touched exactly ONCE, right here. One block, so 1→6 can't miss any.* **CURRENT (`admin.js:152-161`):**
 ```js
   $('add-image-row').addEventListener('click', () => addImageRow('', ''));
   $('upload-btn').addEventListener('click', onUploadImage);
@@ -173,9 +173,10 @@ Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor
     });
   });
 ```
-**NEW (1 removal + 3 additions + the orders-subtab scoping):**
+**NEW (1 removal + 4 additions + the orders-subtab scoping):**
 ```js
   $('add-image-row').addEventListener('click', () => addImageRow('', ''));
+  $('add-media-row').addEventListener('click', () => addMediaRow(null)); // WS3.7b — structured media editor's add button (folded here so :152-161 is touched once; AR#B1/C2/D8)
   wireUploadZones();                                       // P3d — wire the seven role zones (replaces the deleted #upload-btn handler + onUploadImage fn)
   wireProductSubtabs();                                    // P0(i) — product-list state filter
   $('editor-back').addEventListener('click', closeEditor); // P0(ii) — ← Products back control
@@ -190,7 +191,7 @@ Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor
 ```
 **Also delete the now-dead `onUploadImage` fn** (its only caller, the `#upload-btn` wiring, is gone — P3d). `wireProductSubtabs` is already scoped to `#product-subtabs .subtab-btn` and the orders handler is now scoped to `#tab-orders .subtab-btn`, so the two strips never cross-fire. **Phase 2.1e (WS2) wires the coupon form/refresh/search at its OWN anchor** (`admin.js:164-170`, right after the orders-search `keydown` handler) — three individual `addEventListener` calls (`coupon-form` submit, `coupons-refresh-btn` click, `c-product-search` input), **NOT** a `wireCouponEvents()` wrapper (no such fn exists) and **NOT** in this block. Apply 2.1e at its own byte-anchor; this consolidated diff carries WS4's wirings only (AR#F1).
 - **P1 · Editor form sectioning.** `#product-form` (`index.html:119-239`) is ~20 stacked `.field`s with only 2 fieldsets. Wrap into **5 labeled `<fieldset>`s** in workflow order: **Essentials** (title, slug, headline, description, price, qty, type, available, featured) · **Story & Details** (story, features, materials, care, shipping, dimensions, weight, power, series, artist note) · **Media** (P3) · **Checkout (Stripe)** (existing `167-171`, keep verbatim, restyle legend) · **SEO & Sharing** (seo title/desc/thumbnail). Remove the inline `style="border:1px solid #ddd…"` on `166`/`173`; add one reusable rule: `fieldset { border:1px solid var(--c-border); border-radius:var(--r-md); padding:var(--s-4); background:var(--c-surface); } fieldset>legend { font-size:var(--fs-md); font-weight:var(--fw-semibold); padding:0 var(--s-2); } .product-form { gap:var(--s-5); }`. Pure HTML+CSS; `openEditor` targets the same `#p-*` IDs.
-- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12); and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class. **Concrete per-state rules (a status pill is load-bearing, not pure render-tune, so it ships a concrete default; emit these literally rather than leaving the builder to translate the prose mapping, and note `.pill.refunded` was the one with no rule at all):**
+- **P2 · Product-state visibility.** State lives in one cramped meta line (`renderProductList`, `admin.js:246-256`); pills are tiny grey lozenges (`index.html:68-73`). Promote the **status pill to a badge overlaid top-left on the card image** (`.product-card{position:relative} .pc-badge{position:absolute;top:var(--s-2);left:var(--s-2)}`); give pills semantic color + shape (`.pill{display:inline-block;border-radius:var(--r-pill);padding:3px 9px;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}` — **merge into the existing `.pill` rule; KEEP `display:inline-block`** (inline pills need it for their padding to render; AR#D10) — mapped draft→warn, edits→info, live→success, archived→neutral, sold→accent-soft (a sale is a GOOD state — NOT a red error; F12); and **refunded**→neutral/muted as its OWN `.pill.refunded` class — the order-card "Refunded" pill (IMPLEMENT 1.5b) uses it instead of reusing `.unsent`, which is semantically an email-not-sent state); **dim archived cards** (`.product-card.is-archived{opacity:.6}`, class added in JS when `p.archived_at`). Status becomes the loud signal, price the quiet meta. Minimal JS: build the pill as a separate `.pc-badge` node + the conditional class. **Concrete per-state rules (a status pill is load-bearing, not pure render-tune, so it ships a concrete default; emit these literally rather than leaving the builder to translate the prose mapping, and note `.pill.refunded` was the one with no rule at all):**
 ```css
 .pill.live      { background: var(--c-success-bg); color: var(--c-success); }
 .pill.draft     { background: var(--c-warn-bg);    color: var(--c-warn); }
@@ -201,7 +202,69 @@ Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor
 ```
 *(Tokens are the real ones at §4.1 `:42` — `--c-neutral-bg`/`--c-neutral-tx`, NOT `--c-text-muted`, though they share `#5b6573`. Color/saturation is still render-tune; the mapping is the concrete default.)*
 
-**State legend (AR#F18 — concrete default; colors-without-a-key read as decorative on a long list).** When the P0 state-filter subtabs are active, render a one-line key above the product grid, each label wearing its own `.pill` class so the legend doubles as the color key: `<div class="state-legend"><span class="pill live">Live</span><span class="pill edits">Edits</span><span class="pill sold">Sold</span><span class="pill draft">Draft</span><span class="pill archived">Archived</span><span class="pill refunded">Refunded</span></div>` + `.state-legend{display:flex;gap:var(--s-2);flex-wrap:wrap;margin:var(--s-2) 0 var(--s-3)}`. Render-tune: hide it on the "All" tab if it reads as clutter.
+**State legend (AR#F18 — concrete default; colors-without-a-key read as decorative on a long list).** When the P0 state-filter subtabs are active, render a one-line key above the product grid, each label wearing its own `.pill` class so the legend doubles as the color key: `<div class="state-legend"><span class="pill live">Live</span><span class="pill edits">Edits</span><span class="pill sold">Sold</span><span class="pill draft">Draft</span><span class="pill archived">Archived</span><span class="pill refunded">Refunded</span></div>` + `.state-legend{display:flex;gap:var(--s-2);flex-wrap:wrap;margin:var(--s-2) 0 var(--s-3)}`. **Insertion anchor (AR#D9 — like P0 + the skeleton, anchored so two builders don't diverge):** drop the static `<div class="state-legend">…</div>` in `admin/index.html` right **after `#product-subtabs`** (above the toolbar and the `#products-list` grid at `:115`); the labels are static, so no JS is needed. Render-tune: hide it on the "All" tab if it reads as clutter.
+
+**`renderProductList` — byte-anchored (AR#D2/D5).** The badge/filter/dim/meta rewrite lands on code that *actively contradicts* it, so — like P0 and the skeleton — it's byte-anchored, not left as prose (a builder adding the badge over the surviving two-pill line would double the status / keep `.unsent` for "sold"). The shipped fn builds TWO pills with an inline predicate: `availPill` reuses bare `.pill` / `.pill.unsent` ("sold" as a red *email-not-sent* state) and `statusPill` reuses `.pill.shipped` for "live" — the exact semantics P2 removes (F12: a sale is GOOD). **CURRENT (`admin.js:235-261`):**
+```js
+function renderProductList() {
+  const list = $('products-list');
+  if (!state.products.length) {
+    list.innerHTML = '<div class="empty">No products yet. Click "New Product" to add one.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const p of state.products) {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    const thumb = p.thumbnail || (Array.isArray(p.images) && p.images[0]?.url) || '';
+    const priceLabel = typeof p.price === 'number' ? `$${centsToDollars(p.price)}` : '—';
+    const availPill = p.available ? '<span class="pill">available</span>' : '<span class="pill unsent">sold</span>';
+    const statusPill = p.archived_at
+      ? '<span class="pill archived">archived</span>'
+      : p.is_published
+        ? (p.draft ? '<span class="pill edits">live · edits pending</span>' : '<span class="pill shipped">live</span>')
+        : '<span class="pill draft">draft</span>';
+    card.innerHTML = `
+      <img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.thumbnail_alt || p.title || '')}" />
+      <p class="pc-title">${escapeHtml(p.title || '(untitled)')}</p>
+      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'} ${statusPill} ${availPill}</p>
+    `;
+    card.addEventListener('click', () => openEditor(p.id));
+    list.appendChild(card);
+  }
+}
+```
+**NEW (one `.pc-badge` from the canonical `productState`; filters via the module-level `matchesProductFilter`/`activeProductFilter` declared in P0 above; `is-archived` dim; branched empty copy):**
+```js
+function renderProductList() {
+  const list = $('products-list');
+  const shown = (state.products || []).filter(matchesProductFilter);   // P0 state-filter (module-level activeProductFilter)
+  if (!shown.length) {
+    const msg = !(state.products && state.products.length)
+      ? 'No products yet. Click "New Product" to add one.'
+      : 'No products match this filter.';                              // AR#D5 — honest two-state empty copy (empty catalog vs filtered-empty)
+    list.innerHTML = `<div class="empty">${msg}</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  for (const p of shown) {
+    const card = document.createElement('div');
+    card.className = p.archived_at ? 'product-card is-archived' : 'product-card';   // AR#D2 — dim archived (opacity:.6)
+    const thumb = p.thumbnail || (Array.isArray(p.images) && p.images[0]?.url) || '';
+    const priceLabel = typeof p.price === 'number' ? `$${centsToDollars(p.price)}` : '—';
+    const s = productState(p);                                         // ONE canonical predicate (P0) — the single status axis
+    card.innerHTML = `
+      <span class="pc-badge pill ${s}">${s}</span>
+      <img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.thumbnail_alt || p.title || '')}" />
+      <p class="pc-title">${escapeHtml(p.title || '(untitled)')}</p>
+      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'}</p>
+    `;
+    card.addEventListener('click', () => openEditor(p.id));
+    list.appendChild(card);
+  }
+}
+```
+*(Single status axis: the old `availPill`/`statusPill` are gone — `sold` vs `live` IS the badge (`productState` folds `available` in), with `quantity`/price as quiet `.pc-meta`. `is-archived` carries the P2 `opacity:.6` dim. `${s}` is one of the five hardcoded enum strings, so it's safe in both the class and the label. Badge wording is render-tune.)*
 - **P3 · Media (the biggest win — removes the only raw-JSON field).**
   - **3a Image-list previews.** `addImageRow` (`admin.js:331-345`) renders URL+alt+Remove only. Prepend a 40×40 `<img class="img-thumb">` (`object-fit:cover; var(--r-sm); background:var(--c-surface-2)`) whose `src` tracks the URL input, + a role-prefix tag from the filename covering **all 7 roles** (`hero`/`thumbnail`/`seo_thumbnail`/`checkout_image`/`gallery-NN`/`detail-NN`/`video-NN` — matches IMPLEMENT 3.7a's regex; the earlier 5-role version dropped `seo_thumbnail`/`checkout_image`, F6). Regrid `.img-url-row` → `40px 64px 1fr 1fr auto` (thumb, role, url, alt, remove) — matches IMPLEMENT 3.7a.
   - **3b "Still need" coverage hint.** The "≥1 hero + 5 gallery" requirement is static prose (`index.html:182-184`). Add a live `#img-coverage` line above the Add button counting rows by role prefix → `Hero ✓ · Gallery 3 / 5 needed · Thumbnail ✓` (`--c-success` met / `--c-warn` unmet). New `updateCoverage()` called from add/remove/url-change. Additive JS.
@@ -211,6 +274,7 @@ Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor
       - **Gallery auto-numbering:** next `N = max(existing gallery-NN in #p-images) + 1`; **ignore holes** (deleting `gallery-02` leaves `gallery-01` + `gallery-03`, and the next upload becomes `gallery-04`) — **never renumber/rename an existing file** (the CDN filename is the role; renaming breaks the "nobody renames a file" invariant + orphans the object). Same scheme for `detail-NN`/`video-NN`.
       - **Video zone `skip_transform`:** every Video-zone upload POSTs `skip_transform=true` **unconditionally** (a video always skips the Cloudinary crop) — this is the home for the old 3.7c rule (IMPLEMENT 3.7c is collapsed into here; do NOT edit the removed `#upload-role` handler).
       - **Remove the dangling wiring (else init throws):** replacing the upload control deletes `#upload-btn`, so its event wiring (`admin.js:153`) and the now-dead `onUploadImage` fn are removed and `wireUploadZones()` is wired in their place — **all shown in the consolidated `attachEventListeners` diff at P0(iii) above** (the single source for this removal + the three new wirers). The footgun it closes: if the wiring stayed, `$('upload-btn')` is `null` at init → `.addEventListener` throws → every handler after it (orders subtabs, search, refund, coupons) silently never binds.
+      - **Repoint `openEditor`'s stale `#upload-status` reset (AR#C1 — a SECOND, separate reference the `onUploadImage` deletion misses):** `openEditor` ends with `$('upload-status').textContent = '';` (`admin.js:322`) — *not* inside the deleted `onUploadImage`, so once P3d removes `#upload-status`, `$('upload-status')` resolves to `null` → `null.textContent` **throws a `TypeError` on every editor open** (new *and* edit), invisible to `tsc`/`node --check` (valid syntax, runtime-only). Repoint that line to clear the new per-zone messages instead: `document.querySelectorAll('.upload-zone .zone-msg').forEach((m) => { m.textContent = ''; });` — preserves the clear-on-open so a prior upload's status doesn't bleed into the next editor. (The TESTING static gate greps `upload-status` in `admin.js` → 0 after P3d.)
       - **Landing order:** each upload appends an `addImageRow` to `#p-images` (the existing single image list) — the zones are just role-routers, not separate stores; the final `images[]` order = `#p-images` DOM order (so a Hero zone can prepend if you want hero first, but the payload shape is unchanged). Video uploads append to the `#p-media-list` (3c), not `#p-images`.
       - **Per-zone errors + empty state:** an upload failure renders inline in that zone — write to the zone's own `.zone-msg` (the JS skeleton below does exactly this; NOT the global `setStatus`), not a global alert; an empty zone shows a quiet "Drop or choose a {role} image" placeholder. No silent failures.
     - **Concrete default (markup + JS skeleton; render-tune the look, not the routing).** P0 ships exact markup; so does this, so two builders don't diverge on the load-bearing role routing. Replace the **entire** "Upload new image" control (the role `<select>` + file input + Upload button + the now-obsolete skip-transform checkbox + global status line) with seven role zones — one shown verbatim, the other six identical but for `data-role` + label (`gallery`, `detail`, `thumbnail`, `seo_thumbnail`, `checkout_image`, `video`; the Video zone's input is `accept="video/*"`). **CURRENT (`admin/index.html:188-229`):**
@@ -262,13 +326,15 @@ Wired in the consolidated `attachEventListeners` diff at (iii) below (`$('editor
 ```html
 <div class="upload-zones">
   <div class="upload-zone" id="upload-zone-hero" data-role="hero">
-    <label>Hero</label>
-    <input type="file" class="zone-file" accept="image/*" />
+    <label>Hero
+      <input type="file" class="zone-file" accept="image/*" />
+    </label>
     <div class="zone-msg" style="font-size:12px;color:var(--c-text-muted)">Drop or choose a hero image</div>
   </div>
   <!-- …six more: gallery · detail · thumbnail · seo_thumbnail · checkout_image · video -->
 </div>
 ```
+*(AR#D6 — the file input is **wrapped inside** its `<label>` so the zone name is clickable + programmatically associated, not a bare sibling [a sibling `<label>` does nothing on click and SR users hear only "Choose File"]. `zoneEl.querySelector('.zone-file')` in the wirer is unaffected by the nesting. The structured media-row inputs get `aria-label`s in IMPLEMENT 3.7b; the video-opts checkboxes are already `.checkbox-row`-wrapped — this matches that bar.)*
 A shared wirer + a numbered-role resolver (gallery/detail/video number per-upload; single roles use the base). Mirrors the existing `onUploadImage` POST (`admin.js:358-400`) — `deriveSlug`/`addImageRow`/`addMediaRow`/`authHeader` already exist:
 ```js
 function nextNumberedRole(base) {
@@ -364,7 +430,7 @@ The zones are role-routers into the same `#p-images`/`#p-media-list` (3a/3b/3c r
 .zone-msg { font-size: var(--fs-xs); color: var(--c-text-muted); min-height: 1.2em; }          /* reserve the status line so the grid doesn't jump */
 ```
 The sample zone above carries an inline `.zone-msg` style for readability; this rule is its real home — drop the inline when you add the rule. `.is-dragover` is the affordance hook: the concrete default wires the file-input `change` event (JS above); wiring true drag-and-drop (`dragover`/`drop` toggling `.is-dragover`) is optional render-tune. **Also delete the now-orphan `.upload-row` CSS rule (`admin/index.html:63-64`)** — P3d removes its only markup consumer, so it's dead after this swap (same cleanup class as the deleted `onUploadImage` fn).
-- **P4 · Loading / error / empty states.** Orders loading is bare text (`admin.js:651`); products has no loading state (`218-232`). Add **skeleton** cards (`.skeleton{background:linear-gradient(90deg,var(--c-surface-2) 25%,#e9ecef 37%,var(--c-surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r-sm)}` + `@keyframes shimmer{to{background-position:-200% 0}}` + `@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}`). Empty states: `.empty{color:var(--c-text-faint);padding:var(--s-7);text-align:center;border:1px dashed var(--c-border);border-radius:var(--r-md)}` + a CTA where one exists. Errors keep `.status-msg.error` + token colors + a `border-left:3px solid var(--c-danger)` accent (success/info likewise) so they're distinguishable beyond tint.
+- **P4 · Loading / error / empty states.** Orders loading is bare text (`admin.js:651`); products has no loading state (`218-232`). Add **skeleton** cards (`.skeleton{background:linear-gradient(90deg,var(--c-surface-2) 25%,#e9ecef 37%,var(--c-surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s infinite;border-radius:var(--r-sm)}` + `@keyframes shimmer{to{background-position:-200% 0}}` + `@media (prefers-reduced-motion:reduce){.skeleton{animation:none}}`). Empty states: `.empty{color:var(--c-text-muted);padding:var(--s-7);text-align:center;border:1px dashed var(--c-border);border-radius:var(--r-md)}` (AR#D7 — `--c-text-muted` ≈ 5.8:1, meets AA for body copy; `--c-text-faint` is reserved for true placeholders) + a CTA where one exists. Errors keep `.status-msg.error` + token colors + a `border-left:3px solid var(--c-danger)` accent (success/info likewise) so they're distinguishable beyond tint.
   - **Concrete default — where the skeletons render (the CSS alone left the emission point unstated; this is behavioral, so it's anchored).** `loadProducts` clears the status then awaits the fetch with the list area blank — paint skeleton cards there during the await. **CURRENT (`admin.js:218-220`):**
 ```js
 async function loadProducts() {
@@ -382,7 +448,7 @@ async function loadProducts() {
     + '<div class="skeleton" style="height:12px;width:60%"></div></div>').join('');
 ```
   Render-tune the count/shape; the behavior (skeletons during fetch, not a blank/"Loading…" gap) is the fix. **Orders:** `loadOrders` (`admin.js:651`) already paints a `<div class="empty">Loading...</div>` — that's functional, so it's the concrete default for orders; extending the skeleton treatment to the orders list is optional render-tune (the order-card grid differs from the product-card grid), NOT a required edit. The skeleton concrete default above is products-only.
-- **P5 · Mobile (zero breakpoints today).** One block at the stylesheet end: `@media (max-width:640px){ .container{padding:var(--s-4)} .row-2,.row-3,.ship-form{grid-template-columns:1fr} .order-card{grid-template-columns:1fr} .order-card img{height:180px} .img-url-row{grid-template-columns:40px 1fr;grid-auto-flow:row} .upload-zones{grid-template-columns:1fr} .product-list{grid-template-columns:1fr 1fr} .tabs,.subtabs{overflow-x:auto} }`. Pure CSS.
+- **P5 · Mobile (zero breakpoints today).** One block at the stylesheet end: `@media (max-width:640px){ .container{padding:var(--s-4)} .row-2,.row-3,.ship-form{grid-template-columns:1fr} .order-card{grid-template-columns:1fr} .order-card img{height:180px} .img-url-row{grid-template-columns:1fr} .upload-zones{grid-template-columns:1fr} .product-list{grid-template-columns:1fr 1fr} .tabs,.subtabs{overflow-x:auto} }`. Pure CSS. *(AR#D3: 3.7a regrids `.img-url-row` to a **5-cell** desktop grid `40px 64px 1fr 1fr auto`; the prior mobile `40px 1fr` + `grid-auto-flow:row` mis-stacked five auto-placed children — the URL input + Remove landed in the 40px column. A single `1fr` column stacks them cleanly; `.img-thumb` keeps its own `width:40px` from 3.7a so the thumb stays 40px, not stretched. Verify at 360px.)*
 - **P6 · Address block.** `formatAddress` (`admin.js:669-678`) renders a monospace `<pre class="address-block">` (`index.html:52`) — reads as debug output. Restyle to the body font: `.address-block{background:var(--c-surface-2);border:1px solid var(--c-border);border-radius:var(--r-md);padding:var(--s-3);font-size:var(--fs-sm);line-height:var(--lh-base);white-space:pre-wrap;font-family:var(--font)}`. Pair the existing "Copy address" button (`admin.js:775-783`) top-right as a ghost button. Reserve `var(--font-mono)` for the tracking number only.
 - **P7 · Tabs / topbar / login chrome (CSS-only, high showcase value).** Topbar → `background:var(--c-surface);border-bottom:1px solid var(--c-border);box-shadow:var(--sh-sm)`, `h1` `var(--fs-lg)/600/-0.01em`. Tabs → underline indicator (`.tab-btn.active{color:var(--c-accent);box-shadow:inset 0 -2px 0 var(--c-accent);font-weight:var(--fw-semibold)}`, drop the `-1px` margin hack). Subtabs → pill toggle group. Login card (`.login-card` confirmed real — CSS `admin/index.html:16`, markup `:78`) → `background:var(--c-surface);box-shadow:var(--sh-lg);border-radius:var(--r-lg);border:none;margin-top:12vh`. **Ghost back-button** (AR#F8 — the P0(ii) `← Products` control names "ghost button in P7" but no rule existed; the P6 Copy-address button reuses it too): `.link-btn{background:transparent;border:none;color:var(--c-accent);padding:var(--s-1) var(--s-2);font:inherit;cursor:pointer;border-radius:var(--r-sm)}` · `.link-btn:hover{background:var(--c-accent-soft);color:var(--c-accent-hover)}`.
 
@@ -410,12 +476,9 @@ async function loadProducts() {
 .hero__title { position: relative; }
 .hero__title-lottie { position: absolute; inset: 0; pointer-events: none; }
 .hero__title-lottie svg { width: 100%; height: 100%; }
-/* Only after a successful mount (JS adds .has-lottie), visually hide the real <h1> but KEEP it in the a11y tree (clip, never display:none). */
+/* Only after a successful mount (JS adds .has-lottie), hide the real <h1>'s INK but keep it IN FLOW (defines the box height + a11y tree). AR#D1: the old absolute-clip idiom took the <h1> out of flow too — and since .hero__title-lottie is also position:absolute, the wrapper (no explicit height) collapsed to 0 → the Lottie's inset:0 box rendered at height 0 → the write-on was invisible in its SUCCESS path while every fallback looked fine. color:transparent keeps the <h1> in flow (height + margin-bottom to <p>) and in the a11y/DOM tree for SEO/SR; the absolute Lottie draws on top. */
 @media (prefers-reduced-motion: no-preference) {
-  .hero__title.has-lottie .hero__title-text {
-    position: absolute; width: 1px; height: 1px; overflow: hidden;
-    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
-  }
+  .hero__title.has-lottie .hero__title-text { color: transparent; }
 }
 @media (prefers-reduced-motion: reduce) { .hero__title-lottie { display: none; } }  /* static <h1> only */
 ```

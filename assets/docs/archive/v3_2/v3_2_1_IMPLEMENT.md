@@ -1,10 +1,10 @@
-# v3.2.0 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
+# v3.2.1 Implementation Plan — management parity: refunds + coupons-in-admin · chat-attach upload · admin polish · homepage experience
 
 **Initiative**: A fresh dev cycle (built/tested on `dev`, pushed live only when ready) that (1) closes the two store-management parity gaps surfaced by an audit — refunds (missing in both /admin and the GPT) and coupons (missing in /admin) — (2) promotes the two `v3_0_0` briefs (chat-attach image upload; homepage experience), (3) makes the /admin media UX (role assignment + MP4 config) clear and easy, and (4) polishes /admin toward a reusable, brand-neutral template aesthetic.
 **Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its addenda (`…_ADDENDUM_DESIGN.md`, `…_ADDENDUM_TESTING.md`) · the two `v3_0_0` briefs (source) · `.agent/DEV_RULES.md`.
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_0_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_0_ADDENDUM_TESTING.md`.
+> **Status / depth.** Functional workstreams **1–3 + 6 (inventory) are byte-anchored** (exact CURRENT/NEW blocks — line numbers are hints, the quoted CURRENT text is the anchor; reconcile if it drifts). Workstreams **4–5 are spec'd** in `v3_2_1_ADDENDUM_DESIGN.md` as concrete executable design (the `:root` token system + P0–P7; Lottie title + old-film hero) — design ships as concrete-default + render-tune per DEV_RULES, with the small mechanical remainder noted in each. The verification plan is `v3_2_1_ADDENDUM_TESTING.md`.
 
 ---
 
@@ -31,7 +31,7 @@
 - **Inventory lives in Supabase, never Stripe.** `products.quantity` is the only stock record; a sale decrements it and sets `available = (quantity > 0)`. Stripe holds no inventory (the Checkout line-item `quantity` is transactional only).
 - **Storefront brand untouched.** /admin gets neutral/template styling only (NOT the Everlastings plum/lavender/serif) — it's the reusable management-layer UI.
 - **Reduced-motion preserved.** The hero's `prefers-reduced-motion` fallback (the poster swap — inline in `index.html` + the hero rules in `styles.css`; locate by content, the line hints have drifted) stays; any new homepage animation respects it; the real `<h1>` stays for SEO/a11y.
-- **The go-live version is untouched.** v3.2.0 ships on its own, separately, when Sean chooses.
+- **The go-live version is untouched.** v3.2.1 ships on its own, separately, when Sean chooses.
 
 > **GPT instructions char budget — hard cap 8000.** The instruction file ships **verbatim from Phase 3.9** (the per-workstream phases 1.4/2.3/3.5 document the rule *deltas*, not the final wording — Phase 3.9 is the shipped text). Verified **`wc -c` = 7732 / 8000** (268 headroom — the fenced-block extraction; the build re-counts the shipped `.txt`). The cap is HARD — re-run `wc -c` on any instruction add; over-cap, the GPT silently truncates its own instructions and the static gate fails.
 
@@ -922,19 +922,19 @@ COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; 
 
 *Folds `assets/docs/archive/v3_0/v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` (its CURRENT anchors re-verified against the working tree) + the round-2 alt-text + filename/role folds. The brief stays as provenance. **Mechanism:** OpenAI's `openaiFileIdRefs` — Em attaches photos in the chat, the GPT forwards them, the server fetches each `download_link` through the EXISTING `api/upload.ts` pipeline. **Dual-path by design:** the by-link `uploadImage` stays as the backstop (Drive / video / 10+ bulk). No DB change, no new Vercel function.*
 
-**Phase 3.1 — `api/upload.ts`: extract the per-file tail into `processOne`.** The single-file validation + Cloudinary/R2 pipeline + success return (the block **from `if (!slug || !role)` at `:195` through the success `return jsonResponse(request, { url: publicUrl, filename })` at `:316`**) **moves verbatim** into a module-level helper that returns a result object instead of a `Response`: swap each `return jsonResponse(request, { error: … }, status)` for `return { ok: false as const, error: …, status }`, and the final success return for `return { ok: true as const, url: publicUrl, filename }`.
+**Phase 3.1 — `api/upload.ts`: extract the per-file tail into `processOne`.** The single-file validation + Cloudinary/R2 pipeline + success return (the block **from `if (!slug || !role)` at `:195` through the closing `catch` at `:320`** — the `try` opens at `:229` and its `catch` closes at `:320`, *after* the success `return jsonResponse(request, { url: publicUrl, filename })` at `:316`, so the **whole `try…catch` moves intact**, not just through the success return; AR#B2/C3) **moves verbatim** into a module-level helper that returns a result object instead of a `Response`: swap **each** `return jsonResponse(request, { error: … }, status)` — **including the trailing `catch`'s** `return jsonResponse(request, { error: 'Upload failed' }, 500)` → `return { ok: false as const, error: 'Upload failed', status: 500 }` — for a result object, and the final success return for `return { ok: true as const, url: publicUrl, filename }`.
 ```ts
 type UploadResult = { ok: true; url: string; filename: string } | { ok: false; error: string; status: number };
 
 async function processOne(file: File, slug: string, role: string, skipTransformField: string | null): Promise<UploadResult> {
   if (!slug || !role) return { ok: false, error: 'Missing file, slug, or role', status: 400 };
   if (!ROLE_PATTERN.test(role)) return { ok: false, error: 'Invalid role', status: 400 };
-  // … the existing :202–316 body, verbatim, with the two return-swaps above …
+  // … the existing :202–320 body (through the closing catch), verbatim, with the return-swaps above (incl. the catch) …
 }
 ```
-The single-file POST path then ends by calling it (replacing the inlined `:195–316` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);` *(`processOne` is module-level — place it beside `normalizeMediaUrl`/`isPublicHttpUrl`, above `export async function POST`, alongside the 3.2 helpers.)*
+The single-file POST path then ends by calling it (replacing the inlined `:195–320` tail): `const r = await processOne(file, slug, role, skipTransformField); return r.ok ? jsonResponse(request, { url: r.url, filename: r.filename }) : jsonResponse(request, { error: r.error }, r.status);` *(`processOne` is module-level — place it beside `normalizeMediaUrl`/`isPublicHttpUrl`, above `export async function POST`, alongside the 3.2 helpers.)*
 
-> **Verified externals.** The `:195–316` body references ONLY: the four params `{file, slug, role, skipTransformField}` + module-level declarations already in `upload.ts` — `ALLOWED_MIME` (`:34`), `MIME_TO_EXT` (`:43`), `ROLE_PATTERN` (`:52`), `getCloudinaryConfig` (`:62`), `sha1Hex` (`:69`), `isTest`/`env` (imports `:4`), `s3` (`:6`). After the two return-swaps (`jsonResponse(request, …)` → plain result objects) it references **no** `request`, `corsHeaders`, or `formData`, so the 4-param signature is sufficient — no `tsc "X is not defined"` cascade. `handleAttachedRefs` (3.2) likewise reads only module-level `ROLE_PATTERN`/`ALLOWED_MIME`/`MIME_TO_EXT`/`isPublicHttpUrl` — all confirmed module-scope. If the working tree has drifted, re-confirm before extracting.
+> **Verified externals.** The `:195–320` body references ONLY: the four params `{file, slug, role, skipTransformField}` + module-level declarations already in `upload.ts` — `ALLOWED_MIME` (`:34`), `MIME_TO_EXT` (`:43`), `ROLE_PATTERN` (`:52`), `getCloudinaryConfig` (`:62`), `sha1Hex` (`:69`), `isTest`/`env` (imports `:4`), `s3` (`:6`). After the two return-swaps (`jsonResponse(request, …)` → plain result objects) it references **no** `request`, `corsHeaders`, or `formData`, so the 4-param signature is sufficient — no `tsc "X is not defined"` cascade. `handleAttachedRefs` (3.2) likewise reads only module-level `ROLE_PATTERN`/`ALLOWED_MIME`/`MIME_TO_EXT`/`isPublicHttpUrl` — all confirmed module-scope. If the working tree has drifted, re-confirm before extracting.
 
 **Phase 3.2 — `api/upload.ts`: branch the JSON intake + add `handleAttachedRefs`.** **CURRENT (`:129-138`):**
 ```ts
@@ -1035,7 +1035,24 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   return jsonResponse(request, { uploads, failures });
 }
 ```
-*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. **Unique role per file:** because the filename IS the role, two files resolving to the same role would overwrite each other in R2 — so a collision (a duplicate explicit role, or a positional fallback that lands on an already-claimed role) is rejected with a per-file failure rather than silently destroying the earlier upload; the role is claimed only on a successful upload, so a failed file never blocks a later retry of its role. `new File([bytes], …)` + `Buffer` are **Node 20+ globals** — present at runtime even though `tsc` wouldn't flag their absence (`lib.dom` declares `File`). Don't lean on Vercel's *silent* default (AR#F5): the build **pins `engines.node` to `">=20"` in `package.json`** (a documented contract) and confirms no `vercel.json` runtime override forces Node 18 on `api/upload.ts` — both checked in the TESTING static gate. **Attach is images-only:** a `video/*` MIME is rejected with a clear per-file failure ("send it as a link, use uploadImage"), so an attached video can never be silently named with an image role + dropped into `images[]` (which would render a broken `<img src=.mp4>` and never show as media). The GPT instruction (MEDIA) tells it not to attach video; this guard is the belt-and-suspenders so a slip surfaces loudly, not as a broken page. **Auth is already enforced:** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
+*(`files.oaiusercontent.com` is public https → passes the existing `isPublicHttpUrl`. The server names each file `{role}-{slug}` from the resolved role, so nobody renames anything. **Unique role per file:** because the filename IS the role, two files resolving to the same role would overwrite each other in R2 — so a collision (a duplicate explicit role, or a positional fallback that lands on an already-claimed role) is rejected with a per-file failure rather than silently destroying the earlier upload; the role is claimed only on a successful upload, so a failed file never blocks a later retry of its role. `new File([bytes], …)` + `Buffer` are **Node 20+ globals** — present at runtime even though `tsc` wouldn't flag their absence (`lib.dom` declares `File`). Don't lean on Vercel's *silent* default (AR#F5): the build **pins `engines.node` to `">=20"` in `package.json`** (a documented contract — byte-anchored in **Phase 3.2b** below) and confirms no `vercel.json` runtime override forces Node 18 on `api/upload.ts` — both checked in the TESTING static gate. **Attach is images-only:** a `video/*` MIME is rejected with a clear per-file failure ("send it as a link, use uploadImage"), so an attached video can never be silently named with an image role + dropped into `images[]` (which would render a broken `<img src=.mp4>` and never show as media). The GPT instruction (MEDIA) tells it not to attach video; this guard is the belt-and-suspenders so a slip surfaces loudly, not as a broken page. **Auth is already enforced:** `authorize(request)` runs at the **top of `POST`** (`upload.ts:118`), before the JSON content-type fork (`:129`) that reaches `handleAttachedRefs` — so the attach branch is gated; no per-branch auth check needed.)*
+
+**Phase 3.2b — `package.json`: pin the Node runtime (byte-anchored).** `handleAttachedRefs`'s `new File([bytes], …)` + `Buffer` are Node 20+ globals (above) and `tsc` can't catch a missing runtime global, so pin the floor explicitly instead of leaning on Vercel's silent default (AR#F5/B3/C4). **CURRENT (`package.json` — no `engines` field today):**
+```json
+{
+  "name": "everlastings-website",
+  "private": true,
+  "dependencies": {
+```
+**NEW (insert `engines` as a top-level sibling of `dependencies`):**
+```json
+{
+  "name": "everlastings-website",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "dependencies": {
+```
+*(Then confirm no `runtime` override in `vercel.json` forces Node 18 on the upload function — there is none today; both are re-checked in the TESTING static gate.)*
 
 **Phase 3.3 — `vercel.json`: the attach rewrite (same function serves both).** **CURRENT (`vercel.json:19`):**
 ```json
@@ -1147,7 +1164,7 @@ function addImageRow(url, alt) {
   row.className = 'img-url-row';
   row.innerHTML = `
     <img class="img-thumb" alt="" />
-    <span class="img-role" style="font-size:11px;color:#666"></span>
+    <span class="img-role" style="font-size:11px;color:var(--c-text-muted,#666)"></span>
     <input type="url" class="img-url" placeholder="https://cdn.../products/slug/hero-slug.webp" />
     <input type="text" class="img-alt" placeholder="alt text" />
     <button type="button" class="remove-row">Remove</button>
@@ -1178,7 +1195,7 @@ function updateCoverage() {
   const hero = urls.some((u) => /\/(?:test_)?hero-/.test(u));
   const gallery = urls.filter((u) => /\/(?:test_)?gallery-/.test(u)).length;
   const thumb = !!$('p-thumbnail').value.trim() || hero; // hero IS reused as the thumbnail at submit (buildProductPayload, below) — so this ✓ is honest
-  const part = (ok, label) => `<span style="color:${ok ? '#2f7d52' : '#8a5a00'}">${ok ? '✓' : '•'} ${label}</span>`;
+  const part = (ok, label) => `<span style="color:${ok ? 'var(--c-success,#2f7d52)' : 'var(--c-warn,#8a5a00)'}">${ok ? '✓' : '•'} ${label}</span>`; // tokens-with-fallback (AR#D4) — was the literal --c-success/--c-warn values, a duplication trap
   el.innerHTML = [part(hero, 'hero'), part(gallery >= 5, `gallery ${gallery}/5`), part(thumb, 'thumbnail')].join(' &nbsp; ');
 }
 ```
@@ -1206,7 +1223,7 @@ Plus the markup + CSS:
                   <div id="img-coverage" style="font-size:12px;margin:6px 0"></div>
                   <button type="button" id="add-image-row" style="margin-top:6px">Add image URL</button>
 ```
-- **`admin/index.html` CSS CURRENT (`:61`):** `      .img-url-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; }` → **NEW:** `      .img-url-row { display: grid; grid-template-columns: 40px 64px 1fr 1fr auto; gap: 6px; align-items: center; }` + add `      .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; }` right after it.
+- **`admin/index.html` CSS CURRENT (`:61`):** `      .img-url-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; }` → **NEW:** `      .img-url-row { display: grid; grid-template-columns: 40px 64px 1fr 1fr auto; gap: 6px; align-items: center; }` + add `      .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: var(--c-surface-2, #eee); }` right after it.
 
 *3.7b — structured MP4/YouTube editor (replaces the raw-JSON `#p-media` textarea).* **`admin/index.html` CURRENT (`:159`):**
 ```html
@@ -1216,7 +1233,7 @@ Plus the markup + CSS:
 ```html
               <div>
                 <strong style="font-size:13px">Media (optional — MP4 clips + YouTube, in order)</strong>
-                <p style="font-size:12px;color:#666;margin:4px 0 8px">MP4s render before YouTube. Per clip, choose how it plays.</p>
+                <p style="font-size:12px;color:var(--c-text-muted,#666);margin:4px 0 8px">MP4s render before YouTube. Per clip, choose how it plays.</p>
                 <div id="p-media-list" class="img-url-list"></div>
                 <button type="button" id="add-media-row" style="margin-top:6px">Add video</button>
               </div>
@@ -1227,19 +1244,19 @@ function addMediaRow(m) {
   const list = $('p-media-list');
   const row = document.createElement('div');
   row.className = 'media-row';
-  row.style.cssText = 'border:1px solid #eee;border-radius:4px;padding:8px;display:grid;gap:6px';
+  row.style.cssText = 'border:1px solid var(--c-border,#eee);border-radius:4px;padding:8px;display:grid;gap:6px';
   row.innerHTML = `
     <div style="display:grid;grid-template-columns:110px 1fr auto;gap:6px;align-items:center">
       <select class="m-type"><option value="video">MP4 clip</option><option value="youtube">YouTube</option></select>
-      <input type="url" class="m-url" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+      <input type="url" class="m-url" aria-label="Video or YouTube URL" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
       <button type="button" class="remove-row">Remove</button>
     </div>
     <div class="m-video-opts" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px">
       <label class="checkbox-row"><input type="checkbox" class="m-autoplay" /><span>Autoplay + loop, silent (GIF-like)</span></label>
       <label class="checkbox-row"><input type="checkbox" class="m-controls" checked /><span>Show play/pause buttons (uncheck = button-less click-to-play)</span></label>
-      <input type="url" class="m-poster" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+      <input type="url" class="m-poster" aria-label="Poster image URL" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
     </div>
-    <input type="text" class="m-alt" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:inherit;font-size:13px" />
+    <input type="text" class="m-alt" aria-label="Clip alt text" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid var(--c-border,#ccc);border-radius:4px;font:inherit;font-size:13px" />
   `;
   row.querySelector('.m-type').value = m?.type === 'youtube' ? 'youtube' : 'video';
   row.querySelector('.m-url').value = m?.url || '';
@@ -1303,11 +1320,7 @@ function collectMedia() {
   const media = collectMedia();
   payload.media = media.length ? media : null;
 ```
-`attachEventListeners` — wire the add button. **CURRENT (`admin.js:152`):** `  $('add-image-row').addEventListener('click', () => addImageRow('', ''));` → **NEW (add the line after it):**
-```js
-  $('add-image-row').addEventListener('click', () => addImageRow('', ''));
-  $('add-media-row').addEventListener('click', () => addMediaRow(null));
-```
+`add-media-row` wiring — **folded into DESIGN P0(iii)'s consolidated `attachEventListeners` diff** (AR#B1/C2/D8). 3.7b above defines `addMediaRow` + the `#add-media-row` button *unwired*; P0(iii)'s NEW block adds `$('add-media-row').addEventListener('click', () => addMediaRow(null));` right after its `add-image-row` line. **No separate `:152` edit here** — the `admin.js:152-161` region is touched exactly once, at WS4, so the WS3-before-WS4 build order never hits a stale byte-anchor (three reviewers flagged the interleave; this is the clean single-source fix).
 
 *3.7c — video auto-skip is owned by P3d, NOT a standalone edit to the old control.* The single `#upload-role` control is **removed** by DESIGN P3d (role-sectioned zones), so byte-anchoring an `isVideo` skip onto its handler (`admin.js:371`) would be applied-then-stripped — the exact hazard the byte-anchored discipline exists to prevent. Instead **the rule lives in P3d's Video zone**: every upload from the Video zone POSTs `skip_transform=true` unconditionally (a video always skips the Cloudinary crop — replaces the old global checkbox/auto-infer). The chat-attach path takes **no** video at all — 3.2's `handleAttachedRefs` **rejects** `video/*` with a "send it as a link" failure, so attach is images-only and video skip-transform only ever happens on the by-link `uploadImage` path + the admin Video zone. **Do not apply a standalone `#upload-role` edit** — there's no such control after P3d.
 
@@ -1448,12 +1461,12 @@ $$;
 
 > **A forward-pointer in STORE *now* was proposed and REJECTED.** Adding "v3.2.x will change this; see the IMPLEMENT" to STORE today injects future-tense speculation into the **shipped-truth** doc — exactly what the no-mixed-truth / as-built doc-sync rule forbids. The builder works from this IMPLEMENT (not STORE), and Phase 6.2 now carries the mid-build orientation note. STORE is updated **here**, at the as-built sync — not mid-build.
 
-## Workstreams 4–5 — executable design (spec'd in `v3_2_0_ADDENDUM_DESIGN.md`)
+## Workstreams 4–5 — executable design (spec'd in `v3_2_1_ADDENDUM_DESIGN.md`)
 
 - **4 · Admin polish** — the executable design lives in `…_ADDENDUM_DESIGN.md` §WS4 (the `:root` token system + P0–P7). Its CURRENT-state anchors are **verified** against the working tree (`admin/index.html:8-74` literals/grids, `system-ui`, no breakpoints). **P3 (media) is implemented in WS3.7 above.** Remaining at build (mechanical from the spec): the token literal-sweep (`#ddd`→`--c-border`…), P0's product-list state-filter JS + back-nav, and (per the executable-design rule) a render-tune with Sean on the live preview. Optional enhancements: the `improve`-skill code audit + (Sean-logged-in) live-screenshot fresh-instance passes.
 - **5 · Homepage experience** — the executable spec lives in `…_ADDENDUM_DESIGN.md` §5: §5.1's `.hero__title` wrapper + a11y CSS + `homepage.js` init, and §5.2's versioned-key MP4 swap + 3 `index.html` URL edits, are concrete. The Lottie JSON authoring + the HyperFrames old-film render are content-creation steps done at execution (with the `text-to-lottie`/`hyperframes` skills + Sean's render-tune).
 
-## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_0_ADDENDUM_DESIGN.md`)
+## Phase 0 — pre-build research (COMPLETE — folded into `v3_2_1_ADDENDUM_DESIGN.md`)
 
 - ✓ **A — /admin design-review** → ADDENDUM §WS4: neutral/template CSS-variable system + ranked P1–P7 (form sectioning, status badges, structured MP4 editor, skeletons, mobile breakpoint, address block, chrome) + fold order.
 - ✓ **B — text-to-lottie** → ADDENDUM §5.1: author in the Skottie harness, embed with **lottie-web SVG**, title as outline-path trim-draw, dual-element `<h1>`+`aria-hidden` Lottie a11y/reduced-motion pattern.
