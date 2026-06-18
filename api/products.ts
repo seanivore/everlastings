@@ -697,7 +697,8 @@ async function handleCoupon(request: Request): Promise<Response> {
     code?: string;
     product_ids?: string[];
     min_amount?: number;
-    expires_at?: number;
+    expires_date?: string;   // YYYY-MM-DD — preferred; normalized to a store-TZ end-of-day below
+    expires_at?: number;     // Unix (legacy/back-compat)
     max_redemptions?: number;
   };
   try {
@@ -714,6 +715,10 @@ async function handleCoupon(request: Request): Promise<Response> {
   }
   if (body.type === 'percent' && body.value > 100) {
     return jsonResponse(request, { error: 'percent value cannot exceed 100' }, 400);
+  }
+
+  if (typeof body.expires_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.expires_date)) {
+    body.expires_at = endOfDayET(body.expires_date); // store-TZ end-of-day → redeem_by + promo.expires_at + the echo
   }
 
   // duration is required by Stripe; for one-time payments it is effectively moot —
@@ -738,7 +743,7 @@ async function handleCoupon(request: Request): Promise<Response> {
     }
     if (typeof body.expires_at === 'number') promoParams.expires_at = body.expires_at;
     const promo = await stripe.promotionCodes.create(promoParams);
-    return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id });
+    return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id, expires_display: typeof body.expires_at === 'number' ? formatExpiry(body.expires_at) : null });
   } catch (err) {
     if ((err as { code?: string })?.code === 'resource_already_exists') {
       return jsonResponse(request, { error: 'That coupon code already exists. Choose a different code.' }, 409);
@@ -746,6 +751,35 @@ async function handleCoupon(request: Request): Promise<Response> {
     console.error('Coupon create failed:', err);
     return jsonResponse(request, { error: 'Failed to create the coupon' }, 502);
   }
+}
+
+// One place to retarget if a future template "User" store isn't in ET — both expiry helpers read it
+// instead of a literal, so cloning the project for another client is a one-line edit (AR#F14).
+const STORE_TIMEZONE = 'America/New_York';
+
+// Human-readable coupon expiry in the store's timezone, so the GPT/admin never decode a raw Unix
+// timestamp (FEEDBACK_COUPON_v2_1_0: a raw expires_at was misread as July). Returned ALONGSIDE expires_at.
+function formatExpiry(unixSeconds: number): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: STORE_TIMEZONE,
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  }).format(new Date(unixSeconds * 1000));
+}
+
+// End-of-day (23:59:59) on a YYYY-MM-DD calendar date, interpreted in the STORE timezone, as a Unix
+// timestamp — so a coupon's stored expiry matches the date the owner picked regardless of their
+// browser locale. Offset for THIS date is read EXPLICITLY via Intl formatToParts:
+// never round-trip a localized string through `new Date()` — only ISO 8601 is guaranteed to parse,
+// and toLocaleString's output is locale/ICU-version-dependent, so a Node/ICU bump could break it
+// silently with no tsc warning. `shortOffset` yields "GMT-5" (EST) / "GMT-4" (EDT) for ET.
+function endOfDayET(dateStr: string): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const off = new Intl.DateTimeFormat('en-US', { timeZone: STORE_TIMEZONE, timeZoneName: 'shortOffset' })
+    .formatToParts(new Date(Date.UTC(y, m - 1, d, 23, 59, 59)))
+    .find((p) => p.type === 'timeZoneName')?.value ?? 'GMT-5';
+  const offsetHours = Number(off.replace(/^GMT/, '').replace('−', '-')) || -5; // EST -5, EDT -4
+  return Math.floor(Date.UTC(y, m - 1, d, 23 - offsetHours, 59, 59) / 1000);
 }
 
 // ?_action=coupon (GET) — list active discounts so the owner can see/manage them.
@@ -784,6 +818,10 @@ async function handleCouponList(request: Request): Promise<Response> {
           times_redeemed: pc.times_redeemed,
           max_redemptions: pc.max_redemptions ?? null,
           expires_at: pc.expires_at ?? null,
+          expires_display: pc.expires_at ? formatExpiry(pc.expires_at) : null,
+          min_amount: pc.restrictions?.minimum_amount ?? null,
+          min_display: pc.restrictions?.minimum_amount != null ? '$' + (pc.restrictions.minimum_amount / 100).toFixed(2) : null,
+          amount_display: pc.coupon?.amount_off != null ? '$' + (pc.coupon.amount_off / 100).toFixed(2) : null,
           store_wide: !scopedProducts || scopedProducts.length === 0,
           product_ids: scopedProducts && scopedProducts.length ? scopedProducts : null,
         });

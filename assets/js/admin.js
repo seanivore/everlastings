@@ -167,6 +167,10 @@ function attachEventListeners() {
       loadOrders();
     }
   });
+
+  $('coupon-form').addEventListener('submit', onCreateCoupon);
+  $('coupons-refresh-btn').addEventListener('click', loadCoupons);
+  $('c-product-search').addEventListener('input', populateCouponProducts); // re-filter live (render-tune AR#F9: debounce ~150ms if a template "User" catalog ever exceeds ~100 pieces; unconditional is fine at Emy's scale)
 }
 
 async function onLoginSubmit(e) {
@@ -197,17 +201,15 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('tab-products').classList.toggle('hidden', tab !== 'products');
   $('tab-orders').classList.toggle('hidden', tab !== 'orders');
+  $('tab-coupons').classList.toggle('hidden', tab !== 'coupons');
   refreshActiveTab();
 }
 
 function refreshActiveTab() {
   if (!state.session) return;
-  const productsActive = !$('tab-products').classList.contains('hidden');
-  if (productsActive) {
-    loadProducts();
-  } else {
-    loadOrders();
-  }
+  if (!$('tab-products').classList.contains('hidden')) loadProducts();
+  else if (!$('tab-coupons').classList.contains('hidden')) loadCoupons();
+  else loadOrders();
 }
 
 function authHeader() {
@@ -962,6 +964,166 @@ async function relistPiece(r, down, msg) {
     msg.textContent = down ? `Refunded + relisted "${r.title}".` : `Refunded + "${r.title}" stock +1.`;
   } catch (err) {
     msg.textContent = `Refunded, but relist failed (${err.message}) — relist it from the product editor.`;
+  }
+}
+
+async function loadCoupons() {
+  setStatus('coupons-status', '', 'info');
+  // The scope picker needs published products' stripe_product_id. Refetch on each open so a piece
+  // published earlier this session shows up; keep any prior list as a fallback on error.
+  // (Render-tune, AR#F19: if a template "User" catalog ever grows past ~100 pieces, gate this
+  //  refetch behind a short freshness check — fine to refetch unconditionally at Emy's scale.)
+  try {
+    const pr = await fetch('/api/products', { headers: { ...authHeader() } });
+    const pb = await pr.json().catch(() => ({}));
+    if (pr.ok && Array.isArray(pb.products)) state.products = pb.products;
+  } catch { /* non-fatal — the picker keeps the last list, or shows Store-wide */ }
+  populateCouponProducts();
+  const list = $('coupons-list');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    const res = await fetch('/api/coupons', { headers: { ...authHeader() } });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    renderCoupons(Array.isArray(body.coupons) ? body.coupons : []);
+  } catch (err) {
+    list.innerHTML = '';
+    setStatus('coupons-status', `Failed to load sales: ${err.message}`, 'error');
+  }
+}
+
+// A searchable, checkbox product picker so a coupon can be scoped to MANY products — true parity
+// with the GPT's product_ids array (createCoupon already accepts an array, contract line above).
+// Selection lives in a module Set so it PERSISTS as the owner filters by different terms: search
+// "loft", check a few, search "vessel", check more — the earlier checks stay. (Sean: think the
+// template "User" with a large catalog, not Emy's tiny one — full /admin capability, GPT-down-proof.)
+const couponSelectedProducts = new Set(); // stripe_product_ids
+
+function populateCouponProducts() {
+  const list = $('c-product-list');
+  if (!list) return;
+  const term = ($('c-product-search')?.value || '').trim().toLowerCase();
+  const published = (state.products || []).filter((p) => p.is_published && !p.archived_at && p.stripe_product_id);
+  // Drop any selection that's no longer a valid scope target (unpublished/archived since checking).
+  const validIds = new Set(published.map((p) => p.stripe_product_id));
+  [...couponSelectedProducts].forEach((id) => { if (!validIds.has(id)) couponSelectedProducts.delete(id); });
+  const shown = term ? published.filter((p) => (p.title || '').toLowerCase().includes(term)) : published;
+  list.innerHTML = shown.length
+    ? shown.map((p) => {
+        const id = escapeHtml(p.stripe_product_id);
+        const checked = couponSelectedProducts.has(p.stripe_product_id) ? ' checked' : '';
+        return `<label class="checkbox-row"><input type="checkbox" class="c-product-cb" value="${id}"${checked} /><span>${escapeHtml(p.title || '(untitled)')}</span></label>`;
+      }).join('')
+    : '<p class="empty" style="padding:8px">No matching published products.</p>';
+  list.querySelectorAll('.c-product-cb').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) couponSelectedProducts.add(cb.value); else couponSelectedProducts.delete(cb.value);
+      updateCouponScopeNote();
+    });
+  });
+  updateCouponScopeNote();
+}
+
+function updateCouponScopeNote() {
+  const note = $('c-product-selected');
+  if (!note) return;
+  const n = couponSelectedProducts.size;
+  note.textContent = n === 0 ? 'Store-wide (no products selected)' : `${n} product${n === 1 ? '' : 's'} selected`;
+}
+
+function renderCoupons(coupons) {
+  const list = $('coupons-list');
+  if (!coupons.length) {
+    list.innerHTML = '<div class="empty">No sales running. Create one above.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const c of coupons) {
+    const off = c.percent_off ? `${c.percent_off}% off`
+      : c.amount_off ? `$${centsToDollars(c.amount_off)} off` : 'discount';
+    const scope = c.store_wide ? 'store-wide' : `${(c.product_ids || []).length} product(s)`;
+    const used = `${c.times_redeemed ?? 0}${c.max_redemptions ? ` / ${c.max_redemptions}` : ''} used`;
+    const min = c.min_amount ? ` · min $${centsToDollars(c.min_amount)}` : '';
+    const ends = c.expires_display ? ` · ends ${escapeHtml(c.expires_display)}` : '';
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid var(--c-border,#ddd);border-radius:6px;padding:10px;margin-bottom:8px';
+    row.innerHTML = `
+      <p><span class="label">${escapeHtml(c.code)}</span> — ${escapeHtml(off)} · ${escapeHtml(scope)} · ${escapeHtml(used)}${min}${ends}</p>
+      <button type="button" class="end-sale">End sale</button>
+      <div class="coupon-msg" style="margin-top:6px;font-size:13px"></div>
+    `;
+    row.querySelector('.end-sale').addEventListener('click', () => onDeactivateCoupon(c.code, row));
+    list.appendChild(row);
+  }
+}
+
+async function onCreateCoupon(e) {
+  e.preventDefault();
+  setStatus('coupons-status', '', 'info');
+  const type = $('c-type').value;
+  const rawValue = Number.parseFloat($('c-value').value);
+  if (!Number.isFinite(rawValue) || rawValue <= 0) {
+    setStatus('coupons-status', 'Enter a discount amount.', 'error');
+    return;
+  }
+  if (type === 'percent' && rawValue > 100) {
+    setStatus('coupons-status', 'Percent off cannot exceed 100.', 'error');
+    return;
+  }
+  const payload = { type, value: type === 'amount' ? Math.round(rawValue * 100) : rawValue };
+  const code = $('c-code').value.trim();
+  if (code) payload.code = code;
+  const min = Number.parseFloat($('c-min').value);
+  if (Number.isFinite(min) && min > 0) payload.min_amount = Math.round(min * 100);
+  const max = Number.parseInt($('c-max').value, 10);
+  if (Number.isInteger(max) && max > 0) payload.max_redemptions = max;
+  const expires = $('c-expires').value; // YYYY-MM-DD or ''
+  if (expires) payload.expires_date = expires; // raw date; the backend builds end-of-day in the STORE timezone (no browser-TZ drift)
+  const selectedProducts = [...couponSelectedProducts];
+  if (selectedProducts.length) payload.product_ids = selectedProducts; // omit → store-wide
+
+  const offLabel = type === 'percent' ? `${rawValue}% off` : `$${rawValue.toFixed(2)} off`;
+  const scopeLabel = selectedProducts.length ? `${selectedProducts.length} product${selectedProducts.length === 1 ? '' : 's'}` : 'store-wide';
+  const endsLabel = expires ? `, ends after ${expires}` : '';
+  if (!window.confirm(`Create sale: ${offLabel}, ${scopeLabel}${endsLabel}${code ? `, code ${code}` : ' (auto code)'}?`)) return;
+
+  $('create-coupon').disabled = true;
+  try {
+    const res = await fetch('/api/coupons', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    setStatus('coupons-status', `Created ${body.code}${body.expires_display ? ` — ends ${body.expires_display}` : ''}.`, 'success');
+    couponSelectedProducts.clear();
+    if ($('c-product-search')) $('c-product-search').value = '';
+    $('coupon-form').reset();
+    loadCoupons();
+  } catch (err) {
+    setStatus('coupons-status', `Failed: ${err.message}`, 'error');
+  } finally {
+    $('create-coupon').disabled = false;
+  }
+}
+
+async function onDeactivateCoupon(code, row) {
+  if (!window.confirm(`End the sale "${code}" now? Shoppers can no longer use it.`)) return;
+  const msg = row.querySelector('.coupon-msg');
+  msg.textContent = 'Ending...';
+  try {
+    const res = await fetch('/api/coupons/deactivate', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    msg.textContent = 'Ended.';
+    setTimeout(loadCoupons, 600);
+  } catch (err) {
+    msg.textContent = `Failed: ${err.message}`;
   }
 }
 

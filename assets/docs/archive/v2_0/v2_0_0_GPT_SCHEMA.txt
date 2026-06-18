@@ -228,7 +228,8 @@ paths:
                 code: { type: string, description: The shareable code, e.g. HOLIDAY20. Optional — Stripe generates one if omitted. }
                 product_ids: { type: array, items: { type: string }, description: "Stripe product IDs (the stripe_product_id field from listProducts — NOT the Supabase id) to limit the discount to. Omit for store-wide." }
                 min_amount: { type: integer, description: Minimum order total in cents to qualify. Optional. }
-                expires_at: { type: integer, description: Unix timestamp when the code expires. Optional. }
+                expires_date: { type: string, description: "End date as YYYY-MM-DD (e.g. 2026-06-21). PREFER THIS — the server sets end-of-day in the store's timezone, so you never compute a timestamp. Optional." }
+                expires_at: { type: integer, description: "Unix timestamp (legacy — use expires_date instead). Optional." }
                 max_redemptions: { type: integer, description: Max total redemptions. Optional. }
       responses:
         '200': { description: Coupon created; returns the code. }
