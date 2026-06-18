@@ -2,7 +2,7 @@
 
 **Handcrafted havens for the stories that stay** — a custom e-commerce site for artisan miniature dioramas, built so the owner can run the *entire* store by chatting with an AI assistant.
 
-**Status:** the full store — on-site checkout + fulfillment **and** the by-chat AI management layer — **built and verified on the preview** (v2.0, with a v2.1 design pass), pre-launch. A non-technical owner creates, edits, previews, publishes, prices, discounts, and inventories the whole catalog through a Custom GPT, behind a draft → preview → publish safety net. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v2.0 build + design history](/assets/docs/archive/v2_0/).
+**Status:** live (v3.3). The full store — on-site checkout + fulfillment **and** a by-chat AI management layer with **full /admin ↔ GPT parity** — lets a non-technical owner create, edit, preview, publish, price, discount, **refund**, and inventory the entire catalog by chatting with a Custom GPT, behind a draft → preview → publish safety net. v3.3 closed the loop: refunds + coupons on **both** surfaces, **photos attached straight in chat**, real multi-unit inventory, a reusable brand-neutral admin, and a new homepage experience. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v3.3 build packet](/assets/docs/archive/v3_3/).
 
 ---
 
@@ -16,13 +16,13 @@ In practice, the owner can — by chat — :
 
 | She says… | The assistant does |
 | --- | --- |
-| "Add the Lavender Wreath, here are the photos" *(pastes Drive links)* | Creates the product, uploads + crops every image, drafts the copy/SEO, returns a **private preview link** |
+| "Add the Lavender Wreath, here are the photos" *(attaches them in chat)* | Creates the product, uploads + crops every image, drafts the copy/SEO, returns a **private preview link** |
 | "Looks great — publish it" | Creates the Stripe product + price, takes it live at the same URL |
 | "Change the price to $145" | Rotates the Stripe price **in place** — same page, same link — live immediately |
 | "Mark the Sage one sold" / "we got 3 more in" | Flips availability / stock **live**, no publish step |
 | "Run 20% off everything until New Year's" | Builds the coupon + promo code, scoped and dated |
 | "Take the Fern down for now" | Archives it (reversible — nothing is ever hard-deleted) |
-| "Refund that last order" | Walks her through Stripe (web-search-current steps); the order status updates itself |
+| "Refund Jane's order for the Cottage" | Issues the Stripe refund, then asks whether to re-list each piece that came back |
 
 The safety net is **draft → preview → publish**: she always *sees* the real page before anything goes live, because no one can picture a change from a chat message alone.
 
@@ -42,7 +42,7 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
   + **Database-driven static site** — products live in Supabase, not in code; the public site is fast static HTML/JS reading through Row-Level-Security.
   + **On-site checkout** — Stripe Custom Checkout (`ui_mode: 'custom'`) keeps customers on-brand, never bounced to a hosted page.
   + **Draft/preview/publish CMS model** — staged edits, an unguessable preview link, a one-tap Publish — the standard safety UX non-technical owners need.
-  + **AI-first management surface** — a Custom GPT with Actions is the primary admin; a browser admin panel and direct DB access are fallbacks, not the main path.
+  + **Two fully-capable surfaces, at parity** — every management task (incl. refunds + coupons) is doable by chat through a Custom GPT **and** through a polished browser admin; neither is a second-class fallback, so a GPT outage never strands the owner. The admin is deliberately **brand-neutral** — a reusable template that re-skins for the next client.
   + **Built to be productized** — environment-scoped (test/live), template-friendly, and deliberately generic where it can be. The same architecture re-skins for the next client; the management layer is the reusable asset.
 
 ---
@@ -69,7 +69,7 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
 
 ---
 
-## Shipped today (v1.4.9 — verified on preview)
+## Storefront + checkout (live)
 
   + **Product catalog** — rich product pages with 7–15 photo galleries, poetic story cards, and embedded checkout
   + **On-site checkout** — Stripe Custom Checkout with cart and automatic inventory updates via webhooks
@@ -78,15 +78,24 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
   + **Dynamic homepage** — rotating themes and a featured-product carousel driven by the database
   + **Smart filters** — shop grid with multi-select filtering by series, type, and availability
 
-## By-chat store management (v2.0 — built + verified on preview)
+## By-chat store management (live)
 
-  + Custom GPT that can **create, edit, draft-preview, and publish** every product field (copy, SEO, photos by link, price)
+  + Custom GPT that can **create, edit, draft-preview, and publish** every product field (copy, SEO, photos — attached in chat or by link — price)
   + **Live price rotation**, **mark-sold / restock**, and **coupons** (create / list / end) by chat
-  + **Archive / resurface** (no hard delete) and truthful **order status** including refunds
-  + Unified admin panel on the same draft → preview → publish path, with an on-brand pass
-  + A "firelight" perspective-shift hero + a polished, compact product page (v2.1 design pass)
+  + **Archive / resurface** (no hard delete) and truthful **order status**
+  + Unified admin panel on the same draft → preview → publish path
+  + A "firelight" perspective-shift hero + a polished, compact product page
 
-> Built, gap-reviewed across multiple cold passes, and verified on the dev preview; pre-launch. The owner runs the whole catalog by chatting with her Custom GPT.
+## Management parity + experience (v3.3 — live)
+
+  + **Refunds by chat *and* in /admin** — amount-based (one cart can be several pieces on a single payment), so it refunds only the pieces that came back and offers to re-list each
+  + **Coupons in /admin too** — the full create / list / end surface the GPT already had, now on both surfaces, with plain-language dates
+  + **Photos attached straight in the chat** — no Drive link needed for the common case (a by-link path stays for video + large batches)
+  + **Real inventory** — a sale decrements stock; a multi-unit piece stays available until the last one sells
+  + **A reusable, brand-neutral admin** — clean, professional, and re-skins for any future client (the productizable asset)
+  + **A new homepage** — a hand-drawn title write-on over an old-film hero, with reduced-motion + SEO fallbacks intact
+
+> Built and gap-reviewed across many cold review passes. The owner runs the whole catalog — money included — by chatting with her Custom GPT, or from a polished admin that does everything the chat does.
 
 ---
 
@@ -145,6 +154,7 @@ Vercel auto-scopes environment variables per branch, so the same codebase runs a
 | [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Custom GPT brain + setup; agentic curl protocol                 |
 | [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist                                       |
 | [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                   | The by-chat management layer — IMPLEMENT, design/testing addenda, build report |
+| [v3.3 Build Packet](/assets/docs/archive/v3_3/)                            | Management parity (refunds + coupons), chat-attach upload, inventory, admin polish, homepage — IMPLEMENT + addenda + build report |
 
 ---
 
