@@ -1503,6 +1503,24 @@ $$;
 - **Homepage:** Lottie title write-on + old-film hero render; reduced-motion fallback intact; `npx hyperframes lint` clean where used.
 - `npx tsc --noEmit` clean; CORS unaffected.
 
+## As-built doc-sync — the method (load-bearing; the final phase, a fresh agent)
+
+The per-workstream `Doc impact:` notes (Phases 1.6, 3.8, 6.4) all defer to **one** reconciliation done **after** the build + verification pass. **Do it as the DEV_RULES *As-built doc-sync* rule prescribes — not from memory.** This is not optional polish: **the next gap-review gate reads these docs as ground truth, so an inaccurate as-built manufactures phantom findings and burns a whole review round.** Last cycle the v2/v3 as-built was done from near-full memory and left `EVERLASTINGS_STORE.md` a release behind with stale example values (a `quantity=0` sale example, a wrong controls-default, a wrong admin-role set) — each of which a cold reviewer then "found" as a false gap. Don't repeat it.
+
+**The method (in order):**
+1. **A fresh agent** — not the tired build session. Cold eyes, no build-state assumptions.
+2. **Read `EVERLASTINGS_STORE.md` end-to-end, linearly, no chunking** — first, before touching anything. You're reconciling the whole doc, not patching remembered spots.
+3. **Then walk the build-adjusted IMPLEMENT line-by-line + the `BUILD_REPORT`** (deviations-only), folding ~everything the build changed.
+4. **Code is the tiebreaker.** On any behavior conflict between a doc claim and the shipped code, the code wins — open the file and confirm; never trust a remembered or doc-stated value.
+
+**The doc targets (consolidated from the `Doc impact:` notes):**
+- `EVERLASTINGS_STORE.md` — the **inventory model** (Purchase-Flow / Data-States / `products.quantity` flip to decrement + `available = (quantity > 0)`, per Phase 6.4) **and** the **refund/Stripe-sync** note (one cart = N `orders` rows sharing one `stripe_payment_intent`; a refund is an amount against the PaymentIntent, relisting only the marked pieces, per Phase 1.6) **and** the **media premise** (attach-in-chat via `uploadImages`, by-link as backstop, per Phase 3.8).
+- `STORE_ADMINISTRATION.md` — the refund section ("issue it in /admin or via the Sunkeeper; pick the amount + which pieces came back; it asks about relisting each") + the **one-admin-at-a-time** scope-boundary note.
+- `GPT_SETUP.md` + `product-reference.md` — same premise/refund/coupon deltas.
+- The test script (`…_ADDENDUM_TESTING.md`) — flip **R15** and any expectation that assumed a sale leaves `quantity` unchanged.
+
+**Verify before declaring done:** the Status/Version header isn't a release behind (check against the newest `BUILD_REPORT` first); no stale `file:line` anchor survived code growth (re-open before trusting). This phase opens the v4.0.0 as-built MAJOR.
+
 ## Cross-references
 
 - Architecture / schemas → `assets/docs/EVERLASTINGS_STORE.md`.
