@@ -6,6 +6,10 @@ Ships the current, tested version of the store (live on the `dev` preview) → `
 
 ---
 
+> If we end up needed to update any of the secrets in Vercel because we can't confirm them, I don't want to add them as being security blocked any more. I am the only one with access to Vercel and I want to be able to copy the keys from that resource in the future instead of making new keys every time we're unsure of the values.
+
+---
+
 ## 1. Pre-flight — do these first (dashboards / setup)
 
 Set production env + services **before** pushing, so the production deploy doesn't go out with missing keys.
@@ -18,7 +22,7 @@ Set production env + services **before** pushing, so the production deploy doesn
 - [ ] **Admin logins** — add the remaining admins in Supabase Auth.
 - [ ] **Stripe receipt / branding** — set the business name/branding on emailed receipts.
 - [ ] **DNS** — point the custom domain at the production deployment. (The prod custom domain is unprotected by design; Preview keeps Deployment Protection.)
-- [ ] **Docs current** — `EVERLASTINGS_STORE.md` / `README.md` reflect the shipped state; SESSION footers done.
+- [x] **Docs current** — `EVERLASTINGS_STORE.md` / `README.md` reflect the shipped state; SESSION footers done.
 
 ---
 
