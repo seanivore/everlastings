@@ -334,3 +334,47 @@ paths:
                 properties:
                   ok: { type: boolean }
                   email_sent: { type: boolean }
+  /api/orders/{id}/refund:
+    post:
+      operationId: refundOrder
+      summary: "Refund an order via Stripe; emails the buyer. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders on one payment. Default = refund THIS order's amount + relist THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: The order UUID (from listOrders).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount_cents: { type: integer, description: "Refund amount in CENTS. Omit to refund this order's full line amount. For several pieces, sum their amounts. Stripe rejects more than the purchase total." }
+                relist_product_ids:
+                  type: array
+                  items: { type: string }
+                  description: "The Supabase product ids (NOT stripe ids) of the pieces that came back — they get marked refunded and offered for relist. Omit to default to this order's piece; pass [] for a goodwill/partial refund where nothing is returned."
+      responses:
+        '200':
+          description: Refund issued. `relist` carries each returned piece's current state so you can offer to restore it (empty if nothing was returned).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  status: { type: string }
+                  relist:
+                    type: array
+                    description: One entry per returned piece — its current state, so you can offer to restore each returned unit. Empty for a goodwill/partial refund.
+                    items:
+                      type: object
+                      properties:
+                        product_id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        archived: { type: boolean }

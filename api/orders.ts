@@ -5,6 +5,7 @@
 import { corsHeaders, preflight } from './_lib/cors';
 import { requireAdmin } from './_lib/adminAuth';
 import { isTest } from './_lib/env';
+import { stripe } from './_lib/stripe';
 import { sendEmail, trackingEmailHtml, trackingUrl } from './_emails/index';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,6 +73,11 @@ export async function GET(request: Request) {
   } else if (status === 'shipped') {
     query = query.not('shipped_at', 'is', null);
   }
+
+  // Refund panel: load a cart's FULL sibling set by PaymentIntent, independent of the shipping subtab
+  // (siblings can straddle needs_shipping/shipped) — round-4 breadth-pass fix.
+  const paymentIntent = url.searchParams.get('payment_intent');
+  if (paymentIntent) query = query.eq('stripe_payment_intent', paymentIntent);
 
   if (q) {
     const orFilters: string[] = [];
@@ -235,4 +241,102 @@ export async function PATCH(request: Request) {
   }
 
   return jsonResponse(request, { ok: true, order: stamped, email_sent: true });
+}
+
+// POST /api/orders/:id/refund  (vercel rewrite → ?id=:id&_action=refund) — owner-issued refund.
+// A Stripe refund is an AMOUNT against the PaymentIntent (refunds aren't line-item-aware), and one
+// cart = one PI spanning N sibling `orders` rows (webhook.ts:185 writes one row per product). So we
+// refund `amount_cents` (default = THIS order's line amount → the common single-item case) and
+// flip+relist ONLY the pieces the caller marks returned via `relist_product_ids` (default = this
+// order's piece). charge.refunded (webhook.ts:60) also flips status, but only on a FULL-PI refund —
+// for a partial we own the per-order flip here (idempotent: both write 'refunded' where they overlap).
+export async function POST(request: Request) {
+  const auth = await requireAdmin(request);
+  if ('error' in auth) return auth.error;
+  const { supabase } = auth;
+
+  const url = new URL(request.url);
+  if (url.searchParams.get('_action') !== 'refund') {
+    return jsonResponse(request, { error: 'Unknown action' }, 400);
+  }
+  const id = url.searchParams.get('id') ?? '';
+  if (!id || !UUID_RE.test(id)) {
+    return jsonResponse(request, { error: 'Invalid order id' }, 400);
+  }
+
+  // Optional JSON body: amount_cents (a custom/partial amount) + relist_product_ids (which pieces
+  // came back → flip + relist them). No body = refund this order's full line amount + relist this
+  // one piece. An explicit empty relist_product_ids = a goodwill/partial amount, nothing returned.
+  let body: { amount_cents?: unknown; relist_product_ids?: unknown } = {};
+  try { body = (await request.json()) as typeof body; } catch { /* no body → per-line defaults */ }
+
+  const { data: order, error: loadErr } = await supabase
+    .from('orders')
+    .select('id, status, amount, product_id, stripe_payment_intent')
+    .eq('id', id)
+    .eq('is_test', isTest)
+    .single();
+  if (loadErr || !order) return jsonResponse(request, { error: 'Order not found' }, 404);
+  if (order.status === 'refunded') {
+    return jsonResponse(request, { error: 'This order is already refunded.' }, 409);
+  }
+  if (!order.stripe_payment_intent) {
+    return jsonResponse(request, { error: 'This order has no payment to refund.' }, 409);
+  }
+
+  const refundAmount = typeof body.amount_cents === 'number' && Number.isInteger(body.amount_cents) && body.amount_cents > 0
+    ? body.amount_cents
+    : (order.amount as number | null);
+  if (typeof refundAmount !== 'number' || refundAmount <= 0) {
+    return jsonResponse(request, { error: 'Could not determine the refund amount — pass amount_cents.' }, 400);
+  }
+  // Returned pieces (→ flip + relist). Explicit [] = goodwill/partial, nothing returned.
+  // Undefined (the GPT's simple {id} call) = just this order's piece.
+  const relistIds = Array.isArray(body.relist_product_ids)
+    ? (body.relist_product_ids as unknown[]).filter((x): x is string => typeof x === 'string')
+    : [order.product_id as string];
+
+  const pi = order.stripe_payment_intent as string;
+  try {
+    await stripe.refunds.create(
+      { payment_intent: pi, amount: refundAmount },
+      { idempotencyKey: `refund-${pi}-${refundAmount}-${[...relistIds].sort().join('.')}` },
+    );
+  } catch (err) {
+    console.error(`Refund failed for order ${id} (PI ${pi}):`, err);
+    return jsonResponse(request, { error: 'Stripe refund failed — check the amount, then the Stripe dashboard.' }, 502);
+  }
+
+  // Flip + relist only the returned pieces: their sibling orders on this PI (product_ids are unique
+  // per cart, so one row each). The embed resolves for archived pieces too (service-role client).
+  const relist: Array<{ product_id: string; slug: string; title: string; available: boolean; quantity: number; archived: boolean }> = [];
+  if (relistIds.length) {
+    const { data: siblings } = await supabase
+      .from('orders')
+      .select('id, products(id, slug, title, available, quantity, archived_at)')
+      .eq('stripe_payment_intent', pi)
+      .eq('is_test', isTest)
+      .in('product_id', relistIds);
+    const rows = (siblings ?? []) as unknown as Array<{
+      id: string;
+      products?: { id: string; slug: string; title: string; available: boolean; quantity: number | null; archived_at: string | null };
+    }>;
+    const refundedIds = rows.map((r) => r.id);
+    if (refundedIds.length) {
+      // Optimistic flip (the webhook also flips on a full-PI refund). Non-fatal if it lags.
+      const { error: updErr } = await supabase.from('orders').update({ status: 'refunded' }).in('id', refundedIds);
+      if (updErr) console.error(`Refund status flip lagged for PI ${pi}:`, updErr.message);
+    }
+    for (const r of rows) {
+      if (!r.products) continue;
+      relist.push({
+        product_id: r.products.id, slug: r.products.slug, title: r.products.title,
+        available: r.products.available, quantity: r.products.quantity ?? 0, archived: !!r.products.archived_at,
+      });
+    }
+  }
+  // (relistIds empty = goodwill/partial, nothing returned → NO status flip, empty relist; the response
+  // `status` mirrors that — 'refunded' only when pieces actually flipped, else the order's unchanged
+  // status, so the field never lies to the GPT. A full-PI refund still flips every sibling via charge.refunded.)
+  return jsonResponse(request, { ok: true, status: relistIds.length ? 'refunded' : order.status, relist });
 }

@@ -3,8 +3,8 @@
 // Auth model: this UI uses Supabase email/password auth. The user's JWT is
 // sent to the API as `Authorization: Bearer <jwt>`. Both `/api/products` and
 // `/api/upload` accept either PRODUCT_API_KEY (for AI/curl callers) or a
-// Supabase JWT (for this UI). `/api/orders` and `/api/orders/<id>` only
-// accept a Supabase JWT via requireAdmin.
+// Supabase JWT (for this UI). `/api/orders` and `/api/orders/<id>` accept
+// either too via requireAdmin (the GPT drives refundOrder/listOrders/markShipped with PRODUCT_API_KEY).
 
 const supabaseGlobal = window.supabase;
 if (!supabaseGlobal || typeof supabaseGlobal.createClient !== 'function') {
@@ -768,6 +768,12 @@ function buildOrderCard(order) {
       <p><span class="label">Customer</span> ${escapeHtml(customerName)} &lt;${escapeHtml(customerEmail)}&gt; ${escapeHtml(phone)}</p>
       ${addrText ? `<p><span class="label">Ship to</span></p><pre class="address-block">${escapeHtml(addrText)}</pre><button type="button" class="copy-address">Copy address</button>` : '<p><em>No shipping address on file.</em></p>'}
       ${formHtml}
+      ${order.status === 'refunded'
+        ? '<p style="margin-top:6px"><span class="pill refunded">Refunded</span></p>'
+        : !order.stripe_payment_intent
+          ? '<p style="margin-top:6px;font-size:13px;color:var(--c-text-muted,#666)">No payment on file to refund.</p>'
+          : '<button type="button" class="refund-order" style="margin-top:6px">Refund this purchase…</button>'}
+      <div class="refund-panel" style="display:none;margin-top:8px;padding:10px;border:1px solid var(--c-border,#ddd);border-radius:6px"></div>
       <div class="order-msg" style="margin-top:6px;font-size:13px"></div>
     </div>
   `;
@@ -803,6 +809,11 @@ function buildOrderCard(order) {
     });
   }
 
+  const refundBtn = card.querySelector('.refund-order');
+  if (refundBtn) {
+    refundBtn.addEventListener('click', () => openRefundPanel(order, card));
+  }
+
   return card;
 }
 
@@ -828,6 +839,129 @@ async function submitShip(orderId, trackingNumber, carrier, card, isResend) {
   } catch (err) {
     msg.textContent = `Failed: ${err.message}`;
     buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+// A Stripe refund is an AMOUNT against the whole purchase (one cart = N orders sharing a payment),
+// so the panel shows every piece in THIS purchase: CHECK the ones that came back (they get relisted),
+// and the amount auto-sums but stays freely EDITABLE (goodwill / restocking). Checkmarks drive relist;
+// the amount drives the refund. A single-item order = one piece, pre-checked, amount pre-filled.
+async function openRefundPanel(order, card) {
+  const panel = card.querySelector('.refund-panel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; } // toggle closed
+  const pi = order.stripe_payment_intent;
+  // Load the cart's FULL sibling set by PaymentIntent: a multi-piece cart's
+  // siblings can straddle the needs_shipping/shipped subtabs, so the active-subtab slice can silently
+  // UNDER-list a partial cart. Fetch by PI so the panel always shows every piece in the purchase.
+  panel.style.display = 'block';
+  panel.innerHTML = '<p style="font-size:13px;margin:0">Loading the pieces in this purchase…</p>';
+  let pieces = [order];
+  if (pi) {
+    try {
+      const res = await fetch(`/api/orders?payment_intent=${encodeURIComponent(pi)}`, { headers: { ...authHeader() } });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(body.orders)) pieces = body.orders.filter((o) => o.status !== 'refunded');
+    } catch { /* network/Action error → fall back to the single clicked order */ }
+  }
+  const list = pieces.length ? pieces : [order];
+  panel.innerHTML = `
+    <p style="font-size:13px;margin:0 0 6px">Check the pieces that came back (they'll be re-listed). The amount fills in — edit it for a partial/goodwill refund.</p>
+    <div class="refund-pieces" style="display:grid;gap:4px;margin-bottom:8px">
+      ${list.map((o) => {
+        const cents = typeof o.amount === 'number' ? o.amount : 0;
+        const checked = o.id === order.id ? ' checked' : '';
+        const pieceTitle = o.products?.title ?? '(piece)';
+        return `<label class="checkbox-row" style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" class="refund-piece" value="${escapeHtml(o.product_id)}" data-cents="${cents}" data-title="${escapeHtml(pieceTitle)}"${checked} />
+          <span>${escapeHtml(pieceTitle)} — $${centsToDollars(cents)}</span>
+        </label>`;
+      }).join('')}
+    </div>
+    <label class="field" style="margin:0 0 8px"><span>Refund amount ($)</span>
+      <input type="number" class="refund-amount" step="0.01" min="0" /></label>
+    <button type="button" class="refund-confirm primary">Refund</button>
+    <button type="button" class="refund-cancel">Cancel</button>
+  `;
+  const amountInput = panel.querySelector('.refund-amount');
+  const checks = [...panel.querySelectorAll('.refund-piece')];
+  const sumChecked = () => checks.filter((c) => c.checked).reduce((s, c) => s + Number(c.dataset.cents || 0), 0);
+  const syncAmount = () => { amountInput.value = centsToDollars(sumChecked()); };
+  checks.forEach((c) => c.addEventListener('change', syncAmount));
+  syncAmount(); // pre-fill from the pre-checked clicked piece
+  panel.querySelector('.refund-cancel').addEventListener('click', () => { panel.style.display = 'none'; });
+  panel.querySelector('.refund-confirm').addEventListener('click', () => {
+    const amountCents = Math.round(Number.parseFloat(amountInput.value || '0') * 100);
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      card.querySelector('.order-msg').textContent = 'Enter a refund amount.'; return;
+    }
+    const checked = checks.filter((c) => c.checked);
+    const relistIds = checked.map((c) => c.value);
+    const who = order.customers?.email || order.customer_email || 'the buyer';
+    // Read the title from the checkbox's own dataset — NOT by splitting the label text on ' — ', which
+    // truncates a piece whose title itself contains ' — ' (the brand's titles are poetic; round-5 A #14).
+    const what = checked.length ? checked.map((c) => c.dataset.title).join(', ') : 'this purchase';
+    if (!window.confirm(`Refund ${who} $${centsToDollars(amountCents)} for ${what}? This issues a Stripe refund and can't be undone.`)) return;
+    panel.style.display = 'none';
+    submitRefund(order.id, amountCents, relistIds, card);
+  });
+}
+
+async function submitRefund(orderId, amountCents, relistIds, card) {
+  const msg = card.querySelector('.order-msg');
+  msg.textContent = 'Issuing refund...';
+  const buttons = card.querySelectorAll('button');
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/refund`, {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount_cents: amountCents, relist_product_ids: relistIds }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    msg.textContent = 'Refunded.';
+    // ALWAYS offer to restore EACH returned piece (Sean's call — never leave stock un-restored).
+    // Wording by state: a down piece (sold-out/archived) gets re-listed; an in-stock piece just +1.
+    // relistPiece restores both axes either way.
+    for (const r of (Array.isArray(body.relist) ? body.relist : [])) {
+      const down = r.archived || r.available === false;
+      const ask = down
+        ? `Re-list "${r.title}" and make it available for purchase again?`
+        : `Increase "${r.title}"'s available quantity by 1?`;
+      if (window.confirm(ask)) await relistPiece(r, down, msg);
+    }
+    setTimeout(loadOrders, 800);
+  } catch (err) {
+    msg.textContent = `Failed: ${err.message}`;
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+// Relist = RESTORE the returned unit (WS6.3): unarchive when archived AND put it back in stock
+// (quantity + 1 → available follows the quantity>0 rule). BOTH axes, not XOR. Mirrors the admin's
+// own calls: POST /api/products/unarchive (admin.js:634) + PUT /api/products?id=… (:474).
+// `down` only tweaks the success copy (re-listed vs +1) — the restore is identical either way.
+async function relistPiece(r, down, msg) {
+  try {
+    if (r.archived) {
+      const ua = await fetch('/api/products/unarchive', {
+        method: 'POST',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: r.product_id }),
+      });
+      if (!ua.ok) throw new Error(`HTTP ${ua.status}`);
+    }
+    // Return the refunded unit to stock; available follows from quantity > 0.
+    const res = await fetch(`/api/products?id=${encodeURIComponent(r.product_id)}`, {
+      method: 'PUT',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ available: true, quantity: (r.quantity || 0) + 1 }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    msg.textContent = down ? `Refunded + relisted "${r.title}".` : `Refunded + "${r.title}" stock +1.`;
+  } catch (err) {
+    msg.textContent = `Refunded, but relist failed (${err.message}) — relist it from the product editor.`;
   }
 }
 
