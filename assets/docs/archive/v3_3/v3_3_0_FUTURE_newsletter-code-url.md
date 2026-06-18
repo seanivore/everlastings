@@ -28,6 +28,15 @@ So the welcome email should contain a ready-to-click link that lands the subscri
 2. **Email — use the branded shell + embed the link.** Switch `subscribe.ts` to `welcomeCouponEmailHtml` (kills the inline HTML + the TODO). Extend `WelcomeCouponEmailArgs` with an `applyUrl` and render a button: e.g. `https://everlastingsbyemaline.com/shop?promo=${code}` (or `/cart?promo=…`, matching whatever the front-end honors). Keep the code visible as text too (some clients strip buttons).
 3. **Mirror for cart-recovery (optional but tidy):** `cartRecoveryCouponEmailHtml` (`_emails/index.ts:129`) has the same code-as-text shape — give it the same `applyUrl` treatment so both promo emails behave alike.
 
+## Live observation + testing gap (flagged 2026-06-18)
+
+On the **live** site, submitting an email subscribed the row (the `subscribers` table shows the insert) but **no welcome email arrived** within a few minutes. The DB insert and the Resend send are independent, and `subscribe.ts` **swallows a send failure silently** — `catch (mailErr) { console.error(...) }` and the API still returns "Subscribed" — so a delivery problem is invisible to the visitor and leaves no surface signal. Most likely cause: the production **Resend sending domain / `RESEND_FROM_EMAIL` isn't verified** (or the message is in spam, or the prod `RESEND_API_KEY` is restricted). First checks: Resend → Domains for `everlastingsbyemaline.com` verification, and Resend → Logs for the send attempt.
+
+**Testing gap:** the newsletter **signup → welcome-email-delivered** path is not a numbered item in the testing docs and should be. Cover both variants and both modes, and assert **delivery** (not just the 200 — the silent-catch is exactly why a 200 isn't proof):
+- footer form (`newsletter-footer`) → plain welcome email arrives;
+- contemplation-offer form → welcome email **with a working single-use code** arrives (requires `newsletter-welcome-5` to exist in that mode);
+- a duplicate email returns "Already subscribed" and sends nothing.
+
 ## Considerations
 
 - **One param name, honored consistently** across email + cart + checkout (e.g. `?promo=`).
