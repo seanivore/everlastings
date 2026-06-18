@@ -89,7 +89,7 @@ git checkout dev                            # back to dev to keep building v3.3.
 
 ## 3. After the push — verify
 
-  + [ ] **Production URL loads** — a product page + `/shop` render; no console errors.
+  + [x] **Production URL loads** — a product page + `/shop` render; no console errors.
   + [ ] **One real live buy-then-refund** (the one thing the preview/test env can't prove — it confirms the live keys, the live webhook signing secret, and the receipt all at once):
     - Buy the lowest-priced live product with a real card.
     - Confirm: the order appears in `/admin`; the **merchant** "New order" email arrives (to `ORDER_NOTIFY_EMAIL`); the **Stripe receipt** reaches the buyer (this is where §1d pays off).
