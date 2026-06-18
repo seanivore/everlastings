@@ -29,36 +29,41 @@ Set production env + services **first**, so the production deploy doesn't go out
 
 The store hardcodes two system coupons by ID. They must exist **in live mode** or two features silently fail: the sold-in-cart apology (`cart-recovery-10`) and the newsletter welcome code (`newsletter-welcome-5`). There's an idempotent script — safe to run repeatedly.
 
-  + [ ] With the **live** secret key in your shell, run the bootstrap:
+  + [x] With the **live** secret key in your shell, run the bootstrap:
     - `STRIPE_SECRET_KEY=sk_live_… npx tsx api/_bootstrap/coupons.ts`
     - **Done looks like:** `Created coupon: cart-recovery-10` / `Created coupon: newsletter-welcome-5` (or `Coupon already exists, skipping:` if you've run it before). Either is success.
     - These are the discount *rules*; the per-customer single-use *codes* are minted on the fly from them at runtime.
+    - NOTE: did this and both came back already created 
 
 ### 1d. Stripe receipts + branding — set in live mode (you, dashboard)
 
 Flip the dashboard to **live mode** (top-left toggle) first — these settings are per-mode. Use the direct URLs; the menu paths move around.
 
-  + [ ] **Business name + statement descriptor** → `dashboard.stripe.com/settings/public`
+  + [x] **Business name + statement descriptor** → `dashboard.stripe.com/settings/public`
     - Set the public business name to "Everlastings by Emaline" and a clear statement descriptor (what shows on the buyer's card statement).
-  + [ ] **Logo + brand color** → `dashboard.stripe.com/settings/branding`
+  + [x] **Logo + brand color** → `dashboard.stripe.com/settings/branding`
     - These appear on anything Stripe emails (receipts, refund notices).
-  + [ ] **Customer receipt email** → `dashboard.stripe.com/settings/emails`
+  + [x] **Customer receipt email** → `dashboard.stripe.com/settings/emails`
     - Turn **"Successful payments"** ON so buyers get a receipt. (See the email map in §4 — the *receipt* is the one email Stripe sends; everything else is ours via Resend.)
     - **Note:** Stripe has quirks about when receipts send in *test* mode, which is why it felt inconsistent before. You'll confirm it for real in the live smoke test (§3).
 
-### 1e. Admin logins (you)
+### 1e. Admin logins (you) 
+
+**NOTE**: also noted below, but this cannot be done until functionality to the Google Workspace account is fixed because of email confirmation notifications during setup and password changes. 
 
   + [ ] Add the remaining admins in Supabase Auth so Em (and any helper) can reach `/admin`.
   + [ ] Walk the **service-login inventory in §5** — confirm which accounts still hold your personal password vs. the hand-off-able one for Em. (That list doubles as Em's handoff sheet.)
 
 ### 1f. Point the GPT at production (you — do this last)
 
+**NOTE**: Saving to do before using GPT, period. Rule will be that I check how it is set up before each use. To go live right now I don't need to change GPT to production since I won't be using it right after. 
+
   + [ ] In Em's GPT builder: Action server URL → the **production** URL · auth → the **Production** `PRODUCT_API_KEY` (not the preview key) · confirm **Web Browsing is ON**.
 
 ### 1g. Quick confirms (mostly nothing to do)
 
-  + [ ] **DNS** — one glance: the custom domain is attached to the project's Production target in Vercel. Pushing `main` auto-deploys Production; the prod domain is unprotected by design. Nothing else to do.
-  + [ ] **Docs** — `EVERLASTINGS_STORE.md` + `README.md` reflect the shipped state (spot-checked; the full doc re-verify happens at the v4.0.0 as-built after v3.3.0, which rewrites those areas anyway).
+  + [x] **DNS** — one glance: the custom domain is attached to the project's Production target in Vercel. Pushing `main` auto-deploys Production; the prod domain is unprotected by design. Nothing else to do.
+  + [x] **Docs** — `EVERLASTINGS_STORE.md` + `README.md` reflect the shipped state (spot-checked; the full doc re-verify happens at the v4.0.0 as-built after v3.3.0, which rewrites those areas anyway).
 
 > **Recurring step for every future go-live too:** bump the **effective dates** on `privacy.html` + `terms.html` to the ship date.
 
@@ -108,6 +113,8 @@ Every **customer** email is ours, sent via **Resend** (`api/_emails/index.ts` + 
 
 ## 5. Service-login inventory (handoff sheet)
 
+**NOTE**: I (Sean) went to update/confirm all logins were to the admin@ email and used the proper password but was blocked because I cannot access the Google Workspace emails until Emy updates the account. 
+
 Every account behind the store, what it's for, and whose login it's under. Use this to confirm which still hold your personal password vs. the hand-off-able one for Em (the goal is a clean sheet she can own).
 
 **Build + hosting**
@@ -126,8 +133,8 @@ Every account behind the store, what it's for, and whose login it's under. Use t
 
 **Management + presence**
   - **OpenAI / ChatGPT** — the "Sunkeeper" Custom GPT. **(Em's account.)**
-  - **Google Workspace** — the `admin@everlastingsbyemaline.com` mailbox. *(Currently down — affects Em's email access.)*
-  - **Google Analytics (GA4)** — `GA4_MEASUREMENT_ID`.
+  - **Google** — and for the Google Workspace email `admin@everlastingsbyemaline.com` which is under `sean@everlastingsbyemaline.com`. *(Currently down — affects Em's email access.)*
+  - **Google Analytics (GA4)** — `GA4_MEASUREMENT_ID`. Run by same Google login.
   - **Meta / Facebook** — Pixel + Conversions API. *(Not configured yet — `META_*` env vars unset; see `assets/docs/archive/v3_3/v3_3_0_FUTURE_meta-capi.md`.)*
 
 ---
