@@ -154,12 +154,9 @@ export async function POST(request: Request) {
     }
 
     const productIds = items.map((i) => i.id);
-    const { error: productUpdateErr } = await supabase
-      .from('products')
-      .update({ available: false })
-      .in('id', productIds);
+    const { error: productUpdateErr } = await supabase.rpc('record_sale', { p_ids: productIds });
     if (productUpdateErr) {
-      console.error(`Product mark-sold failed for ${event.id}:`, productUpdateErr);
+      console.error(`Stock decrement failed for ${event.id}:`, productUpdateErr);
     }
 
     // Per-line-item amount: prefer Stripe's authoritative line items; fall back to splitting amount_total.
