@@ -58,7 +58,7 @@ upload before the row exists. The server normalizes it identically, and it's per
 - Minimum **7** per product: 1 hero, 1 thumbnail, and at least 5 gallery shots. Ideal is 10–15.
 - Good coverage: a clean **hero** (front, well-lit — this is also the thumbnail), 3–4 **angles**, 2–3 **detail** close-ups, 2–3 **lighting** modes, one **scale** reference (next to a familiar object), 1–2 **lifestyle** shots.
 - Upload roles: `hero`, `thumbnail`, `gallery-01`…`gallery-15`, `detail-01`…`detail-05`, `video-01`…`video-05`. For videos, skip the transform. (GIFs are retired — use a short MP4 instead.)
-- The system crops to 4:5, converts to WebP, and puts each on the CDN — Em just sends the photos.
+- Two ways photos come in: Em **attaches** them to the chat (→ uploadImages) or gives a **link** (Drive share / direct URL, or any video → uploadImage). Either way she never renames anything — you assign the role, the server names + crops to 4:5, converts to WebP, and puts each on the CDN. Write a short descriptive **alt** for every image (and `thumbnail_alt`).
 
 ## Worked example — The Sunkeeper
 

@@ -114,6 +114,191 @@ export async function OPTIONS(request: Request) {
   return preflight(request)!;
 }
 
+type UploadResult = { ok: true; url: string; filename: string } | { ok: false; error: string; status: number };
+
+// The per-file validation + Cloudinary/R2 pipeline, returning a result object (not a Response) so both
+// the single-file POST path and the chat-attach batch path can drive it. Moved verbatim from the old
+// inlined POST tail; each error path returns { ok:false, error, status } and success returns { ok:true }.
+async function processOne(file: File, slug: string, role: string, skipTransformField: string | null): Promise<UploadResult> {
+  if (!slug || !role) return { ok: false, error: 'Missing file, slug, or role', status: 400 };
+  if (!ROLE_PATTERN.test(role)) return { ok: false, error: 'Invalid role', status: 400 };
+
+  if (!ALLOWED_MIME.has(file.type)) {
+    return { ok: false, error: 'File type not allowed. Accepted: JPEG, PNG, WebP, GIF, MP4, WebM', status: 400 };
+  }
+
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { ok: false, error: `File too large. Max: ${isVideo ? '50MB' : '10MB'}`, status: 400 };
+  }
+
+  const skipTransform =
+    typeof skipTransformField === 'string' && skipTransformField === 'true';
+  const isImageMime = file.type.startsWith('image/') && file.type !== 'image/gif';
+  const shouldTransform = isImageMime && !skipTransform;
+
+  let finalBuffer: Buffer;
+  let contentType: string;
+  let extension: string;
+
+  try {
+    if (shouldTransform) {
+      const cloud = getCloudinaryConfig();
+      const imageBuffer = Buffer.from(await file.arrayBuffer());
+
+      // Signed upload: Cloudinary verifies api_key + timestamp + signature
+      // against the account secret. Avoids any dependency on dashboard-side
+      // upload presets (the destroy call below uses the same signature pattern).
+      const uploadTimestamp = Math.floor(Date.now() / 1000);
+      const uploadSigString = `timestamp=${uploadTimestamp}${cloud.apiSecret}`;
+      const uploadSignature = await sha1Hex(uploadSigString);
+
+      const uploadForm = new FormData();
+      uploadForm.append('file', new Blob([imageBuffer], { type: file.type }));
+      uploadForm.append('api_key', cloud.apiKey);
+      uploadForm.append('timestamp', String(uploadTimestamp));
+      uploadForm.append('signature', uploadSignature);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/upload`,
+        { method: 'POST', body: uploadForm },
+      );
+      if (!uploadRes.ok) {
+        const detail = await uploadRes.text();
+        console.error('Cloudinary upload failed:', detail);
+        return { ok: false, error: 'Cloudinary upload failed', status: 502 };
+      }
+      const uploadData = (await uploadRes.json()) as { public_id?: string };
+      const publicId = uploadData.public_id;
+      if (!publicId) {
+        return { ok: false, error: 'Cloudinary upload returned no public_id', status: 502 };
+      }
+
+      let aspectRatio = '4:5';
+      let width = role.startsWith('thumbnail') ? 600 : 1200;
+      if (role === 'seo_thumbnail') { aspectRatio = '1.91:1'; width = 1200; } // OG / Twitter card
+      else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
+      const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto/${publicId}`;
+
+      const transformedRes = await fetch(transformUrl);
+      if (!transformedRes.ok) {
+        console.error('Cloudinary transform fetch failed:', transformedRes.status);
+        return { ok: false, error: 'Cloudinary transform failed', status: 502 };
+      }
+      finalBuffer = Buffer.from(await transformedRes.arrayBuffer());
+      contentType = 'image/webp';
+      extension = 'webp';
+
+      const timestamp = Math.floor(Date.now() / 1000);
+      const sigString = `public_id=${publicId}&timestamp=${timestamp}${cloud.apiSecret}`;
+      const signature = await sha1Hex(sigString);
+      const destroyForm = new FormData();
+      destroyForm.append('public_id', publicId);
+      destroyForm.append('api_key', cloud.apiKey);
+      destroyForm.append('timestamp', String(timestamp));
+      destroyForm.append('signature', signature);
+
+      const destroyRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`,
+        { method: 'POST', body: destroyForm },
+      );
+      if (!destroyRes.ok) {
+        console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text());
+      }
+    } else {
+      finalBuffer = Buffer.from(await file.arrayBuffer());
+      contentType = file.type;
+      extension = MIME_TO_EXT[file.type] ?? 'bin';
+    }
+
+    const filename = isTest
+      ? `test_${role}-${slug}.${extension}`
+      : `${role}-${slug}.${extension}`;
+    const key = isTest
+      ? `test/${slug}/${filename}`
+      : `products/${slug}/${filename}`;
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env('R2_BUCKET_NAME'),
+        Key: key,
+        Body: finalBuffer,
+        ContentType: contentType,
+      }),
+    );
+
+    const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
+    return { ok: true, url: publicUrl, filename };
+  } catch (err) {
+    console.error('Upload error:', err);
+    return { ok: false, error: 'Upload failed', status: 500 };
+  }
+}
+
+type FileRef = { name?: string; id?: string; mime_type?: string; download_link?: string };
+
+function positionalRole(i: number): string {
+  if (i === 0) return 'hero';
+  return `gallery-${String(i).padStart(2, '0')}`; // 1 → gallery-01 …
+}
+
+async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: unknown, rolesRaw: unknown): Promise<Response> {
+  if (typeof slugRaw !== 'string' || !slugRaw.trim()) return jsonResponse(request, { error: 'Missing slug' }, 400);
+  if (refs.length === 0) return jsonResponse(request, { error: 'No files attached. Ask Em to attach the photos to the message.' }, 400);
+  if (refs.length > 10) return jsonResponse(request, { error: 'Up to 10 files per message — send them in batches.' }, 400);
+  const slug = slugRaw.trim();
+  const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
+  const uploads: Array<{ url: string; filename: string; role: string }> = [];
+  const failures: Array<{ index: number; error: string }> = [];
+  const usedRoles = new Set<string>();
+  for (let i = 0; i < refs.length; i++) {
+    const ref = refs[i] as FileRef;
+    const link = typeof ref?.download_link === 'string' ? ref.download_link : '';
+    const role = (typeof roles[i] === 'string' && ROLE_PATTERN.test((roles[i] as string).trim()))
+      ? (roles[i] as string).trim()
+      : positionalRole(i);
+    // Each file must land at a UNIQUE role: the server names the R2 object `{role}-{slug}`, so two files
+    // sharing a role would silently OVERWRITE each other (no error). A bad/duplicate explicit role, or a
+    // positional fallback landing on an already-taken role, surfaces loudly instead of losing the file.
+    if (usedRoles.has(role)) {
+      failures.push({ index: i + 1, error: `role "${role}" is already used by an earlier file — give each photo a distinct role` });
+      continue;
+    }
+    // Collect per-file failures instead of bailing on the first — else an already-uploaded batch is
+    // orphaned when file N is bad, and Em re-attaches all 7 (double R2 cost). The GPT reuses the
+    // successes + asks her to re-attach only the failures.
+    if (!isPublicHttpUrl(link)) {
+      failures.push({ index: i + 1, error: 'no usable download link (links last ~5 min — re-attach)' });
+      continue;
+    }
+    let mediaRes: Response;
+    try { mediaRes = await fetch(link, { redirect: 'follow' }); }
+    catch { failures.push({ index: i + 1, error: 'could not fetch the attached file' }); continue; }
+    const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
+      failures.push({ index: i + 1, error: `not an allowed image (got "${fetchedType || 'unknown'}")` });
+      continue;
+    }
+    // Attach is IMAGES-ONLY. A video routed here would be named with an image role (positional default
+    // `hero`) and the GPT would drop its url into images[] → the page renders a broken <img src=.mp4> and
+    // the clip never shows (populateMedia reads media[], not images[]). Reject it loudly so the misroute
+    // can NEVER be silent, even if the GPT slips past the instruction. Video = by-link only.
+    if (fetchedType.startsWith('video/')) {
+      failures.push({ index: i + 1, error: 'video must be sent as a LINK, not attached — ask Em for a Drive share or direct URL and use uploadImage' });
+      continue;
+    }
+    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    const file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
+    const r = await processOne(file, slug, role, null); // attach is images-only → never skip_transform
+    if (!r.ok) { failures.push({ index: i + 1, error: r.error }); continue; }
+    uploads.push({ url: r.url, filename: r.filename, role });
+    usedRoles.add(role); // claim only on success → a file that failed to upload doesn't block a later retry of its role
+  }
+  // 200 with both arrays — partial success IS success: the GPT uses uploads[] and surfaces failures[].
+  return jsonResponse(request, { uploads, failures });
+}
+
 export async function POST(request: Request) {
   if (!(await authorize(request))) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
@@ -127,11 +312,19 @@ export async function POST(request: Request) {
   let skipTransformField: string | null = null;
 
   if ((request.headers.get('content-type') ?? '').includes('application/json')) {
-    let body: { url?: unknown; slug?: unknown; role?: unknown; skip_transform?: unknown };
+    let body: {
+      url?: unknown; slug?: unknown; role?: unknown; skip_transform?: unknown;
+      openaiFileIdRefs?: unknown; roles?: unknown;
+    };
     try {
       body = (await request.json()) as typeof body;
     } catch {
       return jsonResponse(request, { error: 'Invalid JSON body' }, 400);
+    }
+    // Custom GPT chat-attach path: OpenAI populates `openaiFileIdRefs` with { name, id, mime_type,
+    // download_link } objects (download_link ~5-min, <=10 files). Fetch each through the SAME pipeline.
+    if (Array.isArray(body.openaiFileIdRefs)) {
+      return await handleAttachedRefs(request, body.openaiFileIdRefs, body.slug, body.roles);
     }
     if (typeof body.url !== 'string' || typeof body.slug !== 'string' || typeof body.role !== 'string') {
       return jsonResponse(request, { error: 'Missing url, slug, or role' }, 400);
@@ -192,130 +385,8 @@ export async function POST(request: Request) {
     role = roleField.trim();
   }
 
-  if (!slug || !role) {
-    return jsonResponse(request, { error: 'Missing file, slug, or role' }, 400);
-  }
-  if (!ROLE_PATTERN.test(role)) {
-    return jsonResponse(request, { error: 'Invalid role' }, 400);
-  }
-
-  if (!ALLOWED_MIME.has(file.type)) {
-    return jsonResponse(
-      request,
-      { error: 'File type not allowed. Accepted: JPEG, PNG, WebP, GIF, MP4, WebM' },
-      400,
-    );
-  }
-
-  const isVideo = file.type.startsWith('video/');
-  const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return jsonResponse(
-      request,
-      { error: `File too large. Max: ${isVideo ? '50MB' : '10MB'}` },
-      400,
-    );
-  }
-
-  const skipTransform =
-    typeof skipTransformField === 'string' && skipTransformField === 'true';
-  const isImageMime = file.type.startsWith('image/') && file.type !== 'image/gif';
-  const shouldTransform = isImageMime && !skipTransform;
-
-  let finalBuffer: Buffer;
-  let contentType: string;
-  let extension: string;
-
-  try {
-    if (shouldTransform) {
-      const cloud = getCloudinaryConfig();
-      const imageBuffer = Buffer.from(await file.arrayBuffer());
-
-      // Signed upload: Cloudinary verifies api_key + timestamp + signature
-      // against the account secret. Avoids any dependency on dashboard-side
-      // upload presets (the destroy call below uses the same signature pattern).
-      const uploadTimestamp = Math.floor(Date.now() / 1000);
-      const uploadSigString = `timestamp=${uploadTimestamp}${cloud.apiSecret}`;
-      const uploadSignature = await sha1Hex(uploadSigString);
-
-      const uploadForm = new FormData();
-      uploadForm.append('file', new Blob([imageBuffer], { type: file.type }));
-      uploadForm.append('api_key', cloud.apiKey);
-      uploadForm.append('timestamp', String(uploadTimestamp));
-      uploadForm.append('signature', uploadSignature);
-
-      const uploadRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/upload`,
-        { method: 'POST', body: uploadForm },
-      );
-      if (!uploadRes.ok) {
-        const detail = await uploadRes.text();
-        console.error('Cloudinary upload failed:', detail);
-        return jsonResponse(request, { error: 'Cloudinary upload failed' }, 502);
-      }
-      const uploadData = (await uploadRes.json()) as { public_id?: string };
-      const publicId = uploadData.public_id;
-      if (!publicId) {
-        return jsonResponse(request, { error: 'Cloudinary upload returned no public_id' }, 502);
-      }
-
-      let aspectRatio = '4:5';
-      let width = role.startsWith('thumbnail') ? 600 : 1200;
-      if (role === 'seo_thumbnail') { aspectRatio = '1.91:1'; width = 1200; } // OG / Twitter card
-      else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
-      const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto/${publicId}`;
-
-      const transformedRes = await fetch(transformUrl);
-      if (!transformedRes.ok) {
-        console.error('Cloudinary transform fetch failed:', transformedRes.status);
-        return jsonResponse(request, { error: 'Cloudinary transform failed' }, 502);
-      }
-      finalBuffer = Buffer.from(await transformedRes.arrayBuffer());
-      contentType = 'image/webp';
-      extension = 'webp';
-
-      const timestamp = Math.floor(Date.now() / 1000);
-      const sigString = `public_id=${publicId}&timestamp=${timestamp}${cloud.apiSecret}`;
-      const signature = await sha1Hex(sigString);
-      const destroyForm = new FormData();
-      destroyForm.append('public_id', publicId);
-      destroyForm.append('api_key', cloud.apiKey);
-      destroyForm.append('timestamp', String(timestamp));
-      destroyForm.append('signature', signature);
-
-      const destroyRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`,
-        { method: 'POST', body: destroyForm },
-      );
-      if (!destroyRes.ok) {
-        console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text());
-      }
-    } else {
-      finalBuffer = Buffer.from(await file.arrayBuffer());
-      contentType = file.type;
-      extension = MIME_TO_EXT[file.type] ?? 'bin';
-    }
-
-    const filename = isTest
-      ? `test_${role}-${slug}.${extension}`
-      : `${role}-${slug}.${extension}`;
-    const key = isTest
-      ? `test/${slug}/${filename}`
-      : `products/${slug}/${filename}`;
-
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: env('R2_BUCKET_NAME'),
-        Key: key,
-        Body: finalBuffer,
-        ContentType: contentType,
-      }),
-    );
-
-    const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
-    return jsonResponse(request, { url: publicUrl, filename });
-  } catch (err) {
-    console.error('Upload error:', err);
-    return jsonResponse(request, { error: 'Upload failed' }, 500);
-  }
+  const r = await processOne(file, slug, role, skipTransformField);
+  return r.ok
+    ? jsonResponse(request, { url: r.url, filename: r.filename })
+    : jsonResponse(request, { error: r.error }, r.status);
 }

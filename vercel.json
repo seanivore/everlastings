@@ -18,6 +18,7 @@
     { "source": "/api/products/by-slug/:slug", "destination": "/api/products?slug=:slug" },
     { "source": "/api/coupons", "destination": "/api/products?_action=coupon" },
     { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
+    { "source": "/api/upload/attach", "destination": "/api/upload" },
     { "source": "/api/cart-activity", "destination": "/api/cart?_action=activity" },
     { "source": "/api/cart-recovery", "destination": "/api/cart?_action=recovery" }
   ]

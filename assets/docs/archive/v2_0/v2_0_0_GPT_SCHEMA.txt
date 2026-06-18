@@ -267,7 +267,7 @@ paths:
   /api/upload:
     post:
       operationId: uploadImage
-      summary: "Upload a photo or video to the store's CDN and return its url; call it for every image/video before createProduct/editProduct, then put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."
+      summary: "Upload a photo or video to the CDN and return its url; call before createProduct/editProduct, then put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. By LINK (Drive share/URL) or video. If she ATTACHED photos, use uploadImages."
       requestBody:
         required: true
         content:
@@ -283,6 +283,30 @@ paths:
       responses:
         '200': { description: "Uploaded; returns { url, filename }. Use url verbatim in the product fields." }
         '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
+  /api/upload/attach:
+    post:
+      operationId: uploadImages
+      summary: "Upload one or more photos the owner ATTACHED to this chat (not a link). Call this with their attached images, then put each returned url into images[]/thumbnail on createProduct/editProduct. For media she gives as a Drive/direct LINK, or for video, use uploadImage instead."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openaiFileIdRefs, slug]
+              properties:
+                openaiFileIdRefs:
+                  type: array
+                  items: { type: string }
+                  description: "The photos the owner attached to the chat. Leave the values to the platform — just include this property so the attached files are forwarded. Up to 10 per call."
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the files on the CDN. Same value you'll use on createProduct." }
+                roles:
+                  type: array
+                  items: { type: string }
+                  description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05, thumbnail, seo_thumbnail, checkout_image. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
+      responses:
+        '200': { description: "Returns { uploads: [{ url, role, filename }, …], failures: [{ index, error }, …] }. Use each uploaded url verbatim in the product fields; if failures is non-empty, keep the successes and ask Em to re-attach just those." }
+        '400': { description: "No files attached, more than 10 files, or a missing slug (whole-request errors). Per-file problems come back in failures[], not here. Relay plainly." }
   /api/orders:
     get:
       operationId: listOrders

@@ -297,7 +297,9 @@ function openEditor(productId) {
   $('p-shipping').value = arrayToLines(eff?.shipping_details);
   $('p-series').value = eff?.series ?? '';
   $('p-theme').value = eff?.homepage_theme ? JSON.stringify(eff.homepage_theme) : '';
-  $('p-media').value = eff?.media ? JSON.stringify(eff.media) : '';
+  const mediaList = $('p-media-list');
+  mediaList.innerHTML = '';
+  if (Array.isArray(eff?.media)) eff.media.forEach((m) => addMediaRow(m));
   $('p-available').checked = product?.available !== false;                                         // live-apply — show live
   $('p-featured').checked = !!eff?.featured;
   $('p-artist-note').value = eff?.artist_note ?? '';
@@ -335,15 +337,40 @@ function addImageRow(url, alt) {
   const row = document.createElement('div');
   row.className = 'img-url-row';
   row.innerHTML = `
-    <span style="font-size:11px;color:#666">URL</span>
+    <img class="img-thumb" alt="" />
+    <span class="img-role" style="font-size:11px;color:var(--c-text-muted,#666)"></span>
     <input type="url" class="img-url" placeholder="https://cdn.../products/slug/hero-slug.webp" />
     <input type="text" class="img-alt" placeholder="alt text" />
     <button type="button" class="remove-row">Remove</button>
   `;
-  row.querySelector('.img-url').value = url || '';
+  const urlInput = row.querySelector('.img-url');
+  const thumb = row.querySelector('.img-thumb');
+  const roleTag = row.querySelector('.img-role');
+  const sync = () => {
+    const v = urlInput.value.trim();
+    thumb.src = v;
+    thumb.style.visibility = v ? 'visible' : 'hidden';
+    const m = v.match(/\/(?:test_)?(hero|thumbnail|seo_thumbnail|checkout_image|gallery-\d+|detail-\d+|video-\d+)[-.]/); // all 7 roles (AR#37) — was missing seo_thumbnail/checkout_image
+    roleTag.textContent = m ? m[1] : '';
+    updateCoverage();
+  };
+  urlInput.value = url || '';
   row.querySelector('.img-alt').value = alt || '';
-  row.querySelector('.remove-row').addEventListener('click', () => row.remove());
+  urlInput.addEventListener('input', sync);
+  row.querySelector('.remove-row').addEventListener('click', () => { row.remove(); updateCoverage(); });
   list.appendChild(row);
+  sync();
+}
+
+function updateCoverage() {
+  const el = $('img-coverage');
+  if (!el) return;
+  const urls = [...$('p-images').querySelectorAll('.img-url')].map((i) => i.value.trim()).filter(Boolean);
+  const hero = urls.some((u) => /\/(?:test_)?hero-/.test(u));
+  const gallery = urls.filter((u) => /\/(?:test_)?gallery-/.test(u)).length;
+  const thumb = !!$('p-thumbnail').value.trim() || hero; // hero IS reused as the thumbnail at submit (buildProductPayload, below) — so this ✓ is honest
+  const part = (ok, label) => `<span style="color:${ok ? 'var(--c-success,#2f7d52)' : 'var(--c-warn,#8a5a00)'}">${ok ? '✓' : '•'} ${label}</span>`; // tokens-with-fallback (AR#D4) — was the literal --c-success/--c-warn values, a duplication trap
+  el.innerHTML = [part(hero, 'hero'), part(gallery >= 5, `gallery ${gallery}/5`), part(thumb, 'thumbnail')].join(' &nbsp; ');
 }
 
 function collectImages() {
@@ -353,6 +380,65 @@ function collectImages() {
     const url = row.querySelector('.img-url').value.trim();
     const alt = row.querySelector('.img-alt').value.trim();
     if (url) out.push({ url, alt });
+  });
+  return out;
+}
+
+function addMediaRow(m) {
+  const list = $('p-media-list');
+  const row = document.createElement('div');
+  row.className = 'media-row';
+  row.style.cssText = 'border:1px solid var(--c-border,#eee);border-radius:4px;padding:8px;display:grid;gap:6px';
+  row.innerHTML = `
+    <div class="media-row__head">
+      <select class="m-type"><option value="video">MP4 clip</option><option value="youtube">YouTube</option></select>
+      <input type="url" class="m-url" aria-label="Video or YouTube URL" placeholder="https://cdn.../video-01-slug.mp4  ·  or  https://youtu.be/ID" style="min-width:0;padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+      <button type="button" class="remove-row">Remove</button>
+    </div>
+    <div class="m-video-opts" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:13px">
+      <label class="checkbox-row"><input type="checkbox" class="m-autoplay" /><span>Autoplay + loop, silent (GIF-like)</span></label>
+      <label class="checkbox-row"><input type="checkbox" class="m-controls" checked /><span>Show play/pause buttons (uncheck = button-less click-to-play)</span></label>
+      <input type="url" class="m-poster" aria-label="Poster image URL" placeholder="poster image url (still shown before play)" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+    </div>
+    <input type="text" class="m-alt" aria-label="Clip alt text" placeholder="alt text — describe the clip" style="padding:6px 8px;border:1px solid var(--c-border-strong,#ccc);border-radius:4px;font:inherit;font-size:13px" />
+  `;
+  row.querySelector('.m-type').value = m?.type === 'youtube' ? 'youtube' : 'video';
+  row.querySelector('.m-url').value = m?.url || '';
+  row.querySelector('.m-autoplay').checked = m?.autoplay === true;
+  row.querySelector('.m-controls').checked = m?.controls !== false; // controls default true; only an explicit controls:false unchecks (button-less click-to-play) — AR#F16, owner-settable now
+  row.querySelector('.m-poster').value = m?.poster || '';
+  row.querySelector('.m-alt').value = m?.alt || '';
+  const opts = row.querySelector('.m-video-opts');
+  const autoplayCb = row.querySelector('.m-autoplay');
+  const controlsCb = row.querySelector('.m-controls');
+  const syncOpts = () => {
+    opts.style.display = row.querySelector('.m-type').value === 'video' ? 'flex' : 'none';
+    controlsCb.disabled = autoplayCb.checked; // GIF-like = no buttons; the toggle only applies to click-to-play
+  };
+  syncOpts();
+  row.querySelector('.m-type').addEventListener('change', syncOpts);
+  autoplayCb.addEventListener('change', syncOpts);
+  row.querySelector('.remove-row').addEventListener('click', () => row.remove());
+  list.appendChild(row);
+}
+
+function collectMedia() {
+  const out = [];
+  $('p-media-list').querySelectorAll('.media-row').forEach((row) => {
+    const url = row.querySelector('.m-url').value.trim();
+    if (!url) return;
+    const alt = row.querySelector('.m-alt').value.trim();
+    if (row.querySelector('.m-type').value === 'youtube') {
+      out.push(alt ? { type: 'youtube', url, alt } : { type: 'youtube', url });
+      return;
+    }
+    const item = { type: 'video', url };
+    if (row.querySelector('.m-autoplay').checked) { item.autoplay = true; item.loop = true; } // GIF-like preset; controls omitted on purpose — populateMedia derives no-controls from autoplay (product.js:252-254), so it renders button-less
+    else if (!row.querySelector('.m-controls').checked) { item.controls = false; } // click-to-play, button-less — owner unchecked "Show play/pause buttons" (product.js:258 reads m.controls!==false). AR#F16: owner-settable now, was a hidden dataset before
+    const poster = row.querySelector('.m-poster').value.trim();
+    if (poster) item.poster = poster;
+    if (alt) item.alt = alt;
+    out.push(item);
   });
   return out;
 }
@@ -432,7 +518,9 @@ function buildProductPayload() {
     checkout_name: $('p-checkout-name').value.trim() || null,
     checkout_description: $('p-checkout-description').value.trim() || null,
     checkout_image: $('p-checkout-image').value.trim() || null,
-    thumbnail: $('p-thumbnail').value.trim(),
+    thumbnail: $('p-thumbnail').value.trim()
+      || [...$('p-images').querySelectorAll('.img-url')].map((i) => i.value.trim()).find((u) => /\/(?:test_)?hero-/.test(u))
+      || '',
     thumbnail_alt: $('p-thumbnail-alt').value.trim() || null,
     images: collectImages(),
   };
@@ -448,13 +536,8 @@ function buildProductPayload() {
     payload.homepage_theme = null;
   }
 
-  const mediaRaw = $('p-media').value.trim();
-  if (mediaRaw) {
-    try { payload.media = JSON.parse(mediaRaw); }
-    catch { throw new Error('Media must be a valid JSON array or empty'); }
-  } else {
-    payload.media = null;
-  }
+  const media = collectMedia();
+  payload.media = media.length ? media : null;
 
   const slugVal = $('p-slug').value.trim();
   if (!state.editing && slugVal) payload.slug = slugVal;

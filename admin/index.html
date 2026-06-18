@@ -58,7 +58,8 @@
       .status-msg.success { background: #efe; color: #060; border: 1px solid #bdb; }
       .status-msg.info { background: #eef; color: #006; border: 1px solid #bbd; }
       .img-url-list { display: grid; gap: 6px; }
-      .img-url-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; }
+      .img-url-row { display: grid; grid-template-columns: 40px 64px 1fr 1fr auto; gap: 6px; align-items: center; }
+      .img-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: var(--c-surface-2, #eee); }
       .img-url-row select, .img-url-row input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font: inherit; font-size: 13px; }
       .upload-row { display: grid; grid-template-columns: 140px 1fr auto; gap: 6px; align-items: center; margin-top: 6px; }
       .upload-row select, .upload-row input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font: inherit; font-size: 13px; }
@@ -157,7 +158,12 @@
                 <span></span>
               </div>
               <label class="field"><span>Artist Note</span><textarea id="p-artist-note" rows="2"></textarea></label>
-              <label class="field"><span>Media (JSON array — optional MP4 / YouTube, in order)</span><textarea id="p-media" rows="3" placeholder='[{"type":"video","url":"https://cdn.../video-01-slug.mp4","loop":true,"autoplay":true},{"type":"youtube","url":"https://youtu.be/ID"}]'></textarea></label>
+              <div>
+                <strong style="font-size:13px">Media (optional — MP4 clips + YouTube, in order)</strong>
+                <p style="font-size:12px;color:var(--c-text-muted,#666);margin:4px 0 8px">MP4s render before YouTube. Per clip, choose how it plays.</p>
+                <div id="p-media-list" class="img-url-list"></div>
+                <button type="button" id="add-media-row" style="margin-top:6px">Add video</button>
+              </div>
               <div class="row-2">
                 <label class="field"><span>SEO Title</span><input id="p-seo-title" /></label>
                 <label class="field"><span>SEO Description</span><input id="p-seo-description" /></label>
@@ -184,6 +190,7 @@
                     At least one hero- and five gallery- entries required.
                   </p>
                   <div id="p-images" class="img-url-list"></div>
+                  <div id="img-coverage" style="font-size:12px;margin:6px 0"></div>
                   <button type="button" id="add-image-row" style="margin-top:6px">Add image URL</button>
                 </div>
                 <div style="margin-top:14px">
