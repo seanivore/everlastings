@@ -38,3 +38,53 @@ The bug class static checks can't catch (CommonJS output / Node-20 runtime globa
 - **Live E2E** (Stripe test mode): seed 3 test pieces, run the multi-cart refund headline (no over-refund + sub-subtab independence), inventory decrement/atomicity, idempotency — per `v3_3_0_ADDENDUM_TESTING.md` items 1-8, 32-35.
 - **Design render-tune** (your eye): /admin neutral-template look (accent/spacing/type; the P0 edits-precedence flag); homepage Lottie write-on (author the JSON) + old-film hero (HyperFrames grade) + re-graded poster.
 - **After sign-off**: as-built doc-sync (a FRESH agent, per the method in IMPLEMENT) → opens v4.0.0; then `dev → main` + tag; repoint the GPT back to production.
+
+---
+
+## Your To-Do
+
+  Human-formatted — the build is done and pushed to `dev`, so none of this blocks it. The preview already serves v3.3.
+
+### Where To Test
+
+  + Admin, homepage, GPT Actions — https://everlastings-website-h4a0hhyya-everlastingsbyemaline.vercel.app
+  + Purchase + refund (webhook) flows — the `dev`-branch alias, now serving v3.3 after the push, which is the URL the Stripe webhook talks to
+
+### GPT Check — In Em's ChatGPT Account
+
+  The Actions are already proven via direct calls; this just confirms the GPT as the client.
+
+  + [ ] Repoint the Action server URL to the Preview URL
+  + [ ] Set the auth to the Preview PRODUCT_API_KEY
+  + [ ] Confirm Web Browsing is ON
+  + [ ] Re-paste the Action schema — now adds refundOrder, uploadImages, expires_date
+  + [ ] Re-paste the instructions — the Phase 3.9 text
+  + [ ] Spot-check in chat — issue a refund, make a coupon, attach a photo
+
+### Live Tests — Stripe Test Mode
+
+  + [ ] Seed 3 different live test pieces, so one cart can hold three
+  + [ ] Buy all 3, refund one — only that piece refunds and relists; the other two stay sold and buyable
+  + [ ] Ship one of the 3 first, then open Refund from Needs Shipping — the panel still lists all 3
+  + [ ] Set a piece to qty 2, buy one — it stays available; buy the second — it goes sold
+  + [ ] Double-click Refund — exactly one Stripe refund lands
+
+### Design — Your Eye, Render-Tune
+
+  + [ ] /admin look — accent, spacing, type; the slate + indigo-slate is a starting default to refine, not a constraint
+
+  + [ ] Product-state precedence — a sold piece with staged edits currently shows under Live, badged "edits"; say the word if you'd rather it read Sold-first
+
+  + [ ] Old-film hero — the HyperFrames warm-grain grade isn't applied yet
+    - `-v2` is a clean copy of the current hero for now, so the swap works but the look is pending
+    - On your go — I run the warm-grain composition, re-grade the poster, drop both to R2
+
+  + [ ] Hero title write-on — no animation yet; the hero shows the real styled title
+    - On your go — I author it via text-to-lottie (Cormorant outlines, trim-path draw-on), QA it, drop the JSON in
+    - The code loads it the moment the file exists, and falls back cleanly until then
+
+### After You Sign Off
+
+  + [ ] I run the as-built doc-sync with a fresh agent — folds v3.3 into the store docs and opens v4.0.0
+  + [ ] Ship dev → main, plus a tag
+  + [ ] Repoint the GPT back to production — prod URL, Production key, re-paste schema + instructions
