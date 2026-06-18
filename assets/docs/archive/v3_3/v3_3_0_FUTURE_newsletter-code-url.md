@@ -28,14 +28,23 @@ So the welcome email should contain a ready-to-click link that lands the subscri
 2. **Email — use the branded shell + embed the link.** Switch `subscribe.ts` to `welcomeCouponEmailHtml` (kills the inline HTML + the TODO). Extend `WelcomeCouponEmailArgs` with an `applyUrl` and render a button: e.g. `https://everlastingsbyemaline.com/shop?promo=${code}` (or `/cart?promo=…`, matching whatever the front-end honors). Keep the code visible as text too (some clients strip buttons).
 3. **Mirror for cart-recovery (optional but tidy):** `cartRecoveryCouponEmailHtml` (`_emails/index.ts:129`) has the same code-as-text shape — give it the same `applyUrl` treatment so both promo emails behave alike.
 
-## Live observation + testing gap (flagged 2026-06-18)
+## CONFIRMED BUG — the email-capture forms never call the API (root cause, 2026-06-18)
 
-On the **live** site, submitting an email subscribed the row (the `subscribers` table shows the insert) but **no welcome email arrived** within a few minutes. The DB insert and the Resend send are independent, and `subscribe.ts` **swallows a send failure silently** — `catch (mailErr) { console.error(...) }` and the API still returns "Subscribed" — so a delivery problem is invisible to the visitor and leaves no surface signal. Most likely cause: the production **Resend sending domain / `RESEND_FROM_EMAIL` isn't verified** (or the message is in spam, or the prod `RESEND_API_KEY` is restricted). First checks: Resend → Domains for `everlastingsbyemaline.com` verification, and Resend → Logs for the send attempt.
+Live, a signup shows "You're on the list" but **no email sends — and Resend has no send attempt in its logs *or* metrics.** The domain is verified and order/shipping emails arrive fine, so it is **not** a Resend/domain/spam problem (my earlier guess was wrong). Root cause is a **frontend event-target mismatch**:
+- `ui.js:89` dispatches the submit event on **`window`**: `window.dispatchEvent(new CustomEvent('email-cta-submit', …))`.
+- `main.js:173` — the listener that actually POSTs to `/api/subscribe` — listens on **`document`**: `document.addEventListener('email-cta-submit', …)`.
+- An event dispatched on `window` does not reach a `document` listener, so **the POST never fires.** `/api/subscribe` (and therefore Resend) is never called.
 
-**Testing gap:** the newsletter **signup → welcome-email-delivered** path is not a numbered item in the testing docs and should be. Cover both variants and both modes, and assert **delivery** (not just the 200 — the silent-catch is exactly why a 200 isn't proof):
-- footer form (`newsletter-footer`) → plain welcome email arrives;
-- contemplation-offer form → welcome email **with a working single-use code** arrives (requires `newsletter-welcome-5` to exist in that mode);
-- a duplicate email returns "Already subscribed" and sends nothing.
+This affects **every email-cta form**, not just the newsletter — product-interest "notify me," the cart-exit modal, the footer / homepage / shop-empty newsletter forms, and the contemplation-offer 5% popup all dispatch through the same path. (The lone `subscribers` row is from `checkout.ts`'s `source:'checkout-started'` upsert, not a form.) The "You're on the list" toast is **unconditional** (`ui.js:93`, fires regardless of the API), which masked the breakage.
+
+**The fix (one line):** make the dispatch and the API listener share a target. Cleanest: change `main.js:173` to `window.addEventListener('email-cta-submit', …)` — everything else in the flow already uses `window` (the success / already-subscribed events at `main.js:184/234`, and ui.js's own `window` listener at `:178`). Equivalent: change `ui.js:89` to `document.dispatchEvent`.
+
+**Fix these adjacent issues at the same time:**
+- **Status mismatch:** `subscribe.ts` returns **200** `{message:'Already subscribed'}` for a duplicate (`23505`), but `main.js:189` branches on **409** — so once the POST works, duplicates fall into the *success* branch. Align them (return 409, or branch on the message).
+- **Unconditional success toast** (`ui.js:93`): show the real outcome — success vs. error vs. already-subscribed — not always "You're on the list."
+- **"Already on the list" UX (Sean's call):** when the email already exists, say so distinctly ("You're already on the list") rather than implying a fresh signup — so someone can't keep re-submitting hoping for another 5% (the single-use code only mints on a *new* contemplation-offer insert anyway, but the messaging should be honest).
+
+**Testing gap:** the **signup → welcome-email-DELIVERED** path is not a numbered item in the testing docs and must be — assert **delivery** (a 200 isn't proof; `subscribe.ts`'s silent `catch (mailErr)` would hide a real send failure too, even after the dispatch bug is fixed). Cover: footer form → plain welcome; contemplation-offer → welcome **with a working single-use code** (needs `newsletter-welcome-5` in that mode); duplicate → "already on the list," no send.
 
 ## Considerations
 
