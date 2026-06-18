@@ -150,12 +150,15 @@ function attachEventListeners() {
   $('product-form').addEventListener('submit', onSaveProduct);
   $('delete-product').addEventListener('click', onArchiveToggle);
   $('add-image-row').addEventListener('click', () => addImageRow('', ''));
-  $('upload-btn').addEventListener('click', onUploadImage);
+  $('add-media-row').addEventListener('click', () => addMediaRow(null)); // WS3.7b — structured media editor's add button (folded here so :152-161 is touched once; AR#B1/C2/D8)
+  wireUploadZones();                                       // P3d — wire the seven role zones (replaces the deleted #upload-btn handler + onUploadImage fn)
+  wireProductSubtabs();                                    // P0(i) — product-list state filter
+  $('editor-back').addEventListener('click', closeEditor); // P0(ii) — ← Products back control
 
-  document.querySelectorAll('.subtab-btn').forEach((btn) => {
+  document.querySelectorAll('#tab-orders .subtab-btn').forEach((btn) => {   // SCOPED to #tab-orders (the P0 product subtabs reuse `.subtab-btn`)
     btn.addEventListener('click', () => {
       state.ordersStatus = btn.dataset.status;
-      document.querySelectorAll('.subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('#tab-orders .subtab-btn').forEach((b) => b.classList.toggle('active', b === btn));
       loadOrders();
     });
   });
@@ -220,6 +223,10 @@ function authHeader() {
 async function loadProducts() {
   setStatus('products-status', '', 'info');
   closeEditor();
+  $('products-list').innerHTML = Array.from({ length: 6 }, () =>
+    '<div class="product-card"><div class="skeleton" style="height:140px"></div>'
+    + '<div class="skeleton" style="height:14px;margin:8px 0 6px"></div>'
+    + '<div class="skeleton" style="height:12px;width:60%"></div></div>').join('');
   try {
     const res = await fetch('/api/products', { headers: { ...authHeader() } });
     if (!res.ok) {
@@ -234,28 +241,56 @@ async function loadProducts() {
   }
 }
 
+// ONE canonical product-state predicate (P0) — drives BOTH the filter subtabs and the P2 card badge.
+// Precedence (first match wins): archived overrides everything; then draft; then edits (published with a
+// staged draft pending); then sold; else live.
+function productState(p) {
+  if (p.archived_at) return 'archived';   // overrides everything
+  if (!p.is_published) return 'draft';
+  if (p.draft != null) return 'edits';    // published with a staged draft pending
+  if (!p.available) return 'sold';
+  return 'live';
+}
+
+let activeProductFilter = 'all';                  // module-level, beside `state`
+function matchesProductFilter(p) {
+  if (activeProductFilter === 'all') return true;
+  const s = productState(p);                      // the ONE canonical predicate above
+  if (activeProductFilter === 'live') return s === 'live' || s === 'edits'; // Edits list under Live
+  return s === activeProductFilter;
+}
+function wireProductSubtabs() {                    // call once from init/attachEventListeners
+  document.querySelectorAll('#product-subtabs .subtab-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      activeProductFilter = b.dataset.pstate;
+      document.querySelectorAll('#product-subtabs .subtab-btn').forEach((x) => x.classList.toggle('active', x === b));
+      renderProductList();                         // re-render from the already-fetched state.products — NO refetch
+    });
+  });
+}
+
 function renderProductList() {
   const list = $('products-list');
-  if (!state.products.length) {
-    list.innerHTML = '<div class="empty">No products yet. Click "New Product" to add one.</div>';
+  const shown = (state.products || []).filter(matchesProductFilter);   // P0 state-filter (module-level activeProductFilter)
+  if (!shown.length) {
+    const msg = !(state.products && state.products.length)
+      ? 'No products yet. Click "New Product" to add one.'
+      : 'No products match this filter.';                              // AR#D5 — honest two-state empty copy (empty catalog vs filtered-empty)
+    list.innerHTML = `<div class="empty">${msg}</div>`;
     return;
   }
   list.innerHTML = '';
-  for (const p of state.products) {
+  for (const p of shown) {
     const card = document.createElement('div');
-    card.className = 'product-card';
+    card.className = p.archived_at ? 'product-card is-archived' : 'product-card';   // AR#D2 — dim archived (opacity:.6)
     const thumb = p.thumbnail || (Array.isArray(p.images) && p.images[0]?.url) || '';
     const priceLabel = typeof p.price === 'number' ? `$${centsToDollars(p.price)}` : '—';
-    const availPill = p.available ? '<span class="pill">available</span>' : '<span class="pill unsent">sold</span>';
-    const statusPill = p.archived_at
-      ? '<span class="pill archived">archived</span>'
-      : p.is_published
-        ? (p.draft ? '<span class="pill edits">live · edits pending</span>' : '<span class="pill shipped">live</span>')
-        : '<span class="pill draft">draft</span>';
+    const s = productState(p);                                         // ONE canonical predicate (P0) — the single status axis
     card.innerHTML = `
+      <span class="pc-badge pill ${s}">${s}</span>
       <img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.thumbnail_alt || p.title || '')}" />
       <p class="pc-title">${escapeHtml(p.title || '(untitled)')}</p>
-      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'} ${statusPill} ${availPill}</p>
+      <p class="pc-meta">${priceLabel} · qty ${p.quantity ?? '—'}</p>
     `;
     card.addEventListener('click', () => openEditor(p.id));
     list.appendChild(card);
@@ -276,6 +311,8 @@ function openEditor(productId) {
   setStatus('editor-status', '', 'info');
   $('product-editor').classList.remove('hidden');
   $('products-list').classList.add('hidden');
+  $('product-subtabs')?.classList.add('hidden'); // P0(iv) — hide the state-filter chrome while editing
+  document.querySelector('.state-legend')?.classList.add('hidden');
   $('editor-heading').textContent = product ? `Edit: ${product.title}` : 'New Product';
 
   $('p-id').value = product?.id ?? '';
@@ -323,12 +360,16 @@ function openEditor(productId) {
   const archiveBtn = $('delete-product');
   archiveBtn.classList.toggle('hidden', !product);
   archiveBtn.textContent = product?.archived_at ? 'Resurface' : 'Archive';
-  $('upload-status').textContent = '';
+  // P3d — clear the per-zone upload messages (the old single status line was removed; reaching for it
+  // would now resolve to null → null.textContent throws a TypeError on EVERY editor open, invisible to tsc/node --check).
+  document.querySelectorAll('.upload-zone .zone-msg').forEach((m) => { m.textContent = ''; });
 }
 
 function closeEditor() {
   $('product-editor').classList.add('hidden');
   $('products-list').classList.remove('hidden');
+  $('product-subtabs')?.classList.remove('hidden'); // P0(iv) mirror — restore the list chrome
+  document.querySelector('.state-legend')?.classList.remove('hidden');
   state.editing = null;
 }
 
@@ -443,48 +484,78 @@ function collectMedia() {
   return out;
 }
 
-async function onUploadImage() {
-  setStatus('upload-status', '', 'info');
-  const file = $('upload-file').files[0];
-  if (!file) {
-    $('upload-status').textContent = 'Choose a file first.';
-    return;
-  }
-  let slug = $('p-slug').value.trim();
-  if (!slug) slug = deriveSlug($('p-title').value);
-  if (!slug) {
-    $('upload-status').textContent = 'Enter a title or slug before uploading.';
-    return;
-  }
-  const role = $('upload-role').value;
-  const skip = $('upload-skip-transform').checked ? 'true' : '';
+// P3d — role-sectioned upload zones replace the single #upload-role select + #upload-btn. The role is
+// the ZONE you drop into (load-bearing: the frontend reads role from the {role}-{slug} filename), so the
+// wrong-role footgun is gone and video gets a first-class home.
+function nextNumberedRole(base) {
+  // base = 'gallery' | 'detail' | 'video'. Scan the relevant list for the highest base-NN, IGNORE
+  // holes, return base-0(N+1). NEVER renumber an existing file (the CDN filename is the role).
+  const sel = base === 'video' ? '#p-media-list .m-url' : '#p-images .img-url';
+  const re = new RegExp(`\\/(?:test_)?${base}-(\\d+)[-.]`);
+  let max = 0;
+  document.querySelectorAll(sel).forEach((i) => { const m = i.value.match(re); if (m) max = Math.max(max, +m[1]); });
+  return `${base}-${String(max + 1).padStart(2, '0')}`;
+}
 
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('slug', slug);
-  fd.append('role', role);
-  if (skip) fd.append('skip_transform', skip);
+async function wireUploadZone(zoneEl, role) {
+  const fileInput = zoneEl.querySelector('.zone-file');
+  const msg = zoneEl.querySelector('.zone-msg');
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    // AR#F13 — `accept` is only a HINT (drag-drop + some mobile browsers bypass it); enforce the
+    // image/video split here, because the server's ALLOWED_MIME accepts BOTH, so under the Video
+    // zone's skip_transform an image would slip through and become a broken <video> in media[].
+    if (role === 'video' && !file.type.startsWith('video/')) { msg.textContent = 'The Video zone takes video only — drop an MP4/WebM.'; fileInput.value = ''; return; }
+    if (role !== 'video' && file.type.startsWith('video/')) { msg.textContent = 'Video belongs in the Video zone.'; fileInput.value = ''; return; }
+    const slug = $('p-slug').value.trim() || deriveSlug($('p-title').value);
+    if (!slug) { msg.textContent = 'Enter a title or slug first.'; return; }
+    const numbered = role === 'gallery' || role === 'detail' || role === 'video';
+    const resolvedRole = numbered ? nextNumberedRole(role) : role;
+    // AR#F7 — single-role zones (hero/thumbnail/seo_thumbnail/checkout_image) reuse the SAME filename
+    // ({role}-{slug}), so a 2nd upload silently overwrites the R2 object AND would append a 2nd row at
+    // the one file ("two heroes"). Chat-attach already guards this (handleAttachedRefs usedRoles); /admin
+    // must not be MORE dangerous than the GPT for the same op. Confirm, then REPLACE the row in place.
+    const roleRe = new RegExp(`\\/(?:test_)?${resolvedRole}[-.]`);
+    const existingRow = !numbered
+      ? [...$('p-images').querySelectorAll('.img-url-row')].find((r) => roleRe.test(((r.querySelector('.img-url') || {}).value || '').trim()))
+      : null;
+    if (existingRow && !window.confirm(`Replace the existing ${resolvedRole} image?`)) { fileInput.value = ''; return; }
+    const fd = new FormData();
+    fd.append('file', file); fd.append('slug', slug); fd.append('role', resolvedRole);
+    if (role === 'video') fd.append('skip_transform', 'true'); // a video always skips the Cloudinary crop (old 3.7c rule)
+    msg.textContent = 'Uploading…';
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', headers: { ...authHeader() }, body: fd });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+      msg.textContent = `Added ${resolvedRole}.`;
+      if (role === 'video') addMediaRow({ type: 'video', url: body.url });
+      else if (existingRow) {
+        // Same filename → same URL; refresh the row in place (re-fires the row's `sync`) instead of a dupe.
+        const ui = existingRow.querySelector('.img-url');
+        ui.value = body.url; ui.dispatchEvent(new Event('input'));
+        if (role === 'thumbnail') $('p-thumbnail').value = body.url;
+        else if (role === 'seo_thumbnail') $('p-seo-thumbnail').value = body.url;   // AR#D-R3-1
+        else if (role === 'checkout_image') $('p-checkout-image').value = body.url; // AR#D-R3-1
+      } else {
+        if (role === 'thumbnail' && !$('p-thumbnail').value.trim()) $('p-thumbnail').value = body.url;
+        else if (role === 'seo_thumbnail') $('p-seo-thumbnail').value = body.url;   // AR#D-R3-1
+        else if (role === 'checkout_image') $('p-checkout-image').value = body.url; // AR#D-R3-1
+        addImageRow(body.url, '');
+        // Alt-text parity nudge: the GPT writes a descriptive alt for every image
+        // (IMPLEMENT 3.5a); /admin should hold the same bar, so focus + prompt the new row's alt input.
+        // Soft, not a publish gate (validateProductRules doesn't require alt) — just stops blank alts slipping by.
+        const altInput = $('p-images').lastElementChild?.querySelector('.img-alt');
+        if (altInput) { altInput.placeholder = 'alt — what the photo shows'; altInput.focus(); }
+      }
+      fileInput.value = ''; // ready for the next drop in this zone
+    } catch (err) { msg.textContent = `Failed: ${err.message}`; }
+  });
+}
 
-  $('upload-btn').disabled = true;
-  $('upload-status').textContent = 'Uploading...';
-  try {
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { ...authHeader() },
-      body: fd,
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
-    $('upload-status').textContent = `Uploaded: ${body.url}`;
-    if (role === 'thumbnail' && !$('p-thumbnail').value.trim()) {
-      $('p-thumbnail').value = body.url;
-    }
-    addImageRow(body.url, '');
-  } catch (err) {
-    $('upload-status').textContent = `Upload failed: ${err.message}`;
-  } finally {
-    $('upload-btn').disabled = false;
-  }
+function wireUploadZones() { // call once from init/attachEventListeners
+  document.querySelectorAll('.upload-zone').forEach((z) => wireUploadZone(z, z.dataset.role));
 }
 
 function buildProductPayload() {
@@ -851,7 +922,7 @@ function buildOrderCard(order) {
     <div class="order-info">
       <p><span class="label">Order</span> ${escapeHtml(orderIdShort)} · ${escapeHtml(productTitle)} · ${totalLabel}${order.created_at ? ` · ${escapeHtml(new Date(order.created_at).toLocaleDateString())}` : ''}</p>
       <p><span class="label">Customer</span> ${escapeHtml(customerName)} &lt;${escapeHtml(customerEmail)}&gt; ${escapeHtml(phone)}</p>
-      ${addrText ? `<p><span class="label">Ship to</span></p><pre class="address-block">${escapeHtml(addrText)}</pre><button type="button" class="copy-address">Copy address</button>` : '<p><em>No shipping address on file.</em></p>'}
+      ${addrText ? `<div class="address-head"><span class="label">Ship to</span><button type="button" class="copy-address link-btn">Copy address</button></div><pre class="address-block">${escapeHtml(addrText)}</pre>` : '<p><em>No shipping address on file.</em></p>'}
       ${formHtml}
       ${order.status === 'refunded'
         ? '<p style="margin-top:6px"><span class="pill refunded">Refunded</span></p>'
