@@ -94,3 +94,32 @@ function fireViewList(items) {
 function escapeAttr(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// Hero title write-on (WS5 §5.1). lottie-web is loaded `defer` BEFORE this script, so window.lottie is
+// defined when this DOMContentLoaded fires. The static <h1> stays visible unless the SVG actually mounts
+// drawn content — so a 404/blocked script/reduced-motion all fall back cleanly to the styled <h1>.
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.querySelector('[data-hero-title-lottie]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!el || reduce || !window.lottie) return;            // reduced-motion / no-JS → static <h1>
+  try {
+    const anim = lottie.loadAnimation({
+      container: el, renderer: 'svg', loop: false, autoplay: true,
+      path: '/assets/lottie/hero-title-writeon.json',
+      rendererSettings: { progressiveLoad: false, preserveAspectRatio: 'xMidYMid meet' },
+    });
+    // Async fetch/parse failure (404, blocked, bad JSON) fires data_failed, never DOMLoaded → leave the
+    // real <h1> visible.
+    anim.addEventListener('data_failed', () => { /* never add .has-lottie → static <h1> stays */ });
+    // Only hide the real <h1> once the SVG has ACTUALLY mounted DRAWN content. A JSON that parses but
+    // renders empty (no layers, or a Skottie-subset lottie-web can't draw) still fires DOMLoaded — guard
+    // against that "blank hero" case instead of relying on the manual lottie-web preview gate.
+    anim.addEventListener('DOMLoaded', () => {
+      const svg = el.querySelector('svg');
+      // Check for `path` (the drawn strokes), NOT `g` — lottie-web can mount empty <g> containers that
+      // match truthily and would hide the <h1> over a blank hero; a real trim-path write-on draws paths.
+      if (svg && svg.querySelector('path')) el.closest('.hero__title').classList.add('has-lottie');
+      // else: nothing visible mounted → leave the static <h1> showing
+    });
+  } catch { /* lottie threw synchronously → leave the real <h1> visible (never add .has-lottie); F15 */ }
+});

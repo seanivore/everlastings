@@ -86,6 +86,7 @@
   <!-- Supabase client + Track C foundations -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/assets/js/main.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js" defer></script>
   <script src="/assets/js/homepage.js" defer></script>
 </head>
 <body>
@@ -158,8 +159,8 @@
       <!-- Hero artwork (Track B-curated; replace via Sean's CDN drop) -->
       <div class="hero__media" data-hero-media>
         <video class="hero__video" autoplay muted loop playsinline
-               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim.jpg"
-               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation.mp4"></video>
+               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v2.jpg"
+               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation-v2.mp4"></video>
       </div>
 
       <div class="hero__overlay" aria-hidden="true"></div>
@@ -167,7 +168,10 @@
       <div class="hero__glow" aria-hidden="true"></div>
 
       <div class="hero__content">
-        <h1>Step into Elsewhere</h1>
+        <div class="hero__title">
+          <h1 class="hero__title-text">Step into Elsewhere</h1>            <!-- SEO + SR + no-JS + reduced-motion -->
+          <div class="hero__title-lottie" data-hero-title-lottie aria-hidden="true"></div>
+        </div>
         <p>Where memory becomes miniature, and loss transforms into something you can hold.</p>
         <a href="/shop" class="btn btn-primary btn-lg">Enter Elsewhere</a>
       </div>
@@ -376,7 +380,7 @@
       @media (prefers-reduced-motion: reduce) {
         .hero__media {
           animation: none !important; transition: none !important; transform: none !important;
-          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim.jpg');
+          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v2.jpg');
           background-size: cover; background-position: center;
         }
         .hero__video { display: none; }

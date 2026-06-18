@@ -983,6 +983,19 @@ select:focus {
   .hero h1 { font-size: 4.5rem; }
 }
 
+/* Hero title write-on (WS5 §5.1). The real <h1>.hero__title-text paints immediately (SEO/SR/no-JS/
+   reduced-motion); the Lottie is aria-hidden decoration drawn on top once it actually mounts. */
+.hero__title { position: relative; }
+.hero__title-lottie { position: absolute; inset: 0; pointer-events: none; }
+.hero__title-lottie svg { width: 100%; height: 100%; }
+/* Only after a successful mount (JS adds .has-lottie) hide the real <h1>'s INK but keep it IN FLOW
+   (defines the box height + a11y tree). color:transparent (not absolute-clip) so the wrapper keeps its
+   height and the absolute Lottie has a non-zero box to draw into. AR#D1. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero__title.has-lottie .hero__title-text { color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .hero__title-lottie { display: none; } }  /* static <h1> only */
+
 /* Hero-edge firelight — the parked ambient glow, repurposed onto the hero window edges UNDER the text
    (v2.1 hero). Reuses the @property fire zones (--fz1..4) + the `fire` keyframe from the D6 block. */
 .hero__glow { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--hero-glow-intensity, 0.85); }
