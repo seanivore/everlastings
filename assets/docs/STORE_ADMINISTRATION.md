@@ -31,7 +31,7 @@ You have three tools. They all change the same store — pick whichever is easie
 ### With The Sunkeeper (easiest)
 1. Open **The Sunkeeper** in your ChatGPT sidebar.
 2. Say what you're adding — title, price, the story, the details. Talk naturally; it drafts all the wording for you (including the behind-the-scenes SEO + checkout text).
-3. **Share your photos as links** — at least 7 (one clear front shot, plus angles, details, a size reference). A ChatGPT GPT can't grab a photo you paste *straight* into the chat, so it comes by link (it'll ask). The taps:
+3. **Send your photos** — at least 7 (one clear front shot, plus angles, details, a size reference). Easiest: **attach them right in the chat** and the Sunkeeper uploads them. Or share them as **links** — it'll ask, and a Google Drive / direct link is best for video or a big batch. The link taps:
    - **iPhone:** open the photo in Photos → **Share** → **Save to Files** (or the Drive app) → in **Google Drive**, long-press the file → **Share / Manage access** → **"Anyone with the link"** → **Copy link** → paste it to the Sunkeeper.
    - **Android:** open the photo → **Share** → **Drive** → open it in Drive → **⋮** → **Manage access / Share** → **"Anyone with the link"** → **Copy link** → paste it.
    - You can paste **several links in one message** — it adds them all.
@@ -90,14 +90,18 @@ You make the label yourself (Shippo or whatever you prefer), package the piece, 
 
 ## Refund someone
 
-Refunds happen in **Stripe** (not the Sunkeeper or Admin panel):
-1. Log in to the **Stripe dashboard**.
-2. **Payments** → find the payment → **Refund**.
-3. Stripe **emails the customer** the refund confirmation automatically.
+You can issue a refund right in **/admin** *or* by asking **The Sunkeeper** — both do the real Stripe refund, and Stripe emails the customer automatically.
 
-**The Sunkeeper can walk you through it** — ask "how do I refund jane@…'s order?" and it talks you through the current Stripe steps (it looks them up, since Stripe's screens change over time). It can't *do* the refund for you — that lives in Stripe, where you sign in for payouts anyway. A **full** refund automatically flips the order to **Refunded** in your orders list; a *partial* one won't change the status, so check Stripe for those.
+- **In /admin:** open the order → **Refund this purchase…** → a panel lists every piece in that purchase. Check the ones that came back (they'll be re-listed), the amount fills in (edit it for a partial / goodwill refund) → **Refund**.
+- **With the Sunkeeper:** "refund jane@…'s order for the Cottage" → it reads back the piece(s), the amount, and the buyer, waits for your **yes**, then issues it.
 
-**Want the piece available again?** A refund does **not** relist it. Just tell the Sunkeeper "mark the Cottage available again" (or Admin panel → Edit → Available on) — immediate, no preview.
+A few things to know:
+- **One purchase can be several pieces** sharing one payment, so a refund is an **amount** — it refunds (and re-lists) only the pieces you mark as returned, never the whole cart by surprise.
+- **It asks about re-listing each returned piece** — say yes and it puts the piece back up for sale (or adds 1 to its quantity). A refund never re-lists on its own.
+- A **full** refund flips the order to **Refunded** in your list; a **partial** one usually won't change the status (refunding the full cart total does) — check Stripe if unsure.
+- Stripe is still home for **payouts and payment history** (`dashboard.stripe.com`); the Sunkeeper can walk you through anything there (it web-looks-up the current steps).
+
+> **One operator at a time.** The store is built for a single person managing it at once — don't drive refunds or edits from two tabs (or two people) simultaneously. A second seat is a future feature, not supported today.
 
 ## A customer has a question (where did it ship, what did they order, etc.)
 

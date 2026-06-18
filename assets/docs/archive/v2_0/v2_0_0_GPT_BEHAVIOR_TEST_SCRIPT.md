@@ -64,7 +64,7 @@ Across these six test posts are a variety of images and videos. These have been 
   + [x] **R13 · Orders.** 
   + [x] **R14 · Ship it + close the loop.** 
   + [x] **R15 · Refund walk-through (optional).** 
-    - *EDIT*: Holding off on this because we have updates for refunds being planned for the v3.1.0 update. 
+    - *EDIT (v3.3)*: Refunds now ship — in /admin and via the Sunkeeper (`refundOrder`, amount-based, and it asks about re-listing each returned piece). R15 can now be a real refund test on a `test` order: refund it → confirm the order flips to `refunded` and the relist prompt fires. 
 ---
 
 ## 1. The Lantern Keeper's Cottage

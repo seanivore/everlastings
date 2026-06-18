@@ -86,15 +86,17 @@ The GPT is Emy's whole console — it handles fulfillment too, not just products
 - **Mark shipped + send tracking** (`markShipped`): record a tracking number + carrier on an order. This **emails the buyer their tracking link automatically** and flips the order to `shipped`. The carrier MUST be exactly one of `USPS`, `UPS`, `FedEx`, `DHL` — normalize her wording ("the post office" → `USPS`). **Always confirm before calling** (it emails the buyer and can't be undone).
 - **Find information**: use `listOrders` to answer "what did she order," "what's the shipping address," "did the tracking email send" (the order carries `tracking_email_sent_at`).
 
-### 1E. Refunds (the GPT guides, but cannot execute)
+### 1E. Refunds (the GPT can issue them — v3.3)
 
-The GPT has no refund Action in v1. When she wants to refund: tell her to do it in the **Stripe dashboard** (Payments → find the payment → Refund) — Stripe emails the buyer automatically. Note clearly: refunding does **not** automatically put the piece back up for sale. If she wants it available again, that's a separate manual relist (set `available = true`) via the **admin UI** or Supabase Studio (`createProduct` only makes *new* products). See `STORE_ADMINISTRATION.md`.
+The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find the order (`listOrders q=<email|id>`), read back the piece(s) + amount + buyer, get her **yes**, then refund — Stripe emails the buyer automatically. A Stripe refund is an **amount against the payment**, and one purchase can be several pieces sharing one payment, so it refunds (and offers to re-list) **only** the pieces she marks returned (`relist_product_ids`), never the whole cart by surprise. It then **always offers to re-list each returned piece** (re-list a sold-out piece, or +1 a multi-stock one) — a refund never re-lists on its own. **/admin** has the same "Refund this purchase…" panel. A **full** refund flips the order to `refunded`; a **partial** usually won't (refunding the full cart total does). Payouts + payment history still live in **Stripe** (the GPT can web-look-up its current screens). See `STORE_ADMINISTRATION.md`.
 
 ---
 
 ## Part 2 — The GPT configuration (paste-able)
 
-### 2A. Instructions (system prompt) — paste verbatim into the Instructions field
+### 2A. Instructions (system prompt)
+
+> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able instructions are **`assets/docs/archive/v2_0/v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`** (the Phase 3.9 v3.3 rewrite — adds amount-based refund, chat-attach `uploadImages`, and coupon `expires_date` + plain-date readback; 7788/8000 chars). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
 
 ```
 You are "The Sunkeeper", Everlastings by Emaline's store assistant. You help Em (the artist) run her store: add/edit products, run sales, fulfill orders. Be a warm, capable studio assistant; always plain language; never expose API keys, URLs, or jargon unless she asks. Field definitions and how to write each field = your "product-reference" Knowledge file; brand voice = "voice-guide". Each Action's own description gives its mechanics; rely on them.
@@ -128,7 +130,9 @@ LINK TROUBLE: if uploadImage 400s (a Drive share PAGE not the file, not public, 
 ALWAYS: write copy in Em's voice (warm, poetic, quietly magical, never sales-y; full guidance + word lists in "voice-guide"). On 409 (slug/code taken) suggest a new title/code; 400 -> name the missing field plainly; 401 -> stop and say "the connection key needs Sean's attention." Never invent a tracking number, carrier, or URL; never set a price she didn't say. Keep her in plain, warm language.
 ```
 
-### 2B. Actions schema (OpenAPI) — paste verbatim into the Schema field
+### 2B. Actions schema (OpenAPI)
+
+> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able schema is **`assets/docs/archive/v2_0/v2_0_0_GPT_SCHEMA.txt`** (v3.3 adds the `refundOrder` + `uploadImages` operations and `expires_date` on `createCoupon`). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
 
 ```yaml
 openapi: 3.1.0
