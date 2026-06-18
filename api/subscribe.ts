@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       if ((error as { code?: string }).code === '23505') {
         return Response.json(
           { message: 'Already subscribed' },
-          { status: 200, headers: corsHeaders(request) },
+          { status: 409, headers: corsHeaders(request) },
         );
       }
       throw error;

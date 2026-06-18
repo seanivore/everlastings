@@ -30,7 +30,9 @@ So the welcome email should contain a ready-to-click link that lands the subscri
 
 ## CONFIRMED BUG — the email-capture forms never call the API (root cause, 2026-06-18)
 
-Live, a signup shows "You're on the list" but **no email sends — and Resend has no send attempt in its logs *or* metrics.** The domain is verified and order/shipping emails arrive fine, so it is **not** a Resend/domain/spam problem (my earlier guess was wrong). Root cause is a **frontend event-target mismatch**:
+> **STATUS — core fix APPLIED 2026-06-18 (on `dev`).** The event-target fix (`main.js:173` now listens on `window`) and the duplicate-status fix (`subscribe.ts` returns **409**) are committed. Capture + the welcome / 5% email now fire on the dev preview, and the "you're already on the list" message (`main.js:254`) now reaches duplicates. **Still open (intentionally deferred to keep the fix minimal + low-risk):** the unconditional success-toast rework (`ui.js:93`) and the delivery-assert test below. Reaches **production** only on the next `dev → main` ship.
+
+Live, a signup showed "You're on the list" but **no email sends — and Resend has no send attempt in its logs *or* metrics.** The domain is verified and order/shipping emails arrive fine, so it is **not** a Resend/domain/spam problem (my earlier guess was wrong). Root cause is a **frontend event-target mismatch**:
 - `ui.js:89` dispatches the submit event on **`window`**: `window.dispatchEvent(new CustomEvent('email-cta-submit', …))`.
 - `main.js:173` — the listener that actually POSTs to `/api/subscribe` — listens on **`document`**: `document.addEventListener('email-cta-submit', …)`.
 - An event dispatched on `window` does not reach a `document` listener, so **the POST never fires.** `/api/subscribe` (and therefore Resend) is never called.

@@ -170,7 +170,7 @@ function getCartTotal() {
 
 // --- Global email-cta-submit listener ---
 
-document.addEventListener('email-cta-submit', async (e) => {
+window.addEventListener('email-cta-submit', async (e) => {
   const { source, email, productSlug } = e.detail || {};
   if (!email || !source) return;
   try {
