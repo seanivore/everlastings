@@ -996,19 +996,9 @@ select:focus {
 }
 @media (prefers-reduced-motion: reduce) { .hero__title-lottie { display: none; } }  /* static <h1> only */
 
-/* Hero-edge firelight — the parked ambient glow, repurposed onto the hero window edges UNDER the text
-   (v2.1 hero). Reuses the @property fire zones (--fz1..4) + the `fire` keyframe from the D6 block. */
-.hero__glow { position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: var(--hero-glow-intensity, 0.85); }
-.hero__glow::after {
-  content: ""; position: absolute; inset: 0;
-  box-shadow:
-    inset 0  4px 7px -1px var(--fz1),  inset 0  10px 15px -4px var(--fz2),  inset 0  19px 27px -9px var(--fz3),  inset 0  34px 50px -22px var(--fz4),
-    inset 0 -4px 7px -1px var(--fz1),  inset 0 -10px 15px -4px var(--fz2),  inset 0 -19px 27px -9px var(--fz3),  inset 0 -34px 50px -22px var(--fz4),
-    inset  4px 0 7px -1px var(--fz1),  inset  10px 0 15px -4px var(--fz2),  inset  19px 0 27px -9px var(--fz3),  inset  34px 0 50px -22px var(--fz4),
-    inset -4px 0 7px -1px var(--fz1),  inset -10px 0 15px -4px var(--fz2),  inset -19px 0 27px -9px var(--fz3),  inset -34px 0 50px -22px var(--fz4);
-  animation: fire 3.4s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) { .hero__glow::after { animation: none; } }
+/* Hero-edge firelight glow REMOVED (v3.3 homepage) — the warm light now lives baked into the graded
+   hero footage (warm grade + halation), not a CSS overlay. A tasteful baked "light-leak" is the next
+   render-tune. The shared @property fire zones (--fz1..4) + `fire` keyframe live in the D6 block. */
 
 /* Toast (post-form-submit confirmation) */
 .toast {

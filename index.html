@@ -159,13 +159,12 @@
       <!-- Hero artwork (Track B-curated; replace via Sean's CDN drop) -->
       <div class="hero__media" data-hero-media>
         <video class="hero__video" autoplay muted loop playsinline
-               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v2.jpg"
-               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation-v2.mp4"></video>
+               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v3.jpg"
+               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation-v3.mp4"></video>
       </div>
 
       <div class="hero__overlay" aria-hidden="true"></div>
       <div class="hero__spotlight" aria-hidden="true"></div>
-      <div class="hero__glow" aria-hidden="true"></div>
 
       <div class="hero__content">
         <div class="hero__title">
@@ -372,15 +371,15 @@
           animation-range: 0 100vh;
         }
         @keyframes hero-counter-scroll {
-          from { transform: translateY(8%) scale(1.2); }    /* ~20% zoom; pans top->bottom as you scroll */
-          to   { transform: translateY(-8%) scale(1.2); }
+          from { transform: translateY(8%) scale(1.6); }    /* ~60% zoom — vibe-forward, abstracts the diorama; pans top->bottom on scroll */
+          to   { transform: translateY(-8%) scale(1.6); }
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
         .hero__media {
           animation: none !important; transition: none !important; transform: none !important;
-          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v2.jpg');
+          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v3.jpg');
           background-size: cover; background-position: center;
         }
         .hero__video { display: none; }
