@@ -159,20 +159,34 @@
       <!-- Hero artwork (Track B-curated; replace via Sean's CDN drop) -->
       <div class="hero__media" data-hero-media>
         <video class="hero__video" autoplay muted loop playsinline
-               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v3.jpg"
-               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation-v3.mp4"></video>
+               poster="https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v4.jpg"
+               src="https://cdn.everlastingsbyemaline.com/hero-bg-anim/homepage-hero-animation-v4.mp4"></video>
       </div>
 
       <div class="hero__overlay" aria-hidden="true"></div>
       <div class="hero__spotlight" aria-hidden="true"></div>
 
       <div class="hero__content">
-        <div class="hero__title">
-          <h1 class="hero__title-text">Step into Elsewhere</h1>            <!-- SEO + SR + no-JS + reduced-motion -->
-          <div class="hero__title-lottie" data-hero-title-lottie aria-hidden="true"></div>
-        </div>
-        <p>Where memory becomes miniature, and loss transforms into something you can hold.</p>
-        <a href="/shop" class="btn btn-primary btn-lg">Enter Elsewhere</a>
+        <!-- Each unit = real text (SEO / SR / no-JS / reduced-motion) + a Lottie drawn over it,
+             positioned per the mockup. The text goes transparent once the SVG actually mounts. -->
+        <h1 class="hero__heading">
+          <span class="hero__unit hero__unit--into">
+            <span class="hero__unit-text">Step into</span>
+            <span class="hero__unit-lottie" data-hero-lottie="/assets/lottie/hero-step-into.json" aria-hidden="true"></span>
+          </span>
+          <span class="hero__unit hero__unit--elsewhere">
+            <span class="hero__unit-text">Elsewhere</span>
+            <span class="hero__unit-lottie" data-hero-lottie="/assets/lottie/hero-elsewhere.json" aria-hidden="true"></span>
+          </span>
+        </h1>
+        <p class="hero__unit hero__unit--tagline">
+          <span class="hero__unit-text">Where memory becomes miniature, and loss transforms into something you can hold.</span>
+          <span class="hero__unit-lottie" data-hero-lottie="/assets/lottie/hero-tagline.json" aria-hidden="true"></span>
+        </p>
+        <a href="/shop" class="hero__unit hero__unit--enter" aria-label="Enter the shop">
+          <span class="hero__unit-text">Enter</span>
+          <span class="hero__unit-lottie" data-hero-lottie="/assets/lottie/hero-enter.json" aria-hidden="true"></span>
+        </a>
       </div>
 
     </section>
@@ -371,19 +385,41 @@
           animation-range: 0 100vh;
         }
         @keyframes hero-counter-scroll {
-          from { transform: translateY(8%) scale(1.6); }    /* ~60% zoom — vibe-forward, abstracts the diorama; pans top->bottom on scroll */
-          to   { transform: translateY(-8%) scale(1.6); }
+          from { transform: translateY(8%) scale(2.0); }    /* ~2x zoom — vibe-forward, abstracts the diorama into atmosphere; pans top->bottom on scroll */
+          to   { transform: translateY(-8%) scale(2.0); }
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
         .hero__media {
           animation: none !important; transition: none !important; transform: none !important;
-          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v3.jpg');
+          background-image: url('https://cdn.everlastingsbyemaline.com/hero-bg-anim/hero-bg-image-not-anim-v4.jpg');
           background-size: cover; background-position: center;
         }
         .hero__video { display: none; }
         .hero__spotlight { animation: none; }
+      }
+
+      /* Hero text composition (v3.4) — Lottie units positioned per the mockup over the hero.
+         Each unit keeps a real-text fallback (SEO / SR / no-JS / reduced-motion); the Lottie draws
+         over it and the text goes transparent once the SVG actually mounts (.has-lottie). The unit's
+         aspect-ratio matches its Lottie comp so the box height follows the width with no distortion. */
+      .hero__content { position: absolute; inset: 0; z-index: 2; max-width: none; padding: 0; pointer-events: none; }
+      .hero__heading { margin: 0; }
+      .hero__unit { position: absolute; display: block; margin: 0; }
+      .hero__unit-text { color: var(--text-inverse); text-shadow: 0 2px 22px rgba(0, 0, 0, 0.62); font-family: 'Cormorant Garamond', Georgia, serif; line-height: 1; white-space: nowrap; }
+      .hero__unit-lottie { position: absolute; inset: 0; display: block; }
+      .hero__unit-lottie svg { width: 100%; height: 100%; display: block; }
+      .hero__unit.has-lottie .hero__unit-text { color: transparent; }
+      .hero__unit--into      { top: 13%; left: 7%;  width: 46%; aspect-ratio: 1631 / 783; font-size: clamp(2rem, 7vw, 5.5rem); }
+      .hero__unit--elsewhere { top: 45%; left: 19%; width: 52%; aspect-ratio: 1756 / 649; font-size: clamp(2rem, 7vw, 5.5rem); }
+      .hero__unit--tagline   { top: 27%; right: 5%; width: 33%; aspect-ratio: 1311 / 189; font-size: clamp(0.7rem, 1.5vw, 1.1rem); letter-spacing: 0.04em; }
+      .hero__unit--enter     { bottom: 9%; right: 8%; width: 15%; aspect-ratio: 710 / 334; pointer-events: auto; cursor: pointer; text-decoration: none; }
+      @media (max-width: 768px) {
+        .hero__unit--into      { top: 11%; left: 6%;  width: 72%; }
+        .hero__unit--elsewhere { top: 33%; left: 12%; width: 80%; }
+        .hero__unit--tagline   { top: 63%; left: 8%; right: 8%; width: auto; }
+        .hero__unit--enter     { bottom: 8%; right: auto; left: 50%; transform: translateX(-50%); width: 38%; }
       }
 
       /* FEATURED CAROUSEL — horizontal scroll on mobile, grid on desktop */
