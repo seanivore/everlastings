@@ -14,6 +14,8 @@
 
 # Environment variables (ignore all .env* variants; allow .env.example only)
 .env
+.env.prod
+.env.dev
 .env.*
 !.env.example
 
