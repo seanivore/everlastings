@@ -58,7 +58,7 @@
 
 **Coupons in /admin** — reuse the existing endpoints verbatim: create + list via `/api/coupons` (`?_action=coupon`, `products.ts:689-798`), end via `/api/coupons/deactivate` (`?_action=coupon_deactivate`, `products.ts:800-829`). Expose the **full** surface for true parity: `type` (percent/amount), `value`, `code`, `product_ids` (these are **`stripe_product_id`**, not the Supabase id — the UI maps published products → their `stripe_product_id`), `min_amount`, `expires_at`, `max_redemptions`; plus the list (with `times_redeemed` / scope / expiry) and deactivate-by-code. **Human-friendly dates (from `FEEDBACK_COUPON_v2_1_0.md` — the GPT misread a raw Unix `expires_at` as July when the coupon was correctly set to June; the coupon was never wrong):** the one backend add — `handleCouponList` (+ the `createCoupon` response) returns a human `expires_display` (e.g. "Ends after Sun, Jun 21, 2026", store TZ America/New_York) **alongside** the raw `expires_at`, so the GPT never decodes a timestamp; plus a GPT **read-back-before-create** beat and a date input (not a raw timestamp) in the /admin coupon UI. *(Optional stretch: `campaign_note`/`intended_dates` in the coupon `metadata`.)*
 
-**Chat-attach upload** — exactly per `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` (fold its phases in): a new `uploadImages` op taking `openaiFileIdRefs` into `api/upload.ts`, positional role default (`hero`, then `gallery-0N`), the by-link `uploadImage` kept as the backstop. **Admin upload UX:** preview thumbnails on upload, a remaining-roles hint (need 1 hero + 5 gallery), a **structured MP4 editor** (pick an uploaded `video-0N` url → GIF-like vs click-to-play preset → poster image → alt) replacing the raw-JSON `p-media` textarea (`admin/index.html:159`), and **auto-infer `skip_transform`** from the file's MIME so the checkbox stops being a footgun. **Alt text (GPT skips it on ALL images today — the instructions never mention it, `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:6`):** require the GPT to generate descriptive `alt` per image + `thumbnail_alt`, carried through `uploadImages` / createProduct `images[]`. **Filename/role (clarification, not a rename):** `upload.ts` names files `{role}-{slug}.{ext}` server-side from the `role` param, and the frontend derives an image's role from that filename prefix (`product.js:415` gallery, `:576` hero) — there is no stored role field — so passing the *correct role* is load-bearing. GPT instructions state plainly it assigns *roles* (never invents or renames a filename); the chat-attach `roles[]`/positional mapping must be reliable.
+**Chat-attach upload** — exactly per `v3_0_0_GPT_DIRECT_IMG_UPLOAD.md` (fold its phases in): a new `uploadImages` op taking `openaiFileIdRefs` into `api/upload.ts`, positional role default (`hero`, then `gallery-0N`), the by-link `uploadImage` kept as the backstop. **Admin upload UX:** preview thumbnails on upload, a remaining-roles hint (need 1 hero + 5 gallery), a **structured MP4 editor** (pick an uploaded `video-0N` url → GIF-like vs click-to-play preset → poster image → alt) replacing the raw-JSON `p-media` textarea (`admin/index.html:159`), and **auto-infer `skip_transform`** from the file's MIME so the checkbox stops being a footgun. **Alt text (GPT skips it on ALL images today — the instructions never mention it, `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt:6`):** require the GPT to generate descriptive `alt` per image + `thumbnail_alt`, carried through `uploadImages` / createProduct `images[]`. **Filename/role (clarification, not a rename):** `upload.ts` names files `{role}-{slug}.{ext}` server-side from the `role` param, and the frontend derives an image's role from that filename prefix (`product.js:415` gallery, `:576` hero) — there is no stored role field — so passing the *correct role* is load-bearing. GPT instructions state plainly it assigns *roles* (never invents or renames a filename); the chat-attach `roles[]`/positional mapping must be reliable.
 
 **Admin polish** — clean, professional, **genuinely polished + smart, high-appeal** (it can have a vibe). Brand-**neutral**: NOT Everlastings-branded and **not** anchored to august.style tokens (Sean's branding shifts too often to matter) — the bar is "looks excellent + ports to any future client," not "matches a palette." Two fronts, in order: (1) full /admin↔GPT parity made obvious, then (2) make it pleasant. New gaps (`FEEDBACK_ADMIN_v2_1_0.md`): confusing in-admin back-nav (the browser Back button leaves /admin → add a clear "← Products" + obvious tab return) and a product-list **state-filter** (live/draft/sold/archived, like the orders subtabs). The addendum's neutral-slate + indigo-slate accent is the working default to *refine*.
 
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
     { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
 ```
 
-**Phase 1.3 — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): add the `refundOrder` op.** **CURRENT (the end of `markShipped` — the file's last lines, `:334-336`):**
+**Phase 1.3 — GPT schema (`v3_3_0_GPT_SCHEMA.txt`): add the `refundOrder` op.** **CURRENT (the end of `markShipped` — the file's last lines, `:334-336`):**
 ```yaml
                 properties:
                   ok: { type: boolean }
@@ -289,7 +289,7 @@ export async function POST(request: Request) {
 ```
 *(`summary` = **286 chars** (verified `wc`/byte-count), under the 300 cap — the earlier "≈295" estimate undercounted by ~20 and would have tripped the testing static gate (`every summary < 300`); count it, don't estimate. The path sits at 2-space indent like `/api/orders/{id}:` `:307`. `relist` is an **array** now (multi-piece refunds — headline fold) with each item's shape enumerated; the GPT reads `relist[].archived`/`.quantity`/`.available`/`.title` in instruction 1.4a. `reason` is gone (the handler never read it + Stripe's `reason` is an enum, not free text; the human reason lives in the chat read-back). No char cap on the schema file, only the per-`summary` 300.)*
 
-**Phase 1.4 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7728/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
+**Phase 1.4 — GPT instructions (`v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`): flip REFUNDS + a poster aside.** *(→ This phase documents the REFUNDS rule changes. The instruction file is replaced WHOLESALE in **Phase 3.9** (full restructure → 7728/8000) — do NOT hand-apply the CURRENT→NEW block below to the file; ship Phase 3.9's text, which already embodies it.)*
 
 *1.4a — REFUNDS.* **CURRENT (`:23`):**
 ```
@@ -801,7 +801,7 @@ if (document.readyState === 'loading') {
 
 **Phase 2.2 — backend: human-readable expiry on read (the `FEEDBACK_COUPON_v2_1_0` fix).** So the GPT never decodes a raw Unix timestamp.
 
-> **No `listCoupons`/`createCoupon` response-schema edit needed.** A cold reviewer flagged that `expires_display` must be declared in the Action response schema or the GPT can't see it. Checked: both ops declare an **opaque 200** — `'200': { description: … }` with **no `schema.properties`** (`v2_0_0_GPT_SCHEMA.txt:233-239`). With no declared response schema the platform passes the **raw JSON body** to the model, so `expires_display` on the wire (2.2b) + the relay instruction (2.3) are sufficient; declaring it would be inert. (Contrast `refundOrder`, which *does* enumerate its `relist` response — there the shape is declared, so additions there must be too.) Do **not** add a coupon response schema.
+> **No `listCoupons`/`createCoupon` response-schema edit needed.** A cold reviewer flagged that `expires_display` must be declared in the Action response schema or the GPT can't see it. Checked: both ops declare an **opaque 200** — `'200': { description: … }` with **no `schema.properties`** (`v3_3_0_GPT_SCHEMA.txt:233-239`). With no declared response schema the platform passes the **raw JSON body** to the model, so `expires_display` on the wire (2.2b) + the relay instruction (2.3) are sufficient; declaring it would be inert. (Contrast `refundOrder`, which *does* enumerate its `relist` response — there the shape is declared, so additions there must be too.) Do **not** add a coupon response schema.
 
 *2.2a — a formatter, above `handleCouponList`.* **CURRENT (`api/products.ts:751-752`):**
 ```ts
@@ -891,7 +891,7 @@ Then, at the top of `handleCoupon` (before `couponParams`), normalize `expires_d
 ```
 Both surfaces send `expires_date`: /admin already does, and **the GPT does too now** (Phase 2.2e adds it to the `createCoupon` schema + instruction). That closes the v2.1 timestamp-misread regression on **both** surfaces, not just /admin — leaving the GPT to compute a Unix end-of-day itself was the exact failure class. `expires_at` stays accepted for back-compat. `endOfDayET` is the helper from 2.2a.
 
-**Phase 2.2e — GPT schema (`v2_0_0_GPT_SCHEMA.txt`): prefer `expires_date` on `createCoupon` (parity + regression-class closure).** **CURRENT (`:231`):**
+**Phase 2.2e — GPT schema (`v3_3_0_GPT_SCHEMA.txt`): prefer `expires_date` on `createCoupon` (parity + regression-class closure).** **CURRENT (`:231`):**
 ```yaml
                 expires_at: { type: integer, description: Unix timestamp when the code expires. Optional. }
 ```
@@ -902,7 +902,7 @@ Both surfaces send `expires_date`: /admin already does, and **the GPT does too n
 ```
 *(`handleCoupon`'s 2.2d normalization already accepts `expires_date`, so the backend is ready — only the schema + instruction needed exposing. Each `description` < 300 chars.)*
 
-**Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** *(→ Documents the COUPONS rule change; the file is shipped from **Phase 3.9** in full — don't hand-apply the block below.)* **CURRENT (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
+**Phase 2.3 — GPT instructions: read-back before create + use `expires_display`.** *(→ Documents the COUPONS rule change; the file is shipped from **Phase 3.9** in full — don't hand-apply the block below.)* **CURRENT (`v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt:19`):**
 ```
 COUPONS: translate her wish into createCoupon (percent, or amount-off in cents; dollars->cents; optional code/scope/min/expiry/cap). A product-scoped coupon needs a PUBLISHED product (a draft has no Stripe id); else make it store-wide. NEVER promise BOGO / "buy N". Read the code back. listCoupons shows running sales and each one's scope (store-wide vs specific); relay it. deactivateCoupon {code} ends one now. For a temporary sale, a coupon (not a price cut) keeps the list price intact.
 ```
@@ -1042,7 +1042,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 
 **Phase 3.4 — GPT schema: add `uploadImages` + point `uploadImage` at it.**
 
-*3.4a — insert the new op before `/api/orders`.* **CURRENT (`v2_0_0_GPT_SCHEMA.txt:284-285`):**
+*3.4a — insert the new op before `/api/orders`.* **CURRENT (`v3_3_0_GPT_SCHEMA.txt:284-285`):**
 ```yaml
         '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
   /api/orders:
@@ -1080,7 +1080,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 
 *3.4b — point `uploadImage` at the new op.* **CURRENT (`:269`):** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Media comes as a LINK (a Drive share or direct URL); you can't forward a pasted file."` → **NEW:** `…put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. Use this for media given as a LINK (a Drive share or direct URL) or for video. If she ATTACHED photos to the chat, use uploadImages instead."` *(keep < 300 chars)*
 
-**Phase 3.5 — GPT instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.** *(→ Documents the attach/alt/roles rule changes; the file is shipped from **Phase 3.9** in full — don't hand-apply the blocks below.)*
+**Phase 3.5 — GPT instructions (`v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`): attach-first + alt + roles.** *(→ Documents the attach/alt/roles rule changes; the file is shipped from **Phase 3.9** in full — don't hand-apply the blocks below.)*
 
 *3.5a — step 3 (`:6`).* **CURRENT:**
 ```
@@ -1299,9 +1299,9 @@ function collectMedia() {
 
 **Phase 3.8 — premise-update sweep (as-built, post-build).** Flip the v2.0.0 docs' "media arrives by link / can't forward a pasted file" premise (`v2_0_0_IMPLEMENT.md:8/:55`, `EVERLASTINGS_STORE.md`, `GPT_SETUP.md`, `product-reference.md`) to "attach in chat via `uploadImages`, with by-link as the backstop." Do at as-built to avoid mid-build mixed truth.
 
-**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7728 / 8000** (272 headroom; this round added the attach-path roles thumbnail/seo_thumbnail/checkout_image + the clearer full-cart-goodwill wording).
+**Phase 3.9 — FINAL GPT instructions file (complete restructure).** The 8000-char cap **cannot** be met by patching the dense file section-by-section: verified arithmetic — the WS1–3 rule adds take `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt` from 7781 → **8921**, and *every* rule-preserving trim across the whole file bottoms out at **8538** (still 538 over). So the file was **fully rewritten** via a 3-pass copywriting method (cut-down → restructure → remove-redundancy): dense AI run-ons broken into clean labeled lines (the GPT reads them better too), cross-section redundancy removed, **every distinct rule kept**. **Verified `wc -c` = 7728 / 8000** (272 headroom; this round added the attach-path roles thumbnail/seo_thumbnail/checkout_image + the clearer full-cart-goodwill wording).
 
-**This is the artifact to ship: replace `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
+**This is the artifact to ship: replace `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt` IN FULL with the content below** (it is the canonical final text — the per-workstream instruction phases above, 1.4a/1.4b REFUNDS+poster · 2.3 COUPONS · 3.5a/3.5b attach, document the *rule deltas* this file embodies, i.e. the WHY; this block is the WHAT). After pasting, `wc -c` to confirm < 8000.
 
 ```
 You're 'The Sunkeeper', warm, capable Everlastings by Emaline store studio assistant. Help artist Em add/edit product, run sales, fulfill orders, in plain language. Never expose API keys, URLs, jargon unless asked. Field definitions, how to write each, is your PRODUCT-REFERENCE knowledge file. Use brand VOICE-GUIDE. Action description show mechanics to rely on.

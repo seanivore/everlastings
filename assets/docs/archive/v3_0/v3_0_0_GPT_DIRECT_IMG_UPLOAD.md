@@ -1,6 +1,6 @@
 # GPT Direct Image Upload (chat-attach) — push-toward-exclusively-executable
 
-**Version**: v3.0.0 (preliminary tier — sits beside `v3_0_0_HOMEPAGE_EXPERIENCE.md`). **Status**: written *as executable as the platform allows* and **gate-ready under this name**; rename to `v3_0_0_GPT_DIRECT_IMG_UPLOAD_IMPLEMENT.md` (or fold into a `_IMPLEMENT`) only once the active **v2.0.0** build is done — we don't stand up a competing IMPLEMENT mid-build. **Initiative**: let Em hand the GPT product photos the *normal* way — **attach them in the chat** (any device) — instead of forcing a Google Drive / direct-URL link. **Net feature set:** a new `uploadImages` Action that accepts OpenAI's `openaiFileIdRefs` (chat-attached files), fetches each through the **existing** Cloudinary→R2 pipeline, and returns one CDN url per file; the by-link path stays as the deliberate backstop; the GPT stops rejecting pasted photos. **No new Vercel function, no DB migration.** **Required reading**: `api/upload.ts`, `assets/docs/archive/v2_0/v2_0_0_GPT_SCHEMA.txt`, `assets/docs/gpt/product-reference.md`, and this doc.
+**Version**: v3.0.0 (preliminary tier — sits beside `v3_0_0_HOMEPAGE_EXPERIENCE.md`). **Status**: written *as executable as the platform allows* and **gate-ready under this name**; rename to `v3_0_0_GPT_DIRECT_IMG_UPLOAD_IMPLEMENT.md` (or fold into a `_IMPLEMENT`) only once the active **v2.0.0** build is done — we don't stand up a competing IMPLEMENT mid-build. **Initiative**: let Em hand the GPT product photos the *normal* way — **attach them in the chat** (any device) — instead of forcing a Google Drive / direct-URL link. **Net feature set:** a new `uploadImages` Action that accepts OpenAI's `openaiFileIdRefs` (chat-attached files), fetches each through the **existing** Cloudinary→R2 pipeline, and returns one CDN url per file; the by-link path stays as the deliberate backstop; the GPT stops rejecting pasted photos. **No new Vercel function, no DB migration.** **Required reading**: `api/upload.ts`, `assets/docs/archive/v3_3/v3_3_0_GPT_SCHEMA.txt`, `assets/docs/gpt/product-reference.md`, and this doc.
 
 > **How to use this doc (anti-fragility rule).** Every code edit quotes a **CURRENT** block (the locator) and a **NEW** block. **Line numbers are hints; the quoted CURRENT text is the anchor.** If a CURRENT block doesn't match the working tree byte-for-byte, **STOP and reconcile** — never guess. Where a decision is genuinely empirical (model behavior — see §1.4), it's flagged for the gate/live-test, not silently resolved.
 
@@ -62,8 +62,8 @@ A product needs ≥ 7 photos with **roles** (`hero`, `gallery-01…`, etc.). Whe
 ## 1.6 Reuse surface (precise)
 
 - **The whole pipeline** — `api/upload.ts`: the JSON-intake branch (`129–174`), `normalizeMediaUrl` (`81`), `isPublicHttpUrl` (`100`), the fetch + content-type guard (`145–171`), `ALLOWED_MIME`/`MIME_TO_EXT` (`34–50`), `ROLE_PATTERN` (`52`), the Cloudinary transform + R2 put + filename/key scheme (`220–316`), `authorize` (`24`). The new path is a second front door on this exact machinery.
-- **Schema** — `assets/docs/archive/v2_0/v2_0_0_GPT_SCHEMA.txt` (the `uploadImage` op at `266–284`; **no `securitySchemes` block** — auth is configured in the GPT-builder Actions UI, not the schema). Mind the **300-char `summary` cap** per operation; `description` fields are uncapped.
-- **GPT brain** — `assets/docs/archive/v2_0/v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` (MEDIA + LINK TROUBLE lines) + `GPT_SETUP.md §2A/§2B` + `assets/docs/gpt/product-reference.md` (Photos `56–61`, Media `115–119`).
+- **Schema** — `assets/docs/archive/v3_3/v3_3_0_GPT_SCHEMA.txt` (the `uploadImage` op at `266–284`; **no `securitySchemes` block** — auth is configured in the GPT-builder Actions UI, not the schema). Mind the **300-char `summary` cap** per operation; `description` fields are uncapped.
+- **GPT brain** — `assets/docs/archive/v3_3/v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt` (MEDIA + LINK TROUBLE lines) + `GPT_SETUP.md §2A/§2B` + `assets/docs/gpt/product-reference.md` (Photos `56–61`, Media `115–119`).
 - **Conventions** — `api/_lib/cors.ts` (`corsHeaders`/`preflight`, the `*.vercel.app` allowlist) and `api/_lib/env.ts` (`isTest`, `env`). All responses spread `corsHeaders(request)`.
 - **Admin reference (not edited)** — `admin/index.html:189–229` + `assets/js/admin.js:358–400` show the multipart upload the pipeline already serves.
 
@@ -176,7 +176,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 
 ## Phase 2 — GPT Action schema: add `uploadImages`
 
-**CURRENT (`v2_0_0_GPT_SCHEMA.txt:266–284`, the whole `uploadImage` op).** **NEW: keep `uploadImage` as-is and insert a sibling op right after it** (before `/api/orders` at `285`):
+**CURRENT (`v3_3_0_GPT_SCHEMA.txt:266–284`, the whole `uploadImage` op).** **NEW: keep `uploadImage` as-is and insert a sibling op right after it** (before `/api/orders` at `285`):
 ```yaml
   /api/upload/attach:
     post:
@@ -220,7 +220,7 @@ Also update the **`uploadImage` summary** (`:269`) to point at the new op for at
 
 ## Phase 4 — GPT instructions + product-reference: flip "reject pasted file" → "attach them"
 
-**4a. Trimmed instructions (`v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`) + `GPT_SETUP.md §2A`.** The MEDIA + LINK TROUBLE guidance currently says photos arrive as links only and a pasted file → ask for a link. **NEW behavior to encode** (keep it terse — the 8k Instructions cap still applies):
+**4a. Trimmed instructions (`v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`) + `GPT_SETUP.md §2A`.** The MEDIA + LINK TROUBLE guidance currently says photos arrive as links only and a pasted file → ask for a link. **NEW behavior to encode** (keep it terse — the 8k Instructions cap still applies):
 - Photos: if she **attaches** them to the chat, call **`uploadImages`** (pass `openaiFileIdRefs`; optionally `roles[]` in the order shown); if she gives a **Drive/direct link**, call `uploadImage`. Either way, ≥ 1 hero + ≥ 5 gallery; reuse the hero url for `thumbnail`.
 - Video: by **link** (`uploadImage`, `skip_transform`) — attachments are for photos.
 - LINK TROUBLE: drop "a pasted photo → say you can't use it." Replace with: an attached photo → `uploadImages`; only ask for a link if an attachment fails (e.g. expired — links last ~5 min — re-attach) or for video/bulk.

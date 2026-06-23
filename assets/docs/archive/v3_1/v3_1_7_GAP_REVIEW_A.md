@@ -40,7 +40,7 @@ A builder following DESIGN P0(iii) literally will either invent a `wireCouponEve
 
 If the original full summary is in the 250+ range, the new one tips past 300 — exactly the failure mode landmine #31 already caught once (round-5 #1: refundOrder summary at 314 the doc estimated "≈295"). The parenthetical telling the builder *"keep < 300 chars"* is necessary but not sufficient — the doc doesn't show the full NEW summary so the builder can't verify by reading.
 
-**Concrete fix**: quote the FULL CURRENT `uploadImage` summary (`v2_0_0_GPT_SCHEMA.txt:269`) and the FULL NEW summary in 3.4b, with the verified `wc -c` count of the new one (must be < 300). If it overflows, trim before shipping (candidate: "If she ATTACHED photos to the chat, use uploadImages instead." → "If she attached photos, use uploadImages.").
+**Concrete fix**: quote the FULL CURRENT `uploadImage` summary (`v3_3_0_GPT_SCHEMA.txt:269`) and the FULL NEW summary in 3.4b, with the verified `wc -c` count of the new one (must be < 300). If it overflows, trim before shipping (candidate: "If she ATTACHED photos to the chat, use uploadImages instead." → "If she attached photos, use uploadImages.").
 
 **Severity**: MODERATE. Build-time only; the static gate would fail loudly. But landing the static gate then doing schema surgery is exactly the late-in-the-build friction this review exists to prevent.
 
@@ -92,7 +92,7 @@ The 7690 is comfortably under 8000 (310 chars of headroom by my count, 272 by th
 
 This is **not** a build-derailing finding — the only hard rule is < 8000 and we're well clear — but the doc's own discipline ("Verified `wc -c` = 7728 / 8000") is now slightly false on its face.
 
-**Concrete fix**: at build time, copy the Phase 3.9 block byte-for-byte into `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`, run `wc -c`, and update the cited figures in 3.9 + the testing static gate to match what's actually shipping. If F3's wording fix lands, recount after that edit.
+**Concrete fix**: at build time, copy the Phase 3.9 block byte-for-byte into `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`, run `wc -c`, and update the cited figures in 3.9 + the testing static gate to match what's actually shipping. If F3's wording fix lands, recount after that edit.
 
 **Severity**: LOW (informational). Flag rather than assert because the difference could be a copy-paste artifact in my extraction. Either way, the *verification step* the doc demands gets re-run.
 

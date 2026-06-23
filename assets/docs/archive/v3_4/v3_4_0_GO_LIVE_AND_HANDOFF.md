@@ -40,8 +40,8 @@
 
   + [ ] Finish the hero — pick the FX level, lay the text over it per your mockup, push to preview, tune to your eye.
   + [ ] GPT update, in Em's ChatGPT — paste the updated Action schema + instructions, point it at the preview, spot-check a refund / coupon / photo-attach.
-    - Schema: assets/docs/archive/v2_0/v2_0_0_GPT_SCHEMA.txt
-    - Instructions: assets/docs/archive/v2_0/v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt
+    - Schema: assets/docs/archive/v3_3/v3_3_0_GPT_SCHEMA.txt
+    - Instructions: assets/docs/archive/v3_3/v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt
     - The v2_0_0 names are current — they were never renamed.
   + [ ] Test-mode run-through on the preview — buy then refund a test piece (inventory decrements, a full refund flips the order), per the testing addendum.
   + [ ] Ship dev → main and tag, per assets/docs/archive/v2_0/v2_0_0_GO_LIVE.md.

@@ -52,7 +52,7 @@ Why this is the worst finding: every other gap surfaces visibly (build break, sc
 
 **2. The GPT `createCoupon` path still requires the GPT to compute a Unix timestamp — the v2.1 `FEEDBACK_COUPON` regression class isn't closed on this surface.**
 
-Location: IMPLEMENT Phase 2.2d + GPT schema (`v2_0_0_GPT_SCHEMA.txt`) for `createCoupon` — schema is NOT updated.
+Location: IMPLEMENT Phase 2.2d + GPT schema (`v3_3_0_GPT_SCHEMA.txt`) for `createCoupon` — schema is NOT updated.
 
 The /admin path is fixed: it sends raw `expires_date` (YYYY-MM-DD), the new `endOfDayET()` helper computes the ET end-of-day instant server-side. Clean. The **GPT** path still posts `expires_at` as Unix seconds. The note at IMPLEMENT line 675 — *"the GPT may still send expires_at directly (back-compat — both resolve to the same store-TZ instant for an Eastern owner)"* — is wishful: it presumes the GPT correctly constructs ET end-of-day from a date intent. The v2.1 regression was exactly the GPT getting that wrong. Instruction 2.3 only says "never invent an expiry" and "never decode a timestamp on read" — it doesn't teach the write side.
 
@@ -208,7 +208,7 @@ Location: IMPLEMENT 2.1b — `<select id="c-product">` single-select (line 387) 
 
 Fix: optional. If skipped, note as deliberate in the as-built doc so a future audit doesn't surface it as a defect.
 
-**14. No proactive char budget for `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` against the 8000-char cap (F5).**
+**14. No proactive char budget for `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt` against the 8000-char cap (F5).**
 
 Location: Testing addendum static gate; IMPLEMENT doesn't quote current file size or per-edit deltas.
 

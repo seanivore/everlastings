@@ -56,14 +56,14 @@ That's **net +~930**. From 7781 → **~8711**. The static gate fails by ~711 cha
 
 **Concrete fix (pick one):**
 - **(a, preferred)** Add a Phase 3.9d/e/f: two more CURRENT→NEW edits to ORDERS and MEDIA in the trimmed instructions file, pre-computed to net another 700+ chars. The same compression pattern (fold repetition, keep every distinct rule) used in 3.9a/b/c.
-- **(b)** Reconcile against an actual current copy of `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` and publish the post-edit `wc -c` count in the plan — if it's < 8000, the math above is wrong and the gate is fine; if it's > 8000, do (a).
+- **(b)** Reconcile against an actual current copy of `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt` and publish the post-edit `wc -c` count in the plan — if it's < 8000, the math above is wrong and the gate is fine; if it's > 8000, do (a).
 - **(c)** If neither, downgrade the cap to a soft gate with explicit owner approval — but that's a policy change, not a fix.
 
 ---
 
 ### 2. **MODERATE** — The 1.4a REFUND instruction omits the `id` parameter on `editProduct` inside the per-piece relist loop.
 
-**Where:** `IMPLEMENT.md` Phase 1.4a NEW (the REFUNDS block in `v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`).
+**Where:** `IMPLEMENT.md` Phase 1.4a NEW (the REFUNDS block in `v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`).
 
 **What's wrong:** The relevant clause reads:
 > "Yes -> unarchiveProduct if archived AND editProduct {available:true, quantity: quantity + 1} (both if both)."

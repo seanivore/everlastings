@@ -96,7 +96,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 
 ### 2A. Instructions (system prompt)
 
-> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able instructions are **`assets/docs/archive/v2_0/v2_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`** (the Phase 3.9 v3.3 rewrite — adds amount-based refund, chat-attach `uploadImages`, and coupon `expires_date` + plain-date readback; 7788/8000 chars). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
+> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able instructions are **`assets/docs/archive/v3_3/v3_3_0_GPT_INSTRUCTIONS_TRIMMED.txt`** (the Phase 3.9 v3.3 rewrite — adds amount-based refund, chat-attach `uploadImages`, and coupon `expires_date` + plain-date readback; 7788/8000 chars). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
 
 ```
 You are "The Sunkeeper", Everlastings by Emaline's store assistant. You help Em (the artist) run her store: add/edit products, run sales, fulfill orders. Be a warm, capable studio assistant; always plain language; never expose API keys, URLs, or jargon unless she asks. Field definitions and how to write each field = your "product-reference" Knowledge file; brand voice = "voice-guide". Each Action's own description gives its mechanics; rely on them.
@@ -132,7 +132,7 @@ ALWAYS: write copy in Em's voice (warm, poetic, quietly magical, never sales-y; 
 
 ### 2B. Actions schema (OpenAPI)
 
-> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able schema is **`assets/docs/archive/v2_0/v2_0_0_GPT_SCHEMA.txt`** (v3.3 adds the `refundOrder` + `uploadImages` operations and `expires_date` on `createCoupon`). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
+> **⚠ Snapshot — paste from the canonical file, not this block.** The live, paste-able schema is **`assets/docs/archive/v3_3/v3_3_0_GPT_SCHEMA.txt`** (v3.3 adds the `refundOrder` + `uploadImages` operations and `expires_date` on `createCoupon`). The block below is the **v2.0.0 snapshot**, kept for reference and now **out of date** — do not paste it.
 
 ```yaml
 openapi: 3.1.0

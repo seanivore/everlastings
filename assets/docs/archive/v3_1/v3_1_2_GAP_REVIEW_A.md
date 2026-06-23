@@ -60,7 +60,7 @@ The TESTING gate item 13 reads *"`listCoupons` returns `expires_display`; the GP
 
 This wholly defeats the regression-class fix the workstream was built around.
 
-**Fix.** Add a Phase 2.2f (or fold into 2.2e) byte-anchored to the existing `listCoupons` response shape in `v2_0_0_GPT_SCHEMA.txt`, adding `expires_display: { type: string, nullable: true, description: "Human-readable expiry in the store's timezone — relay this, never decode expires_at." }` to each coupon item's properties. (Same for the `createCoupon` 200 response if it explicitly declares property keys — 2.2c added it to the body, but only the wire side.)
+**Fix.** Add a Phase 2.2f (or fold into 2.2e) byte-anchored to the existing `listCoupons` response shape in `v3_3_0_GPT_SCHEMA.txt`, adding `expires_display: { type: string, nullable: true, description: "Human-readable expiry in the store's timezone — relay this, never decode expires_at." }` to each coupon item's properties. (Same for the `createCoupon` 200 response if it explicitly declares property keys — 2.2c added it to the body, but only the wire side.)
 
 ### T1·3 — WS1 declares a `reason` parameter the handler silently drops (IMPLEMENT §1.1b vs §1.3 vs §1.4a)
 
