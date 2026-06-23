@@ -14,15 +14,15 @@ Most "no-code" storefronts still make a non-technical owner *do the work* — lo
 
 In practice, the owner can — by chat — :
 
-| She says… | The assistant does |
-| --- | --- |
+| She says…                                                                | The assistant does                                                                                        |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | "Add the Lavender Wreath, here are the photos" *(attaches them in chat)* | Creates the product, uploads + crops every image, drafts the copy/SEO, returns a **private preview link** |
-| "Looks great — publish it" | Creates the Stripe product + price, takes it live at the same URL |
-| "Change the price to $145" | Rotates the Stripe price **in place** — same page, same link — live immediately |
-| "Mark the Sage one sold" / "we got 3 more in" | Flips availability / stock **live**, no publish step |
-| "Run 20% off everything until New Year's" | Builds the coupon + promo code, scoped and dated |
-| "Take the Fern down for now" | Archives it (reversible — nothing is ever hard-deleted) |
-| "Refund Jane's order for the Cottage" | Issues the Stripe refund, then asks whether to re-list each piece that came back |
+| "Looks great — publish it"                                               | Creates the Stripe product + price, takes it live at the same URL                                         |
+| "Change the price to $145"                                               | Rotates the Stripe price **in place** — same page, same link — live immediately                           |
+| "Mark the Sage one sold" / "we got 3 more in"                            | Flips availability / stock **live**, no publish step                                                      |
+| "Run 20% off everything until New Year's"                                | Builds the coupon + promo code, scoped and dated                                                          |
+| "Take the Fern down for now"                                             | Archives it (reversible — nothing is ever hard-deleted)                                                   |
+| "Refund Jane's order for the Cottage"                                    | Issues the Stripe refund, then asks whether to re-list each piece that came back                          |
 
 The safety net is **draft → preview → publish**: she always *sees* the real page before anything goes live, because no one can picture a change from a chat message alone.
 
@@ -142,18 +142,18 @@ Vercel auto-scopes environment variables per branch, so the same codebase runs a
 
 ## Documentation
 
-| Document                                                                   | Description                                                     |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                                    |
-| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy, email templates                |
-| [Implementation Guide](/assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md)      | Phase 0 setup + Tracks A/B/C build                              |
-| [v1.4.9 Build Report](/assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md)    | What shipped in the checkout/fulfillment build + deviations     |
-| [v1.5 Plan + Gap-Review History](/assets/docs/archive/v1_5/)               | AI store-management — the living plan + its cold-review hardening|
-| [GA4 KPIs + Advertising](/assets/docs/archive/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                               |
-| [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Owner how-to: products + orders across GPT, Admin, Studio       |
-| [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Custom GPT brain + setup; agentic curl protocol                 |
-| [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist                                       |
-| [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                   | The by-chat management layer — IMPLEMENT, design/testing addenda, build report |
+| Document                                                                   | Description                                                                                                                       |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [Architecture](/assets/docs/EVERLASTINGS_STORE.md)                         | Complete technical reference                                                                                                      |
+| [Brand Guide](/assets/docs/BRAND.md)                                       | Voice, colors, typography, copy, email templates                                                                                  |
+| [Implementation Guide](/assets/docs/archive/v1_4/v1_4_3_IMPLEMENT.md)      | Phase 0 setup + Tracks A/B/C build                                                                                                |
+| [v1.4.9 Build Report](/assets/docs/archive/v1_4/v1_4_9_BUILD_REPORT.md)    | What shipped in the checkout/fulfillment build + deviations                                                                       |
+| [v1.5 Plan + Gap-Review History](/assets/docs/archive/v1_5/)               | AI store-management — the living plan + its cold-review hardening                                                                 |
+| [GA4 KPIs + Advertising](/assets/docs/archive/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                                                                                                 |
+| [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)               | Owner how-to: products + orders across GPT, Admin, Studio                                                                         |
+| [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                       | Custom GPT brain + setup; agentic curl protocol                                                                                   |
+| [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                 | One-email setup checklist                                                                                                         |
+| [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                  | The by-chat management layer — IMPLEMENT, design/testing addenda, build report                                                    |
 | [v3.3 Build Packet](/assets/docs/archive/v3_3/)                            | Management parity (refunds + coupons), chat-attach upload, inventory, admin polish, homepage — IMPLEMENT + addenda + build report |
 
 ---
