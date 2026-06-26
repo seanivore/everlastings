@@ -94,34 +94,3 @@ function fireViewList(items) {
 function escapeAttr(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-
-// Hero text units (v3.4). lottie-web is loaded `defer` BEFORE this script, so window.lottie is defined
-// when this DOMContentLoaded fires. Each [data-hero-lottie] unit keeps a real-text fallback; we hide it
-// only once its SVG actually mounts drawn <path>s — so a 404/blocked script/reduced-motion all fall back
-// cleanly to the styled text. Each Lottie loops (the subtle old-film nudge is baked in).
-document.addEventListener('DOMContentLoaded', () => {
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || !window.lottie) return;                   // reduced-motion / no-JS → styled text fallback
-  document.querySelectorAll('[data-hero-lottie]').forEach((el) => {
-    const path = el.getAttribute('data-hero-lottie');
-    if (!path) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: el, renderer: 'svg', loop: true, autoplay: true,
-        path,
-        rendererSettings: { progressiveLoad: false, preserveAspectRatio: 'xMidYMid meet' },
-      });
-      // Async failure (404, blocked, bad JSON) fires data_failed, never DOMLoaded → leave the text.
-      anim.addEventListener('data_failed', () => { /* never add .has-lottie → styled text stays */ });
-      // Hide the fallback text only once the SVG has ACTUALLY mounted drawn content. Check for `path`
-      // (the real strokes), NOT `g` — lottie-web can mount empty <g> containers that match truthily.
-      anim.addEventListener('DOMLoaded', () => {
-        const svg = el.querySelector('svg');
-        if (svg && svg.querySelector('path')) {
-          const unit = el.closest('.hero__unit');
-          if (unit) unit.classList.add('has-lottie');
-        }
-      });
-    } catch { /* lottie threw synchronously → leave the styled text visible */ }
-  });
-});
