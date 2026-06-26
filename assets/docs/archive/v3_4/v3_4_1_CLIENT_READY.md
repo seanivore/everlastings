@@ -97,13 +97,13 @@ There isn’t a character-limit issue in the action schema from what I can see h
   **Feedback in the same vein that should be integrated before final handoff to client**
     - Additionally, for any website, they're going to need legal copy and even banners about the deals they'll be running. It is one thing to neglect the banners and be like, okay out of scope (though it would be shitty IMO like a good consultant should have advised it would be necessary if not just include it), but the lack of legal terms on using coupons and what the stipulations of any one promotion are is just irresponsible and not something we can forgo. I thin that in fixing the above, we might need to look into a super simple banner that displays. We should simplify the understanding of coupons and discounts too with like, idk, a flow chart, that leads them to what they need for showcasing it on the site and for legal jargon. LMK what you think! 
 
-  + [ ] Put both pieces in one cart, apply the code at checkout, finish the test purchase
+  + [x] Put both pieces in one cart, apply the code at checkout, finish the test purchase
     - Proves coupons + the code actually applying at checkout (never tested) + the buy flow + both pieces going sold
 
 #### Flow 4 — Refund two ways
 
-  + [ ] Refund "The Letter Room" with the Sunkeeper and relist it → it comes back live and buyable
-  + [ ] Refund "The Tide-Glass Lantern" in /admin and don't relist → it stays sold
+  + [x] Refund "The Letter Room" with the Sunkeeper and relist it → it comes back live and buyable
+  + [x] Refund "The Tide-Glass Lantern" in /admin and don't relist → it stays sold
     - Proves refunds on both surfaces + relist-or-not + a full refund flipping the order to refunded
     - While you're in /admin, double-click Refund once → only one refund should land
     - Leaves the dev site with one live piece and one sold piece — a real preview for Em
