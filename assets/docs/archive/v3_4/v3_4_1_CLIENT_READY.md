@@ -32,6 +32,8 @@
     - The SEO thumbnail upload was not copying over into the form field which also seems redundant anyway 
     - There was an overhang of the button descriptions for each upload, it was messy, honestly sort of looked like no one gave the design much thought
     - Why is it so easy for LLM to create a great UI for front end on first try, but Admin page is always ugly? Why are we treating them different at all? Historically this was to save resources because it took humans eternity to code even the simplest looking page, but LLM can make a beautiful page in minutes, so why would we not want the admin page to look beautiful? This feels like a huge oversight AND a huge edge ahead of competition because everyone else is still working that the same old mentality that we are apparently still stuck in when it comes to the admin page. The customer is as important to me as their shoppers. They need to be happy with frontend and back end. No reason other than human effort in the past was admin page ever left ugly. 
+    - Publish is hidden until you click "Save draft" again — it only draws into a panel after a save, so reopening a finished draft (all * fields + green checks) shows no Publish at all and looks like you can't publish. Fix: ALWAYS show Publish, and if something essential is missing, a warning popup stops the publish and names what's missing — louder + self-explaining (a UI that hides or disables an action owes you the reason)
+    - No "view site / back to storefront" exit — Sign out only goes to the login page, "← Products" only returns to the grid; I keep deleting "/admin" from the URL by hand. Add a View Site link
 
 #### Flow 3 — Make a sale, then buy with it
 
