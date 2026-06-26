@@ -1,5 +1,21 @@
 # Welcome, Em — Running Your Store
 
+## Still finishing — quick flags (Sean's handoff list)
+
+  We're still polishing these. Flag them for Em so she knows they're known and on the way.
+
+  1. Auto sales (no code) — holiday-style sales that apply to everyone automatically, with a banner, a small popup, and sale prices shown right on the site; right now a sale still needs a code
+  2. Publish button hides — in the Dashboard, "Publish" only appears after you click "Save draft"; making it always show and tell you if anything's missing
+  3. No "View Site" link — the Dashboard has no button back to the storefront (you delete "/admin" from the address by hand); adding one
+  4. Dashboard polish — making the admin pages as clean and pretty as the storefront
+  5. Shop "Series" filter — filtering the shop by a series like "Portals to Peace" shows nothing right now; fixing the match
+  6. False "already purchased" — if you start checkout and back out, the piece locks for 15 minutes and wrongly says sold (and offers a discount too soon); removing that hold
+  7. Featured tiles on mobile — the Featured Havens tiles stack awkwardly on phones; making each row its own smooth side-scroll (like Netflix rows)
+  8. Homepage hero — a fancier animated homepage intro is ready to show you; we'll add it if you like it
+  9. Order ID on the receipt page — the confirmation page shows a long internal Stripe code as the "Order ID"; we'll hide it or swap it for a clean reference (it's not a testing thing — it'd show on real orders too)
+
+  ---
+
   Your store mostly runs itself once your pieces are in it. When you want to add a haven, change a price, run a sale, or send an order on its way, you have two easy ways to do it — and you never touch any code.
 
   + The Sunkeeper — your assistant. You talk to it, and it does the work
