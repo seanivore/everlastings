@@ -92,6 +92,8 @@ Birthday code: already created as HAPPY_BIRTHDAY_MARK; because Checkout only acc
 There isn’t a character-limit issue in the action schema from what I can see here; it’s more that this particular action is intentionally narrow, while Stripe’s full API has more checkout-level controls.
 ```
 
+  **Feedback in the same vein that should be integrated before final handoff to client**
+    - Additionally, for any website, they're going to need legal copy and even banners about the deals they'll be running. It is one thing to neglect the banners and be like, okay out of scope (though it would be shitty IMO like a good consultant should have advised it would be necessary if not just include it), but the lack of legal terms on using coupons and what the stipulations of any one promotion are is just irresponsible and not something we can forgo. I thin that in fixing the above, we might need to look into a super simple banner that displays. We should simplify the understanding of coupons and discounts too with like, idk, a flow chart, that leads them to what they need for showcasing it on the site and for legal jargon. LMK what you think! 
 
   + [ ] Put both pieces in one cart, apply the code at checkout, finish the test purchase
     - Proves coupons + the code actually applying at checkout (never tested) + the buy flow + both pieces going sold
