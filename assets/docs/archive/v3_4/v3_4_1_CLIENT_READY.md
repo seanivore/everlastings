@@ -11,23 +11,62 @@
 
 ## Left to go live
 
-### Test on dev — Stripe test mode
+### Test on dev — set up, sell, refund (Stripe test mode)
 
-  + [ ] Chat-photo upload — the one new thing never tested end to end
-    - In the GPT: attach a photo, "create a product called … with this as the hero"
-    - It should upload to the CDN and build the piece
-    - Claude confirms the image landed and the product row exists
+  One natural flow instead of scattered checks: build two real pieces (one by chat, one in the dashboard), leave them on the dev site as Em's preview, then buy and refund them. Every test item gets covered along the way, and Claude verifies each step on the server side.
 
-  + [ ] Refund — both surfaces
-    - GPT: "refund <buyer>'s order for <piece>" → it reads back, confirms, refunds, offers to relist
-    - /admin: buy a 3-piece cart, refund one → only that piece refunds and relists, the other two stay sold and buyable
-    - A full-amount refund flips the order to refunded; a double-click still makes only one refund
+#### Flow 1 — "The Letter Room", built by chat (the Sunkeeper)
 
-  + [ ] Store tools in /admin
-    - Coupons: make one with a minimum, confirm it reads back "$50.00" not a raw number, then end it
-    - Media editor: add an MP4 or YouTube row, set the no-buttons vs click-to-play toggle, save, reopen
-    - Image zones: the seo_thumbnail and checkout_image zones actually set those fields
-    - States and filters: live / draft / sold / archived badges, the filter, the back-to-products nav
+  + [ ] In the GPT, attach the photos, ask it to create the piece below, let it write the copy and hand back a preview, then publish
+    - Proves the chat-photo upload (the one new thing never tested end to end) + create-by-chat
+    - The schema is new, so let it walk you through; Claude confirms the photos hit the CDN and the row is in the database
+
+  The piece:
+
+    - Name: The Letter Room
+    - Series: Story Lofts
+    - Price: $245 · Quantity: 1 · Featured
+    - Headline: For the letters we never stopped writing
+    - Description: A miniature writing room at dusk, one lamp lit over a desk where a letter waits, half-finished — for everyone still keeping a correspondence with someone the world has carried out of reach.
+    - Story: Some evenings the rain finds the window first, and the lamp comes on without being asked. The Letter Room is that hour — a small desk, a cup gone cool, a page begun and set down and begun again. It keeps a light on for the letters we go on writing to the people we can no longer send them to. Built in basswood and resin, lit by a warm LED you can turn low, and small enough to keep where you'll see it last thing at night.
+    - Dimensions: 8" W x 5" D x 9" H · 2.1 lbs
+    - Materials: basswood, resin, brass-finish lamp, miniature paper, warm LED
+    - Power: USB-C (adapter included) · Ships: 3-5 business days, insured
+    - Photos: a hero plus a few gallery shots — attach from your computer
+
+#### Flow 2 — "The Tide-Glass Lantern", built in /admin (your first time)
+
+  + [ ] Log in, add the piece below by hand, drop in the hero image and the looping clip, set the social + checkout images in their slots, publish
+    - Proves /admin create + the media editor (the clip row + the loop / click-to-play toggle) + the image zones (seo_thumbnail + checkout_image) + the state badges
+    - This is your first /admin build, so go slow and notice the flow
+
+  The piece:
+
+    - Name: The Tide-Glass Lantern
+    - Series: Portals to Peace
+    - Price: $210 · Quantity: 1
+    - Headline: A small light that keeps the dark company
+    - Description: A miniature harbor lantern with a slow-turning glow, the kind left burning on a sill for whoever is still out on the water — for the nights that need a little keeping.
+    - Story: On the far edge of Elsewhere there is a lantern that never quite goes out — it turns, slow as breathing, throwing warm light across the glass and the water beyond. The Tide-Glass Lantern is a haven for the long nights, a steady thing to set on the shelf when you need proof that the dark can be kept company. Hand-built in resin and brass-finish, lit by a warm LED with a gentle turning glow.
+    - Dimensions: 6" W x 6" D x 11" H · 2.4 lbs
+    - Materials: resin, brass-finish, frosted glass, warm LED
+    - Power: USB-C (adapter included) · Ships: 3-5 business days, insured
+    - Media: a hero image + one looping clip (set it to loop, no buttons) + a square checkout image + a wide social image
+
+#### Flow 3 — Make a sale, then buy with it
+
+  + [ ] Make a coupon — try the /admin Coupons tab, or ask the GPT — say 15% off everything, or $25 off over $200
+    - Confirm it reads back as real money ("$25.00", "$200.00 minimum"), not a raw number
+  + [ ] Put both pieces in one cart, apply the code at checkout, finish the test purchase
+    - Proves coupons + the code actually applying at checkout (never tested) + the buy flow + both pieces going sold
+
+#### Flow 4 — Refund two ways
+
+  + [ ] Refund "The Letter Room" with the Sunkeeper and relist it → it comes back live and buyable
+  + [ ] Refund "The Tide-Glass Lantern" in /admin and don't relist → it stays sold
+    - Proves refunds on both surfaces + relist-or-not + a full refund flipping the order to refunded
+    - While you're in /admin, double-click Refund once → only one refund should land
+    - Leaves the dev site with one live piece and one sold piece — a real preview for Em
 
 ### Ship
 

@@ -1,101 +1,101 @@
 # Welcome, Em — Running Your Store
 
-  Your store mostly runs itself once your pieces are in it. When you want to add a piece, change a price, run a sale, or ship an order, you have two easy ways to do it — and you never touch any code.
+  Your store mostly runs itself once your pieces are in it. When you want to add a haven, change a price, run a sale, or send an order on its way, you have two easy ways to do it — and you never touch any code.
 
-  + The Sunkeeper — your assistant. You just talk to it, and it does the work
+  + The Sunkeeper — your assistant. You talk to it, and it does the work
   + The Dashboard — your control panel at the website's /admin. The same things, by clicking
   + The Sunkeeper is the easy everyday way. The Dashboard always works, even if the assistant is ever down — so it's good to know both
   + Stuck on anything? Ask the Sunkeeper "how do I …?" and it will walk you through it
 
   ---
 
-  Note for Sean — this is the recording script. Each clip below has a plain caption (what Em sees on screen between clips) and a "Clip" line (what to screen-record while talking to camera). Record them in order.
+  Note for Sean — this is the recording script. Each clip has a plain caption (what Em sees on screen between clips) and a "Clip" line (what to screen-record while talking to camera). The example pieces match what's set up on the dev site, so the footage looks real.
 
 ## Part 1 — The Sunkeeper (your store, by chat)
 
 ### Clip 1 — See everything in your shop
 
-  Ask the Sunkeeper what's in your store and it shows you every piece — live, draft, or sold.
+  Ask the Sunkeeper what's in your store and it shows you every haven — live, draft, or already gone home.
 
-  Clip: open the Sunkeeper, type "show me everything in the shop," let it list the pieces — say that this is always how you check what's live.
+  Clip: open the Sunkeeper, type "show me everything in the shop," let it list the pieces — The Letter Room, The Tide-Glass Lantern, The Reading Hour — with prices and status. Say this is always how you check what's live, without opening anything.
 
-### Clip 2 — Add a new piece with your photos
+### Clip 2 — Add a new haven with your photos
 
-  Drop your photos into the chat, tell it the name and price, and it writes the listing in your voice — you just look it over and say "publish."
+  Drop your photos into the chat, tell it the name and price, and it writes the listing in your voice. You just look it over and say publish.
 
-  Clip: attach a few photos, type "add a new piece called … for $…, here are the photos," let it write the copy and hand back a preview link → open the preview → say "publish it." Point out that you can change any words before publishing.
+  Clip: attach a few photos → "Add a new piece called The Greenhouse at Dusk for $260 — a glass conservatory gone soft and golden at the end of the day." Let it write the headline and story in your voice and hand back a preview link → open the preview → "publish it." Point out you can change any word before it goes live.
 
-### Clip 3 — Change a price, mark something sold, restock
+### Clip 3 — Change a price, send something home, restock
 
   Prices, availability, and quantity change the moment you ask. Wording changes show you a preview first, then you publish.
 
-  Clip: "set The Reading Hour to $195" (happens instantly) → "mark The Tide Library sold" (instant) → "change the headline to …" (it stages a preview) → "publish that." Say the rule out loud: numbers and on/off are instant; words wait for your okay.
+  Clip: "set The Reading Hour to $195" (instant) → "mark The Tide-Glass Lantern as found its home" (instant) → "change The Letter Room's headline to 'A light left on for the letters'" → it stages a preview → "publish that." Say the rule out loud: prices and on/off are instant; words wait for your okay.
 
-### Clip 4 — Feature a piece on the homepage
+### Clip 4 — Feature a haven on the homepage
 
-  Tell it which piece to feature and it shows up on your homepage.
+  Tell it which piece to feature and it shines on your homepage.
 
-  Clip: "feature The Clockmaker's Window on the homepage" → then open the homepage and show it there.
+  Clip: "feature The Letter Room on the homepage" → then open the homepage and show it there in the featured row.
 
 ### Clip 5 — Run a sale, then end it
 
   Make a discount code in one sentence, and end it the same way when the sale is over.
 
-  Clip: "make a code for 20% off everything through Sunday" → it reads the code back → "what sales are running?" → later, "end that sale." Mention it can do a percent off or a dollar amount, store-wide or on chosen pieces.
+  Clip: "make a code for 15% off everything through Sunday" → it reads the code back (FIRELIGHT15) → "what sales are running?" → later, "end that sale." Mention it can do a percent off or a dollar amount, the whole shop or chosen pieces.
 
-### Clip 6 — See what needs shipping
+### Clip 6 — See what's waiting to ship
 
-  Ask what's waiting to go out and it lists the orders, with the buyer and the piece.
+  Ask what needs to go out and it lists the orders, with the collector and the piece.
 
-  Clip: "what needs shipping?" → it lists the open orders. Also show "look up <buyer>'s order" for a single one.
+  Clip: "what needs shipping?" → it lists the open orders. Then show "look up Marian's order" for a single one.
 
-### Clip 7 — Ship an order
+### Clip 7 — Send an order on its way
 
-  Give it the tracking number and it marks the order shipped and emails the buyer for you.
+  Give it the tracking number and it marks the order shipped and sends the collector the "on its way" note for you.
 
-  Clip: "mark <buyer>'s order shipped, tracking is …" → it confirms → mention the buyer automatically gets the "on its way" email.
+  Clip: "mark Marian's order shipped, tracking is 9400 1000 …" → it confirms → mention the collector automatically gets the "Your haven is on its way" email.
 
 ### Clip 8 — Refund an order
 
-  Ask it to refund and it handles the money and offers to put the piece back up for sale.
+  Ask it to refund and it handles the money, then offers to put the piece back up for sale.
 
-  Clip: "refund <buyer>'s order for <piece>" → it reads back the amount and asks you to confirm → confirm → it offers to relist the piece → "yes, relist it." Note you can refund the whole thing or part of it.
+  Clip: "refund Marian's order for The Letter Room" → it reads back the amount and asks you to confirm → confirm → it offers to relist the piece → "yes, relist it." Note you can refund the whole thing or part of it.
 
 ## Part 2 — The Dashboard (the same things, no assistant needed)
 
 ### Clip 9 — Log in
 
-  Your control panel lives at the website address with /admin on the end. One login and you're in.
+  Your control panel lives at your website address with /admin on the end. One login and you're in.
 
   Clip: go to the site /admin → sign in → land on the Products screen. (Em's login comes with this guide.)
 
-### Clip 10 — Your pieces at a glance
+### Clip 10 — Your havens at a glance
 
   Every piece with a colored tag — live, draft, sold, or archived — and a filter to show just one kind. Click any piece to open it.
 
-  Clip: show the Products grid, point out the tags, use the filter (e.g. show only Live), use the "back to Products" link → say this is the same store the Sunkeeper sees.
+  Clip: show the Products grid with The Letter Room and The Tide-Glass Lantern, point out the tags, use the filter to show only Live, then the "back to Products" link → say this is the same store the Sunkeeper sees.
 
-### Clip 11 — Add or edit a piece by hand
+### Clip 11 — Add or edit a haven by hand
 
-  The same fields the assistant fills — name, price, story, photos, videos — laid out as a form you fill in, then Publish.
+  The same fields the assistant fills — name, price, story, photos, a video — laid out as a form you fill in, then Publish.
 
-  Clip: open a piece → change the price → drop a photo into a slot, add a video row and set whether it loops silently or plays on click → Save / Publish. Keep it short; the point is "you can do it here too."
+  Clip: open The Tide-Glass Lantern → change the price → drop a photo into a slot, add a video row and set whether it loops silently or plays on click → Save. Keep it short; the point is "you can do all of it here too."
 
 ### Clip 12 — Run a sale from the dashboard
 
-  A Coupons tab where you create a discount and end it with a button.
+  A Coupons tab where you make a discount and end it with a button.
 
-  Clip: open the Coupons tab → make a 15%-off code with an end date → show it in the running-sales list → end one with the button.
+  Clip: open the Coupons tab → make a 10%-off code (WINTERING10) with an end date → show it in the running-sales list → end one with the button.
 
 ### Clip 13 — Orders and shipping
 
-  Three views — Needs Shipping, Shipped, All — and a place to drop in a tracking number that emails the buyer.
+  Three views — Needs Shipping, Shipped, All — and a place to drop in a tracking number that emails the collector.
 
-  Clip: open Orders → Needs Shipping → open an order → add a tracking number and save → show it move to Shipped. Mention the buyer gets the email, same as in chat.
+  Clip: open Orders → Needs Shipping → open an order → add a tracking number and Save → show it move to Shipped. Mention the collector gets the same "on its way" email as in chat.
 
 ### Clip 14 — Refund from the dashboard
 
-  A refund panel where you pick the piece, refund it, and choose to relist it.
+  A refund panel where you pick the piece, refund it, and choose whether to relist it.
 
   Clip: open a sold order → Refund this purchase → check the piece → Refund → accept the relist prompt → say it's the same refund the assistant does, just by clicking.
 
