@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Studio Slate — Pieces, States &amp; Cards · Content Creator Portal</title>
+<style>
+/* ============================================================
+   STUDIO SLATE — the Live Line
+   Tokens authored in OKLCH; every semantic state derives from ONE
+   hue token via color-mix(). Component CSS holds ZERO literal hex,
+   so a buyer re-hues the whole template by editing the hue tokens.
+   Hex in comments is reference only.
+   ============================================================ */
+:root{
+  /* —— type —— */
+  --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
+  --font-data:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --t-xs:.75rem; --t-sm:.875rem; --t-base:1rem; --t-lg:1.125rem; --t-xl:1.375rem; --t-2xl:1.75rem;
+
+  /* —— structural (the shipped light theme) —— */
+  --bg:oklch(97.3% 0.004 255);            /* #f6f7fa */
+  --surface:#ffffff;
+  --surface-sunk:oklch(95% 0.006 255);    /* #eef0f4 */
+  --ink:oklch(24% 0.03 262);              /* #1c2230 */
+  --ink-muted:oklch(46% 0.025 262);       /* #5b6477 */
+  --ink-faint:oklch(62% 0.02 262);        /* #8a91a1 */
+  --hairline:oklch(91% 0.006 262);        /* #e2e5ec */
+  --accent:oklch(42% 0.055 262);          /* #3d4f6d — the single structural hue token */
+  --accent-strong:color-mix(in oklch,var(--accent),black 14%);
+  --accent-soft:color-mix(in oklch,var(--accent),white 88%);
+  --focus:color-mix(in oklch, color-mix(in oklch,var(--accent),white 8%) 48%, transparent);
+
+  /* —— semantic STATE bases (one hue each; everything else mixes from these) —— */
+  --live:oklch(60% 0.12 150);             /* green — LIVE NOW / in the shop */
+  --waiting:oklch(72% 0.13 72);           /* amber — WAITING to go live / unpublished edits */
+  --sold:oklch(55% 0.04 300);             /* muted slate-plum — sold (present, not gone) */
+  --archived:oklch(62% 0.012 262);        /* desaturated grey — out of shop */
+  --draft:oklch(58% 0.02 262);            /* neutral slate — hidden draft */
+
+  /* derived tint / border / ink — all generated, re-hueable from the base above */
+  --live-bg:color-mix(in oklch,var(--live),white 86%);
+  --live-bd:color-mix(in oklch,var(--live),white 56%);
+  --live-ink:color-mix(in oklch,var(--live),black 42%);
+  --waiting-bg:color-mix(in oklch,var(--waiting),white 86%);
+  --waiting-bd:color-mix(in oklch,var(--waiting),white 56%);
+  --waiting-ink:color-mix(in oklch,var(--waiting),black 44%);
+  --sold-bg:color-mix(in oklch,var(--sold),white 86%);
+  --sold-bd:color-mix(in oklch,var(--sold),white 56%);
+  --sold-ink:color-mix(in oklch,var(--sold),black 30%);
+  --archived-bg:color-mix(in oklch,var(--archived),white 84%);
+  --archived-bd:color-mix(in oklch,var(--archived),white 52%);
+  --archived-ink:color-mix(in oklch,var(--archived),black 34%);
+  --draft-bg:color-mix(in oklch,var(--draft),white 84%);
+  --draft-bd:color-mix(in oklch,var(--draft),white 52%);
+  --draft-ink:color-mix(in oklch,var(--draft),black 34%);
+
+  /* —— elevation (cool-tinted; depth-as-information, no backdrop-blur) —— */
+  --sh-1:0 1px 2px oklch(24% 0.03 262 / .06);
+  --sh-2:0 4px 12px oklch(24% 0.03 262 / .10);
+  --sh-lift:0 10px 26px oklch(24% 0.03 262 / .14);
+  --sh-pop:0 -2px 16px oklch(24% 0.03 262 / .14);
+  --sh-inset:inset 0 2px 4px oklch(24% 0.03 262 / .12);
+
+  /* —— motion —— */
+  --dur-press:70ms; --dur-base:140ms; --dur-settle:220ms;
+  --ease-weight:cubic-bezier(.2,.7,.3,1);
+  --lift:translateY(-1px);        /* calm — secondary controls */
+  --lift-pro:translateY(-3px);    /* pronounced — tiles / hero */
+  --press:translateY(1px);
+
+  /* —— radius / space —— */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-pill:999px;
+}
+
+/* —— graceful degradation: flat-but-correct color on engines without OKLCH/color-mix —— */
+@supports not (color: color-mix(in oklch, white, black)){
+  :root{
+    --bg:#f6f7fa; --surface:#fff; --surface-sunk:#eef0f4;
+    --ink:#1c2230; --ink-muted:#5b6477; --ink-faint:#8a91a1; --hairline:#e2e5ec;
+    --accent:#3d4f6d; --accent-strong:#33425b; --accent-soft:#ecedf2; --focus:rgba(74,94,124,.5);
+    --live:#2f9e63; --waiting:#d2922d; --sold:#7c6d88; --archived:#8b919d; --draft:#7b8290;
+    --live-bg:#e7f5ed; --live-bd:#aedcc1; --live-ink:#1d6a41;
+    --waiting-bg:#faf0dd; --waiting-bd:#eccc8e; --waiting-ink:#8a5b13;
+    --sold-bg:#f1eef4; --sold-bd:#d4ccdb; --sold-ink:#4e4359;
+    --archived-bg:#f1f2f5; --archived-bd:#d5d8df; --archived-ink:#555a65;
+    --draft-bg:#eef0f3; --draft-bd:#ced3da; --draft-ink:#4c525f;
+    --sh-1:0 1px 2px rgba(28,34,48,.06); --sh-2:0 4px 12px rgba(28,34,48,.10);
+    --sh-lift:0 10px 26px rgba(28,34,48,.14); --sh-pop:0 -2px 16px rgba(28,34,48,.14);
+    --sh-inset:inset 0 2px 4px rgba(28,34,48,.12);
+  }
+}
+
+/* ============================================================ base */
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-ui); font-size:var(--t-base); line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+h1,h2,h3,p{margin:0;}
+.mono{font-family:var(--font-data); font-variant-numeric:tabular-nums;}
+
+/* shared focus ring — instant, same gesture everywhere */
+a,button{color:inherit;}
+:where(a,button,.tile,.cycle,.card__head):focus-visible{
+  outline:2.5px solid var(--focus); outline-offset:2px; border-radius:var(--r-sm);
+}
+
+/* ============================================================ chrome */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:.6rem;
+  padding:.85rem max(1rem,env(safe-area-inset-left)) .85rem max(1rem,env(safe-area-inset-left));
+  background:color-mix(in oklch,var(--surface),transparent 4%);
+  border-bottom:1px solid var(--hairline); box-shadow:var(--sh-1);
+}
+.brandmark{
+  width:26px; height:26px; border-radius:7px; flex:none;
+  background:linear-gradient(150deg,var(--accent),var(--accent-strong));
+  box-shadow:var(--sh-1), inset 0 1px 0 color-mix(in oklch,white,transparent 78%);
+  display:grid; place-items:center;
+}
+.brandmark span{width:8px; height:8px; border-radius:999px; background:var(--live); box-shadow:0 0 0 2px color-mix(in oklch,var(--live),transparent 70%);}
+.brandname{font-size:var(--t-sm); font-weight:600; letter-spacing:.01em;}
+.brandname small{display:block; font-weight:500; color:var(--ink-faint); font-size:var(--t-xs); letter-spacing:.04em;}
+.topbar__site{
+  margin-left:auto; font-size:var(--t-sm); font-weight:500; color:var(--ink-muted);
+  text-decoration:none; display:inline-flex; align-items:center; gap:.35rem;
+  padding:.4rem .6rem; border-radius:var(--r-sm);
+  transition:background var(--dur-base) var(--ease-weight), color var(--dur-base) var(--ease-weight);
+}
+.topbar__site:hover{background:var(--surface-sunk); color:var(--ink);}
+.topbar__site svg{width:14px; height:14px;}
+
+/* ============================================================ layout */
+.wrap{max-width:1080px; margin:0 auto; padding:1.5rem max(1rem,env(safe-area-inset-left)) 5rem;}
+.hero{margin:1rem 0 2.25rem;}
+.hero h1{font-size:var(--t-2xl); font-weight:600; line-height:1.2; letter-spacing:-0.01em;}
+.hero h1 em{font-style:normal; color:var(--ink-faint); font-weight:500;}
+.hero p{margin-top:.5rem; max-width:46ch; color:var(--ink-muted); font-size:var(--t-base);}
+.edge-key{display:inline-flex; align-items:center; gap:.45rem; margin-top:.9rem; flex-wrap:wrap;}
+.edge-key b{display:inline-flex; align-items:center; gap:.4rem; font-weight:500; font-size:var(--t-sm); color:var(--ink-muted);}
+.edge-key i{width:4px; height:14px; border-radius:2px; display:inline-block;}
+
+section{margin-top:2.5rem;}
+.sec-head{margin-bottom:1rem;}
+.sec-head .kicker{
+  font-size:var(--t-xs); font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint);
+}
+.sec-head h2{font-size:var(--t-lg); font-weight:600; margin-top:.2rem; letter-spacing:-0.005em;}
+.sec-head p{margin-top:.25rem; color:var(--ink-muted); font-size:var(--t-sm); max-width:54ch;}
+
+/* ============================================================ state pills (component 7)
+   self-evident, no legend. Each modifier sets one --st-* set; the
+   live & edits-waiting dots breathe, the rest sit still. */
+.pill{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.18rem .55rem .18rem .45rem; border-radius:var(--r-pill);
+  font-size:var(--t-xs); font-weight:500; line-height:1.4; white-space:nowrap;
+  background:var(--st-bg,var(--draft-bg));
+  border:1px solid var(--st-bd,var(--draft-bd));
+  color:var(--st-ink,var(--draft-ink));
+}
+.pill .dot{
+  width:7px; height:7px; border-radius:999px; flex:none;
+  background:var(--st-dot,var(--draft)); box-shadow:0 0 0 2px color-mix(in oklch,var(--st-dot,var(--draft)),transparent 78%);
+}
+.pill--live   {--st-bg:var(--live-bg);    --st-bd:var(--live-bd);    --st-ink:var(--live-ink);    --st-dot:var(--live);}
+.pill--waiting{--st-bg:var(--waiting-bg); --st-bd:var(--waiting-bd); --st-ink:var(--waiting-ink); --st-dot:var(--waiting);}
+.pill--draft  {--st-bg:var(--draft-bg);   --st-bd:var(--draft-bd);   --st-ink:var(--draft-ink);   --st-dot:var(--draft);}
+.pill--sold   {--st-bg:var(--sold-bg);    --st-bd:var(--sold-bd);    --st-ink:var(--sold-ink);    --st-dot:var(--sold);}
+.pill--archived{--st-bg:var(--archived-bg);--st-bd:var(--archived-bd);--st-ink:var(--archived-ink);--st-dot:var(--archived);}
+
+/* breathe only on the live / edits dot */
+.dot--pulse{animation:breathe 2.6s ease-in-out infinite;}
+@keyframes breathe{0%,100%{opacity:1;}50%{opacity:.32;}}
+/* one settle-pulse on a state transition (JS-triggered) */
+.pill--pulsing{animation:statepulse var(--dur-settle) var(--ease-weight);}
+@keyframes statepulse{0%{transform:scale(1);}40%{transform:scale(1.13);}100%{transform:scale(1);}}
+
+.pill-rail{display:flex; gap:.55rem; flex-wrap:wrap; align-items:center;}
+.pill-strip{
+  display:flex; gap:.6rem 1.1rem; flex-wrap:wrap; align-items:center;
+  padding:1.1rem; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:var(--r-lg); box-shadow:var(--sh-1);
+}
+.pill-strip figure{display:flex; flex-direction:column; gap:.45rem; margin:0;}
+.pill-strip figcaption{font-size:var(--t-xs); color:var(--ink-faint);}
+
+/* clickable demo — proves JS owns the state change, CSS owns the press/pulse */
+.cycle{
+  display:inline-flex; align-items:center; gap:.6rem;
+  padding:.35rem .6rem .35rem .4rem; border-radius:var(--r-pill);
+  background:var(--surface); border:1px solid var(--hairline); box-shadow:var(--sh-1);
+  font:inherit; color:var(--ink-muted); cursor:pointer;
+  transition:transform var(--dur-base) var(--ease-weight), box-shadow var(--dur-base) var(--ease-weight);
+}
+.cycle:hover{transform:var(--lift); box-shadow:var(--sh-2);}
+.cycle:active{transition-duration:var(--dur-press); transform:var(--press); box-shadow:var(--sh-inset);}
+.cycle__hint{font-size:var(--t-xs); font-weight:500;}
+
+/* ============================================================ product tile + Live Line (component 6)
+   ONE component. .tile-cq is its container; the tile reflows on the
+   CONTAINER's width — identical markup in the phone grid and the rail. */
+.tile-cq{container-type:inline-size;}
+
+.tile{
+  display:flex; flex-direction:column; text-decoration:none; color:inherit;
+  background:var(--surface);
+  border:1px solid var(--hairline);
+  border-left:4px solid var(--line,var(--draft));   /* THE LIVE LINE */
+  border-radius:var(--r-md); overflow:hidden; box-shadow:var(--sh-1);
+  transition:transform var(--dur-base) var(--ease-weight), box-shadow var(--dur-base) var(--ease-weight);
+}
+.tile:hover{transform:var(--lift-pro); box-shadow:var(--sh-lift);}    /* pronounced — eyes & thumbs land here */
+.tile:active{transition-duration:var(--dur-press); transform:var(--press); box-shadow:var(--sh-inset);}
+
+.tile--live    {--line:var(--live);}
+.tile--waiting {--line:var(--waiting);}
+.tile--draft   {--line:var(--draft);}
+.tile--sold    {--line:var(--sold);}
+.tile--archived{--line:var(--archived);}
+
+.tile__thumb{
+  position:relative; width:100%; aspect-ratio:4/3; flex:none;
+  background:var(--thumb,var(--surface-sunk)); background-size:cover; background-position:center;
+}
+.tile__thumb::after{   /* gentle bottom vignette for photographic depth */
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg,transparent 55%,oklch(24% 0.03 262 / .18));
+}
+.tile__pill{position:absolute; top:.5rem; right:.5rem; z-index:1;}
+.tile__pill .pill{box-shadow:var(--sh-1); backdrop-filter:none;}
+.tile__body{display:flex; flex-direction:column; gap:.25rem; padding:.7rem .8rem .85rem; flex:1; min-width:0;}
+.tile__title{font-size:var(--t-base); font-weight:600; line-height:1.25; letter-spacing:-0.005em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.tile__sub{font-size:var(--t-xs); color:var(--ink-faint);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.tile__meta{display:flex; align-items:baseline; gap:.5rem; margin-top:.4rem;}
+.tile__price{font-size:var(--t-base); font-weight:600; color:var(--ink);}
+.tile__price.is-muted{color:var(--ink-faint); font-weight:500;}
+.tile__sep{width:3px; height:3px; border-radius:999px; background:var(--ink-faint); opacity:.6;}
+.tile__qty{font-size:var(--t-xs); color:var(--ink-muted);}
+.tile__qty.is-low{color:var(--waiting-ink); font-weight:600;}
+.tile__qty.is-sold{color:var(--sold-ink); font-weight:600;}
+.tile--archived .tile__thumb{filter:grayscale(.72) brightness(1.02); opacity:.78;}
+.tile--archived .tile__title,.tile--archived .tile__price{color:var(--ink-muted);}
+
+/* horizontal layout kicks in on the CONTAINER's width — not the viewport's */
+@container (min-width: 25rem){
+  .tile{flex-direction:row; align-items:stretch;}
+  .tile__thumb{width:9.5rem; aspect-ratio:auto; align-self:stretch;}
+  .tile__body{justify-content:center;}
+}
+
+.grid{display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(190px,1fr));}
+
+/* container-query proof stage */
+.cq-stage{display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start;}
+.cq-col{display:flex; flex-direction:column; gap:.55rem;}
+.cq-col .tag{font-size:var(--t-xs); font-weight:500; color:var(--ink-faint);
+  display:inline-flex; align-items:center; gap:.4rem;}
+.cq-col .tag b{font-weight:600; color:var(--ink-muted);}
+.cq-narrow{width:248px; max-width:100%;}
+.cq-wide-scroll{max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.4rem;}
+.cq-wide{width:460px;}
+
+/* ============================================================ card / section container (component 10)
+   header (title + LIVE/WAITING tag) + collapsible body grid.
+   Demonstrates the two-speed split by color + position. */
+.card{
+  background:var(--surface); border:1px solid var(--hairline);
+  border-left:4px solid var(--line,var(--hairline));
+  border-radius:var(--r-lg); box-shadow:var(--sh-1); overflow:hidden;
+}
+.card--live{--line:var(--live);}
+.card--waiting{--line:var(--waiting);}
+.card__head{
+  display:flex; align-items:center; gap:.7rem; width:100%;
+  padding:1rem 1.1rem; font:inherit; color:inherit; text-align:left;
+  background:var(--head-bg,transparent); border:0; cursor:pointer;
+  transition:transform var(--dur-base) var(--ease-weight), background var(--dur-base) var(--ease-weight);
+}
+.card--live .card__head{--head-bg:color-mix(in oklch,var(--live-bg),transparent 35%);}
+.card--waiting .card__head{--head-bg:color-mix(in oklch,var(--waiting-bg),transparent 35%);}
+.card__head:active{transition-duration:var(--dur-press); transform:var(--press);}
+.card__title{font-size:var(--t-lg); font-weight:600; letter-spacing:-0.005em;}
+.tag{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.16rem .5rem; border-radius:var(--r-pill);
+  font-size:var(--t-xs); font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  background:var(--st-bg); border:1px solid var(--st-bd); color:var(--st-ink);
+}
+.tag .dot{width:6px; height:6px; border-radius:999px; background:var(--st-dot);}
+.tag--live{--st-bg:var(--live-bg); --st-bd:var(--live-bd); --st-ink:var(--live-ink); --st-dot:var(--live);}
+.tag--waiting{--st-bg:var(--waiting-bg); --st-bd:var(--waiting-bd); --st-ink:var(--waiting-ink); --st-dot:var(--waiting);}
+.card__chevron{
+  margin-left:auto; width:18px; height:18px; flex:none; color:var(--ink-faint);
+  transition:transform var(--dur-base) var(--ease-weight);
+}
+.card[data-collapsed="true"] .card__chevron{transform:rotate(-90deg);}
+.card__bodywrap{display:grid; grid-template-rows:1fr; transition:grid-template-rows var(--dur-settle) var(--ease-weight);}
+.card[data-collapsed="true"] .card__bodywrap{grid-template-rows:0fr;}
+.card__body{overflow:hidden; min-height:0;}
+.card__inner{padding:1rem 1.1rem 1.1rem; border-top:1px solid var(--hairline);}
+
+.rows{display:grid; gap:.1rem;}
+.row{
+  display:flex; align-items:baseline; justify-content:space-between; gap:1rem;
+  padding:.55rem 0; border-bottom:1px solid color-mix(in oklch,var(--hairline),transparent 35%);
+}
+.row:last-child{border-bottom:0;}
+.row__label{font-size:var(--t-sm); color:var(--ink-muted); font-weight:500;}
+.row__val{font-size:var(--t-base); font-weight:600; color:var(--ink); text-align:right;}
+.row__val .mono{font-weight:600;}
+.row__val small{display:block; font-weight:500; font-size:var(--t-xs); color:var(--ink-faint);}
+.inline-dot{display:inline-flex; align-items:center; gap:.4rem;}
+.inline-dot i{width:7px; height:7px; border-radius:999px; background:var(--live); box-shadow:0 0 0 2px color-mix(in oklch,var(--live),transparent 75%);}
+.note{
+  margin-top:.85rem; padding:.6rem .7rem; border-radius:var(--r-sm);
+  font-size:var(--t-xs); color:var(--ink-muted);
+  background:var(--surface-sunk); box-shadow:var(--sh-inset);
+}
+.chips{display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.2rem;}
+.chip{
+  font-size:var(--t-xs); padding:.18rem .5rem; border-radius:var(--r-sm);
+  background:var(--surface-sunk); color:var(--ink-muted); border:1px solid var(--hairline);
+}
+.split{display:grid; gap:1rem;}
+@media (min-width:720px){ .split{grid-template-columns:1fr 1fr; align-items:start;} }
+
+.footnote{margin-top:3rem; padding-top:1.25rem; border-top:1px solid var(--hairline);
+  color:var(--ink-faint); font-size:var(--t-xs); max-width:62ch;}
+.footnote code{font-family:var(--font-data); color:var(--ink-muted);}
+
+/* —— photographic placeholders: the WORK supplies the warmth; the chrome stays cool —— */
+.ph-1{--thumb:radial-gradient(120% 85% at 28% 16%,rgba(255,247,234,.7),transparent 55%),linear-gradient(152deg,#ecc79b,#cf8b5f 54%,#7c463b);}
+.ph-2{--thumb:radial-gradient(120% 85% at 26% 18%,rgba(236,252,252,.6),transparent 55%),linear-gradient(150deg,#9fd6cf,#3f8f96 55%,#1d4a59);}
+.ph-3{--thumb:radial-gradient(120% 85% at 30% 16%,rgba(247,250,232,.6),transparent 55%),linear-gradient(150deg,#bcc78a,#7f9450 52%,#46532c);}
+.ph-4{--thumb:radial-gradient(120% 85% at 27% 15%,rgba(255,249,226,.72),transparent 55%),linear-gradient(150deg,#f0cf7e,#d29a3c 55%,#8a5a1f);}
+.ph-5{--thumb:radial-gradient(120% 85% at 30% 18%,rgba(244,249,255,.7),transparent 55%),linear-gradient(150deg,#cdd9ec,#7d96c0 52%,#3a4d78);}
+.ph-6{--thumb:radial-gradient(120% 85% at 28% 16%,rgba(240,251,242,.6),transparent 55%),linear-gradient(150deg,#a8cf9e,#5a9560 54%,#264a32);}
+
+/* ============================================================ reduced-motion floor
+   drop ALL travel/pulse — every feedback survives via color, opacity & the ring. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+  .tile:hover,.cycle:hover{transform:none;}        /* no travel; shadow/ring still change */
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brandmark" aria-hidden="true"><span></span></span>
+  <span class="brandname">Content Creator Portal<small>Studio Slate</small></span>
+  <a class="topbar__site" href="#" aria-label="View the live storefront">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+    View Site
+  </a>
+</header>
+
+<main class="wrap">
+
+  <div class="hero">
+    <h1>The Live Line <em>— a state you can point at</em></h1>
+    <p>Every piece wears a colored left edge, everywhere it appears. You never read the words “draft” or “staged” — you read a color.</p>
+    <div class="edge-key">
+      <b><i style="background:var(--live)"></i> Green is live in the shop</b>
+      <b><i style="background:var(--waiting)"></i> Amber is waiting to go live</b>
+    </div>
+  </div>
+
+  <!-- ============ STATE PILLS (component 7) ============ -->
+  <section aria-labelledby="s-states">
+    <div class="sec-head">
+      <p class="kicker">Piece states</p>
+      <h2 id="s-states">Self-evident — no legend</h2>
+      <p>The five states a piece can hold. The live and edits-waiting dots breathe; the rest sit still. Sold reads “present, not gone.”</p>
+    </div>
+
+    <div class="pill-strip">
+      <figure>
+        <span class="pill pill--live"><span class="dot dot--pulse" aria-hidden="true"></span>Live</span>
+        <figcaption>for sale right now</figcaption>
+      </figure>
+      <figure>
+        <span class="pill pill--draft"><span class="dot" aria-hidden="true"></span>Draft</span>
+        <figcaption>hidden, not listed yet</figcaption>
+      </figure>
+      <figure>
+        <span class="pill pill--waiting"><span class="dot dot--pulse" aria-hidden="true"></span>Edits waiting</span>
+        <figcaption>live, with unpublished changes</figcaption>
+      </figure>
+      <figure>
+        <span class="pill pill--sold"><span class="dot" aria-hidden="true"></span>Sold</span>
+        <figcaption>can be relisted anytime</figcaption>
+      </figure>
+      <figure>
+        <span class="pill pill--archived"><span class="dot" aria-hidden="true"></span>Archived</span>
+        <figcaption>out of the shop</figcaption>
+      </figure>
+    </div>
+
+    <div style="margin-top:1rem; display:flex; align-items:center; gap:.85rem; flex-wrap:wrap;">
+      <button class="cycle" id="cycleBtn" type="button" aria-label="Cycle the demo piece through its states">
+        <span class="pill pill--live" id="demoPill">
+          <span class="dot dot--pulse" id="demoDot" aria-hidden="true"></span><span id="demoLabel">Live</span>
+        </span>
+        <span class="cycle__hint">tap to change state &rarr;</span>
+      </button>
+      <span style="font-size:var(--t-xs); color:var(--ink-faint);">JS sets the state · CSS owns the press &amp; the settle-pulse</span>
+    </div>
+  </section>
+
+  <!-- ============ PRODUCT TILES (component 6) ============ -->
+  <section aria-labelledby="s-grid">
+    <div class="sec-head">
+      <p class="kicker">Your shop</p>
+      <h2 id="s-grid">Pieces</h2>
+      <p>Thumbnail, title, price and quantity — with the Live Line edge and a corner state pill. The whole tile lifts on hover and sinks on press.</p>
+    </div>
+
+    <div class="grid">
+      <div class="tile-cq"><a class="tile tile--live" href="#" aria-label="Hearthlight Haven — Live, $240.00, 1 available">
+        <div class="tile__thumb ph-1"><span class="tile__pill"><span class="pill pill--live"><span class="dot dot--pulse" aria-hidden="true"></span>Live</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Hearthlight Haven</h3>
+          <p class="tile__sub">Glass-domed · firelit cabin</p>
+          <div class="tile__meta"><span class="tile__price mono">$240.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">1 available</span></div>
+        </div>
+      </a></div>
+
+      <div class="tile-cq"><a class="tile tile--waiting" href="#" aria-label="Tidepool Cloche — live with edits waiting, $185.00, 1 available">
+        <div class="tile__thumb ph-2"><span class="tile__pill"><span class="pill pill--waiting"><span class="dot dot--pulse" aria-hidden="true"></span>Edits waiting</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Tidepool Cloche</h3>
+          <p class="tile__sub">Glass-domed · coastal</p>
+          <div class="tile__meta"><span class="tile__price mono">$185.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">1 available</span></div>
+        </div>
+      </a></div>
+
+      <div class="tile-cq"><a class="tile tile--draft" href="#" aria-label="Moss and Ember — draft, not yet listed">
+        <div class="tile__thumb ph-3"><span class="tile__pill"><span class="pill pill--draft"><span class="dot" aria-hidden="true"></span>Draft</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Moss &amp; Ember</h3>
+          <p class="tile__sub">Open terrarium · woodland</p>
+          <div class="tile__meta"><span class="tile__price mono is-muted">Not priced</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">not listed</span></div>
+        </div>
+      </a></div>
+
+      <div class="tile-cq"><a class="tile tile--live" href="#" aria-label="Lantern Row — Live, $96.00, 2 left">
+        <div class="tile__thumb ph-4"><span class="tile__pill"><span class="pill pill--live"><span class="dot dot--pulse" aria-hidden="true"></span>Live</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Lantern Row</h3>
+          <p class="tile__sub">Small series · golden hour</p>
+          <div class="tile__meta"><span class="tile__price mono">$96.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono is-low">2 left</span></div>
+        </div>
+      </a></div>
+
+      <div class="tile-cq"><a class="tile tile--sold" href="#" aria-label="Winterfold Haven — sold, can be relisted">
+        <div class="tile__thumb ph-5"><span class="tile__pill"><span class="pill pill--sold"><span class="dot" aria-hidden="true"></span>Sold</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Winterfold Haven</h3>
+          <p class="tile__sub">Glass-domed · snowfield</p>
+          <div class="tile__meta"><span class="tile__price mono">$320.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono is-sold">Sold &middot; relistable</span></div>
+        </div>
+      </a></div>
+
+      <div class="tile-cq"><a class="tile tile--archived" href="#" aria-label="Glasshouse No. 4 — archived, out of shop">
+        <div class="tile__thumb ph-6"><span class="tile__pill"><span class="pill pill--archived"><span class="dot" aria-hidden="true"></span>Archived</span></span></div>
+        <div class="tile__body">
+          <h3 class="tile__title">Glasshouse No. 4</h3>
+          <p class="tile__sub">Open terrarium · fern</p>
+          <div class="tile__meta"><span class="tile__price mono is-muted">$150.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">out of shop</span></div>
+        </div>
+      </a></div>
+    </div>
+  </section>
+
+  <!-- ============ ONE TILE, TWO LAYOUTS — container-query proof ============ -->
+  <section aria-labelledby="s-cq">
+    <div class="sec-head">
+      <p class="kicker">One tile, two layouts</p>
+      <h2 id="s-cq">Mobile-first by construction</h2>
+      <p>Identical markup. The tile reflows on its <em>container’s</em> width — not the screen’s — so the same component renders in the phone grid and the desktop rail. (Swipe the wide one on a narrow screen; it stays horizontal because its container is wide.)</p>
+    </div>
+
+    <div class="cq-stage">
+      <div class="cq-col">
+        <span class="tag tag--live" style="--st-bg:var(--surface-sunk);--st-bd:var(--hairline);--st-ink:var(--ink-muted);--st-dot:var(--accent); text-transform:none; letter-spacing:0; font-weight:500;">Phone grid cell <b>· 248px</b></span>
+        <div class="tile-cq cq-narrow"><a class="tile tile--live" href="#">
+          <div class="tile__thumb ph-1"><span class="tile__pill"><span class="pill pill--live"><span class="dot dot--pulse" aria-hidden="true"></span>Live</span></span></div>
+          <div class="tile__body">
+            <h3 class="tile__title">Hearthlight Haven</h3>
+            <p class="tile__sub">Glass-domed · firelit cabin</p>
+            <div class="tile__meta"><span class="tile__price mono">$240.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">1 available</span></div>
+          </div>
+        </a></div>
+      </div>
+
+      <div class="cq-col" style="flex:1; min-width:280px;">
+        <span class="tag" style="--st-bg:var(--surface-sunk);--st-bd:var(--hairline);--st-ink:var(--ink-muted);--st-dot:var(--accent); text-transform:none; letter-spacing:0; font-weight:500;">Desktop rail item <b>· 460px</b></span>
+        <div class="cq-wide-scroll">
+          <div class="tile-cq cq-wide"><a class="tile tile--live" href="#">
+            <div class="tile__thumb ph-1"><span class="tile__pill"><span class="pill pill--live"><span class="dot dot--pulse" aria-hidden="true"></span>Live</span></span></div>
+            <div class="tile__body">
+              <h3 class="tile__title">Hearthlight Haven</h3>
+              <p class="tile__sub">Glass-domed · firelit cabin</p>
+              <div class="tile__meta"><span class="tile__price mono">$240.00</span><span class="tile__sep" aria-hidden="true"></span><span class="tile__qty mono">1 available</span></div>
+            </div>
+          </a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARD / SECTION CONTAINERS — the two-speed split (component 10) ============ -->
+  <section aria-labelledby="s-cards">
+    <div class="sec-head">
+      <p class="kicker">The two speeds</p>
+      <h2 id="s-cards">What’s live now vs. what’s waiting</h2>
+      <p>Price, stock and availability go live the moment you save. Wording and photos get previewed, then published. Same card system — color and place tell you which is which. Tap a header to collapse it.</p>
+    </div>
+
+    <div class="split">
+      <!-- LIVE NOW commerce card -->
+      <article class="card card--live" data-collapsed="false">
+        <button class="card__head" type="button" aria-expanded="true">
+          <span class="card__title">Live now</span>
+          <span class="tag tag--live"><span class="dot" aria-hidden="true"></span>Live now</span>
+          <svg class="card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="card__bodywrap"><div class="card__body"><div class="card__inner">
+          <div class="rows">
+            <div class="row"><span class="row__label">Price</span><span class="row__val"><span class="mono">$240.00</span></span></div>
+            <div class="row"><span class="row__label">Stock</span><span class="row__val"><span class="mono">1</span></span></div>
+            <div class="row"><span class="row__label">Available</span><span class="row__val"><span class="inline-dot"><i aria-hidden="true"></i> In the shop</span></span></div>
+          </div>
+          <p class="note">Changes here go live the moment you save — no preview step.</p>
+        </div></div></div>
+      </article>
+
+      <!-- WAITING card -->
+      <article class="card card--waiting" data-collapsed="false">
+        <button class="card__head" type="button" aria-expanded="true">
+          <span class="card__title">Story &amp; details</span>
+          <span class="tag tag--waiting"><span class="dot" aria-hidden="true"></span>Waiting</span>
+          <svg class="card__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="card__bodywrap"><div class="card__body"><div class="card__inner">
+          <div class="rows">
+            <div class="row"><span class="row__label">Description</span><span class="row__val" style="font-weight:500; color:var(--ink-muted); font-size:var(--t-sm);">A firelit cabin under glass…</span></div>
+            <div class="row"><span class="row__label">Materials</span><span class="row__val" style="font-weight:500;">
+              <span class="chips"><span class="chip">balsa</span><span class="chip">moss</span><span class="chip">LED ember</span></span>
+            </span></div>
+            <div class="row"><span class="row__label">Edits</span><span class="row__val"><span class="pill pill--waiting"><span class="dot dot--pulse" aria-hidden="true"></span>3 waiting</span></span></div>
+          </div>
+          <p class="note">Edits here wait until you publish. The Studio Dock counts them and tells you what’s left.</p>
+        </div></div></div>
+      </article>
+    </div>
+  </section>
+
+  <p class="footnote">
+    One coherent system, not a skin. Every color is authored in OKLCH and every state derives from a single hue token via <code>color-mix()</code> — there is zero literal hex in the component CSS, so a buyer re-hues the whole template by editing the hue tokens. No webfonts, no <code>backdrop-filter</code>, no build step. Dark mode is deferred but not foreclosed: the lightness channel is kept clean for a future <code>prefers-color-scheme</code> remap.
+  </p>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* collapsible cards — JS owns the attribute, CSS owns the reveal (grid-template-rows 1fr→0fr) */
+  document.querySelectorAll(".card__head").forEach(function(head){
+    head.addEventListener("click", function(){
+      var card = head.closest(".card");
+      var collapsed = card.getAttribute("data-collapsed") === "true";
+      card.setAttribute("data-collapsed", String(!collapsed));
+      head.setAttribute("aria-expanded", String(collapsed));
+    });
+  });
+
+  /* state-cycle demo — JS sets the state + label + which dot breathes; CSS plays the settle-pulse */
+  var states = [
+    { cls:"pill--live",     label:"Live",          pulse:true  },
+    { cls:"pill--waiting",  label:"Edits waiting", pulse:true  },
+    { cls:"pill--draft",    label:"Draft",         pulse:false },
+    { cls:"pill--sold",     label:"Sold",          pulse:false },
+    { cls:"pill--archived", label:"Archived",      pulse:false }
+  ];
+  var i = 0;
+  var btn   = document.getElementById("cycleBtn");
+  var pill  = document.getElementById("demoPill");
+  var dot   = document.getElementById("demoDot");
+  var label = document.getElementById("demoLabel");
+
+  if (btn && pill && dot && label){
+    btn.addEventListener("click", function(){
+      i = (i + 1) % states.length;
+      var s = states[i];
+      pill.className  = "pill " + s.cls;
+      label.textContent = s.label;
+      dot.className   = "dot" + (s.pulse ? " dot--pulse" : "");
+      /* retrigger the scale-pulse */
+      void pill.offsetWidth;
+      pill.classList.add("pill--pulsing");
+    });
+  }
+
+  /* tiles are press-target demos; don't navigate */
+  document.querySelectorAll(".tile").forEach(function(t){
+    t.addEventListener("click", function(e){ e.preventDefault(); });
+  });
+})();
+</script>
+</body>
+</html>
