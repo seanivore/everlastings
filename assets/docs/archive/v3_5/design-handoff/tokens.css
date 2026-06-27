@@ -1,0 +1,78 @@
+/* ============================================================================
+   Content Creator Portal — design tokens
+   Lifted verbatim from controls.html (the aesthetic anchor). These are the
+   canonical values — use them exactly; don't approximate.
+
+   Authoring rule: every color is OKLCH or color-mix() from ONE hue token, so
+   the whole template is re-hueable by editing a couple of tokens. Do NOT
+   introduce literal hex in component CSS (the one #ffffff below is the only
+   intentional literal — pure white surface).
+
+   NOTE on semantic-state usage (see brief.md §Color): the inline comments
+   below are the tokens' origin labels. In THIS redesign the colored TEXT TAGS
+   ("LIVE NOW" / "WAITING") are killed. The state colors survive as:
+     • a per-row LED + field-border rings, 3 states only:
+         green  (--live)    = live / published / required-met
+         yellow (--waiting) = edited, needs publish / needs attention
+         red    (--draft or --danger family) = draft / blocking publish
+     • sold + archived are reached via TABS, not encoded in row color.
+   @supports fallback to flat hex for older browsers is a build-time task.
+   ============================================================================ */
+
+:root{
+  /* ---- Structural (light = the shipped theme) ---- */
+  --bg:            oklch(97.3% 0.004 255);
+  --surface:       #ffffff;
+  --surface-sunk:  oklch(95% 0.006 255);
+  --ink:           oklch(24% 0.03 262);
+  --ink-muted:     oklch(46% 0.025 262);
+  --ink-faint:     oklch(62% 0.02 262);
+  --hairline:      oklch(91% 0.006 262);
+
+  --accent:        oklch(42% 0.055 262);           /* the single structural hue */
+  --accent-strong: color-mix(in oklch, var(--accent), black 14%);
+  --accent-soft:   color-mix(in oklch, var(--accent), white 84%);
+  --focus:         color-mix(in oklch, color-mix(in oklch, var(--accent), white 8%), transparent 55%);
+
+  /* ---- Semantic STATE (each = one hue base + color-mix tint/border) ---- */
+  --live:      oklch(60% 0.12 150);   /* green  = LIVE / published / valid     */
+  --waiting:   oklch(72% 0.13 72);    /* amber  = edited, needs publish        */
+  --sold:      oklch(55% 0.04 300);   /* plum   = sold (present, not gone)     */
+  --archived:  oklch(62% 0.012 262);  /* grey   = out of shop                  */
+  --draft:     oklch(58% 0.018 262);  /* neutral slate = hidden draft          */
+  --danger:    oklch(55% 0.16 25);    /* red = destructive / blocking publish  */
+
+  --live-bg:     color-mix(in oklch, var(--live),     white 86%);
+  --live-bd:     color-mix(in oklch, var(--live),     white 60%);
+  --waiting-bg:  color-mix(in oklch, var(--waiting),  white 86%);
+  --waiting-bd:  color-mix(in oklch, var(--waiting),  white 58%);
+  --sold-bg:     color-mix(in oklch, var(--sold),     white 86%);
+  --sold-bd:     color-mix(in oklch, var(--sold),     white 62%);
+  --archived-bg: color-mix(in oklch, var(--archived), white 86%);
+  --archived-bd: color-mix(in oklch, var(--archived), white 62%);
+  --draft-bg:    color-mix(in oklch, var(--draft),    white 87%);
+  --draft-bd:    color-mix(in oklch, var(--draft),    white 64%);
+  --danger-bg:   color-mix(in oklch, var(--danger),   white 86%);
+  --danger-bd:   color-mix(in oklch, var(--danger),   white 60%);
+
+  /* ---- Elevation (cool-tinted; depth carries information) ---- */
+  --sh-1:    0 1px 2px oklch(24% 0.03 262 / .06);
+  --sh-2:    0 4px 12px oklch(24% 0.03 262 / .10);
+  --sh-pop:  0 -2px 16px oklch(24% 0.03 262 / .14);
+  --sh-inset: inset 0 2px 4px oklch(24% 0.03 262 / .12);
+
+  /* ---- Type ---- */
+  --font-ui:   -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+  --font-data: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --t-xs:.75rem; --t-sm:.875rem; --t-base:1rem; --t-lg:1.125rem; --t-xl:1.375rem;
+
+  /* ---- Radius / space ---- */
+  --r-sm:7px; --r-md:11px; --r-lg:15px; --r-pill:999px;
+  --gut:16px;
+
+  /* ---- Motion (feel = weight, not bounce) ---- */
+  --dur-press:70ms; --dur-base:140ms; --dur-settle:220ms;
+  --ease-weight:cubic-bezier(.2,.7,.3,1);
+  --lift:translateY(-1px);
+  --press:translateY(1px);
+}
