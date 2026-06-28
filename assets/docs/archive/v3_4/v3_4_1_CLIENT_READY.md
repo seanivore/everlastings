@@ -110,7 +110,7 @@ There isn’t a character-limit issue in the action schema from what I can see h
 
 ### Ship
 
-  + [ ] Fast-forward dev → main and tag v3.3.0 (Claude runs it on your go)
+  + [x] Fast-forward dev → main and tag v3.3.0 (Claude runs it on your go)
 
   + [ ] Switch the GPT to production
     - Schema line 7 url → https://everlastingsbyemaline.com
