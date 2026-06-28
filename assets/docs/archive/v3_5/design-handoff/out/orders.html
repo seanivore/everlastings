@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Creator Portal | Everlastings by Emaline</title>
+<link rel="stylesheet" href="portal.css">
+<style>
+/* ===================== Orders surface ===================== */
+.tools{display:flex; flex-direction:column; gap:10px; margin-bottom:14px;}
+.tools__line{display:flex; gap:10px; align-items:center;}
+@media (min-width:860px){ .tools__line .searchbar{flex:0 1 60%;} }
+
+.olist{display:flex; flex-direction:column; gap:12px;}
+
+/* an order = one payment (one person, N pieces) */
+.ocard{background:var(--surface); border:1px solid color-mix(in oklch,var(--hairline),var(--surface) 35%);
+  border-radius:var(--r-lg); box-shadow:var(--sh-1); overflow:hidden;}
+.ocard.is-new{box-shadow:var(--sh-1), 0 0 0 1.5px color-mix(in oklch,var(--waiting),transparent 55%);}
+.ocard__head{display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-bottom:1px solid var(--hairline);}
+.avatar{width:40px; height:40px; flex:none; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:var(--t-sm); color:var(--accent-strong); background:var(--accent-soft); border:1px solid color-mix(in oklch,var(--accent),white 70%);}
+.ocard__who{flex:1; min-width:0;}
+.ocard__name{font-size:var(--t-base); font-weight:600; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.ocard__name .new-dot{width:7px; height:7px; border-radius:50%; background:var(--waiting); animation:tab-alert 2s var(--ease-weight) infinite; box-shadow:0 0 5px color-mix(in oklch,var(--waiting),transparent 40%);}
+.ocard__contact{font-size:var(--t-xs); color:var(--ink-muted); display:flex; gap:8px; flex-wrap:wrap; margin-top:2px;}
+.ocard__contact a{color:var(--accent); text-decoration:none;}
+.ocard__meta{text-align:right; flex:none; display:flex; flex-direction:column; gap:4px; align-items:flex-end;}
+.ocard__ref{font-family:var(--font-data); font-size:var(--t-xs); color:var(--ink-faint);}
+.ocard__total{font-family:var(--font-data); font-variant-numeric:tabular-nums; font-weight:700;}
+
+.opiece{display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--hairline);}
+.opiece:last-child{border-bottom:none;}
+.opiece__thumb{width:46px; height:46px; flex:none; border-radius:var(--r-sm); overflow:hidden; background:var(--surface-sunk); border:1px solid var(--hairline); position:relative;}
+.opiece__thumb img{width:100%; height:100%; object-fit:cover;}
+.opiece__thumb .ph{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--ink-faint);}
+.opiece__info{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+.opiece__title{font-size:var(--t-sm); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.opiece__amt{font-family:var(--font-data); font-variant-numeric:tabular-nums; font-size:var(--t-xs); color:var(--ink-muted);}
+.opiece__act{flex:none; display:flex; align-items:center; gap:8px;}
+
+.tpill{display:inline-flex; align-items:center; gap:6px; font-size:var(--t-xs); font-weight:600; padding:4px 10px; border-radius:var(--r-pill); border:1px solid; white-space:nowrap;}
+.tpill .pdot{width:7px; height:7px; border-radius:50%;}
+.tpill--ship{color:color-mix(in oklch,var(--waiting),black 24%); background:var(--waiting-bg); border-color:var(--waiting-bd);}
+.tpill--ship .pdot{background:var(--waiting);}
+.tpill--shipped{color:color-mix(in oklch,var(--live),black 18%); background:var(--live-bg); border-color:var(--live-bd);}
+.tpill--shipped .pdot{background:var(--live);}
+.tpill--refunded{color:color-mix(in oklch,var(--sold),black 16%); background:var(--sold-bg); border-color:var(--sold-bd);}
+.tpill--refunded .pdot{background:var(--sold);}
+.tpill--delivered{color:var(--ink-muted); background:var(--surface-sunk); border-color:var(--hairline);}
+.tpill--delivered .pdot{background:var(--ink-faint);}
+
+/* email sent/unsent micro-pill */
+.empill{font-size:10px; font-weight:600; color:var(--ink-faint); display:inline-flex; align-items:center; gap:4px;}
+.empill svg{width:11px; height:11px;}
+.empill.sent{color:color-mix(in oklch,var(--live),black 16%);}
+
+/* tracking info line under a shipped piece */
+.track-line{font-size:var(--t-xs); color:var(--ink-muted); font-family:var(--font-data); margin-top:2px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+
+/* inline ship form */
+.shipform{display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:12px 16px; background:var(--surface-sunk); border-bottom:1px solid var(--hairline);}
+.shipform .select-wrap,.shipform .price{flex:0 1 150px;} .shipform .input{min-height:40px;}
+.shipform .grow{flex:1; min-width:120px;}
+
+.ocard__foot{display:flex; align-items:center; gap:12px; padding:12px 16px; background:color-mix(in oklch,var(--surface-sunk),var(--surface) 40%); flex-wrap:wrap;}
+.addr{flex:1; min-width:160px; font-size:var(--t-xs); color:var(--ink-muted); line-height:1.5;}
+.addr b{color:var(--ink); font-weight:600; display:block; font-size:var(--t-xs); text-transform:uppercase; letter-spacing:.05em; margin-bottom:1px;}
+.copybtn{font-size:var(--t-xs);}
+
+/* refund modal */
+.modal{position:fixed; inset:0; z-index:65; display:none; align-items:flex-end; justify-content:center;}
+.modal.is-on{display:flex;} @media (min-width:760px){.modal{align-items:center;}}
+.modal__card{position:relative; z-index:1; width:100%; max-width:560px; max-height:92dvh; overflow:auto; background:var(--surface);
+  border-radius:var(--r-lg) var(--r-lg) 0 0; box-shadow:var(--sh-2); display:flex; flex-direction:column;}
+@media (min-width:760px){.modal__card{border-radius:var(--r-lg);}}
+.modal__head{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px; padding:15px 16px; background:var(--surface); border-bottom:1px solid var(--hairline);}
+.modal__head h3{margin:0; font-size:var(--t-lg); font-weight:600; flex:1;}
+.modal__sub{font-size:var(--t-xs); color:var(--ink-muted); font-weight:400;}
+.modal__body{padding:16px;}
+.rpiece{display:flex; align-items:center; gap:11px; padding:11px 0; border-bottom:1px solid var(--hairline);}
+.rpiece__thumb{width:42px; height:42px; flex:none; border-radius:var(--r-sm); overflow:hidden; background:var(--surface-sunk); border:1px solid var(--hairline);}
+.rpiece__thumb img{width:100%;height:100%;object-fit:cover;}
+.rpiece__info{flex:1; min-width:0;}
+.rpiece__title{font-size:var(--t-sm); font-weight:600;}
+.rpiece__sub{font-size:var(--t-xs); color:var(--ink-faint);}
+.rpiece__ctrls{display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex:none;}
+.rpiece__ctrls .switch__label{font-size:var(--t-xs); font-weight:600;}
+[data-radd].is-added{background:var(--live-bg); border-color:var(--live-bd); color:color-mix(in oklch,var(--live),black 18%);}
+.refund-amt{margin-top:14px;}
+.relist-row{display:flex; align-items:center; gap:10px; padding:9px 0 0; flex-wrap:wrap;}
+.relist-row .switch__label{font-size:var(--t-xs); font-weight:600;}
+.refund-sum{display:flex; align-items:center; justify-content:space-between; margin:14px 0 4px; font-size:var(--t-base); font-weight:700;}
+.refund-sum .n{font-family:var(--font-data);}
+.modal__foot{position:sticky; bottom:0; display:flex; align-items:center; gap:10px; padding:13px 16px; background:var(--surface); border-top:1px solid var(--hairline);}
+.modal__foot .grow{flex:1;}
+.dimmed{opacity:.5;}
+.btn--refund{background:transparent; color:color-mix(in oklch,var(--danger),black 8%); border:1.5px solid var(--danger);}
+.btn--refund:hover{background:var(--danger); color:#fff; border-color:var(--danger); transform:none; box-shadow:var(--sh-1);}
+
+/* ---- mobile layout fixes ---- */
+@media (max-width:560px){
+  .seg__chip{flex:1; min-width:0; padding:0 8px;}
+  .tools__line .searchbar{flex:1 1 100%;}
+  .opiece{flex-wrap:wrap; gap:8px 12px;}
+  .opiece__info{flex:1 1 calc(100% - 58px); min-width:0;}
+  .opiece__act{flex-basis:100%; justify-content:flex-end; flex-wrap:wrap; gap:8px;}
+  .ocard__foot{flex-wrap:wrap; gap:10px;}
+  .ocard__foot .addr{flex-basis:100%;}
+  .ocard__foot .copybtn,.ocard__foot [data-refund]{flex:1; justify-content:center;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="app__main" id="main">
+    <header class="topbar"><h1>Orders</h1><span class="test-chip" id="envChip">Test</span></header>
+    <div class="tools">
+      <div class="seg" role="tablist" aria-label="Filter orders" id="tabs"></div>
+      <div class="tools__line">
+        <div class="searchbar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input class="input" id="search" type="search" placeholder="Search by name, email, order or tracking #" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="olist" id="list"></div>
+  </main>
+</div>
+
+<div class="modal" id="refundModal" role="dialog" aria-modal="true" aria-label="Refund">
+  <div class="scrim" id="refundScrim"></div>
+  <div class="modal__card">
+    <div class="modal__head"><h3>Refund <span class="modal__sub" id="refundSub"></span></h3><button class="iconbtn" id="refundClose" aria-label="Close">✕</button></div>
+    <div class="modal__body" id="refundBody"></div>
+    <div class="modal__foot">
+      <span class="fallback-note" id="refundNote"></span><span class="grow"></span>
+      <button class="btn btn--ghost" id="refundCancel">Cancel</button>
+      <button class="btn btn--danger" id="refundDo">Refund</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="portal.js"></script>
+<script src="orders-app.js"></script>
+</body>
+</html>

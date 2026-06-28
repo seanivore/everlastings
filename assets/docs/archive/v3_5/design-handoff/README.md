@@ -1,14 +1,32 @@
 # Content Creator Portal — Design Handoff
 
-This folder is a **self-contained design brief** for redesigning the Everlastings store admin into the **Content Creator Portal**. It deliberately contains **no application code** — design to the contract here; don't integrate.
+This folder is the **self-contained design handoff** for redesigning the Everlastings
+store admin into the creator/admin portal (public title: **Creator Portal | Everlastings
+by Emaline**). It deliberately contains **no application code** — design to the contract
+here; don't integrate.
+
+## ✅ Status: design pass COMPLETE
+
+The finished design lives in **[`out/`](./out/)**. Integrators should start there:
+  - **[`out/INTEGRATION.md`](./out/INTEGRATION.md)** — the front-door doc for the
+    gap-review + integration pass: file map, the design/backend boundary, and the numbered
+    gaps & decisions to implement.
+  - **[`out/README.md`](./out/README.md)** — how the delivered files fit together (page
+    shells → `data.js` → `portal.js` → `<surface>-app.js`, all on `portal.css`).
+
+All four surfaces are built (**Products** incl. the product editor · **Orders** · **Sales**
+· **Account**), desktop + mobile, as openable vanilla HTML/CSS/JS matching `controls.html`.
+The documents below (`brief.md`, `data-flow.md`, `controls.html`, `tokens.css`,
+`reference/`) are the **source brief** that shaped that output — read them only if you
+need the original design rationale or contract detail.
 
 ## The boundary (Important)
-  - **Design** all five surfaces as polished, mobile-first, **vanilla HTML/CSS/JS** pages — **one variation**.
-  - You may design **one surface at a time** — finish each before the next.
-  - **Do not** modify or wire any backend, and **do not** integrate the design into the app. A separate **gap-review + integration pass** (in Claude Code) handles that. This is non-negotiable — the project is far enough along that we integrate deliberately, with reviews.
-  - Put your output in **`out/`**.
+  - The design is **one variation**, polished and mobile-first, in **vanilla HTML/CSS/JS**.
+  - **Do not** modify or wire any backend, and **do not** integrate the design into the app
+    blindly. The **gap-review + integration pass** (in Claude Code) handles that —
+    deliberately, with reviews. `out/INTEGRATION.md` is its starting point.
 
-## Read order
+## Read order (the source brief)
   1. **`brief.md`** — the design definition: the thesis (entropy-lowering details in familiar layouts), the KILL list, the layout model for each surface, the color system, the mobile rules.
   2. **`data-flow.md`** — the literal data + endpoint **contract** per surface (entities, field types, actions, and the loading/empty/error/permission states to design). *Design to it; don't implement it.*
   3. **`controls.html`** — the **aesthetic anchor**. This is the look — match its type, spacing, containers, and nav exactly. Opens standalone in a browser.
