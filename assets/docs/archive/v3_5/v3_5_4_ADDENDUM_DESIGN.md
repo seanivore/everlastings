@@ -1,7 +1,7 @@
-# v3.5.3 — Design Addendum
+# v3.5.4 — Design Addendum
 
-**Revision driven by**: round-1 A/B/C/D + breadth fold, then round-2 A/B/C/D subagent fold — v3.5.0 → v3.5.1 → v3.5.2 → **v3.5.3** (living doc renamed to `v3_5_3_*`). Round-2 design deltas: **§D.4** (the concrete "One of a kind" tile badge, WS9 §9.2) + the §A View-Site href swap added to the surgical-edits enumeration.
-**Addendum to**: `v3_5_3_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Revision driven by**: round-1 + round-2 folds, then round-3 6-subagent fold — v3.5.0 → … → v3.5.3 → **v3.5.4** (living doc renamed to `v3_5_4_*`). Round-3 design delta: **§D.4 reworked** — the badge default is now the non-overlapping `!sold && !p.featured` gate with solid-token CSS (no `color-mix()`), its CSS wired by IMPLEMENT §9.2a, and a badge-stack rule offered as the "show on featured too" upgrade. (Round-2 deltas, still current: §D.4's badge + the §A View-Site href-swap bullet.)
+**Addendum to**: `v3_5_4_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 
@@ -124,14 +124,16 @@ The **env-aware "View Site"** link (rail + Account) targets the current environm
 
 <!-- NEEDS-VERIFY: confirm the preview/prod hostname split in PORTAL.env() matches the actual Vercel deploy topology (custom domain on prod, *.vercel.app on preview) — INTEGRATION §3.1 says this is "the one line to adjust" if hostnames differ. -->
 
-## D.4 — "One of a kind" tile scarcity badge (WS9 Phase 9.2; `.badge.badge-unique`, storefront tokens)
+## D.4 — "One of a kind" tile scarcity badge (WS9 Phase 9.2/9.2a; `.badge.badge-unique`, storefront tokens)
 
-**Concrete default (storefront tokens, `styles.css`).** A small `badge badge-unique` with the exact copy **"One of a kind"** renders in the product tile's `.card__media`, alongside the existing `.badge-featured` / `.badge-sold`. It reuses the storefront `.badge` base (position/shape/size already defined for the Sold + Featured badges — the new class only sets its hue) so it sits in the same badge stack, not a new component:
-- `.badge-unique { background: color-mix(in oklch, var(--accent-primary) 12%, white); color: var(--accent-primary); border: 1px solid color-mix(in oklch, var(--accent-primary) 30%, transparent); }`
+**Concrete default (storefront tokens, written to `styles.css` by IMPLEMENT §9.2a).** A small `badge badge-unique` with the exact copy **"One of a kind"** renders in the product tile's `.card__media`, reusing the storefront `.badge` base (position/shape/size already defined for Sold + Featured — the new class only sets its hue). **Solid tokens, no `color-mix()`** (so no OKLCH browser-floor question):
+- `.badge-unique { background: var(--bg-primary); border: 1px solid var(--accent-primary); color: var(--accent-primary); }` — warm-plum, distinct from Featured's gold border.
 
-**Render markup** is folded into the merged card blocks — shop grid `§6.5a` and homepage carousel `§6.3d` — as `${!sold ? '<span class="badge badge-unique">One of a kind</span>' : ''}`. **Trigger:** rendered on **purchasable (`!sold`) tiles**; a sold piece shows "Sold" instead (never both). Since every Everlastings piece is one-of-a-kind (`quantity` 1), the default shows it on essentially every in-stock tile — that IS the scarcity lever.
+**Render markup** is folded into the merged card blocks — shop grid `§6.5a` and homepage carousel `§6.3d` — as `${!sold && !p.featured ? '<span class="badge badge-unique">One of a kind</span>' : ''}`. **Trigger (default = no overlap, zero extra CSS):** rendered on a **purchasable, non-featured** tile — so a tile shows at most ONE of {Sold, Featured, One of a kind}. This matters because `.card__media .badge` pins **every** badge to the same corner (`styles.css:593`, no sibling-offset rule); gating on `!p.featured` is the clean way to keep them from overlapping without new CSS. *(Consequence: the homepage carousel is featured-only, so "One of a kind" shows on the shop grid's non-featured pieces, not on the homepage — fine, homepage tiles already carry the "Featured" distinction.)*
 
-**The one design confirm (surface, don't silently decide):** whether "One of a kind" on *every* in-stock tile — stacked with "Featured" on featured tiles — reads as reinforcing or as badge-clutter. Default = show on all `!sold` tiles. If it clutters, the cheap dials are: gate to **non-featured** tiles only (`!sold && !p.featured`), or make it a lighter caption under the price rather than a corner badge. **Render-tune:** the badge hue/weight, its **stack position when both Featured + One of a kind show** (confirm they don't overlap in `card__media`'s corner), and the trigger above. Confirm on the live preview like every §D item.
+**The one design confirm (surface, don't silently decide) — want "One of a kind" on featured tiles too?** If yes, do NOT just drop the `!p.featured` gate (the two badges would then overlap in the shared corner). Instead add a stack rule so a second badge drops below the first, then gate the render on `!sold` only:
+- `.card__media .badge ~ .badge { top: calc(var(--space-sm) + 1.9rem); }`
+Ship the non-featured default; adopt the stack rule + `!sold`-only gate on the live preview only if Sean wants the badge everywhere. **Render-tune:** the badge hue/weight, the exact stack offset if adopted, the copy. Confirm on the live preview like every §D item.
 
 ---
 
