@@ -1,7 +1,7 @@
-# v3.5.1 — Design Addendum
+# v3.5.2 — Design Addendum
 
-**Revision driven by**: round-1 gap-review fold (A/B/C/D) — v3.5.0 → **v3.5.1** (filename stays `v3_5_0_*`; version is internal).
-**Addendum to**: `v3_5_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Revision driven by**: round-1 A/B/C/D fold + breadth-regression fold (owner-journey + integration) — v3.5.0 → v3.5.1 → **v3.5.2** (living doc renamed to `v3_5_2_*`).
+**Addendum to**: `v3_5_2_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 

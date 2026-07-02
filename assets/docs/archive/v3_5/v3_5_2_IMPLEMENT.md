@@ -1,14 +1,14 @@
-# v3.5.1 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
+# v3.5.2 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
 
 **Initiative**: One dev cycle (built/tested on `dev`, shipped to `main` only when Sean signs off) that (1) integrates the finished **Content Creator Portal** front-end design (`assets/docs/archive/v3_5/design-handoff/out/`) as the new `/admin`, preserving the backend-complete management contract while adopting the mobile-first, intent-based, brand-neutral redesign; (2) builds the **automatic store-wide sale** display/auto-apply layer + storefront struck-pricing + a thin utility bar + a once-only popup (ROADMAP #219–222) on top of the existing coupon foundation; (3) rebuilds the **media upload** UX to the designed modal; (4) reconciles the **sold-policy / product-state** model to Sean's final word (§3.6 + PRODUCT_LIFECYCLE policy C); (5) fixes the discrete **storefront bugs** (product-page fields, series filter, featured carousel, /complete order-id) and **webhook/money-integrity** items (#228 even-split, #224 cart-hold removal, #227 reconciliation); (6) adds the **activity log** + **seen/unseen order tracking** + **scheduled publish**; (7) researches **buy-on-tile** (#225) and builds it iff the lift is real; (8) restores **GPT/admin parity** for the sale + folds the shared-payment refund guidance (#222/#228 GPT half).
 
-**Revision driven by**: round-1 gap-review fold (A/B/C/D) — v3.5.0 initial draft → **v3.5.1**. (Filenames stay `v3_5_0_*`; the version is internal.) Rationale is kept inline here on purpose; it is relocated to a sibling `RATIONALE.md` only at the v4.0.0 execution cut (DEV_RULES → Build Guide Final Cuts).
+**Revision driven by**: round-1 A/B/C/D gap-review fold + round-1 breadth-regression fold (owner-journey + integration) — v3.5.0 → v3.5.1 → **v3.5.2**. (Living docs renamed to `v3_5_2_*` at this bump, per DEV_RULES current-only; the round-1 `v3_5_0_GAP_REVIEW_*` findings are kept standing as the rigor trail. Next: minor-bump to `v3_6/` for the formal Agent-SDK A-Type gate.) Rationale is kept inline here on purpose; it is relocated to a sibling `RATIONALE.md` only at the v4.0.0 execution cut (DEV_RULES → Build Guide Final Cuts).
 
-**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_5/` directory** (`v3_5_0_ADDENDUM_DESIGN.md`, `v3_5_0_ADDENDUM_TESTING.md`) · the design handoff in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
+**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_5/` directory** (`v3_5_2_ADDENDUM_DESIGN.md`, `v3_5_2_ADDENDUM_TESTING.md`) · the design handoff in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
 
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_5_0_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_5_0_ADDENDUM_TESTING.md`.
+> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_5_2_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_5_2_ADDENDUM_TESTING.md`.
 
 > **The delta framing (name the settled base).** The current system — all of `EVERLASTINGS_STORE.md` + the repo as it stands on `dev` today — is **built, tested, and live/approved**: the fixed substrate. This build is a **delta** on top: a *presentation swap* of `/admin` (the backend it calls is already complete) + a **defined set of new/changed backend** (the sale display/auto-apply layer, the upload rebuild, the state-semantics reconciliation, the money-integrity fixes, the activity log). Review the delta for gaps + whether it FITS the base; don't re-litigate settled/shipped behavior.
 
@@ -1912,7 +1912,7 @@ Everything routes to the two **existing** endpoints; nothing new is added. Clien
 | delete an item (`:703`) | `PUT /api/products?id=` | omit it from `images[]`/`media[]` on next Apply |
 | Apply (`applyMedia :745`) | `PUT /api/products?id=` (or `POST` if new) | `{images, media, seo_thumbnail, thumbnail, thumbnail_alt}`; add `checkout_image` **only if unpublished** (Phase 5.4e) |
 
-**Prerequisites the modal must satisfy (mirrors `admin.js`):** a `slug` must exist before any upload — new products `POST /api/products` first (or derive via `deriveSlug`, `admin.js:511`); every call carries the Bearer header (`authHeader`); on a **published** product, `images`/`media`/`seo_thumbnail` **stage** into `draft` and the Apply response returns `preview_url`+`preview_token` (surface "changes waiting to publish"), while an **unpublished** product writes through live. Replace the prototype's no-op `autosave` (`:557`) and in-memory `applyMedia` mutations with these calls.
+**Prerequisites the modal must satisfy (mirrors `admin.js`):** a `slug` must exist before any upload — new products `POST /api/products` first (or derive via `deriveSlug`, `admin.js:511`). **New-product guard:** since uploads need a saved slug, on a brand-new product the modal must prompt/require **title (+ price)** and save first — never silently 400 a media-first attempt before the product row exists. every call carries the Bearer header (`authHeader`); on a **published** product, `images`/`media`/`seo_thumbnail` **stage** into `draft` and the Apply response returns `preview_url`+`preview_token` (surface "changes waiting to publish"), while an **unpublished** product writes through live. Replace the prototype's no-op `autosave` (`:557`) and in-memory `applyMedia` mutations with these calls.
 
 **Doc impact:** `data-flow.md` "Media upload" section already matches this seam; add the re-role-via-by-link mechanic and the poster resolution once Phase 5.4c/d are settled.
 
@@ -2402,7 +2402,17 @@ function populateFeatured(items) {
 ```
 *(This is availability only — the JSON-LD `offers.price` still stays the true undiscounted unit price per DESIGN §D.1; do NOT add sale math to `injectProductJsonLd`. `product.js`'s `getProductBySlug` already selects `quantity` for the sticky card, so no fetch change.)*
 
-**Doc impact:** `EVERLASTINGS_STORE.md` — the storefront sold-state + buy-gate are **quantity-based** (`published && quantity > 0`), consistent with `computeState()` and `record_sale`; `available` is a consequence, not the gate.
+*6.5d — related-products card: same null-safe sold rule (`product.js:~558`).* **CURRENT:**
+```js
+            ${rp.available ? '' : '<span class="badge badge-sold">Sold</span>'}
+```
+**NEW (match 6.5a — sold by quantity, else fall back to the flag):**
+```js
+            ${(rp.quantity != null ? rp.quantity <= 0 : !rp.available) ? '<span class="badge badge-sold">Sold</span>' : ''}
+```
+*(Cosmetic — the related pool is fetched `getProducts({ available: true })`, so a click-through still hits the 6.5b buy-gate; this just closes the lag-window on the card badge.)*
+
+**Doc impact:** `EVERLASTINGS_STORE.md` — the storefront sold-state + buy-gate are **quantity-based** (`published && quantity > 0`), consistent with `computeState()` and `record_sale`; `available` is a consequence, not the gate. *(6.5b guard — under `?preview=` (a draft being reviewed) skip the sold render so a draft never reads "Sold"; it isn't purchasable anyway, and "nothing shows wrong without a reason." `product.js` has `previewToken` in scope.)*
 
 ---
 
@@ -3315,9 +3325,47 @@ const ORDERS_LAST_VIEWED_KEY = isTest ? 'orders_last_viewed_test' : 'orders_last
 
 - **Account activity card** (`out/account-app.js:53,82-86`, `window.PORTAL_DATA.activityLog`, shape `{ at, actor, action, summary }`) → **`GET /api/products?_action=activity`** → `{ activityLog: [...] }` (newest 25, `isTest`-scoped). *(`actor` is stored but not rendered — single-admin; the card shows `summary` + relative `at` + the dot.)*
 - **Activity dot color** (`.logitem__dot--{prefix}`, `out/account-app.js:83`) → derived client-side from `action.split(".")[0]` (`product`→green, `sale`→blue, `order`→orange, per `INTEGRATION.md:183`). All WS8 actions use those three prefixes — no CSS case to add.
-- **Orders-nav blink — SETTLED: blink ← `unseen_count`, numeric badge ← unfulfilled count; `mountShell` fetches `unseen_count` centrally on EVERY page.** The blink is a cross-page nav element (rail + tabbar `data-alert`, `out/portal.js:147,154`), but the prototype only the Orders surface knows `unseen_count` — Sales/Account pass a mock `ordersBadge: 2` and Products self-manages a static rail — so the blink would never light on the **landing** page (products). Fix: `portal.js`/`mountShell` does its own authed **`GET /api/orders`** on every page (reading `unseen_count`) and drives the blink from it (`data-alert` when `unseen_count > 0`), independent of the caller's `ordersBadge`. The visible numeric **badge stays the unfulfilled count** (`ordersBadge`, e.g. Orders' `groups().filter((g) => inTab(g, "needs")).length`); the two are decoupled — a page can show the blink (a new unseen order arrived) even when its `ordersBadge` is a stale/mock number. **Products' static-rail path needs the same wiring** — its rail isn't built by `mountShell`, so wire the central `unseen_count` fetch → `data-alert` there too (or route the products rail through the shared helper). Clearing is the `?_action=seen` stamp below.
+- **Orders-nav blink — SETTLED: blink ← `unseen_count`, numeric badge ← unfulfilled count; `mountShell` fetches `unseen_count` centrally on EVERY page.** The blink is a cross-page nav element (rail + tabbar `data-alert`, `out/portal.js:147,154`), but the prototype only the Orders surface knows `unseen_count` — Sales/Account pass a mock `ordersBadge: 2` and Products self-manages a static rail — so the blink would never light on the **landing** page (products). Fix: `portal.js`/`mountShell` does its own authed **`GET /api/orders`** on every page (reading `unseen_count`) and drives the blink from it (`data-alert` when `unseen_count > 0`), independent of the caller's `ordersBadge`. The visible numeric **badge stays the unfulfilled count** (`ordersBadge`, e.g. Orders' `groups().filter((g) => inTab(g, "needs")).length`); the two are decoupled — a page can show the blink (a new unseen order arrived) even when its `ordersBadge` is a stale/mock number. **Products' static-rail path needs the same wiring** — its rail isn't built by `mountShell`, so wire the central `unseen_count` fetch → `data-alert` there too (or route the products rail through the shared helper). Clearing is the `?_action=seen` stamp below. **→ implemented byte-anchored in Phase 8.3 below.**
 - **Clear the blink (Orders viewed)** (`out/orders-app.js:12,98,132-133` in-memory `seen` Set) → **`POST /api/orders?_action=seen`** on Orders mount/view → stamps `site_config.orders_last_viewed_{env}` → next `GET` returns `unseen_count: 0` until a newer order arrives.
 - **Sold product-tab blink** (`out/products-app.js:13,98`) → **removed** (Phase 8.2b) — no data source; Orders owns the order signal.
+
+**Phase 8.3 — `portal.js`: the central new-order signal (byte-anchored — makes the SETTLED bullet above executable).** A shared `PORTAL.refreshOrdersSignal()` does the authed `GET /api/orders` and drives the nav `data-alert` (from `unseen_count`) + the numeric badge (from the real needs-shipping count) on the Orders nav items — decoupled, on every page (`mountShell` pages **and** the Products static rail). It runs after `PORTAL.boot()`, so `authHeader()` is set.
+
+*8.3a — add the helper (after `mountShell`, before the IIFE close).* **CURRENT (`out/portal.js:162-164`):**
+```js
+    rt.addEventListener("click", () => { const c = app.classList.toggle("rail-collapsed"); localStorage.setItem("portalRailCollapsed", c ? "1" : "0"); rt.setAttribute("aria-label", c ? "Expand menu" : "Collapse menu"); rt.title = c ? "Expand menu" : "Collapse menu"; });
+  };
+})();
+```
+**NEW (same, then the shared helper before `})();`):**
+```js
+    rt.addEventListener("click", () => { const c = app.classList.toggle("rail-collapsed"); localStorage.setItem("portalRailCollapsed", c ? "1" : "0"); rt.setAttribute("aria-label", c ? "Expand menu" : "Collapse menu"); rt.title = c ? "Expand menu" : "Collapse menu"; });
+  };
+
+  /* ---- central new-order signal: light the Orders blink from the REAL unseen count and show the REAL
+     needs-shipping badge (not the caller's mock ordersBadge). Called by mountShell AND the Products
+     static-rail init. Runs after PORTAL.boot() so authHeader() is set. Best-effort; blink (data-alert)
+     ← unseen_count (decoupled), badge ← needs-shipping count. ---- */
+  P.refreshOrdersSignal = async function () {
+    try {
+      const res = await fetch("/api/orders", { headers: { ...P.authHeader() } });
+      if (!res.ok) return;
+      const body = await res.json().catch(() => ({}));
+      const unseen = Number(body.unseen_count) || 0;
+      const needs = Array.isArray(body.orders) ? body.orders.filter((o) => !o.shipped_at && o.status === "completed").length : 0;
+      document.querySelectorAll('.rail__item[href="orders.html"], .tabbar__item[href="orders.html"]').forEach((el) => {
+        el.toggleAttribute("data-alert", unseen > 0);
+        let b = el.querySelector(".badge");
+        if (needs > 0) { if (!b) { b = document.createElement("span"); b.className = "badge"; el.appendChild(b); } b.textContent = String(needs); }
+        else if (b) { b.remove(); }
+      });
+    } catch { /* best-effort — nav stays as rendered */ }
+  };
+})();
+```
+*8.3b — call it from both rail paths.* In `mountShell`, append `P.refreshOrdersSignal();` after the collapse wiring (out/portal.js:162). In `products-app.js`, after its static rail renders (inside the WS1 §1.5 `boot().then`), call `P.refreshOrdersSignal();` so the **landing** page lights too. *(Both run post-boot → `authHeader()` available. The mock `ordersBadge: 2` the callers pass is now cosmetic — `refreshOrdersSignal` overwrites the badge with the real count and the blink with the real unseen state.)*
+
+**Doc impact:** `EVERLASTINGS_STORE.md` — the Orders new-order signal is a per-page `GET /api/orders` (`unseen_count` → blink; needs-shipping count → badge), cleared by `?_action=seen`.
 
 ---
 
@@ -3364,6 +3412,20 @@ The Custom GPT ("The Sunkeeper") must be able to run the new **automatic store-w
 ```
 *(summary → **225 chars**, `auto_apply` description → **206 chars**, both under the per-`summary`/`description` 300 soft cap that the testing static gate asserts. The schema file has no total byte cap; only the instruction `.txt` does. `deactivateCoupon` is unchanged — it already ends any promotion code by `{code}`, which is how the GPT ends the store-wide sale, matching `data-flow.md:144`'s `coupon_deactivate` end-sale action.)*
 **Doc impact:** `EVERLASTINGS_STORE.md` Key Architectural Decision #10 (the GPT action-set) gains "`createCoupon` `auto_apply` = the automatic store-wide sale (v3.5)."
+
+**Phase 10.1b — GPT schema (`v3_5_0_GPT_SCHEMA.txt`): `editProduct` parity for take-down + scheduled-publish (schema-only, no instruction-`.txt` budget).** The `.txt` is near its cap, but the SCHEMA has no total-char cap — so both new parities go here as `editProduct` param annotations (no instruction-text cost).
+
+*10.1b.a — annotate `available` (the v3.5 take-down→draft reality) + add `scheduled_publish_at`.* **CURRENT (`editProduct` properties, `v3_3_0_GPT_SCHEMA.txt:127`):**
+```
+                available: { type: boolean }
+```
+**NEW (annotate `available`; add `scheduled_publish_at` — both are `editProduct` properties):**
+```
+                available: { type: boolean, description: "false takes the piece DOWN — it unpublishes to a hidden DRAFT (not 'sold'). To put a taken-down piece back UP, call publishProduct {id} (NOT available:true — on a draft that only flips the flag, it stays hidden). true on an in-stock live piece is a normal availability toggle." }
+                scheduled_publish_at: { type: string, description: "ISO 8601 timestamp to auto-publish a ready draft at a future date (date-granular, via the daily cron); null clears it. Parity with the panel's Schedule control (PUT /api/products accepts it)." }
+```
+*(Both parities land in the schema so **no instruction-`.txt` byte is spent** — the `.txt` stays 7988/8000. The `available` annotation closes the "GPT can't re-list a taken-down piece" journey gap [breadth owner-journey #1]; `scheduled_publish_at` gives the GPT the panel's schedule capability, honoring the parity rule. `PUT /api/products` already accepts both, WS2 §2.2/§2.4.)*
+**Doc impact:** `EVERLASTINGS_STORE.md` KAD #10 — `editProduct` gains `scheduled_publish_at` + the take-down→draft / re-list-via-`publishProduct` semantics, both surfaces.
 
 **Phase 10.2 — GPT instructions (`v3_5_0_GPT_INSTRUCTIONS_TRIMMED.txt`): store-wide-sale parity + restored vocabulary (the COUPONS beat, `:36`).** Fold in (a) the precise Stripe vocabulary — a sale = a **Coupon** (the rule) + a **Promotion Code** (the shareable code) = the **Discount**; (b) the automatic store-wide sale set/end path via `createCoupon` + `auto_apply:true` / `deactivateCoupon {code}`, "same as the panel"; (c) the one-discount-per-order Stripe reality stated plainly (stop the apologizing). Trim the illustrative date example + the "never a Unix timestamp" tail (the schema's `expires_date` description already carries that) to hold the budget.
 
@@ -3459,7 +3521,7 @@ REFUNDS: find the order (listOrders q=<buyer email or id> — reaches past/shipp
 
 ---
 
-## Verification (end-to-end, dev preview — full plan in `v3_5_0_ADDENDUM_TESTING.md`)
+## Verification (end-to-end, dev preview — full plan in `v3_5_2_ADDENDUM_TESTING.md`)
 
 Per-surface + backend E2E on seeded **test** products (production-grade placeholders — real content is never a build/test gate): store-wide sale live/struck/at-checkout + removable keyword; refund partial + relist (preserved behavior); media modal roles/reorder/persist; product-page fields render; series filter matches; carousel rows decoupled; webhook even-split correct per-item amounts; cart-hold gone; sold-policy transitions (available-off→draft, qty0→sold, sold persists until archive); seen/unseen clears + not-on-Sold-tab; publish + preview gates; scheduled publish flips; activity-log rows written; buy-on-tile (if built). Plus the **static gate** (tsc/CJS clean · function count unchanged · no new cron · `node --check` · valid `vercel.json` · GPT `.txt` `wc -c` < 8000) and the **GPT-parity spot-check** (the one human touchpoint, in Em's ChatGPT).
 

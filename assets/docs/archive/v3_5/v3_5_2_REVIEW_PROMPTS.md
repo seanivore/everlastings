@@ -1,14 +1,14 @@
-# v3.5.1 — Gap-review prompts (round-1 fold applied → re-run the gate)
+# v3.5.2 — Gap-review prompts (round-1 A/B/C/D + breadth folds applied → re-run the gate)
 
-> **Revision driven by**: round-1 gap-review fold (A/B/C/D) — v3.5.0 → **v3.5.1** (filename stays `v3_5_0_*`; version is internal).
-> **Gate status.** Round-0's validated findings (A/B/C/D) have been folded into the triplet (this is the v3.5.1 state); all four angles **re-run from here** — an angle re-runs only when a later fold lands in its lane (scoped + narrowed), otherwise it stays closed. This file is the paste-ready driver for the in-session A/B/C/D subagent sweep AND the seed that minor-bumps into `v3_6/` for the formal fresh-instance A-Type gate. It is **current-only** (rename/bump, don't accrete copies). Reviewers change nothing — output is findings only, written to the named `GAP_REVIEW_<angle>.md` file (or printed in full if no filesystem).
+> **Revision driven by**: round-1 A/B/C/D fold + breadth-regression fold (owner-journey + integration) — v3.5.0 → v3.5.1 → **v3.5.2** (living docs renamed to `v3_5_2_*`).
+> **Gate status.** Round-1's validated A/B/C/D findings + the breadth-regression findings have been folded into the triplet (this is the v3.5.2 state); all four angles **re-run from here** — an angle re-runs only when a later fold lands in its lane (scoped + narrowed), otherwise it stays closed. This file is the paste-ready driver for the in-session A/B/C/D subagent sweep AND the seed that minor-bumps into `v3_6/` for the formal fresh-instance A-Type gate. It is **current-only** (rename/bump, don't accrete copies). Reviewers change nothing — output is findings only, written to the named `GAP_REVIEW_<angle>.md` file (or printed in full if no filesystem).
 
 ## The build under review
 
 The v3.5.0 triplet, all in `assets/docs/archive/v3_5/`, one build / one source of truth:
-- **`v3_5_0_IMPLEMENT.md`** — 10 workstreams (WS1 portal shell/routing/auth · WS2 Products + sold-policy + scheduled-publish · WS3 Orders + refund-preserve · WS4 store-wide sale + struck pricing + top-bar/popup · WS5 media rebuild · WS6 storefront bugs · WS7 webhook/money · WS8 activity log + seen/unseen · WS9 buy-on-tile info-scent · WS10 GPT+docs parity).
-- **`v3_5_0_ADDENDUM_DESIGN.md`** — the design third (always in scope).
-- **`v3_5_0_ADDENDUM_TESTING.md`** — the testing third (always in scope).
+- **`v3_5_2_IMPLEMENT.md`** — 10 workstreams (WS1 portal shell/routing/auth · WS2 Products + sold-policy + scheduled-publish · WS3 Orders + refund-preserve · WS4 store-wide sale + struck pricing + top-bar/popup · WS5 media rebuild · WS6 storefront bugs · WS7 webhook/money · WS8 activity log + seen/unseen · WS9 buy-on-tile info-scent · WS10 GPT+docs parity).
+- **`v3_5_2_ADDENDUM_DESIGN.md`** — the design third (always in scope).
+- **`v3_5_2_ADDENDUM_TESTING.md`** — the testing third (always in scope).
 
 Effort: **maximum**. A **new instance per pass** (no context contamination). Read ALL THREE end-to-end.
 
@@ -93,7 +93,7 @@ Every entry is a **verified** truth of this project/build — validate against r
 ## Angle A — cold / out-of-repo (self-containment + completeness)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have ONLY the three documents pasted below — NO repo (the absence is the point). Do NOT change anything; your only output is your findings (write them to `v3_5_0_GAP_REVIEW_A.md`, or print the full file contents if you have no filesystem).
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have ONLY the three documents pasted below — NO repo (the absence is the point). Do NOT change anything; your only output is your findings (write them to `v3_5_2_GAP_REVIEW_A.md`, or print the full file contents if you have no filesystem).
 
 [REVIEW LENS — paste parts (a)(b)(c) verbatim from above]
 [SETTLED BASE — paste the delta-on-proven-substrate paragraph]
@@ -106,43 +106,43 @@ OUTPUT
 - The single most important "if you fix one thing" insight.
 - One-line verdict — one of: READY TO BUILD / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW).
 Be concrete: "WS4 Phase 4.4 calls getActiveSale() but no phase defines its return shape" beats "check the sale wiring."
-[paste v3_5_0_IMPLEMENT.md + v3_5_0_ADDENDUM_DESIGN.md + v3_5_0_ADDENDUM_TESTING.md in full]
+[paste v3_5_2_IMPLEMENT.md + v3_5_2_ADDENDUM_DESIGN.md + v3_5_2_ADDENDUM_TESTING.md in full]
 ```
 
 ## Angle B — fidelity (repo)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Do NOT change anything; write findings to `v3_5_0_GAP_REVIEW_B.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Do NOT change anything; write findings to `v3_5_2_GAP_REVIEW_B.md`.
 
 [REVIEW LENS (a)(b)(c)] · [SETTLED BASE] · [LANDMINES 1-30 — you share this file's context, so it's above]
 
 ANGLE B — fidelity: open every file the docs edit. Verify (1) each **CURRENT** block byte-matches the working tree (line numbers are hints; the quoted text is the anchor — flag drift), and (2) each **NEW** block applies cleanly and references only things that exist. Pay special attention to the **shared-file edit coordination** (ledger 25-27): after WS2's edits, do WS4's and WS8's CURRENT anchors in `products.ts` still match? Does the merged `product-feed.ts` service-role client collide? Byte-check the DESIGN addendum's DECIDED blocks against `design-handoff/out/` (for render-tuned defaults, judge "concrete enough the builder never guesses," not "final"). Confirm the remaining NEEDS-VERIFY flags (round-1 resolved the alt-gate, `shipping_address`, and `auto_apply` param-name ones; the rest are the #219 Stripe probe, the PostgREST `.or(...)` form + fallback, and the deploy-env items — `CRON_SECRET`/`PRODUCT_API_KEY`/`SUPABASE_SECRET_KEY`) are each either resolvable from the repo (resolve it) or a genuine build-time/runtime item (say which).
 
-OUTPUT — [same three-part output + verdict as Angle A, written to v3_5_0_GAP_REVIEW_B.md]
+OUTPUT — [same three-part output + verdict as Angle A, written to v3_5_2_GAP_REVIEW_B.md]
 ```
 
 ## Angle C — integration (repo + architecture)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. **Read `assets/docs/EVERLASTINGS_STORE.md` end-to-end FIRST.** Do NOT change anything; write findings to `v3_5_0_GAP_REVIEW_C.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. **Read `assets/docs/EVERLASTINGS_STORE.md` end-to-end FIRST.** Do NOT change anything; write findings to `v3_5_2_GAP_REVIEW_C.md`.
 
 [REVIEW LENS (a)(b)(c)] · [SETTLED BASE] · [LANDMINES 1-30]
 
 ANGLE C — integration: does the delta FIT the system? Hunt system-fit gaps through the lens — the function/cron budget (11/12, 1 cron — ledger 1-2), `is_test` scoping, auth, idempotency (webhook/refund), the **sold-policy consistency across all three surfaces** (`computeState` [WS2] ↔ storefront buy-gate [WS6] ↔ webhook decrement [WS7] — the highest-value cross-lane check), Stripe one-discount reality, AR conflicts, stale `file:line` pointers in the docs, and the shared-file edit coordination (ledger 25-27). Watch for STORE.md drift (its header may lag the code — verify against the newest facts, not the header). Include the design + testing addenda.
 
-OUTPUT — [same output + verdict, to v3_5_0_GAP_REVIEW_C.md]
+OUTPUT — [same output + verdict, to v3_5_2_GAP_REVIEW_C.md]
 ```
 
 ## Angle D — design-correctness (repo + design addendum + design research)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Also read `design-handoff/brief.md`, `design-handoff/out/`, `design-handoff/feedback/FEEDBACK_v1.md`, `design-handoff/controls.html` + `tokens.css`, `design-handoff/reference/`. Do NOT change anything; write findings to `v3_5_0_GAP_REVIEW_D.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Also read `design-handoff/brief.md`, `design-handoff/out/`, `design-handoff/feedback/FEEDBACK_v1.md`, `design-handoff/controls.html` + `tokens.css`, `design-handoff/reference/`. Do NOT change anything; write findings to `v3_5_2_GAP_REVIEW_D.md`.
 
 [REVIEW LENS (a)(b)(c) — the North Star here is design-flavored] · [SETTLED BASE] · [LANDMINES 1-30]
 
 ANGLE D — design-correctness: A can't see the repo and B/C lean fidelity/integration, so YOU own whether the UI actually RENDERS right. Check: the `out/` markup ships verbatim and the seam swaps (mock→API, no-op→endpoint) don't require touching markup/class-names; the state-color system is correct (color reserved for state; the row LED colors ALL FIVE states live/edits/draft/sold/archived per `out/`, field rings; sold/archived ALSO get tabs — both the LED color AND a tab, not either/or); the KILL list holds (no tiles, no nested components, no words in pills, no portal-name header); mobile-primary correctness (NYT-dense, 16px inputs, one component in both row + phone layouts); reduced-motion / a11y / focus / honest enable-disable; and the NEW components not in `out/` (struck-`%` pricing, the top bar + once-only popup, the env chip) are specified concretely enough to render right. The design addendum is ALWAYS in scope.
 
-OUTPUT — [same output + verdict, to v3_5_0_GAP_REVIEW_D.md]
+OUTPUT — [same output + verdict, to v3_5_2_GAP_REVIEW_D.md]
 ```
 
 ---
