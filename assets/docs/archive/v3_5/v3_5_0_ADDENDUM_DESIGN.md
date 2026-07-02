@@ -1,0 +1,141 @@
+# v3.5.1 — Design Addendum
+
+**Revision driven by**: round-1 gap-review fold (A/B/C/D) — v3.5.0 → **v3.5.1** (filename stays `v3_5_0_*`; version is internal).
+**Addendum to**: `v3_5_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
+**Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
+
+> **Executable-design bar.** Design is planned exactly like functionality: **concrete-default + render-tune**, tested + feedback'd, never frozen-no-feedback. The bar this addendum is judged against is *"concrete enough the builder never guesses, and Sean render-tunes on the live preview"* — NOT final-pixel. Real content is never a build/test gate (production-grade placeholders via the existing AI pipeline). **Brand separation is load-bearing:** the portal is a **cool indigo-slate** reusable template (`--accent: oklch(42% 0.055 262)`), deliberately distinct from the storefront's **warm-plum** Everlastings brand — the plum/serif tokens are never imported into `admin/`; the three storefront additions in §D use the storefront's *own* tokens, not the portal's.
+
+**KILL list (restated — the over-innovated v-prev pass produced each of these; the delivered `out/` already avoids them, and the integration must not reintroduce one).**
+- **No product tiles.** A product is a **row** (the spreadsheet), never an image-led card grid. (`reference/vCCP-3-1.jpg`)
+- **No components-inside-components / dropdowns-inside-cards.** Each field gets clear space + an obvious label; no cramming fields into nested widgets. (`reference/vCCP-2-2.jpg`)
+- **No redundant color *text-tags*.** State is encoded by **color alone** (the row LED, the field-border ring) — never a printed "LIVE NOW" / "WAITING" label beside a field. (`reference/vCCP-1-3.jpg`, `vCCP-1-2.jpg`)
+- **No words inside state pills/LEDs.** A pill/LED is just color; the maker learns it in 2-3 clicks (or asks the GPT). (`reference/vCCP-1-8.jpg`)
+- **No oversized mobile fonts / wasted space.** Mobile type is **small and dense — NYT scale**; every pixel earns its place. (`reference/vCCP-1-2-example.jpg`)
+- **No portal-name header.** We don't brand the portal in its own chrome — the top-left "Content Creator Portal" is dropped.
+- **No multi-click state changes** and **no helper text stacked under fields** (helper text lives in the label tooltip; context reveals on field focus).
+
+---
+
+# A. `out/` is the canonical byte-source
+
+**Ship the delivered markup / class-names / `portal.css` verbatim EXCEPT the few surgical `*-app.js`/markup edits the integration makes (enumerated below).** The finished design in `design-handoff/out/` IS the source of truth for every portal pixel — it is not a mockup to re-derive. WS1 Phase 1.1a lands these files in `admin/` unchanged; the data-wiring workstreams then swap **mock arrays → API responses** and **no-op mutations → the documented endpoints** *without changing markup or class names*, plus a short, named set of surgical edits (the miniature-only picker, the removed Sold-tab alert / Delivered pill, the `--staged` token fix). That is the whole boundary, taken verbatim from `INTEGRATION.md §2`:
+
+> Design to the **contract** (`data-flow.md`); do not assume these files call it. All actions in the prototype mutate an **in-memory model** and show the honest confirm/optimistic state a real call would. Replace those mutations with the documented endpoints; **do not** change markup or class names to do it.
+
+**The eleven files that ship (WS1 Phase 1.1a — copied into `admin/`, then surgically edited per the list below):**
+- `portal.css` — the whole design system (tokens in `:root` re-hueable from there; every shared component: shell, rail, tab bar, buttons, `.switch` toggles, `.field`/`data-ring` fields, `.tip` tooltips, `.led`, `.pill`, `.seg` segmented filter, `.skel`, `.toast`, `.modal`/`.scrim`). **Zero literal hex in component CSS** (the one intentional `#ffffff` surface + the semantic state literals `#D95301`/`#297fb4`/`#83718a` are token *values* in `:root`, not inline component hex).
+- `portal.js` — framework-free shared helpers: `PORTAL.env()` (hostname→Test/Live), `PORTAL.mountShell()`, `PORTAL.toast()`, `PORTAL.money`, `PORTAL.siteUrl()`, auto-grow textareas, character counters, tap-tooltips.
+- `data.js` — the **mock** dataset, shaped field-for-field to `data-flow.md`. **This is the seam that gets replaced** (its `products`/`orders`/`coupons`/`storeWideSale` arrays + `config` object → the real `/api/*` responses); markup keys off the same field names so the swap needs no markup edit.
+- the four **shells** — `products.html`, `orders.html`, `sales.html`, `account.html` (each a thin HTML shell loading `data.js` → `portal.js` → its `<surface>-app.js`).
+- the four **surface apps** — `products-app.js`, `orders-app.js`, `sales-app.js`, `account-app.js` (each renders into the shell + carries the mock mutations the integration replaces).
+
+The three docs (`README.md`, `INTEGRATION.md`, `PRODUCT_LIFECYCLE.md`) are handoff reading — **they do not ship** to `admin/`.
+
+**Surgical edits to the shipped files (the ONLY diffs; everything ELSE is verbatim).** The integration makes a short, named set of edits to the copied files — enumerate them so a reviewer never mistakes one for a stray change:
+- **WS1** — the `robots` noindex meta in each shell's `<head>` (Phase 1.1c); the routing/config/auth wiring in `portal.js` + `account-app.js` (Phases 1.3–1.5).
+- **WS2** — narrow the `product_type` picker `options` in `products-app.js` (editorHTML) to **miniature-only** (`["miniature"]`).
+- **WS8** — remove the Sold-tab `data-alert` in `products-app.js` (Phase 8.2b) — the Sold tab no longer blinks.
+- **WS3** — remove the **Delivered** pill in `orders-app.js` + its `.tpill--delivered` CSS (no code writes `status='delivered'`).
+- **F4/§A token fix** — in `products.html:288` (`.sched-chip`) replace the three `var(--staged)` (a token defined **nowhere** → the scheduled chip renders with no background) with `var(--waiting)`; the scheduled/staged chip is the orange `--waiting` state.
+
+**Angle-B byte-check.** Every DECIDED design block in this addendum (and every markup/class the IMPLEMENT's integration-seam tables key off) is verified **byte-identical against `out/`** except the surgical edits above. If a review round wants a class renamed or markup re-shaped beyond that list, that is a *design* change — it goes back through `out/` (or a `<!-- NEEDS-VERIFY -->` here), never a silent edit during data-wiring. This is what lets the IMPLEMENT carry **integration-seam tables** (each mock/no-op call → its real endpoint) instead of full byte-blocks for the presentation surfaces: the markup already exists and is canonical.
+
+---
+
+# B. Reference sources + the design system
+
+**Read order (the aesthetic anchor before the deltas).**
+1. `design-handoff/controls.html` — **the look.** Its typography, spacing, container blending, the weight-not-bounce feel, and especially its **nav** (the desktop notebook-spine rail ↔ mobile thumb-zone tab bar, one component in both layouts) are the gold standard. `portal.css`'s shell/rail/tabbar/button/toggle/field primitives are lifted from it verbatim — match it exactly.
+2. `design-handoff/tokens.css` — the **exact OKLCH token values** lifted from `controls.html`. Every color is OKLCH or `color-mix()` from one hue token, so the whole template is re-hueable by editing a couple of tokens. `out/portal.css`'s `:root` is these values (with the Sean-v1 semantic-state palette folded in). Lift, don't approximate.
+3. `design-handoff/reference/` — the annotated review shots (the `vCCP-*.jpg` set) that ground each KILL-list item and each refinement; consult a specific shot when a decision's *why* is unclear.
+4. `design-handoff/feedback/FEEDBACK_v1.md` — Sean's v1 review prose, esp. **§8 the media-modal spec** (see §C below) and §3 (the LED/tab color palette) + §9 (the sticky row-bar + auto-save-on-close mechanic).
+
+**The token system (what "re-hue" means).** `portal.css` `:root` (verbatim from `tokens.css`) carries the structural indigo-slate + a semantic-STATE palette that is **reserved strictly for state**:
+- `--live: oklch(58% 0.13 150)` — **green** = live / published / required-met
+- `--waiting: #D95301` — **orange** = staged edits, needs publish (Sean's v1 choice; blinks — more urgent than draft)
+- `--draft: oklch(80% 0.142 88)` — **yellow** = draft (never published; blinks)
+- `--sold: #297fb4` — **blue** = sold
+- `--archived: #83718a` — **purple-gray** = archived
+- `--danger: oklch(55% 0.16 25)` — **red** = destructive / blocking publish
+
+Re-hue happens **only** through these tokens (edit `:root`, never a component rule). An `@supports not (color: color-mix(in oklch, red, blue))` block (`portal.css:70-88`) provides a flat-hex fallback for browsers without OKLCH `color-mix` — keep it; it is the build-time fallback the tokens comment calls for. **State color is never spent on decoration**: all five state hues live on the row LED (green live, orange edits, yellow draft, blue sold, purple-gray archived — `portal.css:401-405`), plus green/yellow/orange on the field-border rings; sold + archived ALSO get their own tabs (both the LED color AND a tab, not either/or — see §C).
+
+---
+
+# C. Integration deltas `out/` carries as design but can't wire
+
+`out/` is a finished *design* on a mock model. The behaviors below are **designed** (the markup, colors, and interaction all exist in `out/`), but the live wiring lives in the IMPLEMENT — this addendum references the workstream, it does **not** duplicate the code.
+
+## C.1 — Field → behavior mapping (WS2; `data-flow.md §Products` is the field taxonomy)
+
+**Two-speed, taught by color not words (concrete: the design already groups + rings them).** Some fields apply to the shop **instantly when saved** — `price`, `quantity`, `available` (the live-commerce group; `commitPrice`/`commitQty`/`commitAvail` in `products-app.js`); the rest (wording, photos, SEO) are **staged** and go live on publish. The field rings and grouping carry this; the words "draft/staged/live" never appear. Wiring: **WS2 Integration seam** maps each `commit*` / `autosave()` no-op onto `PUT /api/products?id=` (live-apply rotates the Stripe price) vs a staged draft `PUT`/`POST`. Do not add `effective`-merge to the hot GET — the editor's client-side `eff()` draft-merge (`products-app.js:340`) mirrors `admin.js:310` exactly (IMPLEMENT Locked-decisions §`GET ?id=`).
+
+**The 5-color row LED (concrete — `portal.css` `.led--*`; blink is designed).** The delivered `out/` colors the row LED for **all five** states (`products-app.js:91 ledFor()` → `.led--{state}`; `portal.css:401-405`): `.led--live` (green), `.led--edits` (orange `--waiting`, faster `led-pulse` blink — staged is the more urgent nudge), `.led--draft` (yellow, `led-pulse` blink), `.led--sold` (blue `#297fb4`, steady), `.led--archived` (purple-gray `#83718a`, steady). The `.led--*` classes are the **ROW LEDs**; the **`.dot--*`** classes (`portal.css:373-376`) are the separate **segmented-filter dots**. Sold + archived **ALSO** appear as tabs — **both the LED color AND a tab, not either/or** (Sean's FEEDBACK §3 + `out/README.md`). The single source of truth for the dot/word is `computeState()` (`products-app.js:16-22`), precedence `archived > draft > staged-edits > sold(qty0) > live` — **no `!available→sold` branch** (see C.2). Wiring is WS2.
+
+**Field-border rings green / red / yellow (concrete — `portal.css` `.field[data-ring="…"]`).** The ring lives on the field border itself, never a tag beside it (KILL-list): **green** = required field with valid input; **red** = this field is blocking publish (required + missing/invalid); **yellow** = edited text that needs review before re-publishing. The publish gate + red-ring set uses **Sean's authoritative required set** (broader than the create-contract minimum) — see IMPLEMENT Locked-decisions §"Editor field rules" (`title, slug, headline, description, price, quantity, product_type, story_card, features, materials, care_instructions, shipping_details, dimensions(W·D·H), weight, hero image, ≥5 gallery images, alt on every media`), plus **required-but-auto-generated-if-blank** (`seo_title, seo_description, checkout_name, checkout_description, checkout_image, seo_thumbnail` — never block publish; generate server-side). The `data-ring` attribute is set by the surface's `readiness()`/`refreshGate()`; wiring the *set* to the real fields is WS2 Phase 2.7. Publish also requires a **Preview** for a never-published product (INTEGRATION §3.8) and the control names what's missing in plain maker's language, not "field required."
+
+**Lock-after-publish = show locked, not missing (concrete — `portal.css` `.field--locked` + `.tip__btn--lock`).** `slug, checkout_name, checkout_description, checkout_image` lock once the piece first goes live: render them **locked** (dashed, muted, `cursor:not-allowed`) with a lock icon whose tooltip reads "Locks after first publish" on hover (desktop) / tap (mobile) — never remove the field. Wiring is WS2.
+
+**Sold / archived get BOTH an LED color AND a tab (concrete — `portal.css` `.seg` segmented filter).** The Products tabs are **Live · Drafts · Sold · Archived · All** (default Live) — sold + archived each get their own tab **in addition to** their row-LED color (blue sold, purple-gray archived; see the 5-color LED above), not instead of it. Turning **Available OFF on a live piece makes it a Draft** (unpublish/hide), NOT "sold" — this is Sean's final word (IMPLEMENT Locked-decisions §"Product state / sold policy", INTEGRATION §3.6). Turning Available back on from a row prompts to add stock if quantity is 0 (`promptStock`). "Sold" is `quantity===0` from a real sale only (automatic, computed, persistent until archived). Wiring: WS2 Phase 2.2 (server `available:false` on a published row → `is_published=false`).
+
+**⚠ Superseded contract (kept in context, not silently deleted).** The **whole `data-flow.md:52-57` computed-state table** is superseded, not just its one wrong row (`:55`'s `is_published && !available → sold`): the table derives state from the `available` flag, which the locked sold-policy replaces — Available-off yields **Draft** (not Sold), and Sold = `quantity===0` from a real sale. The authoritative state machine is `computeState()` (`products-app.js:16-22`, precedence `archived > draft > staged-edits > sold(qty0) > live`, no `!available→sold` branch); the IMPLEMENT makes the *server* semantics match (WS2 Phase 2.2 + the storefront buy-gate WS6 Phase 6.5). Flagged here so a reviewer reading `data-flow.md:52-57` doesn't re-raise it as a design/contract mismatch.
+
+## C.2 — The media modal (WS5; full spec is FEEDBACK_v1 §8)
+
+The media UX was substantially redesigned into **one "Add / edit media" modal** — do **not** re-author its markup here (the modal ships in `out/products.html` + `products-app.js`: `.modal`/`.modal__card`, `.dropzone`, `.mitems`/`.mitem`, role pills, coverage counter; functions `openMedia`/`handleFiles`/`addUrl`/`applyMedia`/`renderMedia`/`coverage`). The **full behavioral spec is FEEDBACK_v1 §8** (batch upload / drag-drop / device pick / URL paste / YouTube embed; per-image **role checkboxes with logic** — one hero, hero≠gallery, share/checkout/poster combine freely; per-video **Loop / Mute / Hide-controls / Autoplay**; required **alt text** on every item; reorder + delete; a live coverage counter "hero ✓, gallery 5/5"; "hero is reused for share/checkout if those are missing"; new uploads insert at top and pulse). INTEGRATION §3.10 + §3.13 are the reconciliation notes; **this is the single most intricate integration item and gets its own review pass.**
+
+The design is finished — what the integration reconciles is **data-shape**, in `applyMedia`/`openMedia` (WS5), so what the modal persists matches what the storefront reads: the batch/drag-drop path is a **client fan-out of single-file `POST /api/upload` multipart calls** (no new endpoint — WS5 Phase 5.1a); URL paste is the existing by-link JSON branch (5.1b); video is already accepted, MP4+WebM only, `skip_transform:true` on the multipart video POST (5.1c); YouTube stores as `{type:'youtube', url, alt}` and the storefront render path already exists (5.2); and the two prototype key mismatches (`mute`→`muted`, add `poster`) are fixed in `applyMedia` (5.2c). All roles map to the existing `ROLE_PATTERN` enum — nothing to add (5.1d).
+
+## C.3 — Character counters + recommended targets (FEEDBACK §8.7 — a design-completeness delta)
+
+FEEDBACK §8.7 asks that **every field** show its live char count next to the recommended/SEO target so the maker manages length without bouncing to the preview. `portal.css` ships `.count` + `.count.is-over` and `portal.js` wires the live counter — but the *per-field recommended target values* are the delta the integration must confirm are populated for each field (SEO fields have real limits; on-page copy fields have "recommended" ranges). Concrete default: the counter exists and turns `--waiting` when over. Render-tune: the target numbers per field.
+
+<!-- NEEDS-VERIFY: confirm the per-field recommended/SEO char targets are actually set for ALL fields the FEEDBACK §8.7 "next to the actual number of characters" rule covers (not only the SEO title/description); where a field has no target, the counter should show a bare count, not a 0/limit that reads as always-over. -->
+
+---
+
+# D. NEW components NOT in `out/` (authored here; storefront brand, not portal)
+
+`out/` is the portal (indigo-slate). These three additions live on the **storefront** (warm-plum) and therefore are **not** in the delivered `out/` package — they use the storefront's own tokens. They are authored as concrete-default + render-tune and wired in the IMPLEMENT.
+
+## D.1 — Struck-`%` sale pricing render (WS4 Phase 4.3–4.5; `.price-sale`)
+
+**Concrete default (storefront tokens, `styles.css`).** When a store-wide **percent** sale is active, the price renders struck-through-was + now, via a shared `priceHTML(cents, sale)` helper on every storefront surface (shop grid, product sticky card, homepage carousel, cart line + estimate). The markup + CSS:
+- `.price-sale { display: inline-flex; align-items: baseline; gap: var(--space-sm); }`
+- `.price-sale__was { text-decoration: line-through; color: var(--text-muted); font-weight: 400; }`
+- `.price-sale__now { color: var(--accent-primary); font-weight: 600; }`
+
+Percent-only (a `$`-off store-wide stays a plain checkout code, not struck). **Sold items always render plain** (no struck on an unbuyable piece). The JSON-LD `offers.price` stays the true undiscounted unit price (a sale is a promotion, not a permanent price change) — do NOT touch `injectProductJsonLd`. Wiring across `shop.js`/`product.js`/`homepage.js`/`cart.js` is WS4 Phase 4.5. **Render-tune:** the strike weight, the was/now spacing, whether the cart estimate shows the struck preview.
+
+## D.2 — The #221 thin top utility bar + once-only sale popup (WS4 Phase 4.3.b–4.3.d; storefront tokens)
+
+**Concrete default (`main.js` `mountSaleChrome`, storefront tokens only — this is the shopper brand).** A thin reusable **top utility bar** (free-shipping reminder by default, the sale line when a sale is active) + a **once-only, dismissible, upper-right sale popup** that renders on every storefront page load. The popup is `localStorage`-gated (`everlastings.saleSeen`, **code-scoped** so a new sale re-shows) so it appears once per sale, never nags. It mounts from `getActiveSale().then(mountSaleChrome)`. **Render-tune:** the bar copy/height, the popup's brand treatment + entrance, the dismiss affordance — the load-bearing parts are the once-only gate and the storefront-token (not portal-token) palette.
+
+## D.3 — The env chip topology (WS1; `PORTAL.env()` hostname rule)
+
+**Concrete default (`portal.css` `.test-chip` / `.test-chip--live` / `.envstrip`; `portal.js` `PORTAL.env()`).** The Test/Live marker is **derived from `window.location.hostname`, never hardcoded** — this closes the functionality gap Sean flagged in FEEDBACK §1.1. Desktop = a chip top-right; mobile = a full-width strip (FEEDBACK §1.2 asked for the extra space so the label never truncates). The hostname rule (INTEGRATION §3.1):
+- `*.vercel.app`, `localhost`, `file://` → **Test** (amber `--waiting`)
+- `everlastingsbyemaline.com` → **Live** (green `--live`)
+
+The **env-aware "View Site"** link (rail + Account) targets the current environment's storefront via `PORTAL.siteUrl()` (`location.origin` on Test/preview, the prod domain on Live — INTEGRATION §3.12). WS1 wires these to the deploy topology; it does not re-decide them. **Render-tune:** none load-bearing (the chip already matches `controls.html`); confirm the hostname rule against the real preview/prod domains.
+
+<!-- NEEDS-VERIFY: confirm the preview/prod hostname split in PORTAL.env() matches the actual Vercel deploy topology (custom domain on prod, *.vercel.app on preview) — INTEGRATION §3.1 says this is "the one line to adjust" if hostnames differ. -->
+
+---
+
+# E. Render-tune + the angle-D checklist
+
+The design ships concrete; Sean render-tunes on the live preview. Angle-D (design) reviews confirm each of these holds — they are not re-decides.
+
+- **Re-hue via `tokens.css` only.** The portal is **cool indigo-slate** (`--accent: oklch(42% 0.055 262)`), a reusable template distinct from the storefront's **warm-plum** brand — verify no storefront plum/serif token leaks into `admin/`, and no portal token leaks into the §D storefront additions. Re-hue is editing `:root`, never a component rule (`portal.css` has zero component-level hex).
+- **Mobile-first is the PRIMARY context.** The maker manages the store mostly on their phone. Type is **NYT-dense small**, zero wasted space, slim margins; text **inputs are 16px-min** so iOS never zoom-jumps a field (`portal.css .input` is `font-size:16px` on mobile, tightening to 14px only at `≥860px`). Prove mobile-first **by construction**: one component renders correctly in *both* the desktop row and the phone list (the row collapses to a dense tap-friendly list item — a row, never a tile), and the nav is one component rotating between the desktop rail and the mobile bottom tab bar. No phone-mockup wrapper.
+- **Motion = weight, not bounce** (`--ease-weight: cubic-bezier(.2,.7,.3,1)`; a 1px sink + collapsing shadow + instant focus ring — never a spring/overshoot), and **`prefers-reduced-motion` is honored** (`portal.css:528-532` collapses transitions/animations, drops the skeleton shimmer, disables press-transforms). Confirm the LED/tab blink and the new-order alert respect it.
+- **Accessibility — honest, not CSS-faked.** Focus rings reach every interactive control (`:focus-visible` box-shadow on `.btn`/`.rail__item`/`.tabbar__item`/`.iconbtn`/`.seg__chip`/`.switch`); enable/disable is **computed and honest** (the Publish gate genuinely disables + explains, it does not fake validity with a CSS-only trick that would lie); the `.vh` visually-hidden helper carries screen-reader labels; the lock icon exposes its tooltip on both hover and focus. State is never *only* color where it blocks an action — the red publish-gate ring is paired with the plain-language "what's missing" text.
+- **Responsive.** Verify the rail↔tab-bar swap at the 860px breakpoint, the collapsible desktop rail (icon-only + hover-label tooltip), the segmented filter's horizontal scroll on narrow screens, and that no field truncates a long title mid-word (FEEDBACK §4 — full-width fields with room to breathe).
+- **State-color correctness.** The row LED colors **all five** states (green live, orange edits, yellow draft, blue sold, purple-gray archived — `portal.css:401-405`); sold + archived **ALSO** get their own tabs (both the LED color AND a tab, not either/or). live/draft/edits blink (orange `--waiting` staged-edits + yellow draft; staged is the faster, more urgent pulse); sold/archived are steady. Green = on/in-the-shop for the Available + Featured toggles. Confirm no color is spent on decoration, and that both the row LED (`.led--*`) and the segmented-filter dots (`.dot--*`) use the full 5-state palette.
+
+---
+
+**Constraints honored:** vanilla HTML/CSS/JS, no build step, `out/` markup + class names shipped verbatim (only WS1's enumerated diffs), the portal's indigo-slate tokens never mixed with the storefront plum, mobile-first by construction, and every design decision either byte-anchored to `out/` or referenced to its IMPLEMENT workstream (never duplicated here).
