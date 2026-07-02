@@ -1,5 +1,61 @@
 # Welcome, Em — Running Your Store
 
+---
+
+## Welcome
+
+Let's do a little store introduction.
+
+  1. So when I send you things you won't feel overwhelmed
+  2. I can point out what items are currently being updated 
+  3. This is the opportunity for you to really dig through give feedback 
+     - What do you love? What do you dislike?
+     - Anything to be added or removed or changed, etc. the world is your oyster (never really understood that saying)
+
+## Testing First So You Can Play
+
+### Dev Site
+
+Dev URL --> `https://everlastings-git-dev-seanivore.vercel.app/`
+
+  1. Start with homepage
+     - Newsletter sign-ups 
+     - Got to database, currently have a 5% discount for joining 
+     - We have very simple email marketing tool set up but can add any 
+  2. Then see products
+     - Product page is missing features section 
+     - Also shipping, other details 
+  3. Purchase a product
+     - 4242 4242 4242 4242
+     - Any CSV and any expiration date after today
+     - Use your email if you want to get the receipt
+
+### GPT Site Management
+
+Dev set-up pinned --> `https://chatgpt.com/g/g-6a0b26ce97608191b62b0626bfe1506b-the-sunkeeper`
+
+  1. Can name it whatever you want
+     - What can you do
+     - How can you help
+  2. Quick start a product 
+     - Give a product name, product type, price, if it is to be featured 
+     - Provide a short description and it will draft the other copy 
+  3. Adding media to a product 
+     - What types of media
+       - Any image format 
+       - No GIF, provide MP4 (I can show you how to make a GIF into video if needed)
+       - MP4 specifics 
+       - YouTube embed 
+     - What methods of adding it 
+       - Share URLs but not to a folder, but a list of them is fine
+       - Upload images and tell them what gets what role
+     - They are processed 
+       - Cropped for the role
+       - Downsized
+
+
+---
+
 ## Still finishing — quick flags (Sean's handoff list)
 
   We're still polishing these. Flag them for Em so she knows they're known and on the way.

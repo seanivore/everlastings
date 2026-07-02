@@ -434,25 +434,25 @@ Each of the other three surfaces must not render for a signed-out visitor — wr
 
 ### Integration seam — `products-app.js` → real endpoints
 
-| `products-app.js` (mock / no-op) | Real call |
-|---|---|
-| `products = D.products` (`:11`) | `GET /api/products` → `{products: Product[]}` (admin = full rows: `draft`, `is_published`, `quantity`, `archived_at`, `scheduled_publish_at`) |
-| `openPreview` toast (`:251`) | open `preview_url` (`/product/<slug>?preview=<token>`); clean live row → `/product/<slug>` |
-| `newBtn` toast (`:780`) → blank editor | first Save/autosave → `POST /api/products` (returns `id` + `preview_token`) |
-| `autosave()` no-op (`:557`) | existing row → `PUT /api/products?id=`; brand-new + title/price present → `POST` |
-| `commitPrice` (`:212`) | `PUT ?id=` `{price}` — live-apply (rotates Stripe price) |
-| `commitQty` (`:218`) | `PUT ?id=` `{quantity}` — live-apply |
-| `commitAvail` OFF (`:234`) | `PUT ?id=` `{available:false}` → server **unpublishes to draft** (Phase 2.2) |
-| `commitAvail` ON / `promptStock` (`:228`,`:265`) | republish: `[PUT {quantity}]` → `PUT {available:true}` → `POST ?_action=publish {id}` |
-| `commitFeature` (`:242`) | `PUT ?id=` `{featured}` (staged on published, live on draft — server routes it) |
-| `commitArchive` (`:244`) | `POST ?_action=archive {id}` / `?_action=unarchive {id}` |
-| `discard` (`:451`) | `POST ?_action=discard {id}` |
-| `relist` (`:452`) | `unarchive` (if archived) → `PUT {quantity, available}` → republish if it was unpublished |
-| `doPublish` (`:560`) | never-published → open preview, real `POST ?_action=publish {token}`; staged edits → `POST {id}` |
-| `openSchedule` save (`:490`) | `PUT ?id=` `{scheduled_publish_at: <ISO>}` (Phase 2.4) |
-| `unschedule` (`:454`) | `PUT ?id=` `{scheduled_publish_at: null}` |
-| `handleFiles` FileReader base64 (`:720`) + `applyMedia` (`:745`) | per asset `POST /api/upload` (`file`/`url` + `slug` + `role`) → then `PUT {images, media, thumbnail, seo_thumbnail, checkout_image}` |
-| `product_type` options `["miniature","printable","storybook"]` (`:364`) | picker → **`["miniature"]` only** (surface edit — Phase 2.1) |
+| `products-app.js` (mock / no-op)                                        | Real call                                                                                                                                     |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `products = D.products` (`:11`)                                         | `GET /api/products` → `{products: Product[]}` (admin = full rows: `draft`, `is_published`, `quantity`, `archived_at`, `scheduled_publish_at`) |
+| `openPreview` toast (`:251`)                                            | open `preview_url` (`/product/<slug>?preview=<token>`); clean live row → `/product/<slug>`                                                    |
+| `newBtn` toast (`:780`) → blank editor                                  | first Save/autosave → `POST /api/products` (returns `id` + `preview_token`)                                                                   |
+| `autosave()` no-op (`:557`)                                             | existing row → `PUT /api/products?id=`; brand-new + title/price present → `POST`                                                              |
+| `commitPrice` (`:212`)                                                  | `PUT ?id=` `{price}` — live-apply (rotates Stripe price)                                                                                      |
+| `commitQty` (`:218`)                                                    | `PUT ?id=` `{quantity}` — live-apply                                                                                                          |
+| `commitAvail` OFF (`:234`)                                              | `PUT ?id=` `{available:false}` → server **unpublishes to draft** (Phase 2.2)                                                                  |
+| `commitAvail` ON / `promptStock` (`:228`,`:265`)                        | republish: `[PUT {quantity}]` → `PUT {available:true}` → `POST ?_action=publish {id}`                                                         |
+| `commitFeature` (`:242`)                                                | `PUT ?id=` `{featured}` (staged on published, live on draft — server routes it)                                                               |
+| `commitArchive` (`:244`)                                                | `POST ?_action=archive {id}` / `?_action=unarchive {id}`                                                                                      |
+| `discard` (`:451`)                                                      | `POST ?_action=discard {id}`                                                                                                                  |
+| `relist` (`:452`)                                                       | `unarchive` (if archived) → `PUT {quantity, available}` → republish if it was unpublished                                                     |
+| `doPublish` (`:560`)                                                    | never-published → open preview, real `POST ?_action=publish {token}`; staged edits → `POST {id}`                                              |
+| `openSchedule` save (`:490`)                                            | `PUT ?id=` `{scheduled_publish_at: <ISO>}` (Phase 2.4)                                                                                        |
+| `unschedule` (`:454`)                                                   | `PUT ?id=` `{scheduled_publish_at: null}`                                                                                                     |
+| `handleFiles` FileReader base64 (`:720`) + `applyMedia` (`:745`)        | per asset `POST /api/upload` (`file`/`url` + `slug` + `role`) → then `PUT {images, media, thumbnail, seo_thumbnail, checkout_image}`          |
+| `product_type` options `["miniature","printable","storybook"]` (`:364`) | picker → **`["miniature"]` only** (surface edit — Phase 2.1)                                                                                  |
 
 *(`computeState()` at `:16-22` already encodes Sean's precedence — `archived > draft(!is_published) > edits(draft) > sold(quantity===0) > live` — with NO `!available→sold` branch. Confirmed: the surface never derives "sold" from the toggle; sold is qty-0-only. No client change to `computeState`. The editor's `eff = (k) => (p.draft && p.draft[k] != null ? p.draft[k] : p[k])` (`:340`) is the SAME client-side draft merge as `admin.js:310` — keep it; do NOT add `effective` to the hot GET.)*
 
@@ -919,17 +919,17 @@ The redesigned Orders surface (`assets/docs/archive/v3_5/design-handoff/out/orde
 
 ### Integration seam — `orders-app.js` mock/no-op → real endpoint
 
-| orders-app.js — current (mock / no-op) | Real call the seam wires | Response / notes |
-|---|---|---|
-| `orders = D.orders.map(...)` load (`:10`) | `GET /api/orders?status=&q=` | `{orders: Order[]}` — replace the mock array; re-render on load |
-| tab filter + search over the array (`:42-52`, `:74-81`) | keep client-side, or pass `?status=needs_shipping\|shipped` + `&q=` | server filters mirror the client ones (`orders.ts:71-93`) — either is correct; client-side is simplest |
-| mark-shipped `ship-go` local mutate (`:161-166`) | `PATCH /api/orders/:id` `{tracking_number, tracking_carrier}` | `{ok, order, email_sent, email_skipped?, email_error?}` — carrier value ("FedEx" etc.) maps 1:1; server canonicalizes (`orders.ts:133`) |
-| resend `data-resend` local stamp (`:144`) | re-`PATCH /api/orders/:id` with the existing `{tracking_number, tracking_carrier}` | server re-stamps `tracking_email_sent_at` (mirrors `/admin` `submitShip(…, isResend)`, `admin.js:964`) |
-| refund open — `groups().find` in-memory (`:174`) | `GET /api/orders?payment_intent=<pi>` | `{orders}` → filter `status !== 'refunded'` (Phase 3.1a) |
-| refund submit `doRefund` local mutate (`:217-226`) | `POST /api/orders/:id/refund` `{amount_cents, relist_product_ids}` | `{ok, status, relist:[{product_id,slug,title,available,quantity,archived}]}`; `409`/`502` inline (Phase 3.1) |
-| `seen` Set + "new" highlight, "no data source yet" (`:12`, `:133`) | poll `GET /api/orders`; new = a fresh `completed` row by `created_at`; badge from the needs-shipping count | data-flow.md:116-117 (no push channel) |
-| copy address `navigator.clipboard` (`:141`) | none — client-only | keep as-is |
-| `#envChip` static "Test" (`orders.html:118`) | `GET /api/config` → `{isTest}` | show/hide the chip from `isTest` (data-flow.md:154) |
+| orders-app.js — current (mock / no-op)                             | Real call the seam wires                                                                                   | Response / notes                                                                                                                        |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `orders = D.orders.map(...)` load (`:10`)                          | `GET /api/orders?status=&q=`                                                                               | `{orders: Order[]}` — replace the mock array; re-render on load                                                                         |
+| tab filter + search over the array (`:42-52`, `:74-81`)            | keep client-side, or pass `?status=needs_shipping\|shipped` + `&q=`                                        | server filters mirror the client ones (`orders.ts:71-93`) — either is correct; client-side is simplest                                  |
+| mark-shipped `ship-go` local mutate (`:161-166`)                   | `PATCH /api/orders/:id` `{tracking_number, tracking_carrier}`                                              | `{ok, order, email_sent, email_skipped?, email_error?}` — carrier value ("FedEx" etc.) maps 1:1; server canonicalizes (`orders.ts:133`) |
+| resend `data-resend` local stamp (`:144`)                          | re-`PATCH /api/orders/:id` with the existing `{tracking_number, tracking_carrier}`                         | server re-stamps `tracking_email_sent_at` (mirrors `/admin` `submitShip(…, isResend)`, `admin.js:964`)                                  |
+| refund open — `groups().find` in-memory (`:174`)                   | `GET /api/orders?payment_intent=<pi>`                                                                      | `{orders}` → filter `status !== 'refunded'` (Phase 3.1a)                                                                                |
+| refund submit `doRefund` local mutate (`:217-226`)                 | `POST /api/orders/:id/refund` `{amount_cents, relist_product_ids}`                                         | `{ok, status, relist:[{product_id,slug,title,available,quantity,archived}]}`; `409`/`502` inline (Phase 3.1)                            |
+| `seen` Set + "new" highlight, "no data source yet" (`:12`, `:133`) | poll `GET /api/orders`; new = a fresh `completed` row by `created_at`; badge from the needs-shipping count | data-flow.md:116-117 (no push channel)                                                                                                  |
+| copy address `navigator.clipboard` (`:141`)                        | none — client-only                                                                                         | keep as-is                                                                                                                              |
+| `#envChip` static "Test" (`orders.html:118`)                       | `GET /api/config` → `{isTest}`                                                                             | show/hide the chip from `isTest` (data-flow.md:154)                                                                                     |
 
 *(After a successful PATCH/POST the design's mutate-then-`render()` may stay as an optimistic update, but a `GET /api/orders` reload is authoritative — the backend owns the status/relist flip, mirroring `/admin`'s `setTimeout(loadOrders, …)`.)*
 
@@ -1921,17 +1921,17 @@ A published-product `PUT` that changes `checkout_image` returns `400 "Frozen aft
 
 Everything routes to the two **existing** endpoints; nothing new is added. Client-assigned role tokens are in parentheses.
 
-| modal action (fn in `products-app.js`) | endpoint · method | key payload / notes |
-|---|---|---|
-| open modal, read current media (`openMedia :589`) | `GET /api/products?id=` | roles derived from filename (Phase 5.3c), not array index |
-| drop / pick image (`handleFiles :714`) | `POST /api/upload` · multipart | `{file, slug, role}` role∈`hero`\|`gallery-NN`\|`seo_thumbnail`\|`checkout_image`; →`{url}` |
-| drop / pick video (`handleFiles :714`) | `POST /api/upload` · multipart | `{file, slug, role:video-NN, skip_transform:'true'}` → `{url}` |
-| paste image/video URL (`addUrl :705`) | `POST /api/upload` · JSON | `{url, slug, role, skip_transform?}`; Drive rewritten server-side |
-| paste YouTube URL (`addUrl :705`) | (none — in-memory) | validated client-side; stored in `media[]` on Apply |
-| re-role an existing image (Phase 5.4c) | `POST /api/upload` · JSON | `{url:<existing CDN url>, slug, role:<new>}` → re-crops, new filename |
-| reorder gallery (`wireGalleryDrag :498`) | `PUT /api/products?id=` | `{images:[…reordered {url,alt}]}` (array order = page order) |
-| delete an item (`:703`) | `PUT /api/products?id=` | omit it from `images[]`/`media[]` on next Apply |
-| Apply (`applyMedia :745`) | `PUT /api/products?id=` (or `POST` if new) | `{images, media, seo_thumbnail, thumbnail, thumbnail_alt}`; add `checkout_image` **only if unpublished** (Phase 5.4e) |
+| modal action (fn in `products-app.js`)            | endpoint · method                          | key payload / notes                                                                                                   |
+| ------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| open modal, read current media (`openMedia :589`) | `GET /api/products?id=`                    | roles derived from filename (Phase 5.3c), not array index                                                             |
+| drop / pick image (`handleFiles :714`)            | `POST /api/upload` · multipart             | `{file, slug, role}` role∈`hero`\|`gallery-NN`\|`seo_thumbnail`\|`checkout_image`; →`{url}`                           |
+| drop / pick video (`handleFiles :714`)            | `POST /api/upload` · multipart             | `{file, slug, role:video-NN, skip_transform:'true'}` → `{url}`                                                        |
+| paste image/video URL (`addUrl :705`)             | `POST /api/upload` · JSON                  | `{url, slug, role, skip_transform?}`; Drive rewritten server-side                                                     |
+| paste YouTube URL (`addUrl :705`)                 | (none — in-memory)                         | validated client-side; stored in `media[]` on Apply                                                                   |
+| re-role an existing image (Phase 5.4c)            | `POST /api/upload` · JSON                  | `{url:<existing CDN url>, slug, role:<new>}` → re-crops, new filename                                                 |
+| reorder gallery (`wireGalleryDrag :498`)          | `PUT /api/products?id=`                    | `{images:[…reordered {url,alt}]}` (array order = page order)                                                          |
+| delete an item (`:703`)                           | `PUT /api/products?id=`                    | omit it from `images[]`/`media[]` on next Apply                                                                       |
+| Apply (`applyMedia :745`)                         | `PUT /api/products?id=` (or `POST` if new) | `{images, media, seo_thumbnail, thumbnail, thumbnail_alt}`; add `checkout_image` **only if unpublished** (Phase 5.4e) |
 
 **Prerequisites the modal must satisfy (mirrors `admin.js`):** a `slug` must exist before any upload — new products `POST /api/products` first (or derive via `deriveSlug`, `admin.js:511`). **New-product guard:** since uploads need a saved slug, on a brand-new product the modal must prompt/require **title (+ price)** and save first — never silently 400 a media-first attempt before the product row exists. every call carries the Bearer header (`authHeader`); on a **published** product, `images`/`media`/`seo_thumbnail` **stage** into `draft` and the Apply response returns `preview_url`+`preview_token` (surface "changes waiting to publish"), while an **unpublished** product writes through live. Replace the prototype's no-op `autosave` (`:557`) and in-memory `applyMedia` mutations with these calls.
 
