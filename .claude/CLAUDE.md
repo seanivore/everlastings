@@ -1,2 +1,2 @@
 @.agent/AGENTS.md
-@.agent
+@.agents

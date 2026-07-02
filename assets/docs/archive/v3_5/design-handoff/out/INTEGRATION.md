@@ -13,13 +13,13 @@ real implementation or reconciliation.
 
 ## 1. What's in `out/`
 
-| file | what it is |
-|---|---|
-| `portal.css` | The shared design system — tokens lifted verbatim from `controls.html` + every shared component (shell, rail, tabbar, buttons, toggles, fields, rings, LEDs, pills, toasts, skeletons). Re-hue from the `:root` tokens; **no literal hex** in component CSS. |
-| `portal.js` | Shared, framework-free helpers: `PORTAL.env()` (hostname→Test/Live), `PORTAL.toast()`, auto-grow textareas, char counters, tap tooltips. Attach once per page after `data.js`. |
-| `data.js` | **MOCK** dataset, shaped to `data-flow.md` line-for-line. Provenance is documented at the top of the file (real DB rows vs. a few illustrative rows flagged `_illustrative:true`). Swap these arrays for real API responses — markup keys off the same field names. |
-| `products.html` + `products-app.js` | The Products surface (the spreadsheet + the row→editor). |
-| `orders.html`, `sales.html`, `account.html` | The other three surfaces (built on the same shell). |
+| file                                        | what it is                                                                                                                                                                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `portal.css`                                | The shared design system — tokens lifted verbatim from `controls.html` + every shared component (shell, rail, tabbar, buttons, toggles, fields, rings, LEDs, pills, toasts, skeletons). Re-hue from the `:root` tokens; **no literal hex** in component CSS.        |
+| `portal.js`                                 | Shared, framework-free helpers: `PORTAL.env()` (hostname→Test/Live), `PORTAL.toast()`, auto-grow textareas, char counters, tap tooltips. Attach once per page after `data.js`.                                                                                      |
+| `data.js`                                   | **MOCK** dataset, shaped to `data-flow.md` line-for-line. Provenance is documented at the top of the file (real DB rows vs. a few illustrative rows flagged `_illustrative:true`). Swap these arrays for real API responses — markup keys off the same field names. |
+| `products.html` + `products-app.js`         | The Products surface (the spreadsheet + the row→editor).                                                                                                                                                                                                            |
+| `orders.html`, `sales.html`, `account.html` | The other three surfaces (built on the same shell).                                                                                                                                                                                                                 |
 
 Everything is **vanilla HTML/CSS/JS** and opens directly in a browser. Money is
 **integer cents** everywhere; render with `PORTAL_DATA.money()`. Product state is
