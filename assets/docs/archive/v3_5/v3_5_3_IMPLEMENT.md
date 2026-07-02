@@ -1,14 +1,14 @@
-# v3.5.2 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
+# v3.5.3 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
 
 **Initiative**: One dev cycle (built/tested on `dev`, shipped to `main` only when Sean signs off) that (1) integrates the finished **Content Creator Portal** front-end design (`assets/docs/archive/v3_5/design-handoff/out/`) as the new `/admin`, preserving the backend-complete management contract while adopting the mobile-first, intent-based, brand-neutral redesign; (2) builds the **automatic store-wide sale** display/auto-apply layer + storefront struck-pricing + a thin utility bar + a once-only popup (ROADMAP #219–222) on top of the existing coupon foundation; (3) rebuilds the **media upload** UX to the designed modal; (4) reconciles the **sold-policy / product-state** model to Sean's final word (§3.6 + PRODUCT_LIFECYCLE policy C); (5) fixes the discrete **storefront bugs** (product-page fields, series filter, featured carousel, /complete order-id) and **webhook/money-integrity** items (#228 even-split, #224 cart-hold removal, #227 reconciliation); (6) adds the **activity log** + **seen/unseen order tracking** + **scheduled publish**; (7) researches **buy-on-tile** (#225) and builds it iff the lift is real; (8) restores **GPT/admin parity** for the sale + folds the shared-payment refund guidance (#222/#228 GPT half).
 
-**Revision driven by**: round-1 A/B/C/D gap-review fold + round-1 breadth-regression fold (owner-journey + integration) — v3.5.0 → v3.5.1 → **v3.5.2**. (Living docs renamed to `v3_5_2_*` at this bump, per DEV_RULES current-only; the round-1 `v3_5_0_GAP_REVIEW_*` findings are kept standing as the rigor trail. Next: minor-bump to `v3_6/` for the formal Agent-SDK A-Type gate.) Rationale is kept inline here on purpose; it is relocated to a sibling `RATIONALE.md` only at the v4.0.0 execution cut (DEV_RULES → Build Guide Final Cuts).
+**Revision driven by**: round-1 A/B/C/D + breadth fold, then **round-2 A/B/C/D subagent fold** — v3.5.0 → v3.5.1 → v3.5.2 → **v3.5.3**. Round-2 folds (load-bearing): the `shop.js`/`homepage.js`/`product.js` WS4-struck ↔ WS6-sold card-render collision (now a WS6→WS4→WS9 merged block, struck gated on `!sold`), and the coupon `?code=` share link (now captured site-wide in `main.js` → `sessionStorage`); plus 8 small (concrete WS9 badge in DESIGN §D.4, schedule-on-readiness gate, `?preview=` guard into code, the 4th sold-policy enforcer named, `refreshOrdersSignal` payload tightened, the editProduct schema-anchor scope, the §A View-Site bullet). (Living docs renamed to `v3_5_3_*` at this bump, per DEV_RULES current-only; the `v3_5_0_*` + `v3_5_2_*` `GAP_REVIEW_*` findings are kept standing as the rigor trail. Next: another scoped A/B round, then minor-bump to `v3_6/` for the formal Agent-SDK A-Type gate.) Rationale is kept inline here on purpose; it is relocated to a sibling `RATIONALE.md` only at the v4.0.0 execution cut (DEV_RULES → Build Guide Final Cuts).
 
-**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_5/` directory** (`v3_5_2_ADDENDUM_DESIGN.md`, `v3_5_2_ADDENDUM_TESTING.md`) · the design handoff in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
+**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_5/` directory** (`v3_5_3_ADDENDUM_DESIGN.md`, `v3_5_3_ADDENDUM_TESTING.md`) · the design handoff in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
 
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_5_2_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_5_2_ADDENDUM_TESTING.md`.
+> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_5_3_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_5_3_ADDENDUM_TESTING.md`.
 
 > **The delta framing (name the settled base).** The current system — all of `EVERLASTINGS_STORE.md` + the repo as it stands on `dev` today — is **built, tested, and live/approved**: the fixed substrate. This build is a **delta** on top: a *presentation swap* of `/admin` (the backend it calls is already complete) + a **defined set of new/changed backend** (the sale display/auto-apply layer, the upload rebuild, the state-semantics reconciliation, the money-integrity fixes, the activity log). Review the delta for gaps + whether it FITS the base; don't re-litigate settled/shipped behavior.
 
@@ -42,8 +42,9 @@ Three backend files are edited by more than one workstream. Apply their edits in
   - *`publicView`* + create/edit success returns: **WS2** owns the shape; **WS8** wraps each success return with a `logActivity` call.
 - **`api/product-feed.ts` — WS2 + WS7 merge into ONE edit; apply order WS2 (2.6) → WS7 (7.3), re-anchoring 7.3 against the post-2.6 tree.** Both need a service-role client + a job in `GET`. **WS2 2.6 establishes the single service-role client `feedAdmin`** (one `const`) + imports `isTest` + defines `publishDueScheduled`; **WS7 7.3 reuses `feedAdmin`** (does NOT re-declare it), adds the stripe/email imports, and defines `isCronRequest` + `reconcileOrders`. **BOTH jobs run inside ONE `isCronRequest(req)` gate at the top of `GET`** — `if (isCronRequest(req)) { try { await publishDueScheduled(req) } …; try { await reconcileOrders() } … }` — so a public/preview feed poll (Google/Meta, or a preview hit) NEVER self-publishes or reconciles. `publishDueScheduled` scopes `.eq('is_test', isTest)` so a preview cron scans TEST rows and prod scans LIVE (the `is_test` isolation the ungated per-GET version broke). Do NOT create two clients, two `GET` wrappers, or run either job outside the gate.
 - **`api/orders.ts` — WS3 + WS8 together.** WS3 adds the mark-shipped `409`-refunded guard (PATCH) + the `shipping_address` read-resilience + the `delivered` UI prune. WS8 adds `logActivity` calls + the `?_action=seen` action + `last_viewed` in GET + a `const actor` in POST. The `actor` const and the POST `_action` dispatch fork are **single-definition** (WS8 adds them; WS8's refund log uses `actor`) — WS3's refund phase must not also declare `actor`.
+- **`assets/js/shop.js` + `assets/js/homepage.js` — order: WS6 → WS4 → WS9 (ONE merged NEW per card-render block).** WS6, WS4, and WS9 all edit the SAME card-render line(s): **WS6** (§6.5a shop card / §6.3d homepage tile) rewrites the whole render block for the quantity-based `sold` state; **WS4** (§4.5.b / §4.5.f) makes the `card__price` struck; **WS9** (§9.2) adds the "One of a kind" badge in `card__media`. Their CURRENT anchors are the SAME pristine lines, so applied independently the last edit silently reverts the others (WS6-last drops the struck price; WS4-last breaks WS6's block anchor — a headline feature vanishing with no error). **Apply WS6 first (its block rewrite is the base), then fold WS4's struck value + WS9's badge INTO that block as ONE merged NEW:** §6.5a and §6.3d carry the fully-merged block; **§4.5.b, §4.5.f, and §9.2 are POINTERS into it, not standalone edits.** The struck price is gated on **`!sold`** (never a struck sale price on an unbuyable piece — DESIGN §D.1 "Sold items always render plain"). *(`product.js` sticky card is NOT a line collision — §4.5.d [`:369`] and §6.5b [`:382`] land on different lines — but §4.5.d's struck gate is still reconciled to the same quantity-based `!sold` via a block-local `sold`, so a qty-0 piece never renders struck on its PDP.)*
 
-Everywhere else each file has one owner or non-overlapping regions (`checkout.js`/`cart.js`/`main.js` in WS4·WS7, the `out/*-app.js` surfaces in WS1·WS2·WS3·WS5·WS8 by distinct functions, and the migrations).
+Everywhere else each file has one owner or genuinely non-overlapping regions (`checkout.js`/`cart.js`/`main.js` in WS4·WS7 by distinct functions — including the new `?code=` capture in `main.js` §4.7 vs. the reader in `checkout.js`; the `out/*-app.js` surfaces in WS1·WS2·WS3·WS5·WS8 by distinct functions; and the migrations). The one storefront exception — `shop.js`/`homepage.js` card renders edited by WS6+WS4+WS9 — is the bullet directly above.
 
 ---
 
@@ -619,7 +620,7 @@ Unpublished branch — add to the allow-list + validate. **CURRENT (`:553-559`):
     clean.price = updates.price;
   }
 ```
-*(The surface's `openSchedule` (`:490-495`) already emits `new Date(dv+"T"+tv).toISOString()` and `unschedule` (`:454`) sets null. The chip + "Scheduled · <when>" render off `p.scheduled_publish_at`, `:409-410`. The surface should only OFFER Schedule where a publish is pending — an unpublished draft, or a published row with staged edits — so a scheduled value is never dead.)* <!-- NEEDS-VERIFY: confirm the surface hides "Schedule publish…" on a clean published-no-draft row (nothing to auto-publish there). -->
+*(The surface's `openSchedule` (`:490-495`) already emits `new Date(dv+"T"+tv).toISOString()` and `unschedule` (`:454`) sets null. The chip + "Scheduled · <when>" render off `p.scheduled_publish_at`, `:409-410`. **Gate the Schedule control on publish-READINESS, not merely "a publish is pending":** only offer "Schedule publish…" when the piece PASSES the required-field gate — reuse the surface's own `readiness()`/`refreshGate()` (the same gate the Publish button reads). The cron flip (§2.6) runs the full `validatePublishRules`, so a missing-field draft that got scheduled would **400 and be silently skipped every day, forever** — the exact "hides without explaining" failure the thesis forbids. Offering Schedule only on a publish-ready piece (a complete unpublished draft, or a published row with complete staged edits) guarantees a scheduled value always fires at cron. This also subsumes the clean-published-no-draft case — nothing to auto-publish there, so Schedule stays hidden.)* <!-- NEEDS-VERIFY: confirm the surface's readiness()/refreshGate() is reachable to gate the Schedule affordance (not just the Publish button). -->
 
 **Doc impact:** `EVERLASTINGS_STORE.md` — note scheduled publish is set/cleared via `PUT` and is live (never staged).
 
@@ -745,6 +746,8 @@ async function publishDueScheduled(req: Request): Promise<void> {
 **The `GET` call site is NOT edited here.** `publishDueScheduled(req)` is invoked from inside the shared `isCronRequest(req)` gate that WS7 §7.3c assembles at the top of `GET` (both cron jobs run in that one gate, publish first so freshly-published rows appear in the same run). This phase adds only the imports + `feedAdmin` client + the helper above; §7.3c owns the single `GET` wrapper. Do NOT add a bare `await publishDueScheduled(req)` to `GET` — that ran on every request (including public/preview polls) and was the `is_test` isolation break.
 <!-- NEEDS-VERIFY: PostgREST negation form `draft.not.is.null` inside `.or(...)` — confirm against the installed supabase-js/PostgREST version; the alternate accepted form is `draft.not.is.null` vs `draft.neq.null`. If in doubt, scope the fold to unpublished only (`.eq('is_published', false)`) — that covers the primary "schedule a new piece to go live" case; scheduling a STAGED-EDIT auto-publish (published + draft) is the only path that needs the `.or`. -->
 <!-- NEEDS-VERIFY: PRODUCT_API_KEY must exist in the PRODUCTION Vercel env for the self-call (per reference_gpt_auth_per_env_key it does — prod uses the LIVE key); the fold no-ops harmlessly if absent (publish 401s, logged). -->
+
+**A2-4 backstop (secondary to the §2.4 readiness gate).** The §2.4 fix — only offering Schedule on a publish-READY piece — prevents the common "scheduled an incomplete draft" case. For the residual (a required field cleared *after* scheduling), `publishDueScheduled` currently only `console.error`s the skip (`if (!res.ok) console.error(...)` above) — invisible to the maker. Recommended: surface the skip via a **WS8 activity-log entry** ("Scheduled publish skipped — <piece> not publish-ready") so nothing hides without explaining. <!-- NEEDS-VERIFY: whether `logActivity` (WS8, defined in the `products.ts`/`orders.ts` context) is importable into `product-feed.ts` under the `feedAdmin` client; if not, defer this notice to the lazy-flip enhancement rather than duplicate the insert here. The §2.4 control gate is the primary, always-applied fix; this cron-side notice is the backstop. -->
 
 **Optional (deferred) — lazy on-read time-precision flip.** The cron is date-granular (worst case ~1 day latency to the 09:00 UTC run). A lazy flip (publish on first read after the scheduled time) would add minute-precision — but it must NOT touch the hot public GET (`products.ts:96-121`, `:123-139` return the raw row; the client merges `draft`). Ship the cron fold; leave the lazy flip as a future enhancement scoped to an admin-only read, so it never adds a write side-effect to the public path.
 
@@ -1469,14 +1472,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await getActiveSale(); // v3.5 — sets window._activeSale before the first renderTiles
 ```
 
-*4.5.b — `assets/js/shop.js`: struck card price.* **CURRENT (`assets/js/shop.js:139`):**
-```js
-            <p class="card__price${p.available ? '' : ' text-muted'}">${formatPrice(p.price)}</p>
-```
-**NEW:**
-```js
-            <p class="card__price${p.available ? '' : ' text-muted'}">${p.available ? priceHTML(p.price, window._activeSale) : formatPrice(p.price)}</p>
-```
+*4.5.b — `assets/js/shop.js`: struck card price. **POINTER — do NOT apply as a standalone edit.*** WS6 §6.5a rewrites this entire shop-card block (`shop.js:126-144`) for the quantity-based `sold` state, which subsumes line 139. Apply the struck price **inside §6.5a's merged NEW block** (order WS6→WS4→WS9, per the Shared-file edit coordination section): the `card__price` line reads `${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}` — struck gated on `!sold` so a sold piece renders plain (DESIGN §D.1). Applying this separately against the pristine `shop.js:139` anchor would either be reverted by §6.5a (WS6-last) or break §6.5a's block anchor (WS4-last) — the collision this pointer prevents.
 
 *4.5.c — `assets/js/product.js`: await the sale.* **CURRENT (`assets/js/product.js:21–23`):**
 ```js
@@ -1502,11 +1498,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const priceEl = document.querySelector('[data-product-price]');
   if (priceEl) {
     const sale = window._activeSale;
-    if (p.available && sale && sale.active && sale.type === 'percent') priceEl.innerHTML = priceHTML(p.price, sale);
+    const sold = p.quantity != null ? p.quantity <= 0 : (p.available === false); // v3.5 — struck only on a PURCHASABLE piece, never a sold one (DESIGN §D.1); same rule as §6.5b
+    if (!sold && sale && sale.active && sale.type === 'percent') priceEl.innerHTML = priceHTML(p.price, sale);
     else priceEl.textContent = formatPrice(p.price);
   }
 ```
-*Do NOT touch `injectProductJsonLd` (product.js:338–363) — the JSON-LD `offers.price` stays the true (undiscounted) unit price; a sale is a promotion, not a permanent price change.*
+*The struck gate is `!sold` (quantity-based), NOT `p.available` — a qty-0/flag-lagged piece must render plain on its PDP sticky card, matching the storefront buy-gate (§6.5b) and DESIGN §D.1. This `const sold` is block-scoped inside `if (priceEl)`, so it does not collide with §6.5b's `const sold` at `product.js:382` (a sibling block in the same `populateStickyCard` — NOT a line collision, so no coordination-list entry needed; just the same rule applied twice). Do NOT touch `injectProductJsonLd` (product.js:338–363) — the JSON-LD `offers.price` stays the true (undiscounted) unit price; a sale is a promotion, not a permanent price change.*
 
 *4.5.e — `assets/js/homepage.js`: await the sale.* **CURRENT (`assets/js/homepage.js:5–7`):**
 ```js
@@ -1522,14 +1519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 ```
 
-*4.5.f — `assets/js/homepage.js`: struck featured price.* **CURRENT (`assets/js/homepage.js:61`):**
-```js
-            <p class="card__price">${formatPrice(p.price)}</p>
-```
-**NEW:**
-```js
-            <p class="card__price">${priceHTML(p.price, window._activeSale)}</p>
-```
+*4.5.f — `assets/js/homepage.js`: struck featured price. **POINTER — do NOT apply as a standalone edit.*** WS6 §6.3d rewrites the entire `populateFeatured` (`homepage.js:41-67`) into a `tile` closure, which subsumes the price line. Apply the struck price **inside §6.3d's merged `tile` block** (order WS6→WS4→WS9): the price line reads `${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}` — struck gated on `!sold` so a sold-but-featured piece renders plain (DESIGN §D.1). Applying this against the pristine `homepage.js:61` anchor would either be reverted by §6.3d or break its block anchor.
 
 *4.5.g — `assets/js/cart.js`: re-render once the sale resolves (the cart handler is sync).* **CURRENT (`assets/js/cart.js:17–18`):**
 ```js
@@ -1542,6 +1532,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateTotals();
   getActiveSale().then(() => { renderLineItems(getCart(), withItems); updateTotals(); }); // v3.5 struck preview
 ```
+*(`getCart` and `getCartTotal` are **`main.js` globals** — `main.js:104` / `:167` — and `main.js` loads on every storefront page ahead of `cart.js`/`checkout.js`, so both are in scope wherever WS4 calls them [confirms the cold-read question about where these live]. `getCart()` here re-reads the current cart after the async sale resolves; the in-scope `cart` local would be equivalent since contents don't change — either is correct.)*
 
 *4.5.h — `assets/js/cart.js`: struck line-item price.* **CURRENT (`assets/js/cart.js:64`):**
 ```js
@@ -1602,9 +1593,24 @@ Each mock/no-op call in the prototype (`assets/docs/archive/v3_5/design-handoff/
 
 ### Phase 4.7 — `assets/js/checkout.js`: honor a `?code=` share link (prefill + apply, same path).
 
-The coupon "Copy share link" (§4.6) produces `<siteUrl>/?code=CODE`; ledger 30 says WS4 honors it. Add a reader that, on checkout load, reads the `code` query param, prefills the visible `#promo-code` field, and applies it via the **same** `checkout.applyPromotionCode` path `autoApplyStoreWideSale` uses (Phase 4.4). An explicit `?code=` runs **instead of** the store-wide auto-apply — **mutually exclusive** (Stripe allows one discount/order), which also removes the apply-order race between the two async paths: if a code is present we apply IT and skip the auto-sale. Fails soft: a bad/inactive code just leaves the field prefilled for a manual retry, never blocks checkout.
+The coupon "Copy share link" (§4.6) produces `<siteUrl>/?code=CODE` — the **site root** (`/?code=`), so the shopper lands on the **homepage**, not `/checkout`. `checkout.js` doesn't run there, and by the time they add items and reach `/checkout` the `?code=` param is gone. So the code must be **captured site-wide and persisted**: `main.js` (loaded on every page — `index.html`/`shop.html`/`product.html`/`checkout.html:88-89`) reads `?code=` on load and stashes it in `sessionStorage` (§4.7.0); the checkout reader then consumes the stash (with `location.search` as a fallback for a direct `/checkout?code=` hit). The reader prefills the visible `#promo-code` field and applies the code via the **same** `checkout.applyPromotionCode` path `autoApplyStoreWideSale` uses (Phase 4.4). An explicit `?code=` runs **instead of** the store-wide auto-apply — **mutually exclusive** (Stripe allows one discount/order), which also removes the apply-order race between the two async paths: if a code is present we apply IT and skip the auto-sale. Fails soft: a bad/inactive code just leaves the field prefilled for a manual retry, never blocks checkout. *(Ledger 30 SETTLES the intent — WS4 honors the link; this phase is the missing end-to-end wiring that actually delivers `?code=` to the reader.)*
 
-*4.7.a — apply a share code INSTEAD of the auto-sale when `?code=` is present.* **CURRENT (`assets/js/checkout.js:106`, as Phase 4.4.b left it):**
+*4.7.0 — `assets/js/main.js`: capture a `?code=` share link on ANY page → `sessionStorage`.* **CURRENT (`assets/js/main.js:269-270`):**
+```js
+document.addEventListener('DOMContentLoaded', () => {
+  initConfig();
+```
+**NEW (stash the code so the checkout reader can consume it after navigation):**
+```js
+document.addEventListener('DOMContentLoaded', () => {
+  initConfig();
+  // v3.5 — a coupon "Copy share link" lands on the homepage root (<siteUrl>/?code=CODE, §4.6). main.js
+  // runs on every page, so capture ?code= here and stash it; the /checkout reader (§4.7) applies it once
+  // the shopper has items in the cart. sessionStorage survives the same-tab navigation to /checkout.
+  try { const _sc = new URLSearchParams(location.search).get('code'); if (_sc) sessionStorage.setItem('everlastings.shareCode', _sc); } catch {}
+```
+
+*4.7.a — apply a share code INSTEAD of the auto-sale when a share code is present (stash or query).* **CURRENT (`assets/js/checkout.js:106`, as Phase 4.4.b left it):**
 ```js
   wirePromo(checkout);
   autoApplyStoreWideSale(checkout); // v3.5 — apply the store-wide sale on init (gated on the 4.0 probe)
@@ -1613,9 +1619,9 @@ The coupon "Copy share link" (§4.6) produces `<siteUrl>/?code=CODE`; ledger 30 
 ```js
   wirePromo(checkout);
   // v3.5 — an explicit ?code= share link WINS over the automatic store-wide sale (Stripe = one
-  // discount/order). Apply the share code if present and SKIP the auto-sale; else auto-apply the sale.
-  // Mutually exclusive → no apply-order race between the two async paths.
-  if (new URLSearchParams(location.search).get('code')) applyShareLinkCode(checkout);
+  // discount/order). Apply the share code if present (from the main.js stash or ?code=) and SKIP the
+  // auto-sale; else auto-apply the sale. Mutually exclusive → no apply-order race between the two paths.
+  if (readShareCode()) applyShareLinkCode(checkout);
   else autoApplyStoreWideSale(checkout); // v3.5 — store-wide sale on init (gated on the 4.0 probe)
 ```
 
@@ -1635,14 +1641,25 @@ The coupon "Copy share link" (§4.6) produces `<siteUrl>/?code=CODE`; ledger 30 
   }
 }
 
-// v3.5 — honor a coupon "Copy share link" (<siteUrl>/?code=CODE, §4.6/ledger 30). Read ?code= on load,
-// prefill the visible #promo-code field, and apply it through the SAME applyPromotionCode path the
-// store-wide auto-apply uses. Called INSTEAD of autoApplyStoreWideSale when a ?code= is present
-// (mutually exclusive — Stripe = one discount/order — the intended "use this code instead"). Fails
-// soft: a bad/inactive code just leaves the field prefilled for a manual retry, never blocks checkout.
+// v3.5 — resolve a "Copy share link" code from the main.js stash (§4.7.0 — set when the shopper landed
+// on the homepage /?code=) OR a direct /checkout?code=. The stash is how the code survives homepage →
+// add-to-cart → /checkout; location.search is the fallback for a direct checkout hit.
+function readShareCode() {
+  let code = null;
+  try { code = sessionStorage.getItem('everlastings.shareCode'); } catch {}
+  if (!code) code = new URLSearchParams(location.search).get('code');
+  return code;
+}
+
+// v3.5 — honor a coupon "Copy share link" (<siteUrl>/?code=CODE, §4.6/ledger 30). Resolve the code
+// (stash or query), prefill the visible #promo-code field, and apply it through the SAME
+// applyPromotionCode path the store-wide auto-apply uses. Called INSTEAD of autoApplyStoreWideSale when
+// a code is present (mutually exclusive — Stripe = one discount/order — the intended "use this code
+// instead"). Fails soft: a bad/inactive code just leaves the field prefilled for a manual retry.
 async function applyShareLinkCode(checkout) {
-  const code = new URLSearchParams(location.search).get('code');
+  const code = readShareCode();
   if (!code) return;
+  try { sessionStorage.removeItem('everlastings.shareCode'); } catch {} // one-shot — consumed, so a stale code can't re-apply on a later checkout
   const input = document.getElementById('promo-code');
   if (input) input.value = code;
   const apply = checkout.applyPromotionCode; // Phase 4.0: the verified call on this bundle
@@ -1651,7 +1668,7 @@ async function applyShareLinkCode(checkout) {
 }
 ```
 
-**Doc impact:** none (wires an existing endpoint/param into the existing checkout surface; `EVERLASTINGS_STORE.md` may note the storefront honors a `?code=` share link at checkout).
+**Files (WS4):** this phase touches **`assets/js/main.js`** (§4.7.0 capture — new to WS4's roster) + `assets/js/checkout.js` (the reader). **Doc impact:** none (wires an existing endpoint/param into the existing storefront; `EVERLASTINGS_STORE.md` may note the storefront honors a `?code=` share link — captured site-wide, applied at checkout).
 
 ---
 
@@ -2261,17 +2278,19 @@ function populateFeatured(items) {
   const tile = (p) => {
     const thumb = pickThumb(p);
     const alt = escapeAttr(p.thumbnail_alt || p.title || '');
+    const sold = p.quantity != null ? p.quantity <= 0 : !p.available; // v3.5 — match shop.js: known qty<=0 is Sold; null qty falls back to the available flag
     return `
       <article class="card product-tile" data-product-slug="${escapeAttr(p.slug)}">
         <a href="/product/${escapeAttr(p.slug)}" style="display: block; color: inherit; text-decoration: none;">
           <div class="card__media">
             <span class="badge badge-featured">Featured</span>
+            ${!sold ? '<span class="badge badge-unique">One of a kind</span>' : ''}
             <img loading="lazy" alt="${alt}" src="${escapeAttr(thumb)}">
           </div>
           <div class="card__body">
             <h3 class="card__title">${escapeAttr(p.title || '')}</h3>
             ${p.headline ? `<p style="font-style: italic; color: var(--text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-xs);">${escapeAttr(p.headline)}</p>` : ''}
-            <p class="card__price">${formatPrice(p.price)}</p>
+            <p class="card__price">${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}</p>
           </div>
         </a>
       </article>
@@ -2334,7 +2353,7 @@ function populateFeatured(items) {
 
 ---
 
-**Phase 6.5 — storefront sold-state + buy-gate become quantity-based (`shop.js` + `product.js`).** The storefront currently derives "Sold" + un-buyable purely from `p.available`, but the sold policy (Locked decisions → Product state / sold policy; ledger 20) makes the **storefront buy-gate `published && quantity > 0`**. A sold piece is `quantity ≤ 0`; `available` is only a *consequence*. To make the three enforcers agree (`computeState()` [WS2] ↔ this storefront gate ↔ `record_sale` [WS7]) and guarantee a sold piece is **never purchasable regardless of the `available` flag**, treat `p.quantity != null ? p.quantity <= 0 : !p.available` as sold/unbuyable — a known quantity decides, else fall back to `available`. Minimal + safe (a nullish `quantity` on a legacy row falls back to the `available` flag; a real 0 is always sold). *(Round-1 breadth caught the earlier `!p.available || (p.quantity ?? 0) <= 0` form — it wrongly rendered an available null-quantity row as Sold.)*
+**Phase 6.5 — storefront sold-state + buy-gate become quantity-based (`shop.js` + `product.js`).** The storefront currently derives "Sold" + un-buyable purely from `p.available`, but the sold policy (Locked decisions → Product state / sold policy; ledger 20) makes the **storefront buy-gate `published && quantity > 0`**. A sold piece is `quantity ≤ 0`; `available` is only a *consequence*. To make the three enforcers agree (`computeState()` [WS2] ↔ this storefront gate ↔ `record_sale` [WS7]) and guarantee a sold piece is **never purchasable regardless of the `available` flag**, treat `p.quantity != null ? p.quantity <= 0 : !p.available` as sold/unbuyable — a known quantity decides, else fall back to `available`. Minimal + safe (a nullish `quantity` on a legacy row falls back to the `available` flag; a real 0 is always sold). *(Round-1 breadth caught the earlier `!p.available || (p.quantity ?? 0) <= 0` form — it wrongly rendered an available null-quantity row as Sold.)* **Fourth enforcer (named so "three" isn't read as exhaustive):** the server checkout/reserve gate (`checkout.ts:79` session · `:205` reserve) is deliberately STRICTER — `available === true && quantity >= 1` (AND-logic), not the storefront's quantity-primary *display* gate — so any display-vs-flag mismatch on a legacy/anomalous row fails SAFE at the buy step (a `quantity>0 & available===false` row renders buyable but 410s at checkout; a `quantity=null & available===true` row is treated unavailable server-side). §6.5's null-fallback *preserves* these pre-existing edges rather than introducing them, and both fail safe. This server gate is the intentional strict 4th sold-policy enforcer behind the storefront display gate.
 
 *6.5a — `shop.js` card render: sold state from quantity, not just `available`.* **CURRENT (`assets/js/shop.js:126-144`):**
 ```js
@@ -2358,7 +2377,7 @@ function populateFeatured(items) {
     `;
   }).join('');
 ```
-**NEW (compute `sold` once, drive all four off it):**
+**NEW — the ONE merged shop-card block (compute `sold` once → drives the Sold badge, the image dim, the struck price gate, and the "One of a kind" badge). This block folds WS6 sold-state + WS4 §4.5.b struck price + WS9 §9.2 badge; §4.5.b and §9.2 are pointers into it (see the Shared-file edit coordination section — apply order WS6→WS4→WS9):**
 ```js
   grid.innerHTML = visible.map((p) => {
     const heroImg = pickHeroThumb(p);
@@ -2370,25 +2389,27 @@ function populateFeatured(items) {
           <div class="card__media">
             ${sold ? '<span class="badge badge-sold">Sold</span>' : ''}
             ${p.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+            ${!sold ? '<span class="badge badge-unique">One of a kind</span>' : ''}
             <img loading="lazy" alt="${altText}" src="${escapeAttr(heroImg)}"${sold ? ' style="opacity: 0.55;"' : ''}>
           </div>
           <div class="card__body">
             <h3 class="card__title">${escapeAttr(p.title || '')}</h3>
-            <p class="card__price${sold ? ' text-muted' : ''}">${formatPrice(p.price)}</p>
+            <p class="card__price${sold ? ' text-muted' : ''}">${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}</p>
           </div>
         </a>
       </article>
     `;
   }).join('');
 ```
+*(Merged edits, each with its own home section: the `sold` computation + Sold badge / dim / `text-muted` are WS6 §6.5a; the `${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}` struck price is WS4 §4.5.b gated on `!sold`; the `badge badge-unique` "One of a kind" is WS9 §9.2, spec in DESIGN §D.4. `priceHTML` renders plain when there's no active percent sale, so the `!sold` branch is safe with or without a sale.)*
 
 *6.5b — `product.js` buy-gate: disable purchase when sold by quantity.* **CURRENT (`assets/js/product.js:382`):**
 ```js
   if (p.available === false) {
 ```
-**NEW (a sold-by-quantity piece is unbuyable even if the `available` flag lags):**
+**NEW (a sold-by-quantity piece is unbuyable even if the `available` flag lags; a `?preview=` draft never reads "Sold"):**
 ```js
-  const sold = p.quantity != null ? p.quantity <= 0 : (p.available === false); // v3.5 buy-gate: known qty<=0 is Sold; null qty falls back to the flag
+  const sold = !previewToken && (p.quantity != null ? p.quantity <= 0 : (p.available === false)); // v3.5 buy-gate: known qty<=0 is Sold, null qty falls back to the flag; under ?preview= (a draft being reviewed) never render Sold — it isn't purchasable anyway, "nothing shows wrong without a reason"
   if (sold) {
 ```
 
@@ -2412,7 +2433,7 @@ function populateFeatured(items) {
 ```
 *(Cosmetic — the related pool is fetched `getProducts({ available: true })`, so a click-through still hits the 6.5b buy-gate; this just closes the lag-window on the card badge.)*
 
-**Doc impact:** `EVERLASTINGS_STORE.md` — the storefront sold-state + buy-gate are **quantity-based** (`published && quantity > 0`), consistent with `computeState()` and `record_sale`; `available` is a consequence, not the gate. *(6.5b guard — under `?preview=` (a draft being reviewed) skip the sold render so a draft never reads "Sold"; it isn't purchasable anyway, and "nothing shows wrong without a reason." `product.js` has `previewToken` in scope.)*
+**Doc impact:** `EVERLASTINGS_STORE.md` — the storefront sold-state + buy-gate are **quantity-based** (`published && quantity > 0`), consistent with `computeState()` and `record_sale`; `available` is a consequence, not the gate. *(The §6.5b `?preview=` guard — a draft being reviewed never reads "Sold" — is now folded INTO the NEW code block above via the `!previewToken &&` prefix, not left as prose; `product.js` has `previewToken` in scope from init.)*
 
 ---
 
@@ -3329,7 +3350,7 @@ const ORDERS_LAST_VIEWED_KEY = isTest ? 'orders_last_viewed_test' : 'orders_last
 - **Clear the blink (Orders viewed)** (`out/orders-app.js:12,98,132-133` in-memory `seen` Set) → **`POST /api/orders?_action=seen`** on Orders mount/view → stamps `site_config.orders_last_viewed_{env}` → next `GET` returns `unseen_count: 0` until a newer order arrives.
 - **Sold product-tab blink** (`out/products-app.js:13,98`) → **removed** (Phase 8.2b) — no data source; Orders owns the order signal.
 
-**Phase 8.3 — `portal.js`: the central new-order signal (byte-anchored — makes the SETTLED bullet above executable).** A shared `PORTAL.refreshOrdersSignal()` does the authed `GET /api/orders` and drives the nav `data-alert` (from `unseen_count`) + the numeric badge (from the real needs-shipping count) on the Orders nav items — decoupled, on every page (`mountShell` pages **and** the Products static rail). It runs after `PORTAL.boot()`, so `authHeader()` is set.
+**Phase 8.3 — `portal.js`: the central new-order signal (byte-anchored — makes the SETTLED bullet above executable).** A shared `PORTAL.refreshOrdersSignal()` does the authed `GET /api/orders?status=needs_shipping` (a small payload — it runs on every page just to read `unseen_count` + the needs count) and drives the nav `data-alert` (from `unseen_count`, which is filter-independent) + the numeric badge (from the real needs-shipping count) on the Orders nav items — decoupled, on every page (`mountShell` pages **and** the Products static rail). It runs after `PORTAL.boot()`, so `authHeader()` is set.
 
 *8.3a — add the helper (after `mountShell`, before the IIFE close).* **CURRENT (`out/portal.js:162-164`):**
 ```js
@@ -3348,7 +3369,11 @@ const ORDERS_LAST_VIEWED_KEY = isTest ? 'orders_last_viewed_test' : 'orders_last
      ← unseen_count (decoupled), badge ← needs-shipping count. ---- */
   P.refreshOrdersSignal = async function () {
     try {
-      const res = await fetch("/api/orders", { headers: { ...P.authHeader() } });
+      // v3.5 — ?status=needs_shipping keeps the payload small (this runs on EVERY page just to read two
+      // numbers). unseen_count is returned REGARDLESS of the list filter (orders.ts §8.2a — a separate
+      // count query, filter-independent), so the blink is unaffected. The needs count stays a defensive
+      // client filter over the (already-narrowed) list, so it's correct even if the server predicate drifts.
+      const res = await fetch("/api/orders?status=needs_shipping", { headers: { ...P.authHeader() } });
       if (!res.ok) return;
       const body = await res.json().catch(() => ({}));
       const unseen = Number(body.unseen_count) || 0;
@@ -3375,7 +3400,7 @@ const ORDERS_LAST_VIEWED_KEY = isTest ? 'orders_last_viewed_test' : 'orders_last
 
 **Phase 9.1 — shop card + featured tile: full-tile tap target.** Make the whole product tile a clear, generous tap target into the product page (big image, obvious price, whole-card link) rather than a competing button. *(Reuses the existing card→PDP link; widen the hit area + affordance. Byte-anchors coordinated with WS6's `shop.js`/`homepage.js` card-render edits.)* **Doc impact:** none.
 
-**Phase 9.2 — uniqueness/scarcity badge on tiles.** A small "One of a kind" / "Only one made" badge on the tile — the proven scarcity lever for unique inventory (pulls into the story, doesn't short-circuit it). *(Presentational; reads the existing one-of-a-kind/quantity semantics.)* **Doc impact:** none.
+**Phase 9.2 — "One of a kind" scarcity badge on tiles (concrete).** A small `badge badge-unique` with the copy **"One of a kind"** renders in the tile's `card__media`, next to the Featured badge, on **purchasable (`!sold`) tiles** — the proven scarcity lever for unique inventory (pulls into the story, doesn't short-circuit it). **Render markup is already folded into the merged card blocks** — `§6.5a` (shop grid) and `§6.3d` (homepage carousel), gated on `!sold` (see the Shared-file edit coordination section; do NOT add a separate card edit). **Visual spec (class + copy + CSS + placement + the one trigger to confirm) is DESIGN §D.4** — it's a NEW storefront-brand component (not in `out/`, which is the portal), so its look lives with the other storefront additions in the design addendum. **Doc impact:** none (storefront-only presentational).
 
 **Phase 9.3 — clear grid Sold state.** Sold pieces (`published && quantity===0`, WS2 sold policy) show a clear **"Sold"** state on the grid (the sold-policy wording — "Sold," not "Sold out"), never a purchasable affordance. Ties to the WS6 storefront buy-gate (`published && quantity > 0`). **Doc impact:** none.
 
@@ -3415,7 +3440,7 @@ The Custom GPT ("The Sunkeeper") must be able to run the new **automatic store-w
 
 **Phase 10.1b — GPT schema (`v3_5_0_GPT_SCHEMA.txt`): `editProduct` parity for take-down + scheduled-publish (schema-only, no instruction-`.txt` budget).** The `.txt` is near its cap, but the SCHEMA has no total-char cap — so both new parities go here as `editProduct` param annotations (no instruction-text cost).
 
-*10.1b.a — annotate `available` (the v3.5 take-down→draft reality) + add `scheduled_publish_at`.* **CURRENT (`editProduct` properties, `v3_3_0_GPT_SCHEMA.txt:127`):**
+*10.1b.a — annotate `available` (the v3.5 take-down→draft reality) + add `scheduled_publish_at`.* **CURRENT (`editProduct` properties, `v3_3_0_GPT_SCHEMA.txt:127` — anchor by CONTEXT, not the bare string):** the token `available: { type: boolean }` is **non-unique** — it appears at `:36`, `:91`, `:127`, `:403` (`:36`/`:403` are deeper-nested schemas; `:91` is `createProduct`; **`:127` is the `editProduct` target** — the `available` sitting between `product_type`/`quantity` and `featured`). Annotate ONLY the `editProduct` occurrence at `:127`. (Scoping the take-down→draft annotation to `editProduct` and NOT `createProduct` at `:91` is correct, not a gap: a created piece is a draft regardless of `available`.)
 ```
                 available: { type: boolean }
 ```
@@ -3521,7 +3546,7 @@ REFUNDS: find the order (listOrders q=<buyer email or id> — reaches past/shipp
 
 ---
 
-## Verification (end-to-end, dev preview — full plan in `v3_5_2_ADDENDUM_TESTING.md`)
+## Verification (end-to-end, dev preview — full plan in `v3_5_3_ADDENDUM_TESTING.md`)
 
 Per-surface + backend E2E on seeded **test** products (production-grade placeholders — real content is never a build/test gate): store-wide sale live/struck/at-checkout + removable keyword; refund partial + relist (preserved behavior); media modal roles/reorder/persist; product-page fields render; series filter matches; carousel rows decoupled; webhook even-split correct per-item amounts; cart-hold gone; sold-policy transitions (available-off→draft, qty0→sold, sold persists until archive); seen/unseen clears + not-on-Sold-tab; publish + preview gates; scheduled publish flips; activity-log rows written; buy-on-tile (if built). Plus the **static gate** (tsc/CJS clean · function count unchanged · no new cron · `node --check` · valid `vercel.json` · GPT `.txt` `wc -c` < 8000) and the **GPT-parity spot-check** (the one human touchpoint, in Em's ChatGPT).
 

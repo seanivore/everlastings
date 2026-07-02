@@ -1,7 +1,7 @@
-# v3.5.2 — Design Addendum
+# v3.5.3 — Design Addendum
 
-**Revision driven by**: round-1 A/B/C/D fold + breadth-regression fold (owner-journey + integration) — v3.5.0 → v3.5.1 → **v3.5.2** (living doc renamed to `v3_5_2_*`).
-**Addendum to**: `v3_5_2_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Revision driven by**: round-1 A/B/C/D + breadth fold, then round-2 A/B/C/D subagent fold — v3.5.0 → v3.5.1 → v3.5.2 → **v3.5.3** (living doc renamed to `v3_5_3_*`). Round-2 design deltas: **§D.4** (the concrete "One of a kind" tile badge, WS9 §9.2) + the §A View-Site href swap added to the surgical-edits enumeration.
+**Addendum to**: `v3_5_3_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 
@@ -39,6 +39,7 @@ The three docs (`README.md`, `INTEGRATION.md`, `PRODUCT_LIFECYCLE.md`) are hando
 - **WS8** — remove the Sold-tab `data-alert` in `products-app.js` (Phase 8.2b) — the Sold tab no longer blinks.
 - **WS3** — remove the **Delivered** pill in `orders-app.js` + its `.tpill--delivered` CSS (no code writes `status='delivered'`).
 - **F4/§A token fix** — in `products.html:288` (`.sched-chip`) replace the three `var(--staged)` (a token defined **nowhere** → the scheduled chip renders with no background) with `var(--waiting)`; the scheduled/staged chip is the orange `--waiting` state.
+- **WS1 — View-Site href** — swap the static `products.html:334` rail-foot link (`href="https://everlastingsbyemaline.com"`, hardcoded prod) → env-aware `P.siteUrl()` (or route the products rail through `mountShell`), so preview points at the preview storefront and Live at prod (INTEGRATION §3.12 / IMPLEMENT §WS1 open-item; behavior in §D.3). This is the one **markup-attribute** swap in the otherwise "no markup/class changes" data-wiring — enumerated here so an Angle-B byte-check reads it as intentional, not a stray change.
 
 **Angle-B byte-check.** Every DECIDED design block in this addendum (and every markup/class the IMPLEMENT's integration-seam tables key off) is verified **byte-identical against `out/`** except the surgical edits above. If a review round wants a class renamed or markup re-shaped beyond that list, that is a *design* change — it goes back through `out/` (or a `<!-- NEEDS-VERIFY -->` here), never a silent edit during data-wiring. This is what lets the IMPLEMENT carry **integration-seam tables** (each mock/no-op call → its real endpoint) instead of full byte-blocks for the presentation surfaces: the markup already exists and is canonical.
 
@@ -122,6 +123,15 @@ Percent-only (a `$`-off store-wide stays a plain checkout code, not struck). **S
 The **env-aware "View Site"** link (rail + Account) targets the current environment's storefront via `PORTAL.siteUrl()` (`location.origin` on Test/preview, the prod domain on Live — INTEGRATION §3.12). WS1 wires these to the deploy topology; it does not re-decide them. **Render-tune:** none load-bearing (the chip already matches `controls.html`); confirm the hostname rule against the real preview/prod domains.
 
 <!-- NEEDS-VERIFY: confirm the preview/prod hostname split in PORTAL.env() matches the actual Vercel deploy topology (custom domain on prod, *.vercel.app on preview) — INTEGRATION §3.1 says this is "the one line to adjust" if hostnames differ. -->
+
+## D.4 — "One of a kind" tile scarcity badge (WS9 Phase 9.2; `.badge.badge-unique`, storefront tokens)
+
+**Concrete default (storefront tokens, `styles.css`).** A small `badge badge-unique` with the exact copy **"One of a kind"** renders in the product tile's `.card__media`, alongside the existing `.badge-featured` / `.badge-sold`. It reuses the storefront `.badge` base (position/shape/size already defined for the Sold + Featured badges — the new class only sets its hue) so it sits in the same badge stack, not a new component:
+- `.badge-unique { background: color-mix(in oklch, var(--accent-primary) 12%, white); color: var(--accent-primary); border: 1px solid color-mix(in oklch, var(--accent-primary) 30%, transparent); }`
+
+**Render markup** is folded into the merged card blocks — shop grid `§6.5a` and homepage carousel `§6.3d` — as `${!sold ? '<span class="badge badge-unique">One of a kind</span>' : ''}`. **Trigger:** rendered on **purchasable (`!sold`) tiles**; a sold piece shows "Sold" instead (never both). Since every Everlastings piece is one-of-a-kind (`quantity` 1), the default shows it on essentially every in-stock tile — that IS the scarcity lever.
+
+**The one design confirm (surface, don't silently decide):** whether "One of a kind" on *every* in-stock tile — stacked with "Featured" on featured tiles — reads as reinforcing or as badge-clutter. Default = show on all `!sold` tiles. If it clutters, the cheap dials are: gate to **non-featured** tiles only (`!sold && !p.featured`), or make it a lighter caption under the price rather than a corner badge. **Render-tune:** the badge hue/weight, its **stack position when both Featured + One of a kind show** (confirm they don't overlap in `card__media`'s corner), and the trigger above. Confirm on the live preview like every §D item.
 
 ---
 
