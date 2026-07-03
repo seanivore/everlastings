@@ -1,19 +1,19 @@
-# v3.7.1 — B/C/D reviewer launch kit (human-facilitated Claude Code)
+# v3.7.2 — B/C/D reviewer launch kit (human-facilitated Claude Code)
 
-The setup is done and **breadth has RUN** — both peers came back NARROW and were folded into **v3.7.1** (findings stand in `v3_7_0_GAP_REVIEW_BREADTH_{JOURNEY,INTEGRATION}.md`; ledger 73–77). This card now drives the **three lane reviewers: B · C · D** (the lanes the A-round-1 folds re-opened; the v3.7.1 breadth folds touch B/C/D lanes too). Run each as its **own fresh Sonnet-5·MAX peer** (a spawned peer or a fresh Claude Code window) so there's no context contamination. *(The 2 breadth charters below are retained as the completed-round record.)*
+The **B/C/D lane round has RUN and folded to v3.7.2** — B fidelity READY, C integration READY, D design NARROW (trails at `v3_7_1_GAP_REVIEW_{B,C,D}.md`; ledger 78–84). This card now drives the **scoped re-run**: **D** (confirm the reduced-motion §1.4f + scope-picker folds landed), **C** (confirm the `cart_holds` doc-impact), and the 2-peer **breadth backstop** (charters below); **B stays closed** (its findings were the ledger fix + coordination notes — no new fidelity gap). Run each as its **own fresh Sonnet-5·MAX peer** (a spawned peer or a fresh Claude Code window) so there's no context contamination. *(The earlier breadth trail `v3_7_0_GAP_REVIEW_BREADTH_{JOURNEY,INTEGRATION}.md` stays standing; the charters below are reused for the backstop.)*
 
-## Per-window launch (do this in each of the 5 windows)
+## Per-window launch (do this in each reviewer window)
 
 1. `cd /Users/seanivore/Development/everlastings-website`
 2. `/model` → **Sonnet 5** · `/effort max`  (the effort dial is the whole point — a context-less reviewer only reads everything if pushed to)
 3. Paste the reviewer's charge (below) as the first message.
-4. When it finishes it writes `assets/docs/archive/v3_7/v3_7_1_GAP_REVIEW_<angle>.md` **and** prints its findings — paste that reply back here so the orchestrator validates + folds.
+4. When it finishes it writes `assets/docs/archive/v3_7/v3_7_2_GAP_REVIEW_<angle>.md` **and** prints its findings — paste that reply back here so the orchestrator validates + folds.
 
-The build under review (all three, read end-to-end): `assets/docs/archive/v3_7/v3_7_1_IMPLEMENT.md` + `v3_7_1_ADDENDUM_DESIGN.md` + `v3_7_1_ADDENDUM_TESTING.md`. Source material resolves in the sibling `assets/docs/archive/v3_5/` per the docs' directory banner.
+The build under review (all three, read end-to-end): `assets/docs/archive/v3_7/v3_7_2_IMPLEMENT.md` + `v3_7_2_ADDENDUM_DESIGN.md` + `v3_7_2_ADDENDUM_TESTING.md`. Source material resolves in the sibling `assets/docs/archive/v3_5/` per the docs' directory banner.
 
-## B · C · D — use the self-contained blocks in `v3_7_1_REVIEW_PROMPTS.md`
+## B · C · D — use the self-contained blocks in `v3_7_2_REVIEW_PROMPTS.md`
 
-Each is already paste-ready (complete lens + the full ledger 1–72 + false-alarm classes inlined). Open `v3_7_1_REVIEW_PROMPTS.md` and copy the whole fenced block under:
+Each is already paste-ready (complete lens + the full ledger 1–72 + false-alarm classes inlined). Open `v3_7_2_REVIEW_PROMPTS.md` and copy the whole fenced block under:
 - **Angle B — fidelity (repo)** — byte-check every CURRENT block against the working tree; every NEW block applies cleanly + references only things that exist; DESIGN DECIDED blocks vs `design-handoff/out/`.
 - **Angle C — integration (repo + architecture)** — read `assets/docs/EVERLASTINGS_STORE.md` first; the cross-system seams, the 11/12-function + 1-cron Vercel budget, the CRON_SECRET prod dependency, the sold-policy enforcers agreeing.
 - **Angle D — design-correctness (repo + design addendum + design research)** — read `design-handoff/brief.md`, `out/`, `feedback/FEEDBACK_v1.md`, `controls.html` + `tokens.css`, `reference/`.
@@ -27,7 +27,7 @@ You are doing a fresh owner-journey breadth review of a converged build package 
 
 THESIS (judge everything against it): the product minimizes the maker's (Emaline's) friction. She manages the store mostly through her Custom GPT on her phone; she opens the `/admin` Content Creator Portal only to *fix* something. Both surfaces (GPT + portal) must be fully capable as if the other didn't exist. A "gap" is anything that makes a real maker journey confusing, dead-end, or silently wrong.
 
-DOCS (read all three, in `assets/docs/archive/v3_7/`): v3_7_1_IMPLEMENT.md (10 workstreams) + v3_7_1_ADDENDUM_DESIGN.md + v3_7_1_ADDENDUM_TESTING.md. Source material (design-handoff, GPT files, ROADMAP) is in the sibling assets/docs/archive/v3_5/. The settled "do not re-raise" ledger (entries 1–72) is inside v3_7_1_REVIEW_PROMPTS.md — read it and do NOT re-raise those.
+DOCS (read all three, in `assets/docs/archive/v3_7/`): v3_7_2_IMPLEMENT.md (10 workstreams) + v3_7_2_ADDENDUM_DESIGN.md + v3_7_2_ADDENDUM_TESTING.md. Source material (design-handoff, GPT files, ROADMAP) is in the sibling assets/docs/archive/v3_5/. The settled "do not re-raise" ledger (entries 1–72) is inside v3_7_2_REVIEW_PROMPTS.md — read it and do NOT re-raise those.
 
 YOUR LENS — walk the maker's real journeys end-to-end and find where a FOLD could have broken a flow (convergence is non-monotonic; a fix can seed the next bug). Trace at least these, across BOTH surfaces (portal AND GPT):
 - Create a piece → fill fields → publish. (Does the strict publish gate §2.7 dead-end anywhere? Does the GPT collect the full publish set §10.1c so it doesn't hit a 400? Are the plain-words 400 reasons legible?)
@@ -48,7 +48,7 @@ You are doing a fresh integration/systems breadth review of a converged build pa
 
 THESIS (context): the product minimizes the maker's friction across two fully-capable surfaces (Custom GPT + the /admin portal). Your job is the systems-level fold-regression check — the cross-lane backstop behind the B/C/D angle reviews.
 
-DOCS (read all three, in assets/docs/archive/v3_7/): v3_7_1_IMPLEMENT.md + v3_7_1_ADDENDUM_DESIGN.md + v3_7_1_ADDENDUM_TESTING.md. Source material is in the sibling assets/docs/archive/v3_5/. The settled "do not re-raise" ledger (1–72) is inside v3_7_1_REVIEW_PROMPTS.md — read it; do NOT re-raise those.
+DOCS (read all three, in assets/docs/archive/v3_7/): v3_7_2_IMPLEMENT.md + v3_7_2_ADDENDUM_DESIGN.md + v3_7_2_ADDENDUM_TESTING.md. Source material is in the sibling assets/docs/archive/v3_5/. The settled "do not re-raise" ledger (1–72) is inside v3_7_2_REVIEW_PROMPTS.md — read it; do NOT re-raise those.
 
 YOUR LENS — hunt where the A-round-1 folds (ledger 57–72) created a NEW cross-system seam or contradiction:
 - Shared-file edit coordination (ledger 25–27 + the §"Shared-file edit coordination" list): after WS2's products.ts edits, do WS4's + WS8's CURRENT anchors still match? Does shop.js/homepage.js's WS6→WS4→WS9 merged card block leave exactly ONE render per line with no reverted edit?
