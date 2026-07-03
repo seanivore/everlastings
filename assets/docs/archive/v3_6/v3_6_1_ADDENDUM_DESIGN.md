@@ -1,9 +1,9 @@
-# v3.6.0 — Design Addendum
+# v3.6.1 — Design Addendum
 
 > **📁** The formal A-Type gate copy (converged v3.5.5, minor-bumped into `v3_6/`). **Source material — `design-handoff/…`, `out/…` — lives in the SIBLING `assets/docs/archive/v3_5/` directory;** paths here are relative to that dir. Frozen `v3_5_5_*` + the `GAP_REVIEW_*` trail stay in `v3_5/`.
 
 **Revision driven by**: rounds 1–3 folds + round-4 verification — v3.5.0 → … → v3.5.4 → **v3.5.5** (living doc renamed to `v3_5_5_*`; the converged copy that minor-bumps into `v3_6/`). Round-4 design delta (§D.4): the three card badges are now **mutually exclusive by gate** — Featured gated `!sold && p.featured`, unique `!sold && !p.featured` — so exactly one renders per tile (structural, not invariant-dependent), closing D4-R4-1 and retiring the pre-existing Sold+Featured overlap. (Round-3: §D.4's solid-token CSS wired by §9.2a + the stack-rule upgrade. Round-2: the badge + the §A View-Site bullet.)
-**Addendum to**: `v3_6_0_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_6_1_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 

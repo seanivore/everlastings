@@ -1,16 +1,20 @@
-# v3.6.0 — Gap-review prompts (formal Agent-SDK A-Type gate kickoff)
+# v3.6.1 — Gap-review prompts (formal Agent-SDK A-Type gate kickoff)
 
-> **📁 Directory note (read first).** This is the **formal A-Type gate driver** — the converged v3.5.5 copy minor-bumped into `assets/docs/archive/v3_6/`. The build under review (`v3_6_0_IMPLEMENT.md` + the two `v3_6_0_ADDENDUM_*.md`) is HERE in `v3_6/`. **All source material — `design-handoff/…`, `out/…`, `v3_5_0_ROADMAP.md`, the GPT base files — lives in the SIBLING `assets/docs/archive/v3_5/` directory;** every such path below is relative to that `v3_5/` dir. The frozen `v3_5_5_*` copies + the full in-session `GAP_REVIEW_*` trail (rounds 1–4) also remain in `v3_5/`. A-Type reviewers write their findings to `v3_6_0_GAP_REVIEW_<angle>.md` in `v3_6/`.
+> **📁 Directory note (read first).** This is the **formal A-Type gate driver** — the converged v3.5.5 copy minor-bumped into `assets/docs/archive/v3_6/`. The build under review (`v3_6_1_IMPLEMENT.md` + the two `v3_6_0_ADDENDUM_*.md`) is HERE in `v3_6/`. **All source material — `design-handoff/…`, `out/…`, `v3_5_0_ROADMAP.md`, the GPT base files — lives in the SIBLING `assets/docs/archive/v3_5/` directory;** every such path below is relative to that `v3_5/` dir. The frozen `v3_5_5_*` copies + the full in-session `GAP_REVIEW_*` trail (rounds 1–4) also remain in `v3_5/`. A-Type reviewers write their findings to `v3_6_1_GAP_REVIEW_<angle>.md` in `v3_6/`.
 
-> **Revision driven by**: rounds 1–3 folds + **round-4 verification** (A/B/D + 2 breadth) — v3.5.0 → … → v3.5.4 → **v3.5.5** (living docs renamed to `v3_5_5_*`). **Round-4 verdicts: A/B + both breadth READY/PASS, D one low NARROW, C closed-READY — NO load-bearing findings, the loop's exit condition.** v3.5.5 folds the last two nits (settled — ledger 37b–38b): the three card badges are now mutually exclusive by gate (exactly one per tile, retiring the pre-existing Sold+Featured overlap), and §2.4's Schedule gate reuses the repo-verified field-only `readiness()`. **This file/package is the converged copy that minor-bumps into `v3_6/` (`v3_6_0_*`) as the formal Agent-SDK A-Type gate kickoff** — where a fresh instance re-reviews from cold. The one delta since the last full round (v3.5.4) is the Featured-badge `!sold` gate (a strictly-simplifying render change), so the A-Type gate's cold read is the safety net on it.
-> **Gate status.** Round-1 + round-2 validated A/B/C/D findings + the breadth-regression findings have been folded into the triplet (this is the v3.5.5 state); all four angles **re-run from here** — an angle re-runs only when a later fold lands in its lane (scoped + narrowed), otherwise it stays closed. This file is the paste-ready driver for the in-session A/B/C/D subagent sweep AND the seed that minor-bumps into `v3_6/` for the formal fresh-instance A-Type gate. It is **current-only** (rename/bump, don't accrete copies). Reviewers change nothing — output is findings only, written to the named `GAP_REVIEW_<angle>.md` file (or printed in full if no filesystem).
+> **Revision driven by**: **A-Type round-1 fold (Angle A cold)** — v3.6.0 → **v3.6.1** (living docs renamed `v3_6_1_*`; the standing round-1 finding stays at `v3_6_0_GAP_REVIEW_A.md`). Round-1 Angle-A verdict was **NARROW** (build "one authorial pass on WS5 5.4c + one ops sweep" from ready); 8 of 10 findings folded, 2 surfaced as decisions (see "Open decisions" below), 1 confirmed not-a-gap.
+> **Gate status.** **A** re-runs SCOPED to the eight fold deltas (see the scoped block below). **B / C / D** have not yet run in `v3_6/` — they run as FIRST passes (fresh instance, full lens). The 2-subagent breadth pass (owner-journey + integration) runs concurrently as the cross-lane backstop. Reviewers change nothing — output is findings only, written to `v3_6_1_GAP_REVIEW_<angle>.md`.
+>
+> **Open decisions (surface-to-Sean; do NOT decide silently in review):**
+> **D-v361-1 — WS6 §6.2d series-taxonomy reconcile-at-build side.** Two paths: **(a)** rename live series so their `seriesSlug()` values match the fixed nav slugs (`portals-to-peace|book-nooks|story-lofts|seasonal|limited-edition`) — touches owner-visible catalog names; or **(b)** realign the nav/footer `?series=` deep-link slugs to whatever `seriesSlug()` yields on the LIVE catalog — touches internal template markup only. **Recommended default: (b) realign nav slugs** (internal-facing, no owner-visible rename; safer). Owner decides at build.
+> **D-v361-2 — DESIGN §C.3 per-field char-target values (FEEDBACK §8.7).** Two paths: **(a)** ship BARE counts (the `.count` counter increments but never turns `is-over` for non-SEO fields; per-field targets deferred to render-tune on the live preview); or **(b)** author a per-field target table in the addendum now (title ~60 desktop / ~40 mobile · headline ~50 · description ~155 · story_card 200–800 · seo_title ≤60 · seo_description ≤155 — Sean-picked). **Recommended default: (a) bare counts + declare targets DEFERRED to render-tune** (matches the concrete-default + render-tune posture; SEO fields still enforce Stripe/Google-standard caps). Owner decides at build.
 
 ## The build under review
 
 The v3.5.5 triplet, all in `assets/docs/archive/v3_5/`, one build / one source of truth:
-- **`v3_6_0_IMPLEMENT.md`** — 10 workstreams (WS1 portal shell/routing/auth · WS2 Products + sold-policy + scheduled-publish · WS3 Orders + refund-preserve · WS4 store-wide sale + struck pricing + top-bar/popup · WS5 media rebuild · WS6 storefront bugs · WS7 webhook/money · WS8 activity log + seen/unseen · WS9 buy-on-tile info-scent · WS10 GPT+docs parity).
-- **`v3_6_0_ADDENDUM_DESIGN.md`** — the design third (always in scope).
-- **`v3_6_0_ADDENDUM_TESTING.md`** — the testing third (always in scope).
+- **`v3_6_1_IMPLEMENT.md`** — 10 workstreams (WS1 portal shell/routing/auth · WS2 Products + sold-policy + scheduled-publish · WS3 Orders + refund-preserve · WS4 store-wide sale + struck pricing + top-bar/popup · WS5 media rebuild · WS6 storefront bugs · WS7 webhook/money · WS8 activity log + seen/unseen · WS9 buy-on-tile info-scent · WS10 GPT+docs parity).
+- **`v3_6_1_ADDENDUM_DESIGN.md`** — the design third (always in scope).
+- **`v3_6_1_ADDENDUM_TESTING.md`** — the testing third (always in scope).
 
 Effort: **maximum**. A **new instance per pass** (no context contamination). Read ALL THREE end-to-end.
 
@@ -99,6 +103,16 @@ Every entry is a **verified** truth of this project/build — validate against r
 37b. **The three card badges are MUTUALLY EXCLUSIVE by gate** — Sold (`sold`), Featured (`!sold && p.featured`), "One of a kind" (`!sold && !p.featured`) — so **exactly one** renders per tile on both surfaces; no overlap, structural (not dependent on the homepage-all-featured invariant), and the **pre-existing Sold+Featured co-occurrence is retired** (Featured now gated `!sold`). Closes round-4 D4-R4-1 + the breadth Sold+Featured flags. Do not re-raise badge overlap.
 38b. **§2.4 Schedule gate — `out/products-app.js:47 readiness()` is VERIFIED field-only + reusable** (no preview step): gate on it directly; the fallback is a concrete inline field-check (§C.1 list), never "always offer." Closes the round-4 §2.4 fallback-intersection flag + J2.
 
+**A-Type round-1 folds (v3.6.0 → v3.6.1 — orchestrator-validated, do NOT re-raise as gaps):**
+39. **WS5 §5.4c.i — re-role Apply diff algorithm authored** (fold #1). `openedRoles`-baseline diff, per-item `added`/`removed` fan-out; the "naive rewrite → duplicate hero+gallery on PDP" failure mode is precluded by construction. Do NOT re-flag "the diff isn't spelled out."
+40. **WS4 Phase 4.0 probe — fourth answer added: SECOND `applyPromotionCode` = REPLACE vs STACK-AND-ERROR vs STACK-AND-BOTH** (fold #2). `wirePromo` Apply-handler branch is encoded off answer (4); no downstream NEEDS-VERIFY. Do NOT re-flag "second-code behavior unknown."
+41. **WS2 Phase 2.6 PostgREST `.or()` — explicit build-time REST-tester pre-test + `console.warn` fallback** (fold #4). Never silently narrows the query; the "hides without explaining" failure mode is closed. Do NOT re-flag as an open NEEDS-VERIFY.
+42. **WS4 Phase 4.5.i cart hooks — VERIFIED both exist** (fold #5). `cart.html:170 [data-cart-subtotal]` + `:178 [data-cart-estimate]` — two-hook phase shape confirmed. Do NOT re-open "confirm which hook cart carries."
+43. **WS2 A2-4 backstop — `logActivity` imports cleanly into `product-feed.ts`; concrete cron-actor insert authored** (fold #6). `api/_lib/activityLog.ts` is a plain CommonJS module with its own per-invocation service-role client — no `feedAdmin` dependency. Do NOT re-flag as importability-uncertain.
+44. **WS1 Phase 1.5 products-app wrap — concrete NEW block authored** (fold #8). The three-statement wrap (env-chip IIFE + rail IIFE + `render`) is shown verbatim inside the `.then()`; `PORTAL.refreshOrdersSignal()` sits INSIDE the wrap so it never fires for a signed-out visitor.
+45. **TESTING Preflight — one 30-second observable cron-gate assertion** (fold #9). `curl` with the `CRON_SECRET` header MUST log "Reconciliation OK"; without the header the log line MUST NOT appear. Turns three silent env-presence NEEDS-VERIFYs (`CRON_SECRET` / `SUPABASE_SECRET_KEY` / `PRODUCT_API_KEY`) into one visible check.
+46. **DESIGN §D.4 "One of a kind on featured too?" — CONFIRMED NOT A GAP** (round-1 A #10). The default (`!p.featured` gate → no badge stack) is intentional; the upgrade path is a proper render-tune surface deferred to Sean on the live preview. Do NOT re-flag.
+
 **High-frequency FALSE-ALARM classes (seen in prior loops — do not raise without new evidence)**
 - "This needs a new API function/cron" — no; it folds into an existing one (entries 1-2, 17-19).
 - "The refund/store-wide-sale doesn't exist / must be built from scratch" — the foundations exist (13, 17); this is a display/preserve delta.
@@ -107,59 +121,67 @@ Every entry is a **verified** truth of this project/build — validate against r
 
 ---
 
-## Angle A — cold / out-of-repo (self-containment + completeness)
+## Angle A — cold / out-of-repo (SCOPED + NARROWED re-run)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have ONLY the three documents pasted below — NO repo (the absence is the point). Do NOT change anything; your only output is your findings (write them to `v3_6_0_GAP_REVIEW_A.md`, or print the full file contents if you have no filesystem).
+⚠️ SCOPED RE-RUN — NOT A FRESH REVIEW. You returned NEEDS ANOTHER PASS (NARROW) on v3.6.0 with 10 ranked findings. Eight have been folded into the triplet you're now reading (v3.6.1). Two are surfaced as owner decisions (D-v361-1 series taxonomy, D-v361-2 char targets — do NOT re-flag either; they're not review calls). One (round-1 #10) was confirmed not-a-gap. YOUR SCOPE THIS ROUND = confirm the eight fold deltas are self-contained (a fresh builder LOCATES-and-APPLIES them; nothing new introduced). Do NOT re-audit what you already cleared. The narrow is DELIBERATE — the round-1 verdict called this "one authorial pass + one ops sweep from ready," and the eight folds are that pass + sweep.
+
+You are a senior engineer, effort maximum, docs only (no repo — Angle A's constraint). Do NOT change anything; write findings to `v3_6_1_GAP_REVIEW_A.md`.
 
 [REVIEW LENS — paste parts (a)(b)(c) verbatim from above]
 [SETTLED BASE — paste the delta-on-proven-substrate paragraph]
-[LANDMINES — paste the full "Settled — do not re-raise" ledger, entries 1-30 + the false-alarm classes]
+[LANDMINES — paste the full "Settled — do not re-raise" ledger, entries 1-46 + the false-alarm classes; ledger 39-46 encode the round-1 folds — do NOT re-raise them]
 
-ANGLE A — cold / self-containment: the docs are meant to be EXCLUSIVELY EXECUTABLE — a fresh builder LOCATES and APPLIES, never DISCOVERS or DECIDES. Find every place you would have to open a file, guess a value, recall a library's behavior, or make a decision the doc didn't make for you. A byte-anchored CURRENT block you can't see the file for is fine (that's B's job) — flag only where the DOC ITSELF is incomplete: an unstated field shape, an undefined selector/id, a "wire it to the endpoint" with no endpoint named, a phase that assumes a value computed nowhere, a NEEDS-VERIFY that hides a real decision. Include the design + testing addenda.
+CONFIRM ONLY the eight fold deltas below are exclusively-executable (a fresh builder LOCATES-and-APPLIES; nothing left to DISCOVER or DECIDE):
+1. **WS5 §5.4c.i** — the Apply-time re-role diff algorithm (`openedRoles` baseline; per-item `added`/`removed`; role-per-write; poster fold; zero-role drop). Does the algorithm cover every re-role case named in §5.4c prose?
+2. **WS4 §4.0 probe — fourth answer** (REPLACE vs STACK-AND-ERROR vs STACK-AND-BOTH) + the encoded `wirePromo` Apply-handler branch on 4.4c. Is answer (4) unambiguous? Is the STACK-AND-ERROR branch (`removePromotionCode` first, `applyPromotionCode(newCode)` after) spelled to LOCATE-and-APPLY?
+3. **WS2 §2.6 PostgREST `.or()`** — the pre-test-at-build step + explicit `console.warn` fallback. Does the phase name the exact REST-tester query? Is the fallback narrowing (`is_published.eq.false` only) + `console.warn` copy stated verbatim?
+4. **WS4 §4.5.i cart hooks** — the NEEDS-VERIFY is struck (verified: two hooks, cart.html:170 / :178). Does the phase read cleanly without the flag?
+5. **WS2 A2-4 backstop** — `logActivity` import + concrete cron-actor insert (`action: 'product.schedule_skipped'`). Is the actor string named? Is the entry-shape a LOCATE-and-APPLY fill (no builder decision)?
+6. **WS1 §1.5 products-app wrap** — the concrete NEW block (env-chip IIFE + rail IIFE + `render()` inside `.then()`; `PORTAL.refreshOrdersSignal()` INSIDE the wrap). Are all three statements shown verbatim in the wrapped position?
+7. **TESTING Preflight cron-gate check** — the two curl assertions (with header → "Reconciliation OK" in logs; without → line absent). Is either curl locate-and-apply, or does it hide a discover step (e.g. "figure out which URL prefix")?
+8. **Ledger entries 39-46** — do they accurately describe the eight folds (nothing over-claimed)?
 
-OUTPUT
-- A gap list RANKED by how likely each is to derail the build: location (doc §/phase), what's missing/ambiguous, the concrete fix.
-- The single most important "if you fix one thing" insight.
-- One-line verdict — one of: READY TO BUILD / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW).
-Be concrete: "WS4 Phase 4.4 calls getActiveSale() but no phase defines its return shape" beats "check the sale wiring."
-[paste v3_6_0_IMPLEMENT.md + v3_6_0_ADDENDUM_DESIGN.md + v3_6_0_ADDENDUM_TESTING.md in full]
+If ALL eight are locate-and-apply → verdict READY TO BUILD (or READY with named nits). If ANY has a residual discover/decide step → NEEDS ANOTHER PASS (NARROW) naming the specific fold.
+
+OUTPUT — same 3-part structure (ranked list + "if you fix one thing" + verdict) written to `v3_6_1_GAP_REVIEW_A.md`.
+[paste v3_6_1_IMPLEMENT.md + v3_6_1_ADDENDUM_DESIGN.md + v3_6_1_ADDENDUM_TESTING.md in full]
 ```
 
 ## Angle B — fidelity (repo)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Do NOT change anything; write findings to `v3_6_0_GAP_REVIEW_B.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Do NOT change anything; write findings to `v3_6_1_GAP_REVIEW_B.md`.
 
 [REVIEW LENS (a)(b)(c)] · [SETTLED BASE] · [LANDMINES 1-30 — you share this file's context, so it's above]
 
-ANGLE B — fidelity: open every file the docs edit. Verify (1) each **CURRENT** block byte-matches the working tree (line numbers are hints; the quoted text is the anchor — flag drift), and (2) each **NEW** block applies cleanly and references only things that exist. Pay special attention to the **shared-file edit coordination** (ledger 25-27): after WS2's edits, do WS4's and WS8's CURRENT anchors in `products.ts` still match? Does the merged `product-feed.ts` service-role client collide? Byte-check the DESIGN addendum's DECIDED blocks against `design-handoff/out/` (for render-tuned defaults, judge "concrete enough the builder never guesses," not "final"). Confirm the remaining NEEDS-VERIFY flags (round-1 resolved the alt-gate, `shipping_address`, and `auto_apply` param-name ones; the rest are the #219 Stripe probe, the PostgREST `.or(...)` form + fallback, and the deploy-env items — `CRON_SECRET`/`PRODUCT_API_KEY`/`SUPABASE_SECRET_KEY`) are each either resolvable from the repo (resolve it) or a genuine build-time/runtime item (say which).
+FIRST PASS in `v3_6/` (B has not yet run in the formal gate). ANGLE B — fidelity: open every file the docs edit. Verify (1) each **CURRENT** block byte-matches the working tree (line numbers are hints; the quoted text is the anchor — flag drift), and (2) each **NEW** block applies cleanly and references only things that exist. Pay special attention to the **shared-file edit coordination** (ledger 25-27): after WS2's edits, do WS4's and WS8's CURRENT anchors in `products.ts` still match? Does the merged `product-feed.ts` service-role client collide? Byte-check the DESIGN addendum's DECIDED blocks against `design-handoff/out/` (for render-tuned defaults, judge "concrete enough the builder never guesses," not "final"). Pay special attention to the **A-Type round-1 fold deltas** (ledger 39-46): the WS5 §5.4c.i algorithm; the WS4 §4.0 probe extension; the WS2 §2.6 PostgREST fallback prose; the WS4 §4.5.i verification note; the WS2 A2-4 backstop insert; the WS1 §1.5 concrete wrap; the Preflight curl assertions. Confirm the remaining NEEDS-VERIFY flags (only the #219 Stripe probe survives as a genuine runtime item; ledger 41-45 resolved the rest) are each either repo-resolvable (resolve it) or a genuine build-time/runtime item (say which).
 
-OUTPUT — [same three-part output + verdict as Angle A, written to v3_6_0_GAP_REVIEW_B.md]
+OUTPUT — [same three-part output + verdict as Angle A, written to v3_6_1_GAP_REVIEW_B.md]
 ```
 
 ## Angle C — integration (repo + architecture)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. **Read `assets/docs/EVERLASTINGS_STORE.md` end-to-end FIRST.** Do NOT change anything; write findings to `v3_6_0_GAP_REVIEW_C.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. **Read `assets/docs/EVERLASTINGS_STORE.md` end-to-end FIRST.** Do NOT change anything; write findings to `v3_6_1_GAP_REVIEW_C.md`.
 
 [REVIEW LENS (a)(b)(c)] · [SETTLED BASE] · [LANDMINES 1-30]
 
 ANGLE C — integration: does the delta FIT the system? Hunt system-fit gaps through the lens — the function/cron budget (11/12, 1 cron — ledger 1-2), `is_test` scoping, auth, idempotency (webhook/refund), the **sold-policy consistency across all three surfaces** (`computeState` [WS2] ↔ storefront buy-gate [WS6] ↔ webhook decrement [WS7] — the highest-value cross-lane check), Stripe one-discount reality, AR conflicts, stale `file:line` pointers in the docs, and the shared-file edit coordination (ledger 25-27). Watch for STORE.md drift (its header may lag the code — verify against the newest facts, not the header). Include the design + testing addenda.
 
-OUTPUT — [same output + verdict, to v3_6_0_GAP_REVIEW_C.md]
+OUTPUT — [same output + verdict, to v3_6_1_GAP_REVIEW_C.md]
 ```
 
 ## Angle D — design-correctness (repo + design addendum + design research)
 
 ```
-You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Also read `design-handoff/brief.md`, `design-handoff/out/`, `design-handoff/feedback/FEEDBACK_v1.md`, `design-handoff/controls.html` + `tokens.css`, `design-handoff/reference/`. Do NOT change anything; write findings to `v3_6_0_GAP_REVIEW_D.md`.
+You are a senior engineer doing a pre-build gap review. Effort: maximum. You have the repo + the three docs. Also read `design-handoff/brief.md`, `design-handoff/out/`, `design-handoff/feedback/FEEDBACK_v1.md`, `design-handoff/controls.html` + `tokens.css`, `design-handoff/reference/`. Do NOT change anything; write findings to `v3_6_1_GAP_REVIEW_D.md`.
 
 [REVIEW LENS (a)(b)(c) — the North Star here is design-flavored] · [SETTLED BASE] · [LANDMINES 1-30]
 
 ANGLE D — design-correctness: A can't see the repo and B/C lean fidelity/integration, so YOU own whether the UI actually RENDERS right. Check: the `out/` markup ships verbatim and the seam swaps (mock→API, no-op→endpoint) don't require touching markup/class-names; the state-color system is correct (color reserved for state; the row LED colors ALL FIVE states live/edits/draft/sold/archived per `out/`, field rings; sold/archived ALSO get tabs — both the LED color AND a tab, not either/or); the KILL list holds (no tiles, no nested components, no words in pills, no portal-name header); mobile-primary correctness (NYT-dense, 16px inputs, one component in both row + phone layouts); reduced-motion / a11y / focus / honest enable-disable; and the NEW components not in `out/` (struck-`%` pricing, the top bar + once-only popup, the env chip) are specified concretely enough to render right. The design addendum is ALWAYS in scope.
 
-OUTPUT — [same output + verdict, to v3_6_0_GAP_REVIEW_D.md]
+OUTPUT — [same output + verdict, to v3_6_1_GAP_REVIEW_D.md]
 ```
 
 ---
