@@ -1,16 +1,16 @@
-# v3.6.1 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
+# v3.6.2 Implementation Plan — the Content Creator Portal redesign + the v3.5 store/checkout backlog
 
-> **📁 Directory note (read first).** This `v3_6/` package is the **formal Agent-SDK A-Type gate copy** of the converged v3.5.5 build docs. The three living docs live here in `assets/docs/archive/v3_6/` (`v3_6_1_IMPLEMENT.md` + the two addenda). **All source material — the design handoff (`design-handoff/…`, `out/…`), `v3_5_0_ROADMAP.md`, the GPT base files, `v3_5_0_RATIONALE.md` — lives in the SIBLING `assets/docs/archive/v3_5/` directory.** Every `design-handoff/…`, `out/…`, and `v3_5_0_…` path in these docs is relative to that `v3_5/` dir. The frozen in-session `v3_5_5_*` copies + the full `GAP_REVIEW_*` rigor trail (rounds 1–4) also remain in `v3_5/`.
+> **📁 Directory note (read first).** This `v3_6/` package is the **formal Agent-SDK A-Type gate copy** of the converged v3.5.5 build docs. The three living docs live here in `assets/docs/archive/v3_6/` (`v3_6_2_IMPLEMENT.md` + the two addenda). **All source material — the design handoff (`design-handoff/…`, `out/…`), `v3_5_0_ROADMAP.md`, the GPT base files, `v3_5_0_RATIONALE.md` — lives in the SIBLING `assets/docs/archive/v3_5/` directory.** Every `design-handoff/…`, `out/…`, and `v3_5_0_…` path in these docs is relative to that `v3_5/` dir. The frozen in-session `v3_5_5_*` copies + the full `GAP_REVIEW_*` rigor trail (rounds 1–4) also remain in `v3_5/`.
 
 **Initiative**: One dev cycle (built/tested on `dev`, shipped to `main` only when Sean signs off) that (1) integrates the finished **Content Creator Portal** front-end design (`assets/docs/archive/v3_5/design-handoff/out/`) as the new `/admin`, preserving the backend-complete management contract while adopting the mobile-first, intent-based, brand-neutral redesign; (2) builds the **automatic store-wide sale** display/auto-apply layer + storefront struck-pricing + a thin utility bar + a once-only popup (ROADMAP #219–222) on top of the existing coupon foundation; (3) rebuilds the **media upload** UX to the designed modal; (4) reconciles the **sold-policy / product-state** model to Sean's final word (§3.6 + PRODUCT_LIFECYCLE policy C); (5) fixes the discrete **storefront bugs** (product-page fields, series filter, featured carousel, /complete order-id) and **webhook/money-integrity** items (#228 even-split, #224 cart-hold removal, #227 reconciliation); (6) adds the **activity log** + **seen/unseen order tracking** + **scheduled publish**; (7) researches **buy-on-tile** (#225) and builds it iff the lift is real; (8) restores **GPT/admin parity** for the sale + folds the shared-payment refund guidance (#222/#228 GPT half).
 
 **Revision driven by**: the in-session pre-gate loop — round-1/2/3 folds + **round-4 verification** (5–6 context-isolated subagents per round: A/B/C/D + 2 breadth) — v3.5.0 → v3.5.1 → v3.5.2 → v3.5.3 → v3.5.4 → **v3.5.5**. **Round-4 verdicts: A/B + both breadth READY/PASS, D one low NARROW, C closed-READY — NO load-bearing findings** (the loop's exit condition). The round-3 folds that mattered: **B-1** (the round-2 `?preview=` guard referenced `previewToken` out of scope in `populateStickyCard` — a ReferenceError on every PDP; §6.5b now re-derives it locally) and **A-D4-CSS** (the orphaned `.badge-unique` rule now written by **§9.2a**). v3.5.5 folds the two remaining nits: **the three card badges are now mutually exclusive by gate** — Sold (`sold`) / Featured (`!sold && p.featured`) / "One of a kind" (`!sold && !p.featured`) — exactly one per tile, which also retires the pre-existing Sold+Featured overlap; and **§2.4's Schedule gate reuses the repo-verified field-only `readiness()`** (`out/products-app.js:47`, no preview step). *(Round-2 folds, still current: the WS4-struck ↔ WS6-sold card collision → WS6→WS4→WS9 merged block, and the `?code=` site-wide `main.js` capture.)* **Convergence reached in-session → this `v3_6_0_*` package IS that converged v3.5.5 copy, minor-bumped into `v3_6/` as the formal Agent-SDK A-Type gate kickoff** — a fresh instance re-reviews from cold (the in-session loop's job was to reach *no load-bearing findings*, which round-4 did). The frozen `v3_5_5_*` copies + all `GAP_REVIEW_*` (rounds 1–4) stay in the sibling `v3_5/` as the rigor trail. Rationale is kept inline here on purpose; it is relocated to a sibling `RATIONALE.md` only at the v4.0.0 execution cut (DEV_RULES → Build Guide Final Cuts).
 
-**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_6/` directory** (`v3_6_1_ADDENDUM_DESIGN.md`, `v3_6_1_ADDENDUM_TESTING.md`) · the design handoff (in the sibling `v3_5/` dir per the directory note above) in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
+**Required reading first**: `assets/docs/EVERLASTINGS_STORE.md` · `README.md` · THIS doc + its two addenda **in this same `assets/docs/archive/v3_6/` directory** (`v3_6_2_ADDENDUM_DESIGN.md`, `v3_6_2_ADDENDUM_TESTING.md`) · the design handoff (in the sibling `v3_5/` dir per the directory note above) in its own read order — `design-handoff/out/INTEGRATION.md` → `out/PRODUCT_LIFECYCLE.md` → `design-handoff/brief.md` → `design-handoff/data-flow.md` → the `out/` files (`products.html`+`products-app.js`, `orders*`, `sales*`, `account*`, `portal.css`, `portal.js`, `data.js`) → `design-handoff/controls.html`+`tokens.css` → `design-handoff/feedback/FEEDBACK_v1.md` + `design-handoff/reference/` → `out/README.md` · `assets/docs/archive/v3_5/v3_5_0_ROADMAP.md` · `.agent/DEV_RULES.md`.
 
 **If you find missing context**: `EVERLASTINGS_STORE.md` is living — confirm with Sean and update it; don't paper over the gap here.
 
-> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_6_1_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_6_1_ADDENDUM_TESTING.md`.
+> **Status / depth.** This is the **initial planning draft** entering the fresh-instance gap-review gate — NOT yet the clean execution copy. Backend reconciliations + new backend (WS2 state semantics, WS4 sale extension + public read, WS5 upload, WS6 storefront fixes, WS7 webhook/money, WS8 activity log, WS9 buy-on-tile) are **byte-anchored** where the code is settled (exact CURRENT/NEW — line numbers are hints, the quoted CURRENT text is the anchor; STOP + reconcile if it drifts). The **presentation-integration** workstreams (WS1 shell, WS2/WS3/WS4 the per-surface data→API seams) carry **integration-seam tables** (each mock/no-op `<surface>-app.js` call → its real endpoint) rather than full byte-blocks, because the delivered `out/` files are the canonical markup source — see `v3_6_2_ADDENDUM_DESIGN.md`. Design ships as concrete-default + render-tune per DEV_RULES; the verification plan is `v3_6_2_ADDENDUM_TESTING.md`.
 
 > **The delta framing (name the settled base).** The current system — all of `EVERLASTINGS_STORE.md` + the repo as it stands on `dev` today — is **built, tested, and live/approved**: the fixed substrate. This build is a **delta** on top: a *presentation swap* of `/admin` (the backend it calls is already complete) + a **defined set of new/changed backend** (the sale display/auto-apply layer, the upload rebuild, the state-semantics reconciliation, the money-integrity fixes, the activity log). Review the delta for gaps + whether it FITS the base; don't re-litigate settled/shipped behavior.
 
@@ -759,12 +759,42 @@ async function publishDueScheduled(req: Request): Promise<void> {
 }
 ```
 **The `GET` call site is NOT edited here.** `publishDueScheduled(req)` is invoked from inside the shared `isCronRequest(req)` gate that WS7 §7.3c assembles at the top of `GET` (both cron jobs run in that one gate, publish first so freshly-published rows appear in the same run). This phase adds only the imports + `feedAdmin` client + the helper above; §7.3c owns the single `GET` wrapper. Do NOT add a bare `await publishDueScheduled(req)` to `GET` — that ran on every request (including public/preview polls) and was the `is_test` isolation break.
-**PostgREST `.or()` syntax — pre-test at build (silent-failure branch).** The `.or('is_published.eq.false,draft.not.is.null')` clause uses `not.is.null` inside a comma-composed OR — version-sensitive on supabase-js/PostgREST. **Build-time step**: run the exact query against the preview DB (`products?select=id&or=(is_published.eq.false,draft.not.is.null)` in Supabase Studio's REST tester or `curl`). If it errors or silently drops the draft branch, **explicitly fall back** to the unpublished-only form + emit a startup `console.warn` from the fold: `console.warn('Scheduled-publish: PostgREST .or() negation unsupported on this stack; staged-edit auto-publish disabled — schedule only fires for unpublished drafts.')`. Never silently narrow the query without the warn — that would be the exact "hides without explaining" failure the sold-policy thesis forbids. *(Round-A #4 fold.)*
+**PostgREST `.or()` syntax — RUNTIME-GATED mechanism fallback (v3.6.2 harden — Integration-N1 / Journey-#6).** The `.or('is_published.eq.false,draft.not.is.null')` clause uses `not.is.null` inside a comma-composed OR — version-sensitive on supabase-js/PostgREST. Rather than a doc-gated "remember to run a REST-tester query" step (the pattern Sean rejected for the `cart_holds` DROP), the fallback ships wired. Replace the `.or(...)` single-query with a runtime try/catch — attempt the `.or()` form first; on PostgREST error catch and re-issue the query WITHOUT the OR + emit the specified `console.warn` once per cold start. Also `title` on the select for J4's log summary:
+```ts
+// v3.6.2 — runtime-gate the PostgREST .or() negation form; a supabase-js/PostgREST version bump could
+// silently narrow the query, so ship the fallback as a mechanism, not a build-time note. `title` for
+// the A2-4 skipped-summary log below.
+let dueRes = await feedAdmin
+  .from('products')
+  .select('id, title')
+  .eq('is_test', isTest)
+  .is('archived_at', null)
+  .not('scheduled_publish_at', 'is', null)
+  .lte('scheduled_publish_at', new Date().toISOString())
+  .or('is_published.eq.false,draft.not.is.null');
+if (dueRes.error) {
+  // .or() negation form unsupported on this stack — fall back to unpublished-only + WARN once per cold start.
+  if (!(globalThis as { __postgrestOrWarned?: boolean }).__postgrestOrWarned) {
+    console.warn('Scheduled-publish: PostgREST .or() negation unsupported on this stack; staged-edit auto-publish disabled — schedule only fires for unpublished drafts.');
+    (globalThis as { __postgrestOrWarned?: boolean }).__postgrestOrWarned = true;
+  }
+  dueRes = await feedAdmin
+    .from('products')
+    .select('id, title')
+    .eq('is_test', isTest)
+    .is('archived_at', null)
+    .not('scheduled_publish_at', 'is', null)
+    .lte('scheduled_publish_at', new Date().toISOString())
+    .eq('is_published', false);
+}
+const { data: due, error } = dueRes;
+```
+This closes the "hides without explaining" failure by construction: the fallback ships in code, the warn fires the first time it triggers, Vercel function logs capture it (verified pattern with existing `console.error` sites). *(Round-A #4 fold, hardened v3.6.2 per Integration-N1; subsumes Journey-#6.)*
 <!-- NEEDS-VERIFY: PRODUCT_API_KEY must exist in the PRODUCTION Vercel env for the self-call (per reference_gpt_auth_per_env_key it does — prod uses the LIVE key); the fold no-ops harmlessly if absent (publish 401s, logged). -->
 
 **A2-4 backstop (secondary to the §2.4 readiness gate) — SETTLED.** The §2.4 fix — only offering Schedule on a publish-READY piece — prevents the common "scheduled an incomplete draft" case. For the residual (a required field cleared *after* scheduling), surface the skip via a WS8 activity-log entry so nothing hides without explaining. `api/_lib/activityLog.ts` (WS8 8.1b) is a plain CommonJS module with its own per-invocation service-role client — no shared-client dependency on `feedAdmin`, so it imports cleanly into `product-feed.ts`. **Concrete insert** inside the fold's `if (!res.ok)` branch above (add above the `console.error(...)`):
 ```ts
-await logActivity({ actor: 'cron', action: 'product.schedule_skipped', summary: `Scheduled publish skipped — piece not publish-ready`, entityId: row.id });
+await logActivity({ actor: 'cron', action: 'product.schedule_skipped', summary: `Scheduled publish skipped — "${row.title ?? 'piece'}" not publish-ready`, entityId: row.id });
 ```
 (Add `import { logActivity } from './_lib/activityLog';` alongside `feedAdmin`'s imports; the cron actor `'cron'` matches the "not a JWT / not the GPT" case per WS8 §8.1b actor convention.) *(Round-A #6 fold — NEEDS-VERIFY resolved.)*
 
@@ -1081,6 +1111,24 @@ Record FOUR answers: (1) does `applyPromotionCode` succeed when called at init (
 - **Init is flaky →** apply on the first `checkout.on('change')` tick instead (defer one event loop), still invisible to the shopper.
 - **Apply-at-init rejected entirely →** *prefill* the promo field (`#promo-code`, checkout.html) with the sale code + a visible one-tap "Apply sale" — degrades to one tap, never blocks purchase.
 - **No `removePromotionCode` on the bundle →** the keyword field stays the removal path IF answer (4) = REPLACE (typing a personal code and pressing Apply swaps the promotion, "delete the sale, use mine" still works without a dedicated remove call). If answer (4) = STACK-AND-ERROR, `wirePromo`'s Apply handler MUST attempt a `removePromotionCode()` first — if neither exists (3 said no, 4 said stack-error), the fallback becomes the prefilled promo field + a visible "Apply sale" button per the third fallback above (the shopper can then clear it manually and enter their own). *(Round-A2-1 fold: the "second code REPLACES vs STACKS" question is now the fourth recorded probe answer, not a downstream NEEDS-VERIFY.)*
+
+**STACK-AND-ERROR concrete `wirePromo` skeleton (Integration-N2 + Journey-#5 fold).** If Phase 4.0 answer (4) = STACK-AND-ERROR, `wirePromo`'s Apply-click handler (`checkout.js:~144-167`) needs the remove-then-apply sequence. Concrete NEW block (locate-and-apply on the existing `.addEventListener('click', ...)`; adjacent to Phase 4.4's edits):
+```js
+// v3.6.2 — STACK-AND-ERROR fallback (per Phase 4.0 answer 4). Remove any active sale FIRST, then apply
+// the shopper's code. If remove succeeds but apply throws, RE-APPLY the sale so the shopper is never
+// left with NO discount + surface a friendly retry toast (Journey-#5 race guard).
+const saleCode = window._activeSale?.code;              // set at init by autoApplyStoreWideSale
+try {
+  if (saleCode && typeof checkout.removePromotionCode === 'function') {
+    await checkout.removePromotionCode();
+  }
+  await checkout.applyPromotionCode(input.value);
+} catch (err) {
+  if (saleCode) { try { await checkout.applyPromotionCode(saleCode); } catch {} } // best-effort restore
+  toast("Couldn't apply that code — try again?");
+}
+```
+On REPLACE (answer 4 = REPLACE), skip the remove — a single `applyPromotionCode(newCode)` swaps the promotion (the existing branch). On STACK-AND-BOTH, DO NOT auto-apply — surface + stop (out-of-contract). *(Fold covers Integration-N2's prose-only concern and Journey-#5's race window with one byte-anchored skeleton.)*
 
 **Doc impact:** none (records a verified platform behavior; fold the probe result into `EVERLASTINGS_STORE.md` only if it changes the auto-apply contract).
 
@@ -1911,12 +1959,14 @@ The `images` type is `{url, alt?}` (`data-flow.md` A) — `alt` is **optional in
 
 - **On open** (inside `openMedia`, right after the role-derivation loop from 5.3c): stash the opened role set per item: `mItem.openedRoles = new Set(mItem.roles);` — this is the baseline the Apply diff compares against.
 - **On Apply** (inside `applyMedia`, before writing `p.images`/`p.media`/`p.thumbnail`/`p.seo_thumbnail`/`p.checkout_image`): compute per-item `added = [...mItem.roles].filter(r => !mItem.openedRoles.has(r))` and `removed = [...mItem.openedRoles].filter(r => !mItem.roles.has(r))`. Only items where `added.length || removed.length` need any write; unchanged items pass through their URL as-is.
-- **For each `added` role that renames the R2 key** (`hero`, `gallery`, `seo_thumbnail`, `checkout_image`): call `POST /api/upload` JSON `{url: mItem.url, slug, role: <resolvedRole>}`. `gallery` resolves via a ported `nextNumberedRole` that scans the CURRENT `p.images` filenames (retired `admin.js:490-498` — copy the helper into the modal). Write the response's `url` into `p.images` (or the top-level column for `seo_thumbnail` / `checkout_image`; `checkout_image` obeys Phase 5.4e's post-publish freeze — skip the write there). **`alt`** propagates from `mItem.alt` on every write.
+- **For each `added` role that renames the R2 key** (`hero`, `gallery`, `seo_thumbnail`, `checkout_image`): call `POST /api/upload` JSON `{url: mItem.url, slug, role: <resolvedRole>}`. `gallery` resolves via a ported `nextNumberedRole` that scans the CURRENT `p.images` filenames (retired `admin.js:490-498` — copy the helper into the modal). **Resolve added-gallery roles SEQUENTIALLY, splicing the response URL into `p.images` after EACH POST** so the next `nextNumberedRole()` call sees the freshly-taken NN (Journey-#3 fold — a parallel resolve would hand out the same NN twice and silently overwrite the earlier R2 key). Write the response's `url` into `p.images` (or the top-level column for `seo_thumbnail` / `checkout_image`; `checkout_image` obeys Phase 5.4e's post-publish freeze — skip the write there). **`alt`** propagates from `mItem.alt` on every write.
 - **For each `removed` role**: drop the matching entry from `p.images` (identify by filename prefix + the original `NN` in the case of `gallery-NN`) OR null the top-level column (`seo_thumbnail`/`checkout_image`). Do **not** delete the R2 object — that's out of scope for the modal (an orphaned R2 file is invisible; a mistaken delete would be data loss).
 - **Poster** (per 5.4d, one-per-product): after the added/removed loop, find the single `poster`-checked `mItem` and set `poster: mItem.url` on every `p.media[]` video that lacks its own poster. If no `poster` is checked, leave every video's `poster` as-is.
 - **Zero-role items**: drop the `mItem` from local state; do NOT write any entry back to `p.images` or `p.media` for it. (A role-less image has no role-tied filename; the storefront wouldn't render it anyway.)
 
-*(Round-A #1 fold — authors the algorithm the earlier prose only described; the naive-rewrite duplicate bug the NEEDS-VERIFY predicted cannot arise from this diff.)*
+- **Partial-failure recovery (Journey-#2 fold):** the sequential fan-out means a Nth POST can fail after N-1 have succeeded (auth blip, R2 hiccup, invalid alt). On any POST throw or non-2xx: (i) stop the fan-out — do NOT roll back the successful writes (the R2 objects exist, `p.images` already carries them, no orphan); (ii) mark the failed `mItem.errored = true` (render as `.mitem--errored` in the modal — a small red ring; existing `.mitem` selector base); (iii) toast the failure with the field-role that failed (`"Couldn't set <hero> — try Apply again."`); (iv) DO NOT clear `mItem.openedRoles` on the failed item so the next Apply retries only the remaining diff (the succeeded items now have `mItem.openedRoles` = their new state, so their diff is empty on retry — a re-Apply is idempotent). This keeps the R2 + `p.images` states consistent even mid-failure: the server is always the source of truth, the local model is always ≤ server, and retry converges. Never leaves the maker with a "stuck" modal that requires a page reload.
+
+*(Round-A #1 fold — authors the algorithm the earlier prose only described; the naive-rewrite duplicate bug the NEEDS-VERIFY predicted cannot arise from this diff. Journey-#2/#3 refinements harden the fan-out against partial failure + gallery-NN collision.)*
 
 **d. Poster = a URL copied into `media[].poster`, no upload role, association unspecified.** The storefront consumes poster as a plain URL:
 
@@ -3508,7 +3558,7 @@ The Custom GPT ("The Sunkeeper") must be able to run the new **automatic store-w
 **NEW (annotate `available`; add `scheduled_publish_at` — both are `editProduct` properties):**
 ```
                 available: { type: boolean, description: "false takes the piece DOWN — it unpublishes to a hidden DRAFT (not 'sold'). To put a taken-down piece back UP, call publishProduct {id} (NOT available:true — on a draft that only flips the flag, it stays hidden). true on an in-stock live piece is a normal availability toggle." }
-                scheduled_publish_at: { type: string, description: "ISO 8601 timestamp to auto-publish a ready draft at a future date (date-granular, via the daily cron); null clears it. Parity with the panel's Schedule control (PUT /api/products accepts it)." }
+                scheduled_publish_at: { type: string, description: "ISO 8601 timestamp to auto-publish a ready draft at a future date (date-granular, via the daily cron); null clears it. Parity with the panel's Schedule control (PUT /api/products accepts it). Em says 'schedule for Friday morning' → parse to local ISO, ECHO the resolved date/time back plainly for confirmation before writing ('Scheduled for Fri Jun 26, morning ~9am ET — set it?'); NEVER schedule a piece that isn't publish-ready (call getProduct first, verify story_card/features/materials/care/shipping/dimensions/weight/≥5 gallery + alt); if missing, name the fields and offer to fix first. Date-granular by design — sub-day precision is not guaranteed." }
 ```
 *(Both parities land in the schema so **no instruction-`.txt` byte is spent** — the `.txt` stays 7988/8000. The `available` annotation closes the "GPT can't re-list a taken-down piece" journey gap [breadth owner-journey #1]; `scheduled_publish_at` gives the GPT the panel's schedule capability, honoring the parity rule. `PUT /api/products` already accepts both, WS2 §2.2/§2.4.)*
 **Doc impact:** `EVERLASTINGS_STORE.md` KAD #10 — `editProduct` gains `scheduled_publish_at` + the take-down→draft / re-list-via-`publishProduct` semantics, both surfaces.
@@ -3607,7 +3657,7 @@ REFUNDS: find the order (listOrders q=<buyer email or id> — reaches past/shipp
 
 ---
 
-## Verification (end-to-end, dev preview — full plan in `v3_6_1_ADDENDUM_TESTING.md`)
+## Verification (end-to-end, dev preview — full plan in `v3_6_2_ADDENDUM_TESTING.md`)
 
 Per-surface + backend E2E on seeded **test** products (production-grade placeholders — real content is never a build/test gate): store-wide sale live/struck/at-checkout + removable keyword; refund partial + relist (preserved behavior); media modal roles/reorder/persist; product-page fields render; series filter matches; carousel rows decoupled; webhook even-split correct per-item amounts; cart-hold gone; sold-policy transitions (available-off→draft, qty0→sold, sold persists until archive); seen/unseen clears + not-on-Sold-tab; publish + preview gates; scheduled publish flips; activity-log rows written; buy-on-tile (if built). Plus the **static gate** (tsc/CJS clean · function count unchanged · no new cron · `node --check` · valid `vercel.json` · GPT `.txt` `wc -c` < 8000) and the **GPT-parity spot-check** (the one human touchpoint, in Em's ChatGPT).
 
