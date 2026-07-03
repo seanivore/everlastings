@@ -169,8 +169,8 @@ Which model runs which seat is a real lever — pick it by the seat's actual wor
 | Cycle | Seat | Model · effort | Verdict |
 |---|---|---|---|
 | Everlastings v3.6 A-gate (SDK) | all seats | Opus 4.8 · MAX | ✗ environment failures — SDK harness, not the model |
-| Everlastings v3.7 B/C/D (in-CC) | reviewers | Sonnet 5 · MAX | *(pending — this cycle)* |
-| Everlastings v3.7 B/C/D (in-CC) | orchestrator | Opus 4.8 · high+ | *(pending — this cycle)* |
+| Everlastings v3.7 B/C/D (in-CC) | reviewers | Sonnet 5 · MAX | ✓ gate-grade — 5 spawned peers (2 breadth + B/C/D) read the real backend, line-checked vs the tree, caught real load-bearing issues + self-flagged false alarms; burn ~280/322k breadth, 371/420/488k B/C/D; **no rate limits on 20X** |
+| Everlastings v3.7 B/C/D (in-CC) | orchestrator | Opus 4.8 · MAX | ✓ held — byte-anchored folds across 5 living docs, careful version-identity + ledger 78–84 ×4, dash-safe count bump, per-file commit; no thin folds (ran MAX via 20X; high+ likely suffices) |
 
 ---
 
