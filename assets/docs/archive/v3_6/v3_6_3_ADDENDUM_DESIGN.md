@@ -1,9 +1,9 @@
-# v3.6.2 — Design Addendum
+# v3.6.3 — Design Addendum
 
 > **📁** The formal A-Type gate copy (converged v3.5.5, minor-bumped into `v3_6/`). **Source material — `design-handoff/…`, `out/…` — lives in the SIBLING `assets/docs/archive/v3_5/` directory;** paths here are relative to that dir. Frozen `v3_5_5_*` + the `GAP_REVIEW_*` trail stay in `v3_5/`.
 
 **Revision driven by**: rounds 1–3 folds + round-4 verification — v3.5.0 → … → v3.5.4 → **v3.5.5** (living doc renamed to `v3_5_5_*`; the converged copy that minor-bumps into `v3_6/`). Round-4 design delta (§D.4): the three card badges are now **mutually exclusive by gate** — Featured gated `!sold && p.featured`, unique `!sold && !p.featured` — so exactly one renders per tile (structural, not invariant-dependent), closing D4-R4-1 and retiring the pre-existing Sold+Featured overlap. (Round-3: §D.4's solid-token CSS wired by §9.2a + the stack-rule upgrade. Round-2: the badge + the §A View-Site bullet.)
-**Addendum to**: `v3_6_2_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Addendum to**: `v3_6_3_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 
@@ -93,9 +93,15 @@ The design is finished — what the integration reconciles is **data-shape**, in
 
 ## C.3 — Character counters + recommended targets (FEEDBACK §8.7 — a design-completeness delta)
 
-FEEDBACK §8.7 asks that **every field** show its live char count next to the recommended/SEO target so the maker manages length without bouncing to the preview. `portal.css` ships `.count` + `.count.is-over` and `portal.js` wires the live counter — but the *per-field recommended target values* are the delta the integration must confirm are populated for each field (SEO fields have real limits; on-page copy fields have "recommended" ranges). Concrete default: the counter exists and turns `--waiting` when over. Render-tune: the target numbers per field.
+FEEDBACK §8.7 asks that **every field** show its live char count next to the recommended/SEO target so the maker manages length without bouncing to the preview. `portal.css` ships `.count` + `.count.is-over` and `portal.js` wires the live counter.
 
-<!-- NEEDS-VERIFY: confirm the per-field recommended/SEO char targets are actually set for ALL fields the FEEDBACK §8.7 "next to the actual number of characters" rule covers (not only the SEO title/description); where a field has no target, the counter should show a bare count, not a 0/limit that reads as always-over. -->
+**D-v361-2 SETTLED → path A, per the reusable-template thesis.** Ship **BARE counts by default** for on-page copy fields (title/headline/description/story_card): the `.count` counter increments with keystrokes and turns `.is-over` only where a REAL cap applies (see below). SEO fields keep their platform-imposed caps as `data-target` attributes wired to `.is-over`: `seo_title` ≤ 60 (Google truncates ~55–65), `seo_description` ≤ 155 (Google truncates ~150–160). Only two fields have `data-target`; every other field is a bare count. No 0/limit ratio that reads as always-over.
+
+**Why not author a full per-field target table now:** per-project targets ARE per-project — a table baked into the addendum locks the template into Everlastings' voice/format assumptions. Sean's own instinct ("maybe this is more like a sub-property or something of each column") points at the right home: **per-field targets belong to the field DATA MODEL, not the design addendum**.
+
+**Future upgrade path (design-completeness, does NOT ship in this build).** When the template needs per-project char-target control (v4+ or when a second project onboards), promote `data-target` to a first-class **field-config property**: extend the product-field metadata (a small `FIELD_CONFIG = { title: { targetChars: N }, headline: { … }, ... }` in `portal.js`, or `data-target-chars` attributes on each editor field). Wire `portal.js`'s counter to read the config value on mount. Then a per-project admin can tune `FIELD_CONFIG` (or a Supabase `site_config` row for zero-code control) without editing this addendum or `portal.css`. This is the "concrete-default + render-tune" posture applied correctly: the render-tune surface is *the field config*, not per-doc numbers.
+
+*(Fold rationale: the pragmatic default matches Sean's future-work-enabling logic — nothing hardcoded that would confuse the next project; SEO caps stay because they're platform-imposed, not Everlastings-specific; the upgrade path is spelled out so future admins can add per-field targets without archaeology.)*
 
 ---
 
