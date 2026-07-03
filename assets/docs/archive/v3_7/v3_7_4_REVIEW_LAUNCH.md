@@ -1,6 +1,6 @@
 # v3.7.3 — B/C/D reviewer launch kit (human-facilitated Claude Code)
 
-The **scoped re-run RAN and folded to v3.7.3** — C integration NARROW, D design NARROW, + 2 breadth (journey + integration) all NARROW; validated + folded (trails at `v3_7_2_GAP_REVIEW_{C,D,BREADTH_JOURNEY,BREADTH_INTEGRATION}.md`; ledger 85–92). This card now drives the **next scoped re-run**: **C** + **D** (confirm the v3.7.3 folds landed) + the 2-peer **breadth backstop** (charters below); **B stays closed**. Run each as its **own fresh Sonnet-5·MAX peer** (a spawned peer or a fresh Claude Code window) so there's no context contamination. *(Each round's `GAP_REVIEW_*` trail stays standing at its version; the charters below are reused for the backstop.)*
+The **scoped re-run RAN and folded to v3.7.3** — C integration NARROW, D design NARROW, + 2 breadth (journey + integration) all NARROW; validated + folded (trails at `v3_7_2_GAP_REVIEW_{C,D,BREADTH_JOURNEY,BREADTH_INTEGRATION}.md`; ledger 85–92). This card now drives the **v3.7.3 scoped re-run**: **B** + **C** + **D** — all lanes re-open, because the v3.7.3 folds added new byte-anchored content in every lane (B: the §8.1c(g) re-quote + policies/faq/styles.css CURRENT quotes; C: cart_holds/enforcers; D: header/lock/400) — + the 2-peer **breadth backstop** (charters below). Each reviewer confirms the v3.7.3 folds (ledger 85–92) landed + runs a fresh full-build pass. Run each as its **own fresh Sonnet-5·MAX peer** (a spawned peer or a fresh Claude Code window) so there's no context contamination. *(Each round's `GAP_REVIEW_*` trail stays standing at its version; the charters below are reused for the backstop.)*
 
 ## Per-window launch (do this in each reviewer window)
 
@@ -23,7 +23,7 @@ All three carry the same charge shape: verify the v3.6.6/.7 A-round-1 folds land
 ## Breadth — owner-journey (paste this whole block)
 
 ```
-You are doing a fresh owner-journey breadth review of a converged build package (v3.7.0), in this repo. Effort: MAXIMUM — read the three build docs END-TO-END, do not skim.
+You are doing a fresh owner-journey breadth review of a converged build package (v3.7.3), in this repo. Effort: MAXIMUM — read the three build docs END-TO-END, do not skim.
 
 THESIS (judge everything against it): the product minimizes the maker's (Emaline's) friction. She manages the store mostly through her Custom GPT on her phone; she opens the `/admin` Content Creator Portal only to *fix* something. Both surfaces (GPT + portal) must be fully capable as if the other didn't exist. A "gap" is anything that makes a real maker journey confusing, dead-end, or silently wrong.
 
@@ -38,13 +38,13 @@ YOUR LENS — walk the maker's real journeys end-to-end and find where a FOLD co
 - Media upload modal — a partial-failure mid-fan-out (does it recover legibly, §5.4c.i .mitem--errored?).
 Flag anything that reads as "it just didn't work and didn't say why." Flag-don't-assert: if a finding depends on runtime you can't see, FLAG it needs-verification, never assert "broken."
 
-OUTPUT — write your findings to assets/docs/archive/v3_7/v3_7_0_GAP_REVIEW_BREADTH_JOURNEY.md AND return them as your final reply. For each: [severity: LOAD-BEARING / POLISH] · the journey it breaks · where (doc §/file:line) · the failure scenario · the fix or the decision it needs. End with a one-line verdict: READY / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW). A clean pass still surfaces polish — "nothing found" is a failure of the review, not a pass.
+OUTPUT — write your findings to assets/docs/archive/v3_7/v3_7_3_GAP_REVIEW_BREADTH_JOURNEY.md AND return them as your final reply. For each: [severity: LOAD-BEARING / POLISH] · the journey it breaks · where (doc §/file:line) · the failure scenario · the fix or the decision it needs. End with a one-line verdict: READY / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW). A clean pass still surfaces polish — "nothing found" is a failure of the review, not a pass.
 ```
 
 ## Breadth — integration (paste this whole block)
 
 ```
-You are doing a fresh integration/systems breadth review of a converged build package (v3.7.0), in this repo. Effort: MAXIMUM — read the three build docs END-TO-END, do not skim.
+You are doing a fresh integration/systems breadth review of a converged build package (v3.7.3), in this repo. Effort: MAXIMUM — read the three build docs END-TO-END, do not skim.
 
 THESIS (context): the product minimizes the maker's friction across two fully-capable surfaces (Custom GPT + the /admin portal). Your job is the systems-level fold-regression check — the cross-lane backstop behind the B/C/D angle reviews.
 
@@ -59,5 +59,5 @@ YOUR LENS — hunt where the A-round-1 folds (ledger 57–72) created a NEW cros
 - X-Actor / resolveActor attribution (§2.6): does a cron-driven scheduled publish attribute correctly?
 Flag-don't-assert: FLAG needs-verification when you can't see the runtime; never assert "broken" from training data.
 
-OUTPUT — write your findings to assets/docs/archive/v3_7/v3_7_0_GAP_REVIEW_BREADTH_INTEGRATION.md AND return them as your final reply. For each: [severity] · the systems seam · where (doc §/file:line) · the failure scenario · the fix. End with a one-line verdict: READY / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW). A clean pass still surfaces polish.
+OUTPUT — write your findings to assets/docs/archive/v3_7/v3_7_3_GAP_REVIEW_BREADTH_INTEGRATION.md AND return them as your final reply. For each: [severity] · the systems seam · where (doc §/file:line) · the failure scenario · the fix. End with a one-line verdict: READY / NEEDS ANOTHER PASS / NEEDS ANOTHER PASS (NARROW). A clean pass still surfaces polish.
 ```
