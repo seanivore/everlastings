@@ -1,9 +1,9 @@
-# v3.6.5 — Design Addendum
+# v3.6.6 — Design Addendum
 
 > **📁** The formal A-Type gate copy (converged v3.5.5, minor-bumped into `v3_6/`). **Source material — `design-handoff/…`, `out/…` — lives in the SIBLING `assets/docs/archive/v3_5/` directory;** paths here are relative to that dir. Frozen `v3_5_5_*` + the `GAP_REVIEW_*` trail stay in `v3_5/`.
 
-**Revision**: consolidated at v3.6.4; **v3.6.5 QA pre-flight bump** — REVIEW_PROMPTS courier-repair (this doc is unchanged, renamed in lockstep). Folds to date: round-1 A + round-1 breadth + owner-decisions (see REVIEW_PROMPTS ledger 39-56).
-**Addendum to**: `v3_6_5_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
+**Revision**: consolidated at v3.6.4; QA pre-flight at v3.6.5; **v3.6.6 — round-1 cold-A** touched no design-addendum content (the `.mitem--errored` red-ring rule was authored in IMPLEMENT §5.4c.i beside `.mitem`'s base; the storefront sale-CSS tokens the reviewer flagged are VERIFIED present in `styles.css`); this doc is renamed in lockstep. Folds to date: round-1 A + round-1 breadth + owner-decisions + this round (see REVIEW_PROMPTS ledger 39-66).
+**Addendum to**: `v3_6_6_IMPLEMENT.md` (same version; bumps in lockstep; always in gap-review scope).
 **Covers**: the presentation layer for the **Content Creator Portal redesign** — the four delivered portal surfaces (WS1 shell + WS2 Products + WS3 Orders + WS4 Sales + Account) — plus the three storefront-brand additions the portal design implies but can't carry (WS4 struck-`%` pricing + top utility bar + sale popup).
 **Status**: the front-end design is **finished and delivered** by Claude Design in `design-handoff/out/` (four vanilla HTML/CSS/JS surfaces + shared `portal.css`/`portal.js`, running on a mock `data.js`). This addendum does **not** re-author that markup — it names the byte-source, the boundary the integration honors, the design deltas `out/` can't carry (which the IMPLEMENT wires), and the render-tune surface Sean adjusts on the live preview.
 

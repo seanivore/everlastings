@@ -1,0 +1,21 @@
+# v3.6.6 — Breadth review: OWNER-JOURNEY lens (post round-1-cold-A fold)
+
+**As-run verdict: NEEDS ANOTHER PASS (NARROW). Effective verdict after this round's folds: READY.** The lens read the folded v3.6.6 triplet end-to-end and confirmed all 10 workstreams present + coherent and every capability drivable least-friction in BOTH the portal AND the GPT. Its two load-bearing findings were narrow and are resolved: A was a verified false alarm; B was folded. Its two minor findings (C, D) were folded; E is a by-design parity observation, not a regression.
+
+**Scope.** Fresh end-to-end read of the CONSOLIDATED v3.6.6 triplet (`v3_6_6_IMPLEMENT.md` + both `v3_6_6_ADDENDUM_*`), verifying (a) the six round-1 cold-A folds + the one SURFACED owner decision landed coherent, and (b) Em can drive every capability least-friction in both surfaces. Advisory breadth pass, not the formal gate; no repo access (flag-don't-assert).
+
+## Integrity — the 10 workstreams + the v3.6.6 folds (all present + coherent)
+All 10 workstreams trace end-to-end (WS1 1.1–1.5 · WS2 2.1–2.8 · WS3 3.1–3.4 · WS4 4.0–4.7 · WS5 5.1–5.5 · WS6 6.1–6.5 · WS7 7.1–7.3 · WS8 8.1–8.3 · WS9 9.1–9.3 · WS10 10.1–10.6) — no dropped phase, no sub-phase gap, no dangling cross-ref. Each round-1 fold verified present + coherent: the §2.7 SURFACED OWNER DECISION block (correctly surfaced-not-half-folded — the three under-every-branch items all land: §2.7 doc, commitAvail-ON must-surface-400 seam note, TESTING item 6b covering both republish paths); the §1.3b `/api/config` anchor; the §7.3 CRON_SECRET prod handoff; §4.1.d auto_apply + end-sale heuristic; §5.4c.i `.mitem--errored` CSS; §2.6 `X-Actor:cron` + resolveActor (dot-color keys off action prefix not actor, so `'cron'` renders); the `!p.available` null-fallback harmonized identically across §4.5.d/§6.5a/§6.3d/§6.5b/§6.5d (§6.5c JSON-LD uses the consistent logical inverse).
+
+## Owner-journey drivability (both surfaces) — clean
+Walked all eight capabilities in portal AND GPT: put up · take down (§10.1b.a teaches "→ hidden DRAFT, not sold" — closes the round-1 GPT re-list gap) · re-list (both surfaces hit the expanded publish gate; a legacy 400 surfaces legibly in BOTH — portal via the §2.7 point-(2) toast, GPT via its existing PUBLISHING beat "publish 400 = say plainly what to add") · schedule · run + END a sale · refund · mark shipped · media. No capability this fold touched was left un-drivable. The two parity seams the round targeted (take-down + end-sale) both hold.
+
+## Findings (all resolved this round)
+- **A — RESOLVED (verified FALSE ALARM).** As-read, flagged `var(--danger-bd)` in §5.4c.i's `.mitem--errored` as possibly undefined (no repo). Verified: `--danger-bd` IS defined in `portal.css:46` (+ mobile fallback `:82`); the ring renders. §5.4c.i now names the token source. Ledger 70(a).
+- **B — FOLDED (parity precision).** §4.1.d's "full parity … rides the existing listCoupons output" overstated the GPT side (the §10.2 COUPONS beat lists listCoupons output as scope, not `auto_apply`). Corrected: the GPT ends the sale via its COUPONS beat using the `store_wide` scope + `percent` listCoupons already returns/relays; `auto_apply` is a belt-and-suspenders disambiguator surfaced on the listCoupons Action response schema (no `.txt` cost). Ledger 68.
+- **C — FOLDED (polish).** The §2.7 must-surface-400 requirement is now bound to the `commitAvail` ON seam-table row (`:457`), not only the §2.7 prose — a builder wiring from the table sees it. Ledger 66 scaffolding + this row note.
+- **D — FOLDED (invariant).** §4.1.b now stamps `auto_apply` only on a store-wide (no product-scope) % coupon — `auto_apply ⇒ store_wide` is a server invariant, not caller-convention. Ledger 69.
+- **E — BY-DESIGN (not a fold; recorded).** The activity feed is portal-only (no GPT `listActivity` Action) — an audit/convenience read; the GPT is itself an actor writing to it, so under strict full-parity a maker can't ask the GPT "what happened recently?", but this is not introduced by the fold. Ledger 70(d).
+
+## If you fix one thing
+Nothing load-bearing remains after this round's folds. The 10 workstreams and all round-1 folds are coherent, #66 is properly surfaced-not-half-folded, and the two narrow load-bearing items (A verified false, B folded) are closed.

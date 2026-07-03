@@ -58,6 +58,11 @@ rusty-tags.vi
 # Logistical Files
 .archive/
 
+# Gap-review gate courier scratch (transient — the extracted per-angle prompt payloads
+# the SDK gate ships to reviewers; reproducible from REVIEW_PROMPTS + the build docs.
+# The real rigor trail is the GAP_REVIEW_*.md findings, which ARE tracked.)
+**/.sent/
+
 # Supabase CLI auto-update cache (transient — version string only)
 supabase/.temp/
 
