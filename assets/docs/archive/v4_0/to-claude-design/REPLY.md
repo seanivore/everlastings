@@ -44,13 +44,18 @@ On your note: **no products are missing fields** — the `INTEGRATION.md` §3.2 
 
 ## §4 — Still open / needs info
 
-### Discount links — ⚠ correction: URL pre-apply does NOT exist today
-There is **no** `?code=` / `?coupon=` auto-apply on the storefront. A shopper **types the code** into the promo box at Custom Checkout (`checkout.js:144-167` → `applyPromotionCode`). Nothing reads a URL param into a discount.
+### Discount links — mostly BUILT in this cycle; the gap is one frontend affordance
+Correcting my own first read here — this is better news than "not built."
 
-- The store-wide-sale "types-nothing" auto-apply **is designed in this build** (IMPLEMENT → *Locked decisions → Store-wide sale*) but is **not yet shipped**, and even that auto-applies a **known sale code** on checkout load — still not a URL param.
-- Minting: `handleCoupon()` (`products.ts:689-752`, admin/GPT only) creates a Stripe **Coupon + Promotion Code** and returns the code **string** — there is **no shareable-link mechanism** today.
+**Shipped today:** nothing auto-applies; a shopper types the code into the promo box (`checkout.js:144-167` → `applyPromotionCode`).
 
-So your ask — shareable, **pre-applying links** for unique / one-time / emailed offers — is a **genuinely open, not-yet-built feature**. To do it we'd need: (a) the storefront to read a `?code=` param and call `applyPromotionCode` on load (this is a documented future item — `assets/docs/archive/v3_3/v3_3_0_FUTURE_newsletter-code-url.md`), and (b) a decision on **one-time-use codes** (Stripe `promotion_code` with `max_redemptions: 1`) minted as links. Design the affordance freely; flag on your side that the backend for it is a backlog item, so it's not represented as live.
+**In this build (ships with v4.0.0) — the storefront DOES honor `?code=` share links.** Designed + byte-anchored:
+- A coupon **"Copy share link"** produces `<siteUrl>/?code=CODE` (WS4 §4.6).
+- `main.js` captures `?code=` on **any** page → `sessionStorage` (§4.7.0); `checkout.js` consumes the stash (with `location.search` as a direct-hit fallback), prefills the promo field, and applies via `applyPromotionCode` (§4.7). An explicit `?code=` runs **instead of** the store-wide auto-sale (Stripe = one discount/order — mutually exclusive, so no apply-order race). Fails soft (a bad code just leaves the field prefilled). **So the shopper never hand-types — exactly your ask.**
+
+**One-time / unique codes — already mintable.** `handleCoupon` (`products.ts:689-752`) accepts **`max_redemptions`** (set `1` for single-use) and returns the code string. Wrap that code as `<siteUrl>/?code=CODE` and it's a one-time **pre-applying link**, honored by §4.7 like any other code.
+
+**The actual gap (frontend-only, your side):** today the **"Copy share link" affordance lives only on store-wide coupon cards**. To cover unique / single-person / emailed offers, add the **same "Copy share link"** button to **regular/one-time coupon cards** in the dashboard — it just builds `<siteUrl>/?code=<that code>`. **No new backend needed** — §4.7 already honors any `?code=`, and one-time codes already mint. Design the affordance; the plumbing is there.
 
 ### Seen/unseen order tracking — no data source today (confirmed)
 There is **no** `last_viewed` / `seen` / `viewed_at` column anywhere (schema or API), and no blink implementation. The only real new-order signal is the **merchant email** (`webhook.ts:205`). So the Orders-nav blink is a pure placeholder.
@@ -92,4 +97,4 @@ Our gap review settled the lock model as **three tiers, three lock moments**. Yo
 
 ---
 
-**One-line:** the dashboard is backend-clean and integrates at v4.0.0; the two files you wanted are here; and the honest open items are the shareable discount *links* and the seen/unseen *timestamp* — both genuinely unbuilt, so design the affordances but treat their backends as backlog.
+**One-line:** the dashboard is backend-clean and integrates at v4.0.0; the two files you wanted are here; the `?code=` share-link plumbing already ships this cycle (so just add "Copy share link" to regular coupon cards — frontend only); and the one genuinely-open backend item is the seen/unseen **timestamp** (`orders_seen_at`).
