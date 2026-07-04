@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Creator Portal | Everlastings by Emaline</title>
+<link rel="stylesheet" href="portal.css">
+<style>
+/* ===================== Sales surface ===================== */
+.section-h{display:flex; align-items:center; gap:10px; margin:22px 0 12px; font-size:var(--t-xs); font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-muted);}
+.section-h:first-of-type{margin-top:6px;}
+.section-h .line{flex:1; height:1px; background:var(--hairline);}
+
+/* store-wide automatic sale — prominent control */
+.storewide{border-radius:var(--r-lg); border:1px solid var(--hairline); box-shadow:var(--sh-1); overflow:hidden; background:var(--surface);}
+.storewide.on{border-color:var(--live-bd); box-shadow:var(--sh-1), 0 0 0 1.5px color-mix(in oklch,var(--live),transparent 60%);}
+.storewide__top{display:flex; align-items:center; gap:14px; padding:16px 18px;}
+.storewide__icon{width:44px; height:44px; flex:none; border-radius:var(--r-md); display:flex; align-items:center; justify-content:center; background:var(--accent-soft); color:var(--accent-strong);}
+.storewide.on .storewide__icon{background:var(--live-bg); color:color-mix(in oklch,var(--live),black 18%);}
+.storewide__icon svg{width:22px; height:22px;}
+.storewide__txt{flex:1; min-width:0;}
+.storewide__txt h3{margin:0; font-size:var(--t-lg); font-weight:600;}
+.storewide__txt p{margin:2px 0 0; font-size:var(--t-sm); color:var(--ink-muted);}
+.storewide__big{font-family:var(--font-data); font-weight:700; color:color-mix(in oklch,var(--live),black 16%);}
+.storewide__form{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; padding:0 18px 16px;}
+.storewide__form .field{flex:0 1 140px;}
+
+/* coupon grid */
+.coupons{display:grid; grid-template-columns:1fr; gap:12px;}
+@media (min-width:640px){.coupons{grid-template-columns:1fr 1fr;}}
+.coupon{position:relative; background:var(--surface); border:1px solid color-mix(in oklch,var(--hairline),var(--surface) 35%);
+  border-radius:var(--r-lg); box-shadow:var(--sh-1); padding:16px; display:flex; flex-direction:column; gap:10px;}
+.coupon__top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+.coupon__code{font-family:var(--font-data); font-weight:700; font-size:var(--t-lg); letter-spacing:.02em; color:var(--ink);
+  background:var(--surface-sunk); border:1px dashed var(--hairline); border-radius:var(--r-sm); padding:5px 11px;}
+.coupon__off{font-size:var(--t-xl); font-weight:700; letter-spacing:-.01em;}
+.coupon__rows{display:flex; flex-direction:column; gap:5px; font-size:var(--t-sm); color:var(--ink-muted);}
+.coupon__rows .r{display:flex; align-items:center; gap:8px;}
+.coupon__rows .r b{color:var(--ink); font-weight:600;}
+.coupon__rows svg{width:15px; height:15px; color:var(--ink-faint); flex:none;}
+.coupon__foot{display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:4px;}
+.btn--refund{background:transparent; color:color-mix(in oklch,var(--danger),black 8%); border:1.5px solid var(--danger);}
+.btn--refund:hover{background:var(--danger); color:#fff; border-color:var(--danger); transform:none; box-shadow:var(--sh-1);}
+.scope-pill{display:inline-flex; align-items:center; gap:6px; font-size:var(--t-xs); font-weight:600; padding:3px 9px; border-radius:var(--r-pill); border:1px solid var(--hairline); background:var(--surface-sunk); color:var(--ink-muted);}
+.usebar{height:5px; border-radius:3px; background:var(--surface-sunk); overflow:hidden; flex:1; min-width:60px;}
+.usebar i{display:block; height:100%; background:var(--accent);}
+
+/* create modal */
+.modal{position:fixed; inset:0; z-index:65; display:none; align-items:center; justify-content:center; padding:16px;}
+.modal.is-on{display:flex;}
+.modal__card{position:relative; z-index:1; width:100%; max-width:520px; max-height:88dvh; overflow:auto; background:var(--surface); border-radius:var(--r-lg); box-shadow:var(--sh-2); display:flex; flex-direction:column;}
+input[type=date]{width:100%; min-width:0; box-sizing:border-box;}
+.modal__head{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px; padding:15px 16px; background:var(--surface); border-bottom:1px solid var(--hairline);}
+.modal__head h3{margin:0; font-size:var(--t-lg); font-weight:600; flex:1;}
+.modal__body{padding:16px; display:flex; flex-direction:column; gap:14px;}
+.modal__foot{position:sticky; bottom:0; display:flex; gap:10px; padding:13px 16px; background:var(--surface); border-top:1px solid var(--hairline);}
+.modal__foot .grow{flex:1;}
+.tcols{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.opt-row{display:flex; align-items:center; gap:10px; justify-content:space-between;}
+.opt-row .switch__label{font-size:var(--t-sm); font-weight:600;}
+/* piece picker */
+.picker{display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid var(--hairline); border-radius:var(--r-md); background:var(--surface-sunk);}
+.picker__hint{font-size:var(--t-xs); color:var(--ink-muted); line-height:1.4;}
+.picker.is-muted .picker__search,.picker.is-muted .picklist,.picker.is-muted .picker__foot{opacity:.5; transition:opacity .15s;}
+.picker__search{position:relative; display:flex; align-items:center;}
+.picker__search svg{position:absolute; left:10px; width:16px; height:16px; color:var(--ink-faint); pointer-events:none;}
+.picker__search .input{padding-left:32px; background:var(--surface);}
+.picklist{display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; margin:0 -4px; padding:0 4px;}
+.picklist__empty{padding:16px 8px; text-align:center; font-size:var(--t-sm); color:var(--ink-faint);}
+.pickrow{display:flex; align-items:center; gap:10px; width:100%; padding:7px 9px; border:1px solid transparent; border-radius:var(--r-sm); background:var(--surface); cursor:pointer; text-align:left; font:inherit;}
+.pickrow:hover{border-color:var(--hairline);}
+.pickrow.is-on{border-color:var(--live-bd); background:var(--live-bg);}
+.pickrow__box{flex:none; width:18px; height:18px; border-radius:5px; border:1.5px solid var(--hairline); background:var(--surface); display:flex; align-items:center; justify-content:center; color:#fff;}
+.pickrow.is-on .pickrow__box{background:var(--live); border-color:var(--live);}
+.pickrow__box svg{width:13px; height:13px;}
+.pickrow__thumb{flex:none; width:34px; height:34px; border-radius:var(--r-sm); object-fit:cover; background:var(--surface-sunk);}
+.pickrow__txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
+.pickrow__title{font-size:var(--t-sm); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.pickrow__meta{font-size:var(--t-xs); color:var(--ink-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.pickrow__price{flex:none; font-size:var(--t-sm); color:var(--ink-muted); font-variant-numeric:tabular-nums;}
+.picker__foot{display:flex; align-items:center; justify-content:space-between; font-size:var(--t-xs);}
+.linkbtn{background:none; border:none; padding:0; font:inherit; font-size:var(--t-xs); color:var(--accent); cursor:pointer; font-weight:600;}
+/* end-date: segmented + month/day/year */
+.seg2{display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:3px; background:var(--surface-sunk); border:1px solid var(--hairline); border-radius:var(--r-md);}
+.seg2__b{padding:8px; border:none; border-radius:var(--r-sm); background:transparent; font:inherit; font-size:var(--t-sm); font-weight:600; color:var(--ink-muted); cursor:pointer;}
+.seg2__b.is-on{background:var(--accent); color:#fff; box-shadow:var(--sh-1);}
+.date3{display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:8px; margin-top:8px; transition:opacity .15s;}
+.date3.is-muted{opacity:.5;}
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="app__main" id="main">
+    <header class="topbar"><h1>Sales</h1><span class="test-chip" id="envChip">Test</span></header>
+
+    <div class="section-h">Store-wide sale <span class="line"></span></div>
+    <div id="storewide"></div>
+
+    <div class="section-h">Coupon codes <span class="line"></span>
+      <button class="btn btn--sm" id="newSale">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>New sale</button>
+    </div>
+    <div class="coupons" id="coupons"></div>
+  </main>
+</div>
+
+<div class="modal" id="saleModal" role="dialog" aria-modal="true" aria-label="Create a sale">
+  <div class="scrim" id="saleScrim"></div>
+  <div class="modal__card">
+    <div class="modal__head"><h3>New sale</h3><button class="iconbtn" id="saleClose" aria-label="Close">✕</button></div>
+    <div class="modal__body" id="saleBody"></div>
+    <div class="modal__foot"><span class="grow"></span><button class="btn btn--ghost" id="saleCancel">Cancel</button><button class="btn" id="saleCreate">Create sale</button></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="portal.js"></script>
+<script src="sales-app.js"></script>
+</body>
+</html>
