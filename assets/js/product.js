@@ -91,6 +91,18 @@ async function fetchPreviewProduct(slug, token) {
 
 // The Publish bar is the one thing not in the shopper view — it doubles as the
 // "not live yet" signal. Tapping it publishes via the token capability (no login).
+// Is this preview tab a child of the same-origin admin dashboard? openPreviewTab (admin) opens the
+// draft-review tab WITHOUT `noopener`, so window.opener points back at the admin. A GPT/direct-opened
+// preview has a cross-origin opener (ChatGPT — reading .location.origin throws) or none. This drives the
+// publish-success routing: dashboard child → message + close; otherwise → land on the live page.
+function openerIsDashboard() {
+  try {
+    return !!(window.opener && !window.opener.closed && window.opener.location && window.opener.location.origin === location.origin);
+  } catch (e) {
+    return false; // cross-origin opener → property access throws → treat as non-dashboard
+  }
+}
+
 function mountPreviewBanner(product, token) {
   const bar = document.createElement('div');
   bar.setAttribute('role', 'status');
@@ -124,7 +136,27 @@ function mountPreviewBanner(product, token) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Publish failed');
       }
-      window.location.href = `/product/${product.slug}`;
+      // v4.0 publish flow — the piece is now LIVE. Two cases:
+      //  • DASHBOARD child (window.opener is the same-origin admin): message it so it REFETCHES —
+      //    which kills the stale available:false that a later admin autosave would otherwise PUT back,
+      //    silently UN-publishing the piece (the exact bug this fixes) — then close this preview tab so
+      //    focus returns to the dashboard, now showing the fresh live list.
+      //  • GPT / direct-open (opener cross-origin or absent): no dashboard to return to and we can't
+      //    close a user-opened tab — just land on the live product page (never the dashboard).
+      const pub = await res.json().catch(() => ({}));
+      const liveHref = '/product/' + ((pub.product && pub.product.slug) || product.slug);
+      if (openerIsDashboard()) {
+        try {
+          window.opener.postMessage(
+            { type: 'everlastings:published', id: pub.product && pub.product.id, slug: pub.product && pub.product.slug },
+            location.origin,
+          );
+        } catch (e) { /* opener gone — the close + fallback below still lands cleanly */ }
+        window.close();
+        setTimeout(function () { window.location.href = liveHref; }, 250); // fallback if close() was blocked
+        return;
+      }
+      window.location.href = liveHref;
     } catch (err) {
       btn.disabled = false;
       btn.textContent = 'Publish';

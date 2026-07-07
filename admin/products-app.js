@@ -204,6 +204,7 @@
     unarchive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M12 18v-6m0 0-2.5 2.5M12 12l2.5 2.5"/></svg>',
     ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M21 3 10 14"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
     chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
@@ -294,6 +295,7 @@
         <span class="cell-toggle">${smallToggle("avail", p.id, p.available, archived)}</span>
         <span class="cell-toggle">${smallToggle("feature", p.id, p.featured, archived)}</span>
         <span class="cell-actions">
+          ${p.slug ? `<button class="iconbtn" data-copy-link="${p.id}" title="Copy product link" aria-label="Copy product link">${IC.link}</button>` : ""}
           <button class="iconbtn" data-preview="${p.id}" title="Preview" aria-label="Preview">${IC.eye}</button>
           <button class="iconbtn ${archived ? "" : "iconbtn--danger"}" data-archive="${p.id}" title="${archived ? "Resurface" : "Archive"}" aria-label="${archived ? "Resurface" : "Archive"}">${archived ? IC.unarchive : IC.archive}</button>
         </span>
@@ -304,6 +306,7 @@
         ${labeledToggle("avail", p.id, p.available, archived, "Available")}
         ${labeledToggle("feature", p.id, p.featured, archived, "Featured")}
         <span class="spacer"></span>
+        ${p.slug ? `<button class="iconbtn" data-copy-link="${p.id}" title="Copy product link" aria-label="Copy product link">${IC.link}</button>` : ""}
         <button class="iconbtn" data-preview="${p.id}" title="Preview" aria-label="Preview">${IC.eye}</button>
         <button class="iconbtn ${archived ? "" : "iconbtn--danger"}" data-archive="${p.id}" title="${archived ? "Resurface" : "Archive"}" aria-label="${archived ? "Resurface" : "Archive"}">${archived ? IC.unarchive : IC.archive}</button>
       </span>
@@ -387,6 +390,14 @@
     list.querySelectorAll("[data-feature]").forEach((t) => t.addEventListener("change", () => commitFeature(t.dataset.feature, t)));
     list.querySelectorAll("[data-archive]").forEach((b) => b.addEventListener("click", () => commitArchive(b.dataset.archive)));
     list.querySelectorAll("[data-preview]").forEach((b) => b.addEventListener("click", () => openPreview(b.dataset.preview)));
+    list.querySelectorAll("[data-copy-link]").forEach((b) => b.addEventListener("click", () => copyLink(b.dataset.copyLink)));
+  }
+  // Copy a product's public permalink to the clipboard (any slugged row — live, sold, draft-with-slug).
+  function copyLink(id) {
+    const p = find(id); if (!p || !p.slug) return;
+    const url = P.siteUrl() + "/product/" + p.slug;
+    navigator.clipboard?.writeText(url);
+    P.toast("Link copied", { kind: "live" });
   }
   function toggleOpen(id) {
     if (window.matchMedia("(max-width:859px)").matches) { openSheet(id); return; }
@@ -1322,6 +1333,20 @@
     createDraft();
   });
   document.getElementById("fileInput").addEventListener("change", (e) => { handleFiles(e.target.files); e.target.value = ""; });
+
+  // v4.0 cross-tab publish: the storefront preview tab (product.js), when it publishes from the
+  // dashboard child window, postMessages back here. REFETCH so our model is fresh — this is what stops a
+  // later autosave from PUTting a stale available:false and silently un-publishing the just-published
+  // piece — then collapse the editor and jump to Live so the maker sees the new piece go green.
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin) return;                     // same-origin only
+    if (!e.data || e.data.type !== "everlastings:published") return;
+    openId = null; tab = "live"; query = ""; page = 1;
+    const search = document.getElementById("search"); if (search) search.value = "";
+    apiGet()
+      .then((rows) => { products = rows; render(); P.toast("Published · live now", { kind: "live" }); })
+      .catch((err) => { render(); P.toast(err.message, { kind: "danger" }); });
+  });
 
   // GAP #7: sortable column headers (desktop) + mobile sort select — share one sort state
   document.querySelectorAll(".listhead .colsort").forEach((b) => b.addEventListener("click", () => {
