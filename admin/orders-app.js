@@ -281,10 +281,26 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`); // 409/502 → surfaced inline below
-      const relisted = Array.isArray(data.relist) ? data.relist.length : 0;
+      // Restock each relisted piece — the Relist switch WAS the per-piece intent, so put it back on sale
+      // now: unarchive if archived, then quantity+1 (available follows the quantity>0 rule). The backend
+      // refund only flips order status + RETURNS the pieces; the restore is the caller's step (mirrors the
+      // original admin.js relistPiece — never leave a returned unit un-restored). Best-effort per piece.
+      const returned = Array.isArray(data.relist) ? data.relist : [];
+      let relisted = 0, relistFailed = 0;
+      for (const r of returned) {
+        try {
+          if (r.archived) {
+            const ua = await fetch("/api/products/unarchive", { method: "POST", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify({ id: r.product_id }) });
+            if (!ua.ok) throw new Error("unarchive " + ua.status);
+          }
+          const pr = await fetch(`/api/products?id=${encodeURIComponent(r.product_id)}`, { method: "PUT", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify({ available: true, quantity: (r.quantity || 0) + 1 }) });
+          if (!pr.ok) throw new Error("restock " + pr.status);
+          relisted += 1;
+        } catch (e) { relistFailed += 1; }
+      }
       closeRefund();
       await loadOrders(); // GET reload is authoritative — backend owns the status/relist flip
-      P.toast(money(cents) + " refunded via Stripe" + (relisted ? " · " + relisted + " relisted" : ""), { kind: "live" });
+      P.toast(money(cents) + " refunded via Stripe" + (relisted ? " · " + relisted + " relisted (+1 stock)" : "") + (relistFailed ? " · " + relistFailed + " relist failed — restock from Products" : ""), { kind: relistFailed ? "danger" : "live" });
     } catch (err) {
       doBtn.disabled = false;
       note.innerHTML = `<span style="color:var(--danger)">${esc(err.message)}</span>`; // inline, not a dead screen
