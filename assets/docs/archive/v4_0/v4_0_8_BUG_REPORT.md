@@ -118,4 +118,23 @@ Root-caused by three parallel explore agents. Every symptom was admin **wiring +
 
 **Verified** by a deterministic curl trace on the dev preview: create `%` sale → appears in `active_sale` + tagged for the card, filtered from tiles; `$`-coupons stay as tiles, never in `active_sale`; deactivate clears on ONE call. KJPCVB8J + OPENING_DAY were left in place — end them in the UI to see the one-click delete.
 
-**Still open (next cycle):** the checkout discount line + Apply "applied" state (the "Order summary" section above). No way to see a coupon applied before charging — needs a live Stripe-session probe; planned separately. 
+**Still open (next cycle):** the checkout discount line + Apply "applied" state (the "Order summary" section above). No way to see a coupon applied before charging — needs a live Stripe-session probe; planned separately.
+
+---
+
+## RESOLVED — checkout discount + transparency (commits `3152f5f` → `f3cd37c`, on `dev`)
+
+**Root cause of the "total never moved" bug:** on this Basil Custom-Checkout bundle the session amount fields (`session.total.{subtotal,discount,total}.amount`) are **pre-formatted strings** (`"$185.00"`), with `minorUnitsAmount` as the integer cents. The old change-listener did `Number.isFinite(session.total.total.amount)` — always false on a string — so it **silently skipped every repaint**. The money was always correct (Stripe charged the discounted amount); only the display lagged. Confirmed by a live probe of `window.__checkout.session()` (the browser tool redacts amounts, so read via a painted debug line + booleans).
+
+**The rebuild (`checkout.html` + `assets/js/checkout.js`):**
+- `paintSummary()` reads `checkout.session()` fresh (the change-event arg lags the discount) and paints from the formatted strings. Display-only — never touches Stripe's mounted elements (no `update*` bridge).
+- The promo now lives **in the order-summary flow, above Shipping** (the discount is on the goods; shipping/tax don't count toward a minimum), as a **2-row / 3-column** row: a **"Promo code"** label, then `[ code field + circled ✕ ]` · **(deal in parens)** · **−computed amount** (right-aligned with the price column).
+- **No Apply button** — auto-applies on Enter/blur; the ✕ removes it (`removePromotionCode`) so a shopper can drop a store-wide sale and type their own code right there.
+- **Transparency:** shows the code + what the deal *is* — `(20% off · min $100.00)` — **and** the actual dollars it takes off (20% of $195 → `−$39.00`). Worth comes from the session; the **minimum** comes from a new public `?_action=coupon_lookup&code=` (one call returns a code's whitelisted worth + `restrictions.minimum_amount` — and **never** echoes metadata, since cart-recovery codes carry the customer's email + lost-items).
+- **Smart rejection:** a code under its minimum now explains itself — *"This code requires $100.00 minimum. You're at $88.00. Add $12.00"* — since there's nowhere else to learn the minimum.
+
+**Verified live** (curl + browser on the dev preview): a `%` code shows the deal + computed `−amount` above Shipping and drops the Total; the lookup returns terms with **zero PII leak**; an under-minimum code shows the smart note (no discount, entry kept); ✕ clears. The Coupon + Promotion Code model is now documented in `EVERLASTINGS_STORE.md` + `STORE_ADMINISTRATION.md`.
+
+**Carry-forward TODOs (not blocking):**
+1. Add store copy that **shipping & tax don't count toward a discount or minimum**, and confirm whether Stripe's `minimum_amount` is measured against subtotal vs total.
+2. Optional: capture newsletter **signups** into a subscriber/customer catalog (today only *purchases* populate the Supabase `customers` table). 
