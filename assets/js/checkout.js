@@ -177,8 +177,8 @@ function paintSummary(checkout) {
     if (clearBtn) clearBtn.style.display = 'inline-flex';
     // Deal (in parens): percent → "N% off"; else "$X off" (prefer the looked-up face); + " · min $Y" when known.
     let deal = d0 && d0.percentOff != null ? d0.percentOff + '% off'
-      : (((terms && terms.amount_display) || disc.amount) + ' off');
-    if (terms && terms.min_display) deal += ' · min ' + terms.min_display;
+      : (noCents((terms && terms.amount_display) || disc.amount) + ' off');
+    if (terms && terms.min_display) deal += ' · min ' + noCents(terms.min_display);
     if (dealEl) dealEl.textContent = '(' + deal + ')';
     if (amtEl) amtEl.textContent = '−' + disc.amount; // amount is already "$10.00"
   } else {
@@ -224,7 +224,9 @@ function wirePromo(checkout) {
       let s; try { s = checkout.session(); } catch (e) { s = null; }
       const subMinor = s && s.total && s.total.subtotal && s.total.subtotal.minorUnitsAmount;
       if (terms && terms.min_amount != null && Number.isInteger(subMinor) && subMinor < terms.min_amount) {
-        setMsg('This code needs a ' + terms.min_display + ' minimum — your items are at ' + s.total.subtotal.amount + '.');
+        const short = noCents('$' + ((terms.min_amount - subMinor) / 100).toFixed(2));
+        setMsg('This code requires a minimum order of ' + noCents(terms.min_display)
+          + ' — your items total ' + noCents(s.total.subtotal.amount) + '. Add ' + short + ' to use it.');
       } else {
         setMsg(failed);
       }
@@ -311,6 +313,9 @@ function setText(sel, val) {
   const el = document.querySelector(sel);
   if (el && val !== undefined && val !== null) el.textContent = val;
 }
+// Drop a trailing ".00" so whole-dollar amounts read "$100" not "$100.00" in descriptive text (the price
+// column keeps its cents to stay aligned with the item + total rows).
+function noCents(s) { return typeof s === 'string' ? s.replace(/\.00$/, '') : s; }
 // Buyers should never see Stripe integration jargon. Card declines + validation errors carry
 // user-safe messages from Stripe; anything else (integration/api/network) gets a friendly generic.
 function friendlyPaymentError(err) {
