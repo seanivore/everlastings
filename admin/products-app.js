@@ -867,10 +867,23 @@
   function openMedia(id) {
     mProductId = id; const p = find(id);
     mItems = [];
-    (p.images || []).forEach((im, i) => mItems.push({ kind: "image", url: im.url, alt: im.alt || "", roles: new Set(i === 0 ? ["hero"] : ["gallery"]) }));
+    // §5.3c — seed each image's roles from the {role}-{slug} FILENAME (mirrors pickHero + the storefront
+    // gallery filter), NOT the array index. share/checkout are top-level columns (rarely in images[]);
+    // re-add them by url-match just below.
+    (p.images || []).forEach((im) => {
+      const u = im.url || "";
+      const roles = new Set();
+      if (/\/(?:test_)?hero-/.test(u)) roles.add("hero");
+      if (/\/(?:test_)?gallery-/.test(u)) roles.add("gallery");
+      mItems.push({ kind: "image", url: im.url, alt: im.alt || "", roles });
+    });
     if (p.seo_thumbnail) { const ex = mItems.find((m) => m.url === p.seo_thumbnail); if (ex) ex.roles.add("share"); }
     if (p.checkout_image) { const ex = mItems.find((m) => m.url === p.checkout_image); if (ex) ex.roles.add("checkout"); }
-    (p.media || []).forEach((md) => mItems.push({ kind: md.type === "youtube" ? "youtube" : "video", url: md.url, alt: md.alt || "", loop: md.loop !== false, mute: true, controls: md.controls !== false, autoplay: !!md.autoplay }));
+    // §5.2c symmetry: read `muted` back like loop/controls (emit writes it) so reopen→Apply doesn't silently re-flip Mute.
+    (p.media || []).forEach((md) => mItems.push({ kind: md.type === "youtube" ? "youtube" : "video", url: md.url, alt: md.alt || "", loop: md.loop !== false, mute: md.muted !== false, controls: md.controls !== false, autoplay: !!md.autoplay }));
+    // §5.4c.i — stash the opened role set per image (AFTER the share/checkout re-add, so an unchanged
+    // open→Apply diffs to nothing). Apply computes added/removed roles against this baseline.
+    mItems.forEach((m) => { if (m.roles) m.openedRoles = new Set(m.roles); });
     renderMedia();
     document.getElementById("mediaModal").classList.add("is-on");
     document.getElementById("mediaScrim").classList.add("is-on");
@@ -881,6 +894,45 @@
     if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) return "video";
     if (/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(url) || /drive\.google|dropbox/i.test(url)) return "image";
     return "image";
+  }
+  /* ---- WS5: real uploads + role numbering + persist-first (§5.1 / §5.4c.i) ---- */
+  function padNN(n) { return String(n).padStart(2, "0"); }
+  // ported from admin.js nextNumberedRole (:490-498): scan a url list for the highest {base}-NN and
+  // return the next; NEVER renumbers an existing file (the CDN filename IS the role/uniqueness token).
+  function highestNN(base, urls) {
+    const re = new RegExp("\\/(?:test_)?" + base + "-(\\d+)[-.]");
+    let max = 0;
+    (urls || []).forEach((u) => { const m = String(u || "").match(re); if (m) max = Math.max(max, +m[1]); });
+    return max;
+  }
+  function nextNumberedRole(base, urls) { return base + "-" + padNN(highestNN(base, urls) + 1); }
+  const roleOfUrl = (u) => (/\/(?:test_)?hero-/.test(u) ? "hero" : /\/(?:test_)?gallery-/.test(u) ? "gallery" : null);
+  // persist-first (WS5 §5.5): a brand-new `new-xxx` draft has no server row/slug. An upload needs the real
+  // slug and a media PUT needs the real id, so POST the draft first (title+price required). reconcile folds
+  // the real id/slug back in. Returns the slug, or null (caller aborts + we've toasted why).
+  async function ensureSlug(p, id) {
+    if (isNewRow(p)) {
+      const wrote = await persist(p, id);
+      if (!wrote) { P.toast("Add a title and price first, then add media", { kind: "danger" }); return null; }
+    }
+    return p.slug || null;
+  }
+  // one upload → { url }. Multipart when {file}; JSON by-link when {url}. Video skips the crop (skip_transform).
+  async function uploadMedia(opts) {
+    let res;
+    if (opts.file) {
+      const fd = new FormData();
+      fd.append("file", opts.file); fd.append("slug", opts.slug); fd.append("role", opts.role);
+      if (opts.isVideo) fd.append("skip_transform", "true");
+      res = await fetch("/api/upload", { method: "POST", headers: { ...P.authHeader() }, body: fd });
+    } else {
+      const body = { url: opts.url, slug: opts.slug, role: opts.role };
+      if (opts.isVideo) body.skip_transform = "true";
+      res = await fetch("/api/upload", { method: "POST", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    }
+    const b = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(b.error || ("Upload failed (" + res.status + ")"));
+    return b;
   }
   function coverage() {
     const hero = mItems.some((m) => m.roles && m.roles.has("hero"));
@@ -941,8 +993,14 @@
     const typeLabel = it._label || (it.kind === "youtube" ? "YouTube" : it.kind === "video" ? "Video" : "Image");
     let controls;
     if (it.kind === "image") {
-      controls = `<div class="roleboxes">${ROLE_DEFS.map(([k, lbl]) =>
-        `<label class="rolebox ${it.roles.has(k) ? "on" : ""}" data-role="${k}" data-i="${i}">${esc(lbl)}<input type="checkbox" ${it.roles.has(k) ? "checked" : ""}></label>`).join("")}</div>`;
+      const mp = find(mProductId), everPub = !!(mp && mp.published_at != null);
+      controls = `<div class="roleboxes">${ROLE_DEFS.map(([k, lbl]) => {
+        // §5.4e — checkout_image freezes at first publish: show the checkout role LOCKED (lock chip, no
+        // data-role so it can't toggle), never removed. share/gallery/hero/poster stay editable.
+        if (k === "checkout" && everPub)
+          return `<label class="rolebox is-locked ${it.roles.has(k) ? "on" : ""}" title="Locks after first publish" aria-disabled="true">${esc(lbl)} ${IC.lock}</label>`;
+        return `<label class="rolebox ${it.roles.has(k) ? "on" : ""}" data-role="${k}" data-i="${i}">${esc(lbl)}<input type="checkbox" ${it.roles.has(k) ? "checked" : ""}></label>`;
+      }).join("")}</div>`;
     } else if (it.kind === "video") {
       controls = `<div class="roleboxes">${[["loop", "Loop"], ["mute", "Mute"], ["controls", "Show controls"], ["autoplay", "Autoplay"]].map(([k, lbl]) =>
         `<label class="rolebox ${it[k] ? "on" : ""}" data-vopt="${k}" data-i="${i}">${esc(lbl)}<input type="checkbox" ${it[k] ? "checked" : ""}></label>`).join("")}</div>`;
@@ -950,7 +1008,7 @@
       controls = `<div class="faint" style="font-size:var(--t-xs)">Embedded YouTube — preview loads below in the real build.</div>`;
     }
     const altMissing = !String(it.alt || "").trim();
-    return `<div class="mitem ${it._new ? "is-new" : ""}" data-i="${i}">
+    return `<div class="mitem ${it._new ? "is-new" : ""}${it.errored ? " mitem--errored" : ""}" data-i="${i}">
       <div class="mitem__thumb">${it._uploading ? `<div class="mprog" style="width:100%"><i></i></div>` : thumb}</div>
       <div class="mitem__body">
         <div class="mitem__type"><span class="dot"></span>${typeLabel}</div>
@@ -980,29 +1038,60 @@
     body.querySelectorAll("[data-vopt]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); const it = mItems[+el.dataset.i]; it[el.dataset.vopt] = !it[el.dataset.vopt]; renderMedia(); }));
     body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { mItems.splice(+b.dataset.del, 1); renderMedia(); }));
   }
-  function addUrl() {
+  async function addUrl() {
     const inp = document.getElementById("urlInput"), url = inp.value.trim(); if (!url) return;
     const kind = detectKind(url);
-    if (kind === "youtube" && !/^(https?:\/\/)?(www\.)?(youtu\.be\/|youtube\.com\/watch)/i.test(url)) { P.toast("That doesn't look like a YouTube link", { kind: "danger" }); return; }
-    const it = { kind, url, alt: "", _new: true, roles: new Set() };
-    if (kind === "video") Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
-    mItems.unshift(it); inp.value = ""; renderMedia(); clearNewFlag();
+    if (kind === "youtube") {
+      // §5.2 — YouTube never hits /api/upload; it lives in mItems and becomes {type:'youtube',url,alt} on Apply.
+      if (!/^(https?:\/\/)?(www\.)?(youtu\.be\/|youtube\.com\/watch)/i.test(url)) { P.toast("That doesn't look like a YouTube link", { kind: "danger" }); return; }
+      const it = { kind: "youtube", url, alt: "", _new: true, roles: new Set() };
+      mItems.unshift(it); inp.value = ""; renderMedia(); clearNewFlag();
+      return;
+    }
+    // §5.1b — direct image/.mp4/Drive/Dropbox link → POST /api/upload JSON {url, slug, role, skip_transform?}
+    const p = find(mProductId);
+    const slug = await ensureSlug(p, mProductId);
+    if (!slug) return;
+    const isVideo = kind === "video";
+    const role = isVideo
+      ? nextNumberedRole("video", (p.media || []).map((m) => m.url))
+      : nextNumberedRole("gallery", (p.images || []).map((im) => im.url));
+    const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
+    if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
+    it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
+    mItems.unshift(it); inp.value = ""; renderMedia();
+    uploadMedia({ url, slug, role, isVideo })
+      .then((body) => { it.url = body.url; it._uploading = false; renderMedia(); clearNewFlag(); })
+      .catch((err) => { const i = mItems.indexOf(it); if (i > -1) mItems.splice(i, 1); renderMedia(); P.toast(err.message, { kind: "danger" }); });
   }
   function clearNewFlag() { setTimeout(() => { mItems.forEach((m) => { m._new = false; }); }, 2500); }
-  function handleFiles(files) {
+  async function handleFiles(files) {
+    // §5.1a — client fan-out: N dropped/picked files → N single-file POST /api/upload multipart requests
+    // (NO batch endpoint). Per-item progress via it._uploading. §5.1c: video adds skip_transform (MP4/WebM).
+    const p = find(mProductId);
+    const slug = await ensureSlug(p, mProductId);
+    if (!slug) return;
+    // resolve gallery/video NN up front off current p.images/p.media so a simultaneous batch can't hand
+    // out the same NN twice (a duplicate would overwrite an R2 key).
+    let galNN = highestNN("gallery", (p.images || []).map((im) => im.url));
+    let vidNN = highestNN("video", (p.media || []).map((m) => m.url));
     [...files].forEach((file) => {
       const isVideo = /video\//.test(file.type);
-      const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, roles: new Set() };
+      const role = isVideo ? "video-" + padNN(++vidNN) : "gallery-" + padNN(++galNN);
+      const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
       if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
+      it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
       mItems.unshift(it); renderMedia();
-      const reader = new FileReader();
-      reader.onload = () => { it.url = reader.result; it._uploading = false; renderMedia(); clearNewFlag(); };
-      setTimeout(() => reader.readAsDataURL(file), 350); // simulate brief upload
+      uploadMedia({ file, slug, role, isVideo })
+        .then((body) => { it.url = body.url; it._uploading = false; renderMedia(); clearNewFlag(); })
+        .catch((err) => { const i = mItems.indexOf(it); if (i > -1) mItems.splice(i, 1); renderMedia(); P.toast(err.message, { kind: "danger" }); });
     });
   }
   // role logic: one hero; hero≠gallery; share/checkout/poster combine freely
   function toggleRole(i, role) {
     const it = mItems[i]; if (!it.roles) return;
+    // §5.4e — checkout_image is frozen after first publish; the UI locks it, this is the belt-and-braces guard.
+    if (role === "checkout") { const mp = find(mProductId); if (mp && mp.published_at != null) return; }
     const has = it.roles.has(role);
     if (role === "hero") {
       if (!has) { mItems.forEach((m) => m.roles && m.roles.delete("hero")); it.roles.add("hero"); it.roles.delete("gallery"); }
@@ -1020,23 +1109,116 @@
     if (!cov.checkout) bits.push("checkout");
     note.innerHTML = bits.length ? `<span class="x">×</span> No ${bits.join(" / ")} image — the hero will be reused.` : "";
   }
-  function applyMedia() {
+  async function applyMedia() {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // avoid iOS focus-zoom lingering
     const p = find(mProductId);
     const missingAlt = mItems.some((m) => !String(m.alt || "").trim());
     if (missingAlt) { P.toast("Every piece of media needs alt text", { kind: "danger" }); return; }
-    const hero = mItems.find((m) => m.kind === "image" && m.roles.has("hero"));
-    const gallery = mItems.filter((m) => m.kind === "image" && m.roles.has("gallery"));
-    const share = mItems.find((m) => m.kind === "image" && m.roles.has("share"));
-    const checkout = mItems.find((m) => m.kind === "image" && m.roles.has("checkout"));
-    const imgs = [];
-    if (hero) imgs.push({ url: hero.url, alt: hero.alt });
-    gallery.forEach((g) => imgs.push({ url: g.url, alt: g.alt }));
-    p.images = imgs.length ? imgs : p.images;
-    if (hero) { p.thumbnail = p.thumbnail || hero.url; }
-    p.seo_thumbnail = share ? share.url : (hero ? "" : p.seo_thumbnail); // blank => auto-from-hero
-    p.checkout_image = checkout ? checkout.url : p.checkout_image;
-    p.media = mItems.filter((m) => m.kind === "video" || m.kind === "youtube").map((m) => ({ type: m.kind === "youtube" ? "youtube" : "video", url: m.url, alt: m.alt, loop: !!m.loop, autoplay: !!m.autoplay, controls: !!m.controls }));
+    if (mItems.some((m) => m._uploading)) { P.toast("Hold on — media is still uploading", { kind: "danger" }); return; }
+    // persist-first: a brand-new draft needs a real id + slug before the media PUT / any re-role upload.
+    const slug = await ensureSlug(p, mProductId);
+    if (!slug) return;
+    const everPublished = p.published_at != null;
+
+    // §5.4c.i — Apply-time re-role DIFF. Per image item, compute added/removed roles vs openedRoles; POST
+    // /api/upload (JSON by-link) ONLY for an ADDED role that renames the R2 key (hero/gallery/seo_thumbnail/
+    // checkout_image) — the server re-fetches the CDN url + re-crops under the new filename. We REBUILD the
+    // images array from the (url-corrected) items so a promoted hero can't ALSO linger as a gallery entry
+    // (the duplicate-on-PDP bug §5.4c.i exists to prevent). alt rides along in each images[] entry / thumbnail_alt.
+    const baselineUrls = (p.images || []).map((im) => im.url);        // for gallery-NN scans
+    const knownImgUrls = baselineUrls.concat(mItems.filter((m) => m.kind === "image").map((m) => m.url).filter(Boolean));
+    const nextImages = [];        // gallery entries, in mItems order
+    let heroEntry = null;         // hero pinned to images[0]
+    let seoUrl = p.seo_thumbnail; // share column — preserve unless the maker adds/removes share
+    let checkoutUrl = p.checkout_image;
+    let stopUploads = false;      // set true after the first upload failure — no more POSTs, but keep going
+    let failedRole = null;        // name of the role whose upload failed (for the toast)
+
+    const imageItems = mItems.filter((m) => m.kind === "image" && m.roles && m.roles.size > 0); // zero-role images dropped
+    for (const it of imageItems) {
+      const opened = it.openedRoles || new Set();
+      const added = [...it.roles].filter((r) => !opened.has(r));
+      const removed = [...opened].filter((r) => !it.roles.has(r));
+      let itPending = false; // this item still has an upload that failed OR was skipped after an earlier failure
+
+      // --- array role (hero | gallery): re-upload iff the target role's filename differs from the current one ---
+      const targetArray = it.roles.has("hero") ? "hero" : it.roles.has("gallery") ? "gallery" : null;
+      if (targetArray) {
+        let arrUrl = it.url;
+        if (targetArray !== roleOfUrl(it.url)) { // a rename is needed
+          if (stopUploads) { itPending = true; } // an earlier item failed → skip this POST, keep the file at its old url
+          else {
+            const resolved = targetArray === "hero"
+              ? "hero"
+              : nextNumberedRole("gallery", knownImgUrls.concat(nextImages.map((e) => e.url))); // sequential: sees NNs taken so far
+            try { arrUrl = (await uploadMedia({ url: it.url, slug, role: resolved, isVideo: false })).url; it.url = arrUrl; }
+            catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || targetArray; }
+          }
+        }
+        const entry = { url: arrUrl, alt: it.alt };
+        if (targetArray === "hero") heroEntry = entry; else nextImages.push(entry);
+      }
+      // --- share (seo_thumbnail) column: re-upload only when newly added ---
+      if (it.roles.has("share")) {
+        if (added.includes("share")) {
+          if (stopUploads) { itPending = true; }
+          else { try { seoUrl = (await uploadMedia({ url: it.url, slug, role: "seo_thumbnail", isVideo: false })).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "share"; } }
+        } // unchanged share → seoUrl already correct
+      } else if (removed.includes("share")) {
+        seoUrl = ""; // dropped → blank so the storefront auto-reuses the hero
+      }
+      // --- checkout (checkout_image) column: FROZEN after first publish (§5.4e) — never re-upload on an
+      //     ever-published piece (a changed checkout_image 400s), and it's excluded from the PUT below too ---
+      if (it.roles.has("checkout")) {
+        if (added.includes("checkout") && !everPublished) {
+          if (stopUploads) { itPending = true; }
+          else { try { checkoutUrl = (await uploadMedia({ url: it.url, slug, role: "checkout_image", isVideo: false })).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "checkout"; } }
+        }
+      } else if (removed.includes("checkout") && !everPublished) {
+        checkoutUrl = null;
+      }
+
+      // §5.4c.i idempotency: advance a FULLY-applied item's baseline so a retry re-runs ONLY the remaining
+      // diff. If anything is still pending (failed or skipped-after-failure), LEAVE openedRoles + mark
+      // errored so the next Apply picks up exactly where this one stopped.
+      if (itPending) { it.errored = true; }
+      else { it.openedRoles = new Set(it.roles); it.errored = false; }
+    }
+
+    // rebuild images (hero pinned first); honors deletes + reorder (mItems order) + re-roles
+    p.images = heroEntry ? [heroEntry, ...nextImages] : nextImages.slice();
+    if (heroEntry) { p.thumbnail = p.thumbnail || heroEntry.url; p.thumbnail_alt = heroEntry.alt; }
+    p.seo_thumbnail = seoUrl;
+    if (!everPublished) p.checkout_image = checkoutUrl;
+
+    // §5.2c — emit the exact keys the storefront reads: rename mute→muted, add poster; YouTube stays {type,url,alt}.
+    p.media = mItems.filter((m) => m.kind === "video" || m.kind === "youtube").map((m) =>
+      m.kind === "youtube"
+        ? { type: "youtube", url: m.url, alt: m.alt }
+        : { type: "video", url: m.url, alt: m.alt, loop: !!m.loop, autoplay: !!m.autoplay, controls: !!m.controls, muted: !!m.mute, ...(m.poster ? { poster: m.poster } : {}) });
+    // §5.4d — one poster per product: the single poster-checked image → media[].poster on every video lacking its own.
+    const posterItem = mItems.find((m) => m.kind === "image" && m.roles && m.roles.has("poster"));
+    if (posterItem) p.media.forEach((v) => { if (v.type === "video" && !v.poster) v.poster = posterItem.url; });
+
+    // terminal persist — DISJOINT from autosave's editorPayload (media/images/thumbnail/*_image are omitted
+    // there). On an ever-published piece, EXCLUDE checkout_image (§5.4e freeze); images/media/seo_thumbnail
+    // stage into draft server-side. Fire this EVEN on a partial upload failure so succeeded R2 files persist.
+    const patch = { images: p.images, media: p.media, thumbnail: p.thumbnail, thumbnail_alt: p.thumbnail_alt, seo_thumbnail: p.seo_thumbnail };
+    if (!everPublished) patch.checkout_image = p.checkout_image;
+    try {
+      reconcile(p, await apiUpdate(p.id, patch), mProductId);
+    } catch (err) {
+      P.toast(err.message, { kind: "danger" });
+      renderMedia(); // keep the modal open so nothing is lost; the maker can retry Apply
+      return;
+    }
+    if (stopUploads) {
+      // §5.4c.i partial-failure recovery: partial state IS persisted above (no orphaned R2 uploads). Keep the
+      // modal open, show the errored item, and toast the role that failed so retry re-runs only what's left.
+      renderMedia();
+      P.toast("Couldn't set " + (failedRole || "media") + " — try Apply again.", { kind: "danger" });
+      return;
+    }
     closeMedia(); rerenderEditor(mProductId); P.toast("Media updated", { kind: "live" });
   }
 
