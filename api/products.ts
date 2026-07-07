@@ -811,7 +811,12 @@ async function handlePublish(request: Request): Promise<Response> {
   };
   const { data: published, error: pubError } = await supabase
     .from('products')
-    .update({ is_published: true, published_at: (row.published_at as string) ?? new Date().toISOString(), draft: null, preview_token: null, scheduled_publish_at: null, ...autoGen })
+    // available:true — publishing means "go live in the shop", so it flips the Available switch ON (the
+    // model couples them: turning Available OFF unpublishes → PUT branch above). Without this, a first
+    // publish left is_published:true + available:false = published-but-not-purchasable, an inconsistent
+    // state. Covers scheduled auto-publish too (the cron POSTs this same ?_action=publish). quantity is
+    // left as-is (a 0-stock piece still reads "sold out" via checkout.ts's quantity gate).
+    .update({ is_published: true, available: true, published_at: (row.published_at as string) ?? new Date().toISOString(), draft: null, preview_token: null, scheduled_publish_at: null, ...autoGen })
     .eq('id', row.id)
     .select()
     .single();
