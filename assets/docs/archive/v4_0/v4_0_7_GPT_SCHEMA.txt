@@ -71,7 +71,7 @@ paths:
     get:
       operationId: listProducts
       x-openai-isConsequential: false
-      summary: List products with status. For "what's in the store" pass status=active&view=summary (live + drafts + pending edits, compact — NO archived test pieces). Pull any combo with fields=title,hero,price etc. Widen to view=full / getProduct only when you truly need a piece's full record. Read is_published + has_pending_edits + archived_at (or the derived status) to report state.
+      summary: List products by status. For the store use status=active&view=summary (live+drafts+pending, no archived tests). Narrow with fields=title,hero,price. Use view=full or getProduct only for a full record. Report state from is_published, has_pending_edits, archived_at.
       parameters:
         - in: query
           name: status

@@ -96,7 +96,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 
 ### 2A. Instructions (system prompt)
 
-> **Paste the instructions from the canonical `.txt`, verbatim.** The shipped, paste-able instructions are **`assets/docs/archive/v4_0/v4_0_7_GPT_INSTRUCTIONS_TRIMMED.txt`** — **7978 / 8000 bytes** (the 8000-char cap is a hard ceiling; over it the GPT silently truncates its own prompt). Copy the whole file into the GPT's *Instructions* field byte-for-byte; do not retype from a summary. The beats it carries, so you can sanity-check the paste:
+> **Paste the instructions from the canonical `.txt`, verbatim.** The shipped, paste-able instructions are **`assets/docs/archive/v4_0/v4_0_7_GPT_INSTRUCTIONS.txt`** — **7978 / 8000 bytes** (the 8000-char cap is a hard ceiling; over it the GPT silently truncates its own prompt). Copy the whole file into the GPT's *Instructions* field byte-for-byte; do not retype from a summary. The beats it carries, so you can sanity-check the paste:
 
 - **Intro + posture** — warm plain-language studio assistant; never expose keys/URLs/jargon; **do reversible things without asking, confirm only the irreversible ones** (the initiative nudge).
 - **Create flow** — slug → upload photos → `createProduct` → share preview → publish; required fields; ATTACHED photos → `uploadImages`, LINK/URL photos + video → `uploadImage`; assign the role, write alt; 6-distinct-shot minimum (the hero doubles as the thumbnail).
@@ -175,7 +175,7 @@ The order Actions (`listOrders`, `markShipped`, `refundOrder`) run on the `PRODU
 
 **Hand-off:** the GPT is in Em's sidebar. Remind her: always the required photo set (≥1 hero + ≥5 gallery + a thumbnail); create and edits make a **draft with a preview link** — she reviews it, then **publishes** to go live; it manages products end-to-end (edit, draft → preview → publish, **schedule a publish**, coupons incl. the **automatic store-wide sale**, archive/resurface), fulfills orders, and **issues refunds** — it confirms before marking shipped or refunding (both notify the buyer); if she ever sees "the connection key needs Sean's attention," text Sean.
 
-**Go-live (v4.0.0).** The GPT's Action currently points at the **dev tester**. To hand it to Em on production: flip the schema `servers:` URL to `https://everlastingsbyemaline.com`, re-paste the shipped **`v4_0_7_GPT_SCHEMA.txt`** + **`v4_0_7_GPT_INSTRUCTIONS_TRIMMED.txt`**, and re-paste the **Production**-scoped `PRODUCT_API_KEY` (a schema re-paste can reset the Bearer). Then re-run the smoke test against prod. Re-verify BOTH the URL and the key — they are independent.
+**Go-live (v4.0.0).** The GPT's Action currently points at the **dev tester**. To hand it to Em on production: flip the schema `servers:` URL to `https://everlastingsbyemaline.com`, re-paste the shipped **`v4_0_7_GPT_SCHEMA.txt`** + **`v4_0_7_GPT_INSTRUCTIONS.txt`**, and re-paste the **Production**-scoped `PRODUCT_API_KEY` (a schema re-paste can reset the Bearer). Then re-run the smoke test against prod. Re-verify BOTH the URL and the key — they are independent.
 
 **Maintenance:** if `PRODUCT_API_KEY` rotates, reopen the GPT → Actions → Authentication → paste the new value → Save. If the API base URL changes (or you switch environments), update the `servers:` URL in the schema and **re-verify the auth key for that environment** — re-pasting the schema can reset the Bearer, and a wrong-environment key shows the `listProducts`-empty-`200` / `uploadImage`-`401` tell (2C).
 
