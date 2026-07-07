@@ -527,14 +527,17 @@
   }
 
   function mediaSlots(p) {
-    const imgs = p.images || [];
+    // FIX #4 — read the EFFECTIVE model (draft over live) so a published piece's staged media shows here,
+    // matching what openMedia seeds + what wireGalleryDrag reorders (all effOf-based).
+    const imgs = effOf(p, "images") || [];
     const heroUrl = imgs[0]?.url, galleryImgs = imgs.slice(1), gn = galleryImgs.length, galOk = gn >= 5;
-    const vids = p.media || [];
+    const vids = effOf(p, "media") || [];
+    const shareUrl = effOf(p, "seo_thumbnail"), checkoutUrl = effOf(p, "checkout_image");
     const openIcon = (url) => url ? `<a class="mtile__open" href="${url}" target="_blank" rel="noopener" title="Open full asset" onclick="event.stopPropagation()">${IC.ext}</a>` : "";
     // only filled secondary media render — as uniform squares (never empty upload buttons)
     const sq = [];
-    if (p.seo_thumbnail) sq.push(`<div class="msq" data-open-url="${p.seo_thumbnail}" title="Open share image in new tab"><img src="${p.seo_thumbnail}" alt="" onerror="this.remove()">${openIcon(p.seo_thumbnail)}<span class="msq__lbl">Share</span></div>`);
-    if (p.checkout_image) sq.push(`<div class="msq" data-open-url="${p.checkout_image}" title="Open checkout image in new tab"><img src="${p.checkout_image}" alt="" onerror="this.remove()">${openIcon(p.checkout_image)}<span class="msq__lbl">Checkout</span></div>`);
+    if (shareUrl) sq.push(`<div class="msq" data-open-url="${shareUrl}" title="Open share image in new tab"><img src="${shareUrl}" alt="" onerror="this.remove()">${openIcon(shareUrl)}<span class="msq__lbl">Share</span></div>`);
+    if (checkoutUrl) sq.push(`<div class="msq" data-open-url="${checkoutUrl}" title="Open checkout image in new tab"><img src="${checkoutUrl}" alt="" onerror="this.remove()">${openIcon(checkoutUrl)}<span class="msq__lbl">Checkout</span></div>`);
     vids.forEach((v, i) => {
       const lbl = vids.length > 1 ? `Video ${i + 1}` : "Video";
       const inner = v.type === "youtube"
@@ -778,11 +781,22 @@
         strip.removeEventListener("pointermove", move); strip.removeEventListener("pointerup", up);
         if (!moved) { const u = drag.getAttribute("data-url"); if (u) window.open(u, "_blank", "noopener"); return; }
         drag.classList.remove("dragging");
+        // FIX #3 + #4 — reorder the EFFECTIVE images (the strip's data-gi indexes effOf, per mediaSlots) and
+        // write via setEff (stages into draft on a published piece), THEN PERSIST — §5.3 "order saves with
+        // the piece". autosave/editorPayload deliberately OMIT images, so without this PUT the reorder was
+        // purely in-memory and lost on reload.
+        const eff = effOf(p, "images") || [];
         const order = [...strip.querySelectorAll(".gthumb")].map((g) => +g.dataset.gi);
-        const gal = p.images.slice(1);
+        const gal = eff.slice(1);
         const reordered = order.map((i) => gal[i]).filter(Boolean);
-        p.images = [p.images[0], ...reordered];
+        const next = [eff[0], ...reordered];
+        setEff(p, "images", next);
         rerenderEditor(id);
+        if (!isNewRow(p)) {
+          apiUpdate(p.id, { images: next })
+            .then((res) => { reconcile(p, res, id); rerenderEditor(openId != null ? openId : id); })
+            .catch((err) => P.toast(err.message, { kind: "danger" }));
+        }
       };
       strip.addEventListener("pointermove", move); strip.addEventListener("pointerup", up);
     }));
@@ -867,20 +881,28 @@
   function openMedia(id) {
     mProductId = id; const p = find(id);
     mItems = [];
+    // FIX #4 — seed from the EFFECTIVE model (draft over live). On a published piece the media PUT stages
+    // into draft; reconcile then reverts the in-memory live columns, so reading RAW p.images/p.media here
+    // would diff a re-edit against STALE live state, dropping the prior staged photo + orphaning its upload.
+    const srcImages = effOf(p, "images") || [];
+    const srcMedia = effOf(p, "media") || [];
+    const srcShare = effOf(p, "seo_thumbnail"), srcCheckout = effOf(p, "checkout_image");
     // §5.3c — seed each image's roles from the {role}-{slug} FILENAME (mirrors pickHero + the storefront
     // gallery filter), NOT the array index. share/checkout are top-level columns (rarely in images[]);
     // re-add them by url-match just below.
-    (p.images || []).forEach((im) => {
+    srcImages.forEach((im) => {
       const u = im.url || "";
       const roles = new Set();
       if (/\/(?:test_)?hero-/.test(u)) roles.add("hero");
       if (/\/(?:test_)?gallery-/.test(u)) roles.add("gallery");
       mItems.push({ kind: "image", url: im.url, alt: im.alt || "", roles });
     });
-    if (p.seo_thumbnail) { const ex = mItems.find((m) => m.url === p.seo_thumbnail); if (ex) ex.roles.add("share"); }
-    if (p.checkout_image) { const ex = mItems.find((m) => m.url === p.checkout_image); if (ex) ex.roles.add("checkout"); }
-    // §5.2c symmetry: read `muted` back like loop/controls (emit writes it) so reopen→Apply doesn't silently re-flip Mute.
-    (p.media || []).forEach((md) => mItems.push({ kind: md.type === "youtube" ? "youtube" : "video", url: md.url, alt: md.alt || "", loop: md.loop !== false, mute: md.muted !== false, controls: md.controls !== false, autoplay: !!md.autoplay }));
+    if (srcShare) { const ex = mItems.find((m) => m.url === srcShare); if (ex) ex.roles.add("share"); }
+    if (srcCheckout) { const ex = mItems.find((m) => m.url === srcCheckout); if (ex) ex.roles.add("checkout"); }
+    // §5.2c symmetry: read `muted` back like loop/controls (emit writes it) so reopen→Apply doesn't silently
+    // re-flip Mute. FIX #5: read `poster` back too, else applyMedia's `...(m.poster?…)` is always false and
+    // any change→Apply strips every video's poster (violates §5.4d "leave posters as-is").
+    srcMedia.forEach((md) => mItems.push({ kind: md.type === "youtube" ? "youtube" : "video", url: md.url, alt: md.alt || "", loop: md.loop !== false, mute: md.muted !== false, controls: md.controls !== false, autoplay: !!md.autoplay, poster: md.poster }));
     // §5.4c.i — stash the opened role set per image (AFTER the share/checkout re-add, so an unchanged
     // open→Apply diffs to nothing). Apply computes added/removed roles against this baseline.
     mItems.forEach((m) => { if (m.roles) m.openedRoles = new Set(m.roles); });
@@ -901,8 +923,16 @@
   // return the next; NEVER renumbers an existing file (the CDN filename IS the role/uniqueness token).
   function highestNN(base, urls) {
     const re = new RegExp("\\/(?:test_)?" + base + "-(\\d+)[-.]");
+    const reRole = new RegExp("^" + base + "-(\\d+)$");
     let max = 0;
     (urls || []).forEach((u) => { const m = String(u || "").match(re); if (m) max = Math.max(max, +m[1]); });
+    // FIX #2 — also count in-flight/pending mItems: their reserved role (_role, stamped at creation) holds
+    // the NN before the upload resolves a URL, so a second batch/paste BEFORE Apply can't reuse the same
+    // {base}-NN and silently overwrite the first batch's R2 key.
+    mItems.forEach((m) => {
+      const mu = String(m.url || "").match(re); if (mu) max = Math.max(max, +mu[1]);
+      const mr = String(m._role || "").match(reRole); if (mr) max = Math.max(max, +mr[1]);
+    });
     return max;
   }
   function nextNumberedRole(base, urls) { return base + "-" + padNN(highestNN(base, urls) + 1); }
@@ -912,8 +942,13 @@
   // the real id/slug back in. Returns the slug, or null (caller aborts + we've toasted why).
   async function ensureSlug(p, id) {
     if (isNewRow(p)) {
+      const oldId = p.id;
       const wrote = await persist(p, id);
       if (!wrote) { P.toast("Add a title and price first, then add media", { kind: "danger" }); return null; }
+      // FIX #1 (hard crash) — reconcile retargets openId but NOT mProductId. Once persist swaps the
+      // new-xxx id for the real UUID, every later find(mProductId) would return undefined → the 2nd upload
+      // / Apply throws + orphans the R2 files. Mirror reconcile's openId retarget here.
+      if (p.id !== oldId) mProductId = p.id;
     }
     return p.slug || null;
   }
@@ -1056,7 +1091,7 @@
     const role = isVideo
       ? nextNumberedRole("video", (p.media || []).map((m) => m.url))
       : nextNumberedRole("gallery", (p.images || []).map((im) => im.url));
-    const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
+    const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, _role: role, roles: new Set(isVideo ? [] : ["gallery"]) };
     if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
     it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
     mItems.unshift(it); inp.value = ""; renderMedia();
@@ -1078,7 +1113,7 @@
     [...files].forEach((file) => {
       const isVideo = /video\//.test(file.type);
       const role = isVideo ? "video-" + padNN(++vidNN) : "gallery-" + padNN(++galNN);
-      const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
+      const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, _role: role, roles: new Set(isVideo ? [] : ["gallery"]) };
       if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
       it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
       mItems.unshift(it); renderMedia();
@@ -1187,7 +1222,8 @@
 
     // rebuild images (hero pinned first); honors deletes + reorder (mItems order) + re-roles
     p.images = heroEntry ? [heroEntry, ...nextImages] : nextImages.slice();
-    if (heroEntry) { p.thumbnail = p.thumbnail || heroEntry.url; p.thumbnail_alt = heroEntry.alt; }
+    // FIX #7 — track the hero unconditionally; `|| ` left thumbnail stuck on the OLD hero while thumbnail_alt updated.
+    if (heroEntry) { p.thumbnail = heroEntry.url; p.thumbnail_alt = heroEntry.alt; }
     p.seo_thumbnail = seoUrl;
     if (!everPublished) p.checkout_image = checkoutUrl;
 
@@ -1196,9 +1232,11 @@
       m.kind === "youtube"
         ? { type: "youtube", url: m.url, alt: m.alt }
         : { type: "video", url: m.url, alt: m.alt, loop: !!m.loop, autoplay: !!m.autoplay, controls: !!m.controls, muted: !!m.mute, ...(m.poster ? { poster: m.poster } : {}) });
-    // §5.4d — one poster per product: the single poster-checked image → media[].poster on every video lacking its own.
+    // §5.4d — one poster per product: an explicitly poster-checked image OVERRIDES every video's poster.
+    // (With FIX #5 each video now round-trips its own md.poster, so a "fill only when missing" rule would
+    // make the poster unchangeable; none-checked → the carried posters are preserved as-is above.)
     const posterItem = mItems.find((m) => m.kind === "image" && m.roles && m.roles.has("poster"));
-    if (posterItem) p.media.forEach((v) => { if (v.type === "video" && !v.poster) v.poster = posterItem.url; });
+    if (posterItem) p.media.forEach((v) => { if (v.type === "video") v.poster = posterItem.url; });
 
     // terminal persist — DISJOINT from autosave's editorPayload (media/images/thumbnail/*_image are omitted
     // there). On an ever-published piece, EXCLUDE checkout_image (§5.4e freeze); images/media/seo_thumbnail
