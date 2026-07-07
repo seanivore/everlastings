@@ -1,6 +1,8 @@
 # Everlastings by Emaline — Brand Guide
 
-**Created**: 2026-03-16 **Updated**: 2026-06-10 **Source**: Consolidated from v0 brand docs, v1 planning, client input (2026-06-10: restored Origin & Positioning from the OG strategy docs)
+**Created**: 2026-03-16 **Updated**: 2026-07-07 (v4.0.0 as-built) **Source**: Consolidated from v0 brand docs, v1 planning, client input (2026-06-10: restored Origin & Positioning from the OG strategy docs; 2026-07-07: added the storefront sale/scarcity chrome + the Content Creator Portal as a deliberately-separate second brand)
+
+> **Scope — two brands, one repo.** Everything in this guide governs the **storefront** (warm-plum, Cormorant serif, cream + firelight — Emy's brand). The **Content Creator Portal** at `/admin` is a **deliberately DISTINCT second brand** — a cool indigo-slate, neutral, reusable template — documented in its own section at the end (["The Content Creator Portal"](#the-content-creator-portal--a-second-separate-brand-admin-v40)). The two never mix; that separation is load-bearing.
 
 ---
 
@@ -168,6 +170,15 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
     --accent-gold: var(--color-gold);
   }
   ```
+
+### Storefront Sale & Scarcity Chrome (v3.5 → v4.0)
+
+Three small storefront components layer onto the palette above. **All use the storefront's OWN warm-plum tokens** — they are storefront brand, never the portal's indigo-slate. Shipped in `assets/css/styles.css` (§12 "Store-wide sale" + `.badge-unique`); the sale chrome landed in v3.5 (#221), the scarcity badge in v4.0.0 (WS9).
+
+- **Struck-`%` sale pricing (`.price-sale`)** — when a store-wide *percent* sale is active, the price renders was-struck + now on every surface (shop grid, product card, homepage carousel, cart). `.price-sale__was` = line-through in `--text-muted`, weight 400; `.price-sale__now` = `--accent-primary` (plum), weight 600. Percent-only; **sold items always render plain**; the JSON-LD `offers.price` stays the true undiscounted price.
+- **Top utility bar (`.sale-bar` / `.sale-bar--on`)** — a thin site-wide bar: free-shipping reminder by default (`--color-ink` bg), the sale line when active (`.sale-bar--on` swaps to `--accent-primary` bg, `--text-inverse` text). Mounted by `main.js mountSaleChrome`.
+- **Once-only sale popup (`.sale-pop`)** — a dismissible upper-right popup on `--bg-primary` with a `--color-gold` border; headline in Cormorant Garamond, `--accent-primary`. Shown **once per sale** — the `localStorage` key `everlastings.saleSeen` stores the sale *code*, so a NEW sale re-announces but the same sale never nags twice. Its entrance animation is gated behind `prefers-reduced-motion`.
+- **"One of a kind" scarcity badge (`.badge-unique`)** — copy is exactly **"One of a kind"**. Reuses the shared `.badge` base (same corner/shape/size as Sold + Featured); only the hue is new: `--bg-primary` fill, `1px solid var(--accent-primary)` border + text — warm-plum, **deliberately distinct from Featured's gold border**. Renders on non-featured, non-sold tiles (badges are mutually exclusive by gate, so exactly one ever shows).
 
 ---
 
@@ -529,4 +540,68 @@ Fires from `POST /api/cart-recovery` (handled inside `api/cart.ts` per AR #34) w
 All four templates use this skeleton, swapping only `{{subject}}`, `{{heading}}`, and `{{body}}`. The agent implementing `api/_emails/index.ts` copies this HTML and substitutes template-specific values.
 
 ---
-*This brand guide is the canonical reference. Colors, voice, photography standards, and email templates are enforced across all documents.*
+
+## The Content Creator Portal — a Second, Separate Brand (`/admin`) (v4.0)
+
+Everything above is the **storefront** brand — Emy's warm-plum, Cormorant-serif, cream-and-firelight world. The Content Creator Portal at `/admin` (the back-office where the shop is run) is a **deliberately DISTINCT second brand**: a cool **indigo-slate**, neutral, `august.style`-flavored **reusable template** meant to be re-skinned per future client. This is intentional, not drift.
+
+**Brand separation is load-bearing.** The portal's tokens live only in `admin/portal.css`; the storefront's plum/serif tokens are **never** imported into `admin/`, and no portal token leaks back into the storefront (the three storefront sale/scarcity additions above use storefront tokens, not portal ones). Why keep them apart: the storefront sells grief-anchored miniatures and its emotional identity must stay uncontaminated; a neutral, re-hueable admin is also a **productizable asset** — the same portal re-skins for the next client by editing a couple of tokens.
+
+> **Source of truth:** `admin/portal.css :root` is the tiebreaker. The earlier `assets/docs/archive/v3_5/design-handoff/tokens.css` carried a *stale 3-state* palette (green/amber/red only, sold+archived via tabs) — superseded. The as-built palette below is the 6-token version from Sean's v1 review, shipped in `admin/portal.css`.
+
+### Color — cool indigo-slate, re-hueable from `:root`
+
+Every color is OKLCH or `color-mix()` off ONE structural hue, so the whole template re-hues by editing a couple of `:root` tokens (never a component rule). **Zero literal hex in component CSS** — the only intentional literals are `--surface: #ffffff` and the three semantic state values below.
+
+**Structural tokens (`admin/portal.css :root`):**
+- `--accent: oklch(42% 0.055 262)` — the single structural hue (indigo-slate); `--accent-strong` / `--accent-soft` / `--focus` derive from it via `color-mix()`.
+- `--bg: oklch(97.3% 0.004 255)` — app background; `--surface: #ffffff`, `--surface-sunk: oklch(95% 0.006 255)`.
+- `--ink` / `--ink-muted` / `--ink-faint` — text ramp, all on hue 262; `--hairline: oklch(91% 0.006 262)` for borders.
+- Cool-tinted elevation (`--sh-1/-2/-pop/-inset`) — shadows carry hue 262, so depth reads as information, not decoration.
+
+### Semantic STATE palette — reserved STRICTLY for state
+
+Six tokens, used ONLY to encode state — **never** decoration. Each also has a `-bg` (≈86–87% white mix) + `-bd` (≈58–64% white mix) tint for chips/rings.
+
+- `--live: oklch(58% 0.13 150)` — **green** = live / published / required-met
+- `--waiting: #D95301` — **orange** = staged edits, needs publish (blinks; a more urgent nudge than draft)
+- `--draft: oklch(80% 0.142 88)` — **yellow** = draft, never published (blinks)
+- `--sold: #297fb4` — **blue** = sold
+- `--archived: #83718a` — **purple-gray** = archived
+- `--danger: oklch(55% 0.16 25)` — **red** = destructive / blocking publish
+
+A `@supports not (color: color-mix(...))` block ships a flat-hex fallback of the entire palette (older browsers) — keep it.
+
+**Where state color is spent (nowhere else):**
+- The per-row **LED** (`.led--*`) colors all five states; live/draft/edits blink (`led-pulse` — edits fastest at 1.2s, draft 1.7s), sold/archived are steady.
+- The segmented-filter **dots** (`.dot--*`) mirror the same five hues (`.dot--all` uses `--accent`).
+- Green / orange / yellow also ride the editor **field-border rings** (`.field[data-ring]`): green = required + valid, red = blocking publish, yellow = edited text needing review.
+- **No printed "LIVE NOW" / "WAITING" text-tags, no words inside LEDs/pills** — state is color alone, learned in a couple of clicks (or ask the GPT). Sold + archived *also* get their own filter tabs, in addition to their LED color.
+
+### Typography — mobile-first, NYT-dense, no serif
+
+- `--font-ui`: system sans (`-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif`) for all UI.
+- `--font-data`: monospace (`ui-monospace, "SF Mono", "Cascadia Code", Menlo`) for numeric/data (`.mono`, `tabular-nums`).
+- **No Cormorant, no serif anywhere** — the serif display face is storefront-only; its absence is part of the brand separation.
+- Scale is small + dense (NYT-flavored): `--t-xs .75 / --t-sm .875 / --t-base 1 / --t-lg 1.125 / --t-xl 1.375rem`.
+- **Mobile is the PRIMARY context.** Text inputs are **16px on mobile** (so iOS never zoom-jumps), tightening to 14px only at `≥860px`.
+
+### Motion — weight, not bounce
+
+- `--ease-weight: cubic-bezier(.2,.7,.3,1)`; a press is a 1px sink (`--press`) / lift (`--lift`) + a collapsing shadow + an instant focus ring — **never a spring or overshoot**.
+- Durations: press 70ms, base 140ms, settle 220ms.
+- **`prefers-reduced-motion` is honored** — `portal.css` collapses transitions/animations to ~0, disables the press-transforms, and drops the skeleton shimmer (and thus the LED/tab blinks). The JS sign-in canvas FX guards on it too.
+
+### Layout & nav
+
+- **One nav component in two layouts:** desktop = a notebook-spine rail on the left; mobile = a thumb-zone bottom tab bar. They swap at the **860px** breakpoint.
+- A product is a **row** (spreadsheet), never an image-led tile; the row collapses to a dense, tap-friendly list item on mobile.
+- **No portal-name header** — the top-left "Content Creator Portal" title is intentionally dropped.
+- **Env marker** derived from `window.location.hostname` (never hardcoded): `*.vercel.app` / `localhost` / `file://` → **Test** (amber `--waiting`); `everlastingsbyemaline.com` → **Live** (green `--live`). Desktop = a chip; mobile = a full-width strip.
+
+### The surfaces
+
+All vanilla HTML/CSS/JS, no build step, in `admin/`: shared `portal.css` (the whole design system) + `portal.js` (framework-free helpers), then per-surface `{products,orders,sales,account}.html` + `-app.js`. Four surfaces — **Products · Orders · Sales · Account** — over the shared shell.
+
+---
+*This brand guide is the canonical reference for the **storefront** brand — colors, voice, photography standards, email templates. The **Content Creator Portal** (`/admin`) is a deliberately separate second brand, sourced from `admin/portal.css`; the two palettes never mix.*
