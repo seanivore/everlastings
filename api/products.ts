@@ -5,6 +5,7 @@ import { corsHeaders, preflight } from './_lib/cors';
 import { isTest, env } from './_lib/env';
 import { stripe } from './_lib/stripe';
 import { syncProductToStripe, StripeSyncResult, SyncableProduct } from './_lib/stripeSync';
+import { logActivity, resolveActor } from './_lib/activityLog';
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SECRET_KEY!,
@@ -49,7 +50,7 @@ function liveUrl(request: Request, slug: string): string {
 function publicView<T extends Record<string, unknown>>(row: T) {
   const {
     draft, preview_token, is_test,
-    is_published, published_at, archived_at, stripe_product_id,
+    is_published, published_at, archived_at, stripe_product_id, scheduled_publish_at,
     checkout_name, checkout_description, checkout_image,
     ...pub
   } = row;
@@ -67,8 +68,15 @@ export async function GET(request: Request) {
   const previewToken = url.searchParams.get('preview');
   const isAuthorized = await authorize(request);
 
+  // v3.5: PUBLIC active store-wide sale read (?_action=active_sale, GET) — NO auth. The storefront
+  // reads the single active auto_apply owner_sale % coupon for struck pricing + checkout auto-apply.
+  if (url.searchParams.get('_action') === 'active_sale') return handleActiveSale(request);
+
   // v1.5: list active discounts (?_action=coupon, GET) — admin/GPT only.
   if (url.searchParams.get('_action') === 'coupon') return handleCouponList(request);
+
+  // v3.5: recent activity feed (?_action=activity, GET) — admin/GPT only. Feeds the Account activity card.
+  if (url.searchParams.get('_action') === 'activity') return handleActivityLog(request);
 
   // v1.5 preview: a valid preview_token grants a one-off read of the unpublished/draft
   // row (capability URL — no login). Returns the live row with `draft` overlaid, so the
@@ -180,7 +188,7 @@ export async function POST(request: Request) {
 
   // Per-type product-shape validation, shared with first-publish (handlePublish) via the module-scope
   // helper below. Reports ALL problems at once (joined) instead of one-at-a-time.
-  const problems = validateProductRules(product as Record<string, unknown>);
+  const problems = validateCreateShape(product as Record<string, unknown>);
   if (problems.length) {
     return jsonResponse(request, { error: problems.join('; ') }, 400);
   }
@@ -258,6 +266,12 @@ export async function POST(request: Request) {
   // v1.5: products are created as UNPUBLISHED drafts. No Stripe object is created here —
   // the Stripe product/price are created at publish (?_action=publish), so an abandoned
   // draft never orphans a Stripe product. The DB INSERT trigger also skips drafts.
+  await logActivity({
+    actor: await resolveActor(request),
+    action: 'product.create',
+    summary: `Created draft “${String(data.title)}”`,
+    entityId: String(data.id),
+  });
   return jsonResponse(request, {
     success: true,
     product: data,
@@ -284,22 +298,44 @@ const PRODUCT_TYPE_RULES: Record<string, TypeRules> = {
     minHero: 1, minGallery: 5, requireThumbnail: true,
   },
 };
-function validateProductRules(p: Record<string, unknown>): string[] {
+// PUBLISH gate — Sean v3.5 authoritative required set. Runs on BOTH publish branches (never on create),
+// so a piece can go live only fully-formed. The six auto-generated fields (checkout_*/seo_*, Phase 2.5)
+// are deliberately NOT here — publish fills them, so they never block. Reports ALL problems at once.
+function validatePublishRules(p: Record<string, unknown>): string[] {
   const problems: string[] = [];
   const typeKey = typeof p.product_type === 'string' ? p.product_type : '';
   const rules: TypeRules = PRODUCT_TYPE_RULES[typeKey] ?? PRODUCT_TYPE_RULES.miniature;
 
-  const missing = rules.required.filter((f) => {
-    const v = p[f];
-    if (v === undefined || v === null) return true;
-    if (typeof v === 'string' && v.trim() === '') return true;
-    return false;
-  });
-  if (missing.length) problems.push(`Missing required fields: ${missing.join(', ')}`);
+  const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string).trim() : '');
+  const list = (k: string) => (Array.isArray(p[k]) ? (p[k] as unknown[]).filter((x) => String(x).trim()) : []);
+
+  // v3.7.3 (snake_case-400 RESOLVED, Sean option A): report missing fields in plain maker's language,
+  // not raw snake_case keys — so the 400 reads legibly on BOTH surfaces (the portal + the GPT relay).
+  const FIELD_LABELS: Record<string, string> = {
+    title: 'Title', slug: 'Slug', headline: 'Headline', description: 'Description', story_card: 'Story',
+    product_type: 'Product type', weight: 'Weight', features: 'Features', materials: 'Materials',
+    care_instructions: 'Care instructions', shipping_details: 'Shipping details', quantity: 'Quantity',
+  };
+  const label = (k: string) => FIELD_LABELS[k] ?? k;
+
+  const REQUIRED_STR = ['title', 'slug', 'headline', 'description', 'story_card', 'product_type', 'weight'];
+  const missing = REQUIRED_STR.filter((f) => !str(f));
+  const REQUIRED_LIST = ['features', 'materials', 'care_instructions', 'shipping_details'];
+  for (const f of REQUIRED_LIST) if (!list(f).length) missing.push(f);
+  if (p.quantity === undefined || p.quantity === null) missing.push('quantity');
+  if (missing.length) problems.push(`Missing required fields: ${missing.map(label).join(', ')}`);
 
   if (!Number.isInteger(p.price) || (p.price as number) <= 0) {
     problems.push('Price must be a positive integer in cents');
   }
+  if (p.quantity !== undefined && p.quantity !== null && (!Number.isInteger(p.quantity) || (p.quantity as number) < 0)) {
+    problems.push('Quantity must be a non-negative integer');
+  }
+
+  // dimensions must parse to W · D · H (validate-and-format is a SURFACE concern; here we only gate).
+  const dims = str('dimensions');
+  const hasWDH = /([\d.]+)\s*"?\s*W/i.test(dims) && /([\d.]+)\s*"?\s*D/i.test(dims) && /([\d.]+)\s*"?\s*H/i.test(dims);
+  if (!hasWDH) problems.push('dimensions (W × D × H) required');
 
   const needsImages = rules.minHero > 0 || rules.minGallery > 0 || rules.requireThumbnail;
   const images = Array.isArray(p.images) ? (p.images as ImageEntry[]) : null;
@@ -318,6 +354,25 @@ function validateProductRules(p: Record<string, unknown>): string[] {
   }
   if (galleryImages.length < rules.minGallery) problems.push(`Minimum ${rules.minGallery} gallery images required`);
 
+  // alt on every media asset (images + media[]).
+  const altMissing = imgList.some((img) => !(typeof img?.alt === 'string' && img.alt.trim()));
+  if (altMissing) problems.push('Every image needs alt text');
+  const media = Array.isArray(p.media) ? (p.media as Array<Record<string, unknown>>) : [];
+  if (media.some((m) => !(typeof m?.alt === 'string' && (m.alt as string).trim()))) {
+    problems.push('Every video needs alt text');
+  }
+
+  return problems;
+}
+
+// CREATE shape — the DB-satisfiable minimum so an incomplete draft can persist (auto-save-as-draft).
+// The full gate runs at publish (validatePublishRules), which re-validates on BOTH publish branches.
+function validateCreateShape(p: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  if (typeof p.title !== 'string' || !p.title.trim()) problems.push('title is required');
+  if (!Number.isInteger(p.price) || (p.price as number) <= 0) {
+    problems.push('Price must be a positive integer in cents');
+  }
   return problems;
 }
 
@@ -383,6 +438,26 @@ export async function PUT(request: Request) {
   };
 
   const previewToken = randomUUID();
+
+  // v3.7.1 (breadth journey #1): checkout identity is frozen for the LIFE of the piece, not just while
+  // live. A paused/unpublished-but-previously-published row (published_at set, is_published=false) must
+  // NOT re-open checkout_* — an edit sticks in the DB while syncProductToStripe short-circuits on the
+  // existing stripe_product_id and never pushes it → a silent site↔Stripe desync. (Re-issuing checkout
+  // identity is a deliberate, confirmed future feature, never a casual edit.)
+  if (current.published_at) {
+    const frozenAttempt = FROZEN_AFTER_PUBLISH.filter(
+      (f) =>
+        Object.prototype.hasOwnProperty.call(updates, f) &&
+        updates[f] !== (current as Record<string, unknown>)[f],
+    );
+    if (frozenAttempt.length) {
+      return jsonResponse(
+        request,
+        { error: `Frozen after publish: ${frozenAttempt.join(', ')}. The checkout name, description, and image are set once at publish. (Price can change — it rotates in place.)` },
+        400,
+      );
+    }
+  }
 
   // Published product: copy/SEO edits are STAGED in `draft` (live columns keep serving the site until
   // publish). The checkout IDENTITY fields stay frozen; `price` is NOT frozen — it ROTATES in place
@@ -462,7 +537,17 @@ export async function PUT(request: Request) {
       if (typeof updates.available !== 'boolean') {
         return jsonResponse(request, { error: 'Availability must be true or false' }, 400);
       }
-      liveUpdate.available = updates.available;
+      if (updates.available === false) {
+        // v3.5 §3.6: turning Available OFF on a LIVE piece makes it a DRAFT (hidden), NOT "sold."
+        // "Sold" is quantity===0 from a real sale (computed client-side; never stored). Unpublish so
+        // computeState() resolves to `draft`. Republish is the maker turning it back ON → the surface
+        // re-runs the publish flow (?_action=publish); Stripe is a no-op the 2nd time (stripe_product_id
+        // already set — stripeSync.ts:40), so the piece comes back live without a duplicate Stripe product.
+        liveUpdate.is_published = false;
+        liveUpdate.available = false;
+      } else {
+        liveUpdate.available = updates.available;
+      }
     }
     if (
       updates.quantity !== undefined &&
@@ -472,6 +557,19 @@ export async function PUT(request: Request) {
         return jsonResponse(request, { error: 'Quantity must be a non-negative integer (0 = sold out)' }, 400);
       }
       liveUpdate.quantity = updates.quantity;
+    }
+    // scheduled_publish_at: an auto-publish directive, applied LIVE (never staged — it's not copy). A
+    // string ISO timestamp arms it; null clears it. The daily product-feed fold (WS2 Phase 2.6) does the
+    // actual publish, and publishing clears it (Phase 2.5) so it fires at most once.
+    if (
+      updates.scheduled_publish_at !== undefined &&
+      updates.scheduled_publish_at !== (current as Record<string, unknown>).scheduled_publish_at
+    ) {
+      const sched = updates.scheduled_publish_at;
+      if (sched !== null && (typeof sched !== 'string' || Number.isNaN(Date.parse(sched)))) {
+        return jsonResponse(request, { error: 'scheduled_publish_at must be an ISO timestamp or null' }, 400);
+      }
+      liveUpdate.scheduled_publish_at = sched;
     }
 
     // Stage copy/SEO edits — but ONLY the ones that genuinely differ from what's LIVE. The invariant:
@@ -535,6 +633,12 @@ export async function PUT(request: Request) {
         console.error('Old price deactivate failed (harmless — DB points at the new active price):', err);
       }
     }
+    await logActivity({
+      actor: await resolveActor(request),
+      action: 'product.update',
+      summary: hasDraftable ? `Staged edits on “${String(data.title)}”` : `Updated “${String(data.title)}”`,
+      entityId: String(data.id),
+    });
     return jsonResponse(request, {
       success: true,
       product: data,
@@ -542,6 +646,8 @@ export async function PUT(request: Request) {
       ...(liveUpdate.price !== undefined ? { price_updated: true } : {}),
       ...(liveUpdate.available !== undefined ? { availability_updated: true } : {}),
       ...(liveUpdate.quantity !== undefined ? { quantity_updated: true } : {}),
+      ...(liveUpdate.is_published === false ? { unpublished: true } : {}),
+      ...(liveUpdate.scheduled_publish_at !== undefined ? { scheduled_updated: true } : {}),
       ...(hasDraftable
         ? { preview_url: previewUrl(request, String(data.slug), previewToken), preview_token: previewToken }
         : {}),
@@ -550,7 +656,14 @@ export async function PUT(request: Request) {
 
   // Unpublished draft: edits apply to live columns directly (nothing is live yet).
   // Price + checkout fields are still editable here — they freeze at publish.
-  const clean = pick([...DRAFTABLE, 'checkout_name', 'checkout_description', 'checkout_image']);
+  const clean = pick([...DRAFTABLE, 'checkout_name', 'checkout_description', 'checkout_image', 'scheduled_publish_at']);
+  if (
+    updates.scheduled_publish_at !== undefined &&
+    updates.scheduled_publish_at !== null &&
+    (typeof updates.scheduled_publish_at !== 'string' || Number.isNaN(Date.parse(updates.scheduled_publish_at)))
+  ) {
+    return jsonResponse(request, { error: 'scheduled_publish_at must be an ISO timestamp or null' }, 400);
+  }
   if (updates.price !== undefined) {
     if (!Number.isInteger(updates.price) || (updates.price as number) <= 0) {
       return jsonResponse(request, { error: 'Price must be a positive integer in cents' }, 400);
@@ -567,6 +680,12 @@ export async function PUT(request: Request) {
     console.error('Product update failed:', error.message);
     return jsonResponse(request, { error: error.message }, 400);
   }
+  await logActivity({
+    actor: await resolveActor(request),
+    action: 'product.update',
+    summary: `Updated draft “${String(data.title)}”`,
+    entityId: String(data.id),
+  });
   return jsonResponse(request, {
     success: true,
     product: data,
@@ -628,13 +747,13 @@ async function handlePublish(request: Request): Promise<Response> {
     // populateHero/populateGallery). This is the SAME validator first-publish runs (see the branch
     // below), so the well-formed-product invariant holds on BOTH publish branches, not just first-publish.
     const merged = { ...(row as Record<string, unknown>), ...draft };
-    const shapeProblems = validateProductRules(merged);
+    const shapeProblems = validatePublishRules(merged);
     if (shapeProblems.length) {
       return jsonResponse(request, { error: `Cannot publish — ${shapeProblems.join('; ')}` }, 400);
     }
     const { data: updated, error: applyError } = await supabase
       .from('products')
-      .update({ ...draft, draft: null, preview_token: null })
+      .update({ ...draft, draft: null, preview_token: null, scheduled_publish_at: null })
       .eq('id', row.id)
       .select()
       .single();
@@ -642,16 +761,22 @@ async function handlePublish(request: Request): Promise<Response> {
       console.error('Publish (apply draft) failed:', applyError.message);
       return jsonResponse(request, { error: applyError.message }, 400);
     }
+    await logActivity({
+      actor: await resolveActor(request),
+      action: 'product.publish',
+      summary: `Published edits to “${String(updated.title)}”`,
+      entityId: String(updated.id),
+    });
     return jsonResponse(request, { success: true, product: updated, url: liveUrl(request, String(updated.slug)) });
   }
 
   // First publish: re-validate the SAME product-shape rules create enforces, THEN the checkout
   // essentials, THEN create Stripe + flip live. An unpublished product's edits write straight to its live
   // columns (the unpublished-draft PUT branch), so `row` already holds the current values — no draft
-  // overlay to merge here. Together with the edit-publish guard above, validateProductRules now runs on
+  // overlay to merge here. Together with the edit-publish guard above, validatePublishRules now runs on
   // BOTH publish branches, so the invariant holds: a published product is always well-formed even if an
   // earlier edit blanked story_card / images.
-  const shapeProblems = validateProductRules(row as Record<string, unknown>);
+  const shapeProblems = validatePublishRules(row as Record<string, unknown>);
   if (shapeProblems.length) {
     return jsonResponse(request, { error: `Cannot publish — ${shapeProblems.join('; ')}` }, 400);
   }
@@ -673,9 +798,20 @@ async function handlePublish(request: Request): Promise<Response> {
     return jsonResponse(request, { error: 'Failed to create the Stripe product' }, 502);
   }
 
+  // Required-but-auto-generated (Sean v3.5): fill from other fields when blank so publish never blocks
+  // on them; checkout_* then LOCK (FROZEN_AFTER_PUBLISH). checkoutImage is already resolved above (:658).
+  const autoGen = {
+    checkout_name: (row.checkout_name as string) || (row.title as string),
+    checkout_description:
+      (row.checkout_description as string) || (row.description as string) || (row.headline as string) || '',
+    checkout_image: checkoutImage,
+    seo_title: (row.seo_title as string) || (row.title as string),
+    seo_description: (row.seo_description as string) || (row.description as string) || '',
+    seo_thumbnail: (row.seo_thumbnail as string) || (row.thumbnail as string) || checkoutImage,
+  };
   const { data: published, error: pubError } = await supabase
     .from('products')
-    .update({ is_published: true, published_at: new Date().toISOString(), draft: null, preview_token: null })
+    .update({ is_published: true, published_at: (row.published_at as string) ?? new Date().toISOString(), draft: null, preview_token: null, scheduled_publish_at: null, ...autoGen })
     .eq('id', row.id)
     .select()
     .single();
@@ -683,6 +819,12 @@ async function handlePublish(request: Request): Promise<Response> {
     console.error('Publish (flip live) failed:', pubError.message);
     return jsonResponse(request, { error: pubError.message }, 400);
   }
+  await logActivity({
+    actor: await resolveActor(request),
+    action: 'product.publish',
+    summary: `Published “${String(published.title)}”`,
+    entityId: String(published.id),
+  });
   return jsonResponse(request, { success: true, product: published, url: liveUrl(request, String(published.slug)), stripe_sync: stripeSync });
 }
 
@@ -700,6 +842,7 @@ async function handleCoupon(request: Request): Promise<Response> {
     expires_date?: string;   // YYYY-MM-DD — preferred; normalized to a store-TZ end-of-day below
     expires_at?: number;     // Unix (legacy/back-compat)
     max_redemptions?: number;
+    auto_apply?: boolean;    // v3.5 — the no-code store-wide sale: apply on-site + struck pricing (percent only)
   };
   try {
     body = (await request.json()) as typeof body;
@@ -732,7 +875,12 @@ async function handleCoupon(request: Request): Promise<Response> {
   }
   if (typeof body.max_redemptions === 'number') couponParams.max_redemptions = body.max_redemptions;
   if (typeof body.expires_at === 'number') couponParams.redeem_by = body.expires_at;
-  couponParams.metadata = { source: 'owner_sale' }; // tag so list/deactivate skip system codes
+  // v3.5 — auto_apply is the store-wide "no code needed" sale. Percent ONLY (struck pricing on-site
+  // needs a ratio, not a flat cents amount); a $-off "store-wide" stays a plain shareable code.
+  const autoApply = body.auto_apply === true && body.type === 'percent' && !(Array.isArray(body.product_ids) && body.product_ids.length); // v3.6.6 — auto_apply is store-wide ONLY: a product-scoped % coupon is never stamped auto_apply, so "auto_apply ⇒ store_wide" is a SERVER invariant (was caller-convention only); active_sale/struck then only ever reflect a whole-store sale (round-1 breadth #D)
+  couponParams.metadata = autoApply
+    ? { source: 'owner_sale', auto_apply: 'true' }
+    : { source: 'owner_sale' }; // tag so list/deactivate skip system codes
 
   try {
     const coupon = await stripe.coupons.create(couponParams);
@@ -743,6 +891,27 @@ async function handleCoupon(request: Request): Promise<Response> {
     }
     if (typeof body.expires_at === 'number') promoParams.expires_at = body.expires_at;
     const promo = await stripe.promotionCodes.create(promoParams);
+    // v3.5 — exactly ONE auto-apply store-wide sale runs at a time. Now that the new one exists,
+    // end every OTHER active auto_apply owner_sale promo (best-effort: a failure here is non-fatal —
+    // the storefront's active-sale read returns the first match, so the newest simply wins).
+    if (autoApply) {
+      let swept = 0;
+      const SWEEP_CAP = 2000;
+      for await (const pc of stripe.promotionCodes.list({ active: true, limit: 100 })) {
+        swept += 1;
+        if (pc.id !== promo.id && pc.coupon?.metadata?.source === 'owner_sale' && pc.coupon?.metadata?.auto_apply === 'true') {
+          try { await stripe.promotionCodes.update(pc.id, { active: false }); }
+          catch (err) { console.error('Superseding prior auto-sale failed (non-fatal):', err); }
+        }
+        if (swept >= SWEEP_CAP) break;
+      }
+    }
+    await logActivity({
+      actor: await resolveActor(request),
+      action: 'sale.create',
+      summary: `Created sale “${String(promo.code)}” — ${body.type === 'percent' ? `${body.value}% off` : `$${((body.value as number) / 100).toFixed(2)} off`}`,
+      entityId: promo.id,
+    });
     return jsonResponse(request, { success: true, code: promo.code, coupon_id: coupon.id, promotion_code_id: promo.id, expires_display: typeof body.expires_at === 'number' ? formatExpiry(body.expires_at) : null });
   } catch (err) {
     if ((err as { code?: string })?.code === 'resource_already_exists') {
@@ -823,6 +992,7 @@ async function handleCouponList(request: Request): Promise<Response> {
           min_display: pc.restrictions?.minimum_amount != null ? '$' + (pc.restrictions.minimum_amount / 100).toFixed(2) : null,
           amount_display: pc.coupon?.amount_off != null ? '$' + (pc.coupon.amount_off / 100).toFixed(2) : null,
           store_wide: !scopedProducts || scopedProducts.length === 0,
+          auto_apply: pc.coupon?.metadata?.auto_apply === 'true',
           product_ids: scopedProducts && scopedProducts.length ? scopedProducts : null,
         });
       }
@@ -833,6 +1003,65 @@ async function handleCouponList(request: Request): Promise<Response> {
     console.error('Coupon list failed:', err);
     return jsonResponse(request, { error: 'Failed to list coupons' }, 502);
   }
+}
+
+// ?_action=active_sale (GET) — PUBLIC, no auth. Returns the ONE active store-wide auto-apply sale
+// (a % owner_sale coupon tagged auto_apply='true') for on-site struck pricing + checkout auto-apply,
+// or { active:false }. Stripe test/live keys are env-scoped (api/_lib/stripe.ts), so this returns
+// TEST codes on preview and LIVE codes in prod — the isTest boundary holds via the key, no DB filter.
+// Edge-cached (s-maxage) so a busy storefront doesn't hit Stripe on every page view. Fails SOFT:
+// any error reads as "no sale" (full price) so the store never breaks on a Stripe hiccup.
+async function handleActiveSale(request: Request): Promise<Response> {
+  const cacheHeaders = {
+    ...corsHeaders(request),
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
+  };
+  try {
+    let scanned = 0;
+    const SCAN_CAP = 2000;
+    for await (const pc of stripe.promotionCodes.list({ active: true, limit: 100 })) {
+      scanned += 1;
+      if (
+        pc.coupon?.metadata?.source === 'owner_sale' &&
+        pc.coupon?.metadata?.auto_apply === 'true' &&
+        pc.coupon?.percent_off != null
+      ) {
+        return new Response(JSON.stringify({
+          active: true,
+          type: 'percent',
+          value: pc.coupon.percent_off,
+          code: pc.code,
+          amount_display: pc.coupon.percent_off + '% off',
+        }), { status: 200, headers: cacheHeaders });
+      }
+      if (scanned >= SCAN_CAP) break;
+    }
+    return new Response(JSON.stringify({ active: false }), { status: 200, headers: cacheHeaders });
+  } catch (err) {
+    console.error('Active-sale read failed (soft — treated as no sale):', err);
+    return new Response(JSON.stringify({ active: false }), { status: 200, headers: corsHeaders(request) });
+  }
+}
+
+// ?_action=activity (GET) — recent activity feed for the Account surface's activity card. Admin/GPT only
+// (audit trail is not public). Newest-first, capped at 25, scoped by isTest. Returns the exact
+// { at, actor, action, summary } shape window.PORTAL_DATA.activityLog expects (design-handoff out/data.js).
+async function handleActivityLog(request: Request): Promise<Response> {
+  if (!(await authorize(request))) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401);
+  }
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('at, actor, action, summary')
+    .eq('is_test', isTest)
+    .order('at', { ascending: false })
+    .limit(25);
+  if (error) {
+    console.error('Activity log GET failed:', error.message);
+    return jsonResponse(request, { error: 'Failed to load activity' }, 500);
+  }
+  return jsonResponse(request, { activityLog: data ?? [] });
 }
 
 // ?_action=coupon_deactivate (POST) — end a sale now (promotion code active:false).
@@ -859,6 +1088,12 @@ async function handleCouponDeactivate(request: Request): Promise<Response> {
       return jsonResponse(request, { error: "That code is system-managed and can't be ended here." }, 403);
     }
     const updated = await stripe.promotionCodes.update(promo.id, { active: false });
+    await logActivity({
+      actor: await resolveActor(request),
+      action: 'sale.end',
+      summary: `Ended sale “${String(updated.code)}”`,
+      entityId: updated.id,
+    });
     return jsonResponse(request, { success: true, code: updated.code, active: updated.active });
   } catch (err) {
     console.error('Coupon deactivate failed:', err);
@@ -913,6 +1148,12 @@ async function handleArchive(request: Request, archive: boolean): Promise<Respon
     console.error('Archive update failed:', error.message);
     return jsonResponse(request, { error: error.message }, 400);
   }
+  await logActivity({
+    actor: await resolveActor(request),
+    action: archive ? 'product.archive' : 'product.unarchive',
+    summary: archive ? `Archived “${String(data.title)}”` : `Resurfaced “${String(data.title)}”`,
+    entityId: String(data.id),
+  });
   return jsonResponse(request, { success: true, product: data, archived: archive });
 }
 
@@ -965,5 +1206,11 @@ async function handleDiscard(request: Request): Promise<Response> {
     console.error('Discard update failed:', error.message);
     return jsonResponse(request, { error: error.message }, 400);
   }
+  await logActivity({
+    actor: await resolveActor(request),
+    action: 'product.discard',
+    summary: `Discarded staged edits on “${String(data.title)}”`,
+    entityId: String(data.id),
+  });
   return jsonResponse(request, { success: true, product: data, discarded: true });
 }
