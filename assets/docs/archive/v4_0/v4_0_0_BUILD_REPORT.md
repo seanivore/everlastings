@@ -21,15 +21,32 @@ Delegated by **file ownership** (not workstream) because five files are edited b
 - **Series `?series=` deep-links** in the header/footer nav + `index.html` "browse by series" were not realigned to live-catalog slugs (the code fix — data-derived filter + slugify — is in; the nav-link realignment needs the live catalog's distinct series values, a soft-fail otherwise). Verification-wave / go-live item.
 - **Account page "Site home" link** points at the hardcoded prod domain on the preview (the env-aware `P.siteUrl()` swap covered the Products rail's View-Site, not this link). Minor render-tune.
 
-## Build-time bug caught in verification (fixed)
+## Build-time bugs caught in verification (fixed)
 
-- **The three v3.5 migrations were not applied to the remote database.** `supabase migration list` showed `20260701000001` (scheduled_publish), `20260701000002` (drop_cart_holds), `20260702000001` (activity_log) local-only; the dev DB was still at the v3.1 schema. This made `GET ?_action=activity` return **500** (no `activity_log` table), and the Account activity card silently fell back to mock `data.js` data. **Fixed:** `supabase db push` applied all three (additive: new nullable column, new table, the commented `drop_cart_holds` is a recorded no-op). Re-tested green — a fresh `createProduct` now logs `product.create` with `actor = dev@test.com`. *Process note: applying the migrations is a required deploy step; it was implicit in the preflight and should be explicit in the go-live runbook.*
+1. **The three v3.5 migrations were not applied to the remote database.** `supabase migration list` showed `20260701000001` (scheduled_publish), `20260701000002` (drop_cart_holds), `20260702000001` (activity_log) local-only; the dev DB was still at the v3.1 schema. This made `GET ?_action=activity` return **500** (no `activity_log` table), and the Account activity card silently fell back to mock `data.js` data. **Fixed:** `supabase db push` applied all three (additive: new nullable column, new table, the commented `drop_cart_holds` is a recorded no-op). Re-tested green — a fresh `createProduct` now logs `product.create` with `actor = dev@test.com`. *Process note: applying the migrations is a required deploy step; it was implicit in the preflight and should be explicit in the go-live runbook.*
+2. **The refund "Relist" switch flipped order status but never restocked the piece** (`47b199f`). The WS3 port kept the refund POST + `relist_product_ids` and showed "N relisted", but dropped the restock step — so a relisted piece stayed `quantity:0 / available:false` (not back on sale). The backend refund deliberately only flips order status + RETURNS the pieces; the caller owns the restore, which the original `admin.js relistPiece` (:1080-1122) and the GPT instructions both do (`unarchive-if-archived` + `PUT {available:true, quantity+1}`). **Fixed:** after the refund, each returned piece is restocked automatically (the switch was the per-piece intent) — `quantity+1` so `available` follows the `quantity>0` rule; a restock failure surfaces in the toast. Verified live: a real 2-piece purchase → refund one piece with relist → the restock PUT restores it to `quantity:1 / available:true`. Caught by Sean's "restock should add +1 to the quantity."
 
 ## Verification status (on the dev preview)
 
-**Verified green:** WS1 (routing → `/admin/products`, signed-out gate → `/admin/account`, real Supabase sign-in, env chip "Test", real `pk_test` key, account card) · WS2 surface (9 live rows, tabs Live/Drafts/Sold/Archived/All, 5-color LEDs, create-draft + logging) · WS4 (createCoupon `auto_apply`, `active_sale`, supersede, struck pricing everywhere with correct math, top bar, once-only popup, auto-apply discount attaches to the session, end-sale reverts) · WS6 (PDP structured spec fields, data-derived series filter) · WS8 (activity write+read+actor after the migration fix, Orders nav badge) · WS9 ("One of a kind" + Featured badges) · #219 probe.
+**Verified green on the live preview:**
+- **WS1** — `/admin` → `/admin/products`, signed-out gate → `/admin/account`, real Supabase sign-in (dev@test.com), env chip "Test", real `pk_test` key + account card.
+- **WS2** — Products surface (9 live rows, tabs Live/Drafts/Sold/Archived/All, 5-color LEDs), create-draft + archive.
+- **WS4** — full store-wide-sale lifecycle: `createCoupon {auto_apply}` → `active_sale` → struck pricing on shop/PDP/cart with correct math ($195→$156 etc.) → top bar + once-only popup → **auto-apply attaches the discount to the Stripe session (`discount=$39/total=$156` confirmed) + a second code REPLACES** → end-sale reverts everywhere.
+- **WS6** — PDP structured spec fields render (dimensions/weight/materials/care/shipping/artist-note), data-derived series filter, `/complete` shows **no** raw `cs_` id.
+- **WS7 #228 even-split** — a **real 2-piece unequal-price purchase** ($310 + $88) wrote `orders` rows carrying the **real per-item amounts $310 and $88**, NOT an even $199/$199 split.
+- **WS3 refund** — a real refund of one piece: $88 refunded via Stripe, that piece → refunded + **restocked to quantity:1/available:true** (after the `47b199f` fix), the sibling untouched, `order.refund` logged.
+- **WS8** — activity log write+read+actor (`resolveActor` JWT→email + `X-Actor:cron`→cron both verified), Orders nav badge (needs-shipping count).
+- **WS9** — "One of a kind" + Featured badges.
+- **Cron gate + WS2 scheduled-publish** — `CRON_SECRET` set on Preview; an **authed** `/api/product-feed` hit ran `publishDueScheduled` (a past-due draft attempt logged `product.schedule_skipped` by actor `cron`), while **unauthed + wrong-secret** hits ran nothing (gate holds). WS7 reconciliation runs in that same awaited gate.
+- **#219 probe** + `checkout.js` auto-apply/share-code/struck-total.
 
-**Not yet driven end-to-end (recommended follow-up):** WS5 media modal upload/reorder/re-role via the UI (code-verified + review-fixed, not UI-driven) · WS3 refund + mark-shipped-409 and WS7 even-split (#228) + cart-hold-removed (need a real test purchase) · WS2 scheduled-publish flip + WS7 reconciliation (**cron-gated — need `CRON_SECRET` on the preview + its value**) · the checkout-total display item above · the GPT-parity spot-check (human touchpoint in Em's ChatGPT).
+**Not driven end-to-end (recommended follow-up):**
+- **WS5 media modal** upload/reorder/re-role via the UI — code-verified + independently review-fixed, not UI-driven (Stripe-free, low risk).
+- **A fresh refund-with-relist** to confirm the `47b199f` restock loop end-to-end — the restock *mechanism* (`PUT {available:true, quantity+1}`) is verified; one more real refund would confirm the loop fires automatically.
+- **WS7 reconciliation gap-email** — the job runs in the verified cron gate; the email-on-orphan-session output wasn't separately simulated.
+- **WS3 mark-shipped-409** on a refunded order (backend guard verified by code; not UI-driven).
+- **The `/checkout` total display** item above (money correct; display-only).
+- **The GPT-parity spot-check** — the one human touchpoint, in Em's ChatGPT.
 
 ## Go-live handoff (REQUIRED before dev → main / prod)
 
