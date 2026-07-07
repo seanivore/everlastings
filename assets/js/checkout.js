@@ -176,8 +176,11 @@ function wirePromo(checkout) {
   const promoBtn = document.querySelector('[data-promo-apply]');
   const promoInput = document.getElementById('promo-code');
   if (!promoBtn || !promoInput) return;
+  const promoMsg = document.querySelector('[data-promo-msg]');
+  const setMsg = (t) => { if (promoMsg) { promoMsg.textContent = t || ''; promoMsg.style.display = t ? 'block' : 'none'; } };
 
   function syncPromoState() {
+    setMsg(''); // clear any prior "invalid code" note
     let s; try { s = checkout.session(); } catch (e) { s = null; }
     const d0 = s && s.discountAmounts && s.discountAmounts[0];
     if (d0) {
@@ -210,6 +213,7 @@ function wirePromo(checkout) {
     const code = promoInput.value.trim();
     if (!code) return;
     promoBtn.disabled = true;
+    setMsg('');
     const original = promoBtn.textContent;
     promoBtn.textContent = 'Applying…';
     try {
@@ -217,14 +221,14 @@ function wirePromo(checkout) {
       if (typeof apply === 'function') {
         const r = await apply.call(checkout, code);
         if (r?.type === 'error') {
-          showError(r.error?.message || 'Could not apply this code.');
+          setMsg(r.error?.message || 'Could not apply this code.'); // inline + subtle, not the big pay-error block
           promoBtn.disabled = false;
           promoBtn.textContent = original;
           return;
         }
       }
     } catch (err) {
-      showError('Could not apply this code. Please try again.');
+      setMsg('Could not apply this code. Please try again.');
       promoBtn.disabled = false;
       promoBtn.textContent = original;
       return;
