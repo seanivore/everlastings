@@ -96,7 +96,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 
 ### 2A. Instructions (system prompt)
 
-> **Paste the instructions from the canonical `.txt`, verbatim.** The shipped, paste-able instructions are **`assets/docs/archive/v4_0/v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`** — **7978 / 8000 bytes** (the 8000-char cap is a hard ceiling; over it the GPT silently truncates its own prompt). Copy the whole file into the GPT's *Instructions* field byte-for-byte; do not retype from a summary. The beats it carries, so you can sanity-check the paste:
+> **Paste the instructions from the canonical `.txt`, verbatim.** The shipped, paste-able instructions are **`assets/docs/archive/v4_0/v4_0_7_GPT_INSTRUCTIONS_TRIMMED.txt`** — **7978 / 8000 bytes** (the 8000-char cap is a hard ceiling; over it the GPT silently truncates its own prompt). Copy the whole file into the GPT's *Instructions* field byte-for-byte; do not retype from a summary. The beats it carries, so you can sanity-check the paste:
 
 - **Intro + posture** — warm plain-language studio assistant; never expose keys/URLs/jargon; **do reversible things without asking, confirm only the irreversible ones** (the initiative nudge).
 - **Create flow** — slug → upload photos → `createProduct` → share preview → publish; required fields; ATTACHED photos → `uploadImages`, LINK/URL photos + video → `uploadImage`; assign the role, write alt; 6-distinct-shot minimum (the hero doubles as the thumbnail).
@@ -112,7 +112,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 
 ### 2B. Actions schema (OpenAPI)
 
-> **Paste the schema from the canonical `.txt`, verbatim.** YAML whitespace is significant — copy from **`assets/docs/archive/v4_0/v4_0_0_GPT_SCHEMA.txt`**, never from rendered markdown. It is OpenAPI 3.1.0 with `info.version: 4.0.0`. **16 operations**, all on the `servers:` URL `https://everlastingsbyemaline.com` (change that URL per environment — see 2C + Part 3). The operations:
+> **Paste the schema from the canonical `.txt`, verbatim.** YAML whitespace is significant — copy from **`assets/docs/archive/v4_0/v4_0_7_GPT_SCHEMA.txt`**, never from rendered markdown. It is OpenAPI 3.1.0 with `info.version: 4.0.7`. **16 operations**, all on the `servers:` URL `https://everlastingsbyemaline.com` (change that URL per environment — see 2C + Part 3). The operations:
 
 - **Products (8):** `createProduct` (POST `/api/products` — draft, no Stripe yet), `listProducts` (GET), `editProduct` (PUT `?id=`), `publishProduct`, `archiveProduct`, `unarchiveProduct`, `discardEdits`, `getProduct` (GET `/api/products/by-slug/{slug}`).
 - **Media (2):** `uploadImage` (POST `/api/upload` — by LINK/URL, or a video), `uploadImages` (POST `/api/upload/attach` — photos ATTACHED in chat, `openaiFileIdRefs`, up to 10).
@@ -159,7 +159,7 @@ The full management Action set — `editProduct`, `publishProduct`, `discardEdit
 3. Paste **Instructions** (2A) verbatim.
 4. **Capabilities** per 2D — turn **Web Browsing ON** (required for the refund walkthrough). **Knowledge:** upload `assets/docs/gpt/product-reference.md` + `assets/docs/gpt/voice-guide.md` (2D) — never the raw dev docs.
 5. **Create new action → Authentication:** API Key, Bearer, paste the `PRODUCT_API_KEY` **for the environment the schema's `servers:` URL points at** (see the smoke test + 2C's wrong-key tell). Re-check it any time you re-paste the schema — that can reset the Bearer.
-6. **Schema:** paste the schema from the canonical **`v4_0_0_GPT_SCHEMA.txt`** (2B) verbatim — YAML whitespace is significant, so copy from the `.txt`, not from rendered markdown. Paste the full schema; all 16 Actions (incl. `/api/orders`) are live.
+6. **Schema:** paste the schema from the canonical **`v4_0_7_GPT_SCHEMA.txt`** (2B) verbatim — YAML whitespace is significant, so copy from the `.txt`, not from rendered markdown. Paste the full schema; all 16 Actions (incl. `/api/orders`) are live.
 7. **Privacy URL** (2D). **Save → Only me**.
 8. **Wave 1 smoke test** — because the GPT can't reach the SSO-protected preview, verify the product pipeline one of two ways. Either way the path is: **create-draft → open the returned `preview_url` → publish (publish creates Stripe + goes live) → archive the throwaway.**
    - **Recommended (no live clutter):** Sean curls the **dev preview** first to prove the pipeline (test key from `.env.local`). A bogus-key call → `401` (proves the endpoint is deployed + gated); a real-key `createProduct` returns a draft + `preview_url` and tags the row `is_test=true`; then `publishProduct {id}` creates the Stripe listing. The GPT wraps these exact calls — green curl = green GPT path.
@@ -175,7 +175,7 @@ The order Actions (`listOrders`, `markShipped`, `refundOrder`) run on the `PRODU
 
 **Hand-off:** the GPT is in Em's sidebar. Remind her: always the required photo set (≥1 hero + ≥5 gallery + a thumbnail); create and edits make a **draft with a preview link** — she reviews it, then **publishes** to go live; it manages products end-to-end (edit, draft → preview → publish, **schedule a publish**, coupons incl. the **automatic store-wide sale**, archive/resurface), fulfills orders, and **issues refunds** — it confirms before marking shipped or refunding (both notify the buyer); if she ever sees "the connection key needs Sean's attention," text Sean.
 
-**Go-live (v4.0.0).** The GPT's Action currently points at the **dev tester**. To hand it to Em on production: flip the schema `servers:` URL to `https://everlastingsbyemaline.com`, re-paste the shipped **`v4_0_0_GPT_SCHEMA.txt`** + **`v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`**, and re-paste the **Production**-scoped `PRODUCT_API_KEY` (a schema re-paste can reset the Bearer). Then re-run the smoke test against prod. Re-verify BOTH the URL and the key — they are independent.
+**Go-live (v4.0.0).** The GPT's Action currently points at the **dev tester**. To hand it to Em on production: flip the schema `servers:` URL to `https://everlastingsbyemaline.com`, re-paste the shipped **`v4_0_7_GPT_SCHEMA.txt`** + **`v4_0_7_GPT_INSTRUCTIONS_TRIMMED.txt`**, and re-paste the **Production**-scoped `PRODUCT_API_KEY` (a schema re-paste can reset the Bearer). Then re-run the smoke test against prod. Re-verify BOTH the URL and the key — they are independent.
 
 **Maintenance:** if `PRODUCT_API_KEY` rotates, reopen the GPT → Actions → Authentication → paste the new value → Save. If the API base URL changes (or you switch environments), update the `servers:` URL in the schema and **re-verify the auth key for that environment** — re-pasting the schema can reset the Bearer, and a wrong-environment key shows the `listProducts`-empty-`200` / `uploadImage`-`401` tell (2C).
 
