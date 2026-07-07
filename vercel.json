@@ -4,9 +4,11 @@
   "crons": [
     { "path": "/api/product-feed", "schedule": "0 9 * * *" }
   ],
+  "redirects": [
+    { "source": "/admin", "destination": "/admin/products", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/product/:slug", "destination": "/product" },
-    { "source": "/admin/:path*", "destination": "/admin" },
     { "source": "/api/checkout/reserve", "destination": "/api/checkout?_action=reserve" },
     { "source": "/api/session-status", "destination": "/api/checkout?_action=session-status" },
     { "source": "/api/orders/:id/refund", "destination": "/api/orders?id=:id&_action=refund" },
