@@ -1,0 +1,423 @@
+openapi: 3.1.0
+info:
+  title: Everlastings Store API
+  description: Create products, upload media, and fulfill orders on everlastingsbyemaline.com.
+  version: 3.5.0
+servers:
+  - url: https://everlastingsbyemaline.com
+paths:
+  /api/products:
+    post:
+      operationId: createProduct
+      x-openai-isConsequential: false
+      summary: Create a new product as a draft (no Stripe yet). The response includes preview_url; publishProduct is what creates the Stripe listing and makes it live.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, headline, story_card, description, price, product_type, slug, images, thumbnail]
+              properties:
+                title: { type: string }
+                slug: { type: string, description: "URL-safe handle you derive from the title (lowercase, spaces→hyphens, strip anything not a-z0-9-, collapse repeats) and reuse for every uploadImage call. Required because photos upload before the row exists. The server normalizes it again; it's permanent after creation." }
+                headline: { type: string }
+                story_card: { type: string }
+                description: { type: string }
+                features: { type: array, items: { type: string }, description: "Required to publish." }
+                price: { type: integer, description: Price in cents. }
+                dimensions: { type: string, description: "Required to publish." }
+                weight: { type: string, description: "Required to publish." }
+                materials: { type: array, items: { type: string }, description: "Required to publish." }
+                power_supply: { type: string }
+                care_instructions: { type: array, items: { type: string }, description: "Required to publish." }
+                shipping_details: { type: array, items: { type: string }, description: "Required to publish." }
+                product_type: { type: string, enum: [miniature] }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\"." }
+                available: { type: boolean }
+                quantity: { type: integer, description: "Required to publish." }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel." }
+                artist_note: { type: string }
+                images:
+                  type: array
+                  items:
+                    type: object
+                    required: [url]
+                    properties:
+                      url: { type: string }
+                      alt: { type: string }
+                media:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, url]
+                    properties:
+                      type: { type: string, enum: [video, youtube], description: "video = an MP4 you uploaded (the usual); youtube = a YouTube link (rare)." }
+                      url: { type: string, description: "MP4 CDN URL (from uploadImage role video-0x) or a YouTube link." }
+                      alt: { type: string }
+                      loop: { type: boolean, description: "Replay automatically — true for a GIF-like clip." }
+                      autoplay: { type: boolean, description: "Start on its own (always silent — autoplay must be muted). true = GIF-like; false/omit = she presses play." }
+                      controls: { type: boolean, description: "Show play/volume buttons. true or omit = normal click-to-play; false = GIF-like, no buttons." }
+                      poster: { type: string, description: "Optional still-frame image URL shown before a click-to-play video starts." }
+                thumbnail: { type: string }
+                seo_title: { type: string }
+                seo_description: { type: string }
+                seo_thumbnail: { type: string }
+                checkout_name: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_description: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_image: { type: string, description: "Editable only before first publish (frozen after)." }
+      responses:
+        '200': { description: Draft created; returns preview_url. }
+    get:
+      operationId: listProducts
+      x-openai-isConsequential: false
+      summary: List all products with their status (live, draft, live-with-edits-pending, or archived). Use this to find a product (and its id) before editing, and to tell Em what is live vs still a draft vs archived. Read is_published + draft + archived_at to report status.
+      responses:
+        '200':
+          description: Products list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      description: "A product row. Read these to find a piece, report its status, and scope a coupon: id (UUID — pass to editProduct/publishProduct/archiveProduct/createCoupon), slug, title, price (cents), available, quantity, is_published, archived_at, draft (non-null = edits pending), stripe_product_id (needed to scope a coupon to ONE piece — only present once published)."
+                      properties:
+                        id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        price: { type: integer }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        is_published: { type: boolean }
+                        archived_at: { type: string }
+                        draft: { type: object }
+                        stripe_product_id: { type: string }
+    put:
+      operationId: editProduct
+      x-openai-isConsequential: false
+      summary: Stage edits. On a published product, copy/SEO/photo changes stage a draft to preview (publish applies them); price, availability, and quantity apply live immediately (a price change rotates the Stripe price, same product/URL). checkout_* freeze after publish; for a temp discount, make a coupon.
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                headline: { type: string }
+                story_card: { type: string }
+                features: { type: array, items: { type: string }, description: "Required to publish." }
+                dimensions: { type: string, description: "Required to publish." }
+                weight: { type: string, description: "Required to publish." }
+                materials: { type: array, items: { type: string }, description: "Required to publish." }
+                power_supply: { type: string }
+                care_instructions: { type: array, items: { type: string }, description: "Required to publish." }
+                shipping_details: { type: array, items: { type: string }, description: "Required to publish." }
+                series: { type: string, description: "Collection/series name shoppers filter by, e.g. \"Portals to Peace\". Stages like copy on a published piece — publish to apply." }
+                product_type: { type: string, enum: [miniature] }
+                artist_note: { type: string }
+                quantity: { type: integer, description: "Required to publish." }
+                available: { type: boolean, description: "false takes the piece DOWN — it unpublishes to a hidden DRAFT (not 'sold'). To put a taken-down piece back UP, call publishProduct {id} (NOT available:true — on a draft that only flips the flag, it stays hidden). true on an in-stock live piece is a normal availability toggle." }
+                scheduled_publish_at: { type: string, description: "ISO 8601 timestamp to auto-publish a ready draft at a future date (date-granular, via the daily cron); null clears it. Parity with the panel's Schedule control (PUT /api/products accepts it). Em says 'schedule for Friday morning' → parse to local ISO, ECHO the resolved date/time back plainly for confirmation before writing ('Scheduled for Fri Jun 26, morning ~9am ET — set it?'); NEVER schedule a piece that isn't publish-ready (call getProduct first, verify story_card/features/materials/care/shipping/dimensions/weight/quantity/≥5 gallery + alt); if missing, name the fields and offer to fix first. Date-granular by design — sub-day precision is not guaranteed." }
+                featured: { type: boolean, description: "Show this piece in the homepage carousel. Stages like copy on a published piece — publish to apply." }
+                thumbnail: { type: string }
+                thumbnail_alt: { type: string }
+                images: { type: array, items: { type: object, properties: { url: { type: string }, alt: { type: string } } } }
+                media:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, url]
+                    properties:
+                      type: { type: string, enum: [video, youtube], description: "video = an MP4 you uploaded (the usual); youtube = a YouTube link (rare)." }
+                      url: { type: string, description: "MP4 CDN URL (from uploadImage role video-0x) or a YouTube link." }
+                      alt: { type: string }
+                      loop: { type: boolean, description: "Replay automatically — true for a GIF-like clip." }
+                      autoplay: { type: boolean, description: "Start on its own (always silent — autoplay must be muted). true = GIF-like; false/omit = she presses play." }
+                      controls: { type: boolean, description: "Show play/volume buttons. true or omit = normal click-to-play; false = GIF-like, no buttons." }
+                      poster: { type: string, description: "Optional still-frame image URL shown before a click-to-play video starts." }
+                seo_title: { type: string }
+                seo_description: { type: string }
+                seo_thumbnail: { type: string }
+                price: { type: integer, description: "Price in CENTS — editable anytime. On a published product a change ROTATES the Stripe price and goes live immediately (same product/URL); no need to publish a price change." }
+                checkout_name: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_description: { type: string, description: "Editable only before first publish (frozen after)." }
+                checkout_image: { type: string, description: "Editable only before first publish (frozen after)." }
+      responses:
+        '200': { description: Draft staged; returns preview_url. }
+  /api/products/publish:
+    post:
+      operationId: publishProduct
+      x-openai-isConsequential: false
+      summary: Publish a product (or apply staged edits). For a new product this creates the Stripe product/price and makes it live.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Published; returns the live url. }
+  /api/products/archive:
+    post:
+      operationId: archiveProduct
+      x-openai-isConsequential: false
+      summary: Remove a product from the store (reversible). Hides it from the shop + feed and archives it in Stripe; it stays findable and can be resurfaced. Use this to take a piece down — there is no hard delete.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Archived. }
+  /api/products/unarchive:
+    post:
+      operationId: unarchiveProduct
+      x-openai-isConsequential: false
+      summary: Bring an archived product back into the store (reverses archiveProduct).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Resurfaced. }
+  /api/products/discard:
+    post:
+      operationId: discardEdits
+      x-openai-isConsequential: false
+      summary: Scrap a published product's pending (staged) edits without publishing them — the inverse of publish. The live page is left exactly as it is. Use when she changes her mind about edits she previewed. Only for a published product with edits pending; to drop a brand-new draft, archive it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { type: string, description: The product UUID (from listProducts). }
+      responses:
+        '200': { description: Pending edits discarded; the live product is unchanged. }
+  /api/coupons:
+    post:
+      operationId: createCoupon
+      x-openai-isConsequential: false
+      summary: Create a discount — a Stripe Coupon plus a shareable Promotion Code. Percent or amount off; optional product scope, minimum order amount, expiry, redemption cap, or auto_apply for the automatic store-wide sale. No buy-N/BOGO.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, value]
+              properties:
+                type: { type: string, enum: [percent, amount], description: percent off, or a fixed amount off in CENTS. }
+                value: { type: number, description: "percent (1–100) or amount in cents (e.g. 500 = $5)." }
+                code: { type: string, description: The shareable code, e.g. HOLIDAY20. Optional — Stripe generates one if omitted. }
+                product_ids: { type: array, items: { type: string }, description: "Stripe product IDs (the stripe_product_id field from listProducts — NOT the Supabase id) to limit the discount to. Omit for store-wide." }
+                min_amount: { type: integer, description: Minimum order total in cents to qualify. Optional. }
+                expires_date: { type: string, description: "End date as YYYY-MM-DD (e.g. 2026-06-21). PREFER THIS — the server sets end-of-day in the store's timezone, so you never compute a timestamp. Optional." }
+                expires_at: { type: integer, description: "Unix timestamp (legacy — use expires_date instead). Optional." }
+                max_redemptions: { type: integer, description: Max total redemptions. Optional. }
+                auto_apply: { type: boolean, description: "true = the automatic store-wide sale: the storefront shows struck prices and auto-applies this code at checkout (no code to type). Percent + store-wide only. End it via deactivateCoupon, same as any coupon." }
+      responses:
+        '200': { description: Coupon created; returns the code. }
+    get:
+      operationId: listCoupons
+      x-openai-isConsequential: false
+      summary: List active discounts (codes, percent/amount off, redemptions, expiry) so you can tell Em what's running and end one.
+      responses:
+        '200': { description: Active coupons. }
+  /api/coupons/deactivate:
+    post:
+      operationId: deactivateCoupon
+      x-openai-isConsequential: false
+      summary: End a discount now — deactivates the promotion code so it stops working. Existing orders keep their history.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: The shareable code to end, e.g. HOLIDAY20. }
+      responses:
+        '200': { description: Coupon deactivated. }
+  /api/products/by-slug/{slug}:
+    get:
+      operationId: getProduct
+      x-openai-isConsequential: false
+      summary: Get ONE product (live or draft) by its slug, with full current values — use this when she names a specific piece, instead of listing everything. When the row has pending preview state it also returns a ready-to-share preview_url (origin-correct).
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: "The product (full row, incl. is_published + any staged draft), plus preview_url when a preview_token exists (relay this link; do not build a URL by hand)." }
+  /api/upload:
+    post:
+      operationId: uploadImage
+      x-openai-isConsequential: false
+      summary: "Upload a photo or video to the CDN and return its url; call before createProduct/editProduct, then put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. By LINK (Drive share/URL) or video. If she ATTACHED photos, use uploadImages."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, slug, role]
+              properties:
+                url: { type: string, description: "A link to the image/video — a Google Drive share link ('anyone with the link') or a direct file URL. The server downloads it." }
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the file on the CDN." }
+                role: { type: string, description: "What this media is: hero, thumbnail, gallery-01..15, detail-01..05, video-01..05, checkout_image (Stripe 1:1), or seo_thumbnail (1.91:1 OG card)." }
+                skip_transform: { type: boolean, description: "true for videos and GIFs (uploaded as-is, no crop). Leave off / false for photos so they're cropped + web-optimized." }
+      responses:
+        '200': { description: "Uploaded; returns { url, filename }. Use url verbatim in the product fields." }
+        '400': { description: "The link wasn't directly downloadable (often a Drive share PAGE rather than the file, or not shared as 'anyone with the link'), or the type/size wasn't allowed — relay the message and ask Em for a direct/shared link." }
+  /api/upload/attach:
+    post:
+      operationId: uploadImages
+      x-openai-isConsequential: false
+      summary: "Upload one or more photos the owner ATTACHED to this chat (not a link). Call this with their attached images, then put each returned url into images[]/thumbnail on createProduct/editProduct. For media she gives as a Drive/direct LINK, or for video, use uploadImage instead."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openaiFileIdRefs, slug]
+              properties:
+                openaiFileIdRefs:
+                  type: array
+                  items: { type: string }
+                  description: "The photos the owner attached to the chat. Leave the values to the platform — just include this property so the attached files are forwarded. Up to 10 per call."
+                slug: { type: string, description: "The product's slug (lowercase-hyphenated title). Names the files on the CDN. Same value you'll use on createProduct." }
+                roles:
+                  type: array
+                  items: { type: string }
+                  description: "Optional, same order as the attached photos: what each is — hero, gallery-01..15, detail-01..05, thumbnail, seo_thumbnail, checkout_image. If omitted, the first becomes hero and the rest gallery-01, gallery-02, … You can reuse the hero url for thumbnail on createProduct."
+      responses:
+        '200': { description: "Returns { uploads: [{ url, role, filename }, …], failures: [{ index, error }, …] }. Use each uploaded url verbatim in the product fields; if failures is non-empty, keep the successes and ask Em to re-attach just those." }
+        '400': { description: "No files attached, more than 10 files, or a missing slug (whole-request errors). Per-file problems come back in failures[], not here. Relay plainly." }
+  /api/orders:
+    get:
+      operationId: listOrders
+      x-openai-isConsequential: false
+      summary: List orders for fulfillment. Optional status filter and free-text search.
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [needs_shipping, shipped] }
+          description: Filter to orders awaiting shipping or already shipped.
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search by order id, customer email, or tracking number.
+      responses:
+        '200':
+          description: Orders list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders: { type: array, items: { type: object } }
+  /api/orders/{id}:
+    patch:
+      operationId: markShipped
+      x-openai-isConsequential: false
+      summary: Record a tracking number + carrier on an order and email the buyer automatically.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: The order UUID (from listOrders).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tracking_number, tracking_carrier]
+              properties:
+                tracking_number: { type: string }
+                tracking_carrier: { type: string, enum: [USPS, UPS, FedEx, DHL] }
+      responses:
+        '200':
+          description: Tracking recorded; buyer notified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  email_sent: { type: boolean }
+  /api/orders/{id}/refund:
+    post:
+      operationId: refundOrder
+      x-openai-isConsequential: false
+      summary: "Refund an order via Stripe; emails the buyer. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders on one payment. Default = refund THIS order's amount + relist THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          description: The order UUID (from listOrders).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount_cents: { type: integer, description: "Refund amount in CENTS. Omit to refund this order's full line amount. For several pieces, sum their amounts. Stripe rejects more than the purchase total." }
+                relist_product_ids:
+                  type: array
+                  items: { type: string }
+                  description: "The Supabase product ids (NOT stripe ids) of the pieces that came back — they get marked refunded and offered for relist. Omit to default to this order's piece; pass [] for a goodwill/partial refund where nothing is returned."
+      responses:
+        '200':
+          description: Refund issued. `relist` carries each returned piece's current state so you can offer to restore it (empty if nothing was returned).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  status: { type: string }
+                  relist:
+                    type: array
+                    description: One entry per returned piece — its current state, so you can offer to restore each returned unit. Empty for a goodwill/partial refund.
+                    items:
+                      type: object
+                      properties:
+                        product_id: { type: string }
+                        slug: { type: string }
+                        title: { type: string }
+                        available: { type: boolean }
+                        quantity: { type: integer }
+                        archived: { type: boolean }
