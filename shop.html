@@ -180,14 +180,11 @@
                 </select>
               </div>
 
-              <!-- Series filter -->
+              <!-- Series filter — shop.js populateSeriesFilter() fills this from the live catalog's
+                   distinct series values (label = the real series text, value = its slug). -->
               <details class="filter-group" open>
                 <summary>Series</summary>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="portals-to-peace"> Portals to Peace</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="book-nooks"> Book Nooks</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="story-lofts"> Story Lofts</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="seasonal"> Seasonal</label>
-                <label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="limited-edition"> Limited Edition</label>
+                <div data-shop-series-options></div>
               </details>
 
               <!-- Product type filter -->

@@ -3,6 +3,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForSupabase();
+  await getActiveSale(); // v3.5 — sets window._activeSale before the first renderTiles
 
   let products;
   try {
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  populateSeriesFilter(products);
   initFromURL();
   renderTiles(products);
   wireFilters(products);
@@ -69,7 +71,7 @@ function getActiveFilters() {
 
 function applyFilters(products, filters) {
   return products.filter((p) => {
-    if (filters.series.length && !filters.series.includes(p.series)) return false;
+    if (filters.series.length && !filters.series.includes(seriesSlug(p.series))) return false;
     if (filters.product_type.length && !filters.product_type.includes(p.product_type)) return false;
     // 'available' is a checkbox-pair: 'true' shows available, 'false' shows sold. If both or neither, show all.
     if (filters.available.length === 1) {
@@ -126,17 +128,19 @@ function renderTiles(allProducts) {
   grid.innerHTML = visible.map((p) => {
     const heroImg = pickHeroThumb(p);
     const altText = escapeAttr(p.thumbnail_alt || p.title || '');
+    const sold = p.quantity != null ? p.quantity <= 0 : !p.available; // v3.5 sold policy: known qty<=0 is Sold; a null qty falls back to the available flag
     return `
-      <article class="card product-tile" data-product-slug="${escapeAttr(p.slug)}" data-series="${escapeAttr(p.series || '')}" data-product-type="${escapeAttr(p.product_type || '')}" data-available="${p.available ? 'true' : 'false'}">
+      <article class="card product-tile" data-product-slug="${escapeAttr(p.slug)}" data-series="${escapeAttr(p.series || '')}" data-product-type="${escapeAttr(p.product_type || '')}" data-available="${sold ? 'false' : 'true'}">
         <a href="/product/${escapeAttr(p.slug)}" style="display: block; color: inherit; text-decoration: none;">
           <div class="card__media">
-            ${p.available ? '' : '<span class="badge badge-sold">Sold</span>'}
-            ${p.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
-            <img loading="lazy" alt="${altText}" src="${escapeAttr(heroImg)}"${p.available ? '' : ' style="opacity: 0.55;"'}>
+            ${sold ? '<span class="badge badge-sold">Sold</span>' : ''}
+            ${!sold && p.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+            ${!sold && !p.featured ? '<span class="badge badge-unique">One of a kind</span>' : ''}
+            <img loading="lazy" alt="${altText}" src="${escapeAttr(heroImg)}"${sold ? ' style="opacity: 0.55;"' : ''}>
           </div>
           <div class="card__body">
             <h3 class="card__title">${escapeAttr(p.title || '')}</h3>
-            <p class="card__price${p.available ? '' : ' text-muted'}">${formatPrice(p.price)}</p>
+            <p class="card__price${sold ? ' text-muted' : ''}">${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}</p>
           </div>
         </a>
       </article>
@@ -153,6 +157,33 @@ function pickHeroThumb(p) {
 
 function escapeAttr(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// v3.5 — series filter fix. Checkbox VALUES were hardcoded kebab slugs while `series` is free text
+// ("Portals to Peace"), so includes(p.series) never matched. Normalize both sides to one slug, and
+// derive the options from the live catalog's distinct series so the filter can't drift from the data.
+function seriesSlug(s) {
+  return String(s ?? '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function populateSeriesFilter(products) {
+  const group = document.querySelector('[data-shop-series-options]');
+  if (!group) return;
+  const bySlug = new Map(); // slug -> original label (first-seen wins)
+  (Array.isArray(products) ? products : []).forEach((p) => {
+    const label = (p.series || '').trim();
+    if (!label) return;
+    const slug = seriesSlug(label);
+    if (slug && !bySlug.has(slug)) bySlug.set(slug, label);
+  });
+  if (bySlug.size === 0) {
+    group.closest('.filter-group')?.classList.add('hidden'); // no series in catalog → drop the group
+    return;
+  }
+  group.innerHTML = [...bySlug.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .map(([slug, label]) => `<label class="checkbox-label"><input type="checkbox" data-shop-filter="series" value="${escapeAttr(slug)}"> ${escapeAttr(label)}</label>`)
+    .join('');
 }
 
 function wireFilters(products) {

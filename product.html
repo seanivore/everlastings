@@ -276,52 +276,16 @@
 
         <h2 class="product-details__title">Details</h2>
 
-        <!-- Features list. Track B fallback content stays unless Supabase p.features is provided. -->
-        <ul class="feature-list" data-product-features style="margin-top: var(--space-sm);">
+        <!-- Structured spec fields — product.js populateDetails() binds these from Supabase
+             (dimensions, weight, materials, power_supply, care_instructions, shipping_details);
+             empty fields are omitted, so nothing renders until real data loads. -->
+        <ul class="feature-list" data-product-details style="margin-top: var(--space-sm);"></ul>
 
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M2 7v6h16V7H2zm1 1h2v3H4V8H3zm3 0h1v2H6V8zm2 0h2v3H9V8H8zm3 0h1v2h-1V8zm2 0h2v3h-1V8h-1zm3 0h1v2h-1V8z"/>
-            </svg>
-            <span><strong>Dimensions</strong> &mdash; 8&Prime; W &times; 6&Prime; D &times; 10&Prime; H. Small enough to shelter on a bookshelf.</span>
-          </li>
+        <!-- Optional free-form features — product.js populateFeatures() fills from p.features when set. -->
+        <ul class="feature-list" data-product-features style="margin-top: var(--space-sm);"></ul>
 
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10 2a3 3 0 0 0-2.83 2H4a1 1 0 0 0-.97.76l-2 8A1 1 0 0 0 2 14h6.18A3 3 0 0 0 10 16a3 3 0 0 0 1.82-2H18a1 1 0 0 0 .97-1.24l-2-8A1 1 0 0 0 16 4h-3.17A3 3 0 0 0 10 2zm0 2a1 1 0 0 1 .94.66H9.06A1 1 0 0 1 10 4zm-5 4 1.5 6h-3l1.5-6zm10 0 1.5 6h-3l1.5-6zm-5 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
-            </svg>
-            <span><strong>Weight</strong> &mdash; 2.5 lbs. Substantial enough to hold a world.</span>
-          </li>
-
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10 2a8 8 0 0 0-1 15.94 1.5 1.5 0 0 0 1.4-2.06.5.5 0 0 1 .47-.69H13a4 4 0 0 0 4-4c0-4.97-3.13-9-7-9zm-4 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm3-3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm2 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
-            </svg>
-            <span><strong>Materials</strong> &mdash; reclaimed wood, archival paper, hand-mixed paint, dried botanicals, low-voltage LED wiring.</span>
-          </li>
-
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V2a1 1 0 0 1 1-1zm0 14.5a1 1 0 0 1 1 1V18a1 1 0 0 1-2 0v-1.5a1 1 0 0 1 1-1zM2 9a1 1 0 0 1 1 1 1 1 0 0 1-1 1H.5a1 1 0 0 1 0-2H2zm17.5 0a1 1 0 0 1 0 2H18a1 1 0 0 1 0-2h1.5zM4.22 4.22a1 1 0 0 1 1.41 0L6.7 5.29a1 1 0 0 1-1.41 1.41L4.22 5.63a1 1 0 0 1 0-1.41zm10.07 10.07a1 1 0 0 1 1.41 0l1.07 1.07a1 1 0 0 1-1.41 1.41l-1.07-1.07a1 1 0 0 1 0-1.41zM4.22 15.78a1 1 0 0 1 0-1.41l1.07-1.07a1 1 0 0 1 1.41 1.41l-1.07 1.07a1 1 0 0 1-1.41 0zm10.07-10.07a1 1 0 0 1 0-1.41l1.07-1.07a1 1 0 0 1 1.41 1.41L15.7 5.71a1 1 0 0 1-1.41 0z"/>
-            </svg>
-            <span><strong>Lighting</strong> &mdash; warm LED glow with three modes (always-on, candle-flicker, off). USB-C powered. Adapter included.</span>
-          </li>
-
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M10 1.5 3 4v5c0 4.5 3 8.4 7 9.5 4-1.1 7-5 7-9.5V4l-7-2.5zM10 4 15 5.5V9c0 3.4-2.2 6.4-5 7.4C7.2 15.4 5 12.4 5 9V5.5L10 4zm-2 5.5L9 8.5l1.5 1.5 3-3L14 8l-3.5 3.5L9 9.5z"/>
-            </svg>
-            <span><strong>Care</strong> &mdash; dust gently with a soft brush. Keep out of direct sunlight. Use only the included adapter.</span>
-          </li>
-
-          <li>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M2 5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v2h2.5l2.5 3v4h-1.5a2 2 0 1 1-4 0H7.5a2 2 0 1 1-4 0H2V5zm11 4h3.07L14.5 7H13v2zM5.5 13a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm9 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z"/>
-            </svg>
-            <span><strong>Shipping</strong> &mdash; ships within 3&ndash;5 business days. Hand-packed in protective layers. Insured.</span>
-          </li>
-
-        </ul>
+        <!-- Artist's note — product.js populateDetails() reveals + fills from p.artist_note when set. -->
+        <p class="product-artist-note hidden" data-product-artist-note style="margin-top: var(--space-md); font-style: italic; color: var(--text-secondary);"></p>
         </section>
         <!-- /product-aside -->
         </div>

@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForSupabase();
+  await getActiveSale(); // v3.5 — sets window._activeSale before populateFeatured
 
   let featured;
   try {
@@ -45,25 +46,36 @@ function populateFeatured(items) {
     // Leave Track B's fallback tiles visible if no live featured products yet.
     return;
   }
-  carousel.innerHTML = items.map((p) => {
+  const tile = (p) => {
     const thumb = pickThumb(p);
     const alt = escapeAttr(p.thumbnail_alt || p.title || '');
+    const sold = p.quantity != null ? p.quantity <= 0 : !p.available; // v3.5 — match shop.js: known qty<=0 is Sold; null qty falls back to the available flag
     return `
       <article class="card product-tile" data-product-slug="${escapeAttr(p.slug)}">
         <a href="/product/${escapeAttr(p.slug)}" style="display: block; color: inherit; text-decoration: none;">
           <div class="card__media">
-            <span class="badge badge-featured">Featured</span>
+            ${sold ? '<span class="badge badge-sold">Sold</span>' : ''}
+            ${!sold && p.featured ? '<span class="badge badge-featured">Featured</span>' : ''}
+            ${!sold && !p.featured ? '<span class="badge badge-unique">One of a kind</span>' : ''}
             <img loading="lazy" alt="${alt}" src="${escapeAttr(thumb)}">
           </div>
           <div class="card__body">
             <h3 class="card__title">${escapeAttr(p.title || '')}</h3>
             ${p.headline ? `<p style="font-style: italic; color: var(--text-muted); font-size: var(--text-sm); margin: 0 0 var(--space-xs);">${escapeAttr(p.headline)}</p>` : ''}
-            <p class="card__price">${formatPrice(p.price)}</p>
+            <p class="card__price">${sold ? formatPrice(p.price) : priceHTML(p.price, window._activeSale)}</p>
           </div>
         </a>
       </article>
     `;
-  }).join('');
+  };
+  // Netflix-style independent rows: ≤5 items ride in a single scroller; >5 split into rows of ~3
+  // (each row is its own .featured-row overflow-x scroller, so the rows scroll independently).
+  const perRow = items.length <= 5 ? items.length : 3;
+  const rows = [];
+  for (let i = 0; i < items.length; i += perRow) rows.push(items.slice(i, i + perRow));
+  carousel.innerHTML = rows
+    .map((row) => `<div class="featured-row">${row.map(tile).join('')}</div>`)
+    .join('');
 }
 
 function pickThumb(p) {

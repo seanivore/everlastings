@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const previewToken = params.get('preview');
 
   await waitForSupabase();
+  await getActiveSale(); // v3.5 — sets window._activeSale before populateStickyCard
 
   const product = previewToken
     ? await fetchPreviewProduct(slug, previewToken)
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateStory(product);
   populateMedia(product);
   populateFeatures(product);
+  populateDetails(product);
   wireCartButtons(product);
   wireProductInterestForm(product);
   wireContemplationOfferSuccess(product);
@@ -350,7 +352,7 @@ function injectProductJsonLd(p) {
       url: `https://everlastingsbyemaline.com/product/${p.slug}`,
       priceCurrency: 'USD',
       price: ((p.price || 0) / 100).toFixed(2),
-      availability: p.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: (p.quantity != null ? p.quantity > 0 : p.available) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
     },
   };
@@ -367,7 +369,12 @@ function populateStickyCard(p) {
   setText('[data-product-headline]', p.headline);
   setText('[data-product-breadcrumb-title]', p.title);
   const priceEl = document.querySelector('[data-product-price]');
-  if (priceEl) priceEl.textContent = formatPrice(p.price);
+  if (priceEl) {
+    const sale = window._activeSale;
+    const sold = p.quantity != null ? p.quantity <= 0 : !p.available; // v3.5 — struck only on a PURCHASABLE piece, never a sold one (DESIGN §D.1); same rule as §6.5b. v3.6.6 — null-fallback HARMONIZED to !p.available across every storefront site (a null-qty+null-available row now reads Sold uniformly, matching the server checkout gate's fail-safe: available!==true ⇒ not buyable, so a Sold display is honest)
+    if (!sold && sale && sale.active && sale.type === 'percent') priceEl.innerHTML = priceHTML(p.price, sale);
+    else priceEl.textContent = formatPrice(p.price);
+  }
 
   // Set the article-level data-product-slug to the real slug (Track B left a placeholder).
   document.querySelectorAll('[data-product][data-product-slug]').forEach((el) => {
@@ -379,7 +386,9 @@ function populateStickyCard(p) {
     form.setAttribute('data-product-slug', p.slug);
   });
 
-  if (p.available === false) {
+  const previewToken = new URLSearchParams(location.search).get('preview'); // v3.5 — RE-DERIVE locally: populateStickyCard is a top-level function, so the init handler's previewToken (product.js:19) is out of scope here (referencing it directly throws a ReferenceError on every PDP load)
+  const sold = !previewToken && (p.quantity != null ? p.quantity <= 0 : !p.available); // v3.5 buy-gate: known qty<=0 is Sold, null qty falls back to the flag; under ?preview= (a draft being reviewed) never render Sold — it isn't purchasable anyway, "nothing shows wrong without a reason". v3.6.6 — null-fallback is !p.available (harmonized with §4.5.d/§6.5a/§6.3d/§6.5d; server-consistent)
+  if (sold) {
     document.querySelector('[data-product-sold]')?.classList.remove('hidden');
     document.querySelectorAll('[data-product-add-to-cart], [data-product-buy-now]').forEach((btn) => {
       btn.disabled = true;
@@ -437,6 +446,39 @@ function populateFeatures(p) {
   // Track B's hardcoded list is a great fallback. Only overwrite if Supabase provides structured features.
   if (Array.isArray(p.features) && p.features.length > 0) {
     list.innerHTML = p.features.map((item) => `<li>${escapeHTML(String(item))}</li>`).join('');
+  }
+}
+
+// v3.5 — bind the structured spec fields to the Details list. These columns ARE fetched
+// (main.js getProductBySlug select) but Track B shipped no render code for them; the old static <ul>
+// showed fixed placeholder bullets regardless of the DB. Render only the fields that are set (empty
+// ones omitted); labels mirror the /admin form; array fields (materials/care/shipping) join with ", ".
+// artist_note is prose, revealed as its own note. Mirrors the populateFeatures/populateGallery
+// "only overwrite when data is present" pattern.
+function populateDetails(p) {
+  const list = document.querySelector('[data-product-details]');
+  if (list) {
+    const asText = (v) => Array.isArray(v)
+      ? v.map((x) => String(x).trim()).filter(Boolean).join(', ')
+      : (v == null ? '' : String(v).trim());
+    const rows = [
+      ['Dimensions', asText(p.dimensions)],
+      ['Weight', asText(p.weight)],
+      ['Materials', asText(p.materials)],
+      ['Power Supply', asText(p.power_supply)],
+      ['Care', asText(p.care_instructions)],
+      ['Shipping', asText(p.shipping_details)],
+    ].filter(([, val]) => val !== '');
+    if (rows.length) {
+      list.innerHTML = rows
+        .map(([label, val]) => `<li><strong>${escapeHTML(label)}</strong> &mdash; ${escapeHTML(val)}</li>`)
+        .join('');
+    }
+  }
+  const note = document.querySelector('[data-product-artist-note]');
+  if (note && p.artist_note) {
+    note.textContent = String(p.artist_note);
+    note.classList.remove('hidden');
   }
 }
 
@@ -558,7 +600,7 @@ async function renderRelatedProducts(p) {
       <article class="card product-tile" data-product-slug="${escapeAttr(rp.slug)}">
         <a href="/product/${escapeAttr(rp.slug)}" style="display: block; color: inherit; text-decoration: none;">
           <div class="card__media">
-            ${rp.available ? '' : '<span class="badge badge-sold">Sold</span>'}
+            ${(rp.quantity != null ? rp.quantity <= 0 : !rp.available) ? '<span class="badge badge-sold">Sold</span>' : ''}
             <img loading="lazy" alt="${escapeAttr(rp.thumbnail_alt || rp.title || '')}" src="${escapeAttr(thumb)}">
           </div>
           <div class="card__body">

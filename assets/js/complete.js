@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setText('[data-complete-customer-name]', data.customer_name || 'collector');
   setText('[data-complete-customer-email]', data.customer_email || 'your email');
   setText('[data-complete-total]', formatPrice(data.amount_total || 0));
-  setText('[data-complete-order-id]', sessionId);
 
   // Shipping line: Stripe Checkout returns 0 for free shipping; if shipping_cost present use it.
   const shippingCost = (data.shipping_cost && Number.isFinite(data.shipping_cost.amount_total))
