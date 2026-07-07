@@ -212,5 +212,30 @@
     if (localStorage.getItem("portalRailCollapsed") === "1") app.classList.add("rail-collapsed");
     const rt = document.getElementById("railToggle");
     rt.addEventListener("click", () => { const c = app.classList.toggle("rail-collapsed"); localStorage.setItem("portalRailCollapsed", c ? "1" : "0"); rt.setAttribute("aria-label", c ? "Expand menu" : "Collapse menu"); rt.title = c ? "Expand menu" : "Collapse menu"; });
+    P.refreshOrdersSignal();
+  };
+
+  /* ---- central new-order signal: light the Orders blink from the REAL unseen count and show the REAL
+     needs-shipping badge (not the caller's mock ordersBadge). Called by mountShell AND the Products
+     static-rail init. Runs after PORTAL.boot() so authHeader() is set. Best-effort; blink (data-alert)
+     ← unseen_count (decoupled), badge ← needs-shipping count. ---- */
+  P.refreshOrdersSignal = async function () {
+    try {
+      // v3.5 — ?status=needs_shipping keeps the payload small (this runs on EVERY page just to read two
+      // numbers). unseen_count is returned REGARDLESS of the list filter (orders.ts §8.2a — a separate
+      // count query, filter-independent), so the blink is unaffected. The needs count stays a defensive
+      // client filter over the (already-narrowed) list, so it's correct even if the server predicate drifts.
+      const res = await fetch("/api/orders?status=needs_shipping", { headers: { ...P.authHeader() } });
+      if (!res.ok) return;
+      const body = await res.json().catch(() => ({}));
+      const unseen = Number(body.unseen_count) || 0;
+      const needs = Array.isArray(body.orders) ? body.orders.filter((o) => !o.shipped_at && o.status === "completed").length : 0;
+      document.querySelectorAll('.rail__item[href="orders.html"], .tabbar__item[href="orders.html"]').forEach((el) => {
+        el.toggleAttribute("data-alert", unseen > 0);
+        let b = el.querySelector(".badge");
+        if (needs > 0) { if (!b) { b = document.createElement("span"); b.className = "badge"; el.appendChild(b); } b.textContent = String(needs); }
+        else if (b) { b.remove(); }
+      });
+    } catch { /* best-effort — nav stays as rendered */ }
   };
 })();

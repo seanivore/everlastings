@@ -110,11 +110,27 @@
         btn.disabled = false;
         if (error) { P.toast(error.message, { kind: "danger" }); return; }
         account.email = (P.session && P.session.user && P.session.user.email) || email;
-        if (window.__fxStop) window.__fxStop(); signedIn = true; render(); P.toast("Signed in", { kind: "live" });
+        if (window.__fxStop) window.__fxStop(); signedIn = true; render(); loadActivity(); P.toast("Signed in", { kind: "live" });
       });
     }
   }
   function maskKey(k) { if (!k) return "—"; return k.length > 12 ? k.slice(0, 8) + "…" + k.slice(-4) : k; }
+
+  /* ---- activity-card data layer: real GET /api/products?_action=activity → { activityLog:[newest 25] }
+     (rows shape { at, actor, action, summary }; actor is stored but NOT rendered — single-admin). The
+     dot color + summary + relative time render is already in render(); this only feeds it real data.
+     Carries the WS1 Supabase auth header; best-effort — on success it overwrites PORTAL_DATA.activityLog
+     and re-renders, on any failure the last-rendered log stays. ---- */
+  async function loadActivity() {
+    if (!signedIn) return;
+    try {
+      const res = await fetch("/api/products?_action=activity", { headers: { ...P.authHeader() } });
+      if (!res.ok) return;
+      const body = await res.json().catch(() => ({}));
+      D.activityLog = Array.isArray(body.activityLog) ? body.activityLog.slice(0, 25) : [];
+      render();
+    } catch { /* best-effort — keep the last-rendered log */ }
+  }
 
   /* full-viewport ribbons that snake down behind the sign-in card and shy away from the pointer */
   function initLoginFx() {
@@ -201,6 +217,7 @@
       if (P.session) account.email = (P.session.user && P.session.user.email) || account.email;
       P.mountShell("account"); // Orders badge = shared live PORTAL_DATA.unfulfilledCount()
       render();
+      loadActivity();
     })
     .catch(function (err) { P.mountShell("account"); P.toast(err.message, { kind: "danger" }); render(); });
 })();
