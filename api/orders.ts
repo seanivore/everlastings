@@ -7,8 +7,13 @@ import { requireAdmin } from './_lib/adminAuth';
 import { isTest } from './_lib/env';
 import { stripe } from './_lib/stripe';
 import { sendEmail, trackingEmailHtml, trackingUrl } from './_emails/index';
+import { logActivity } from './_lib/activityLog';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// v3.5: per-env last-viewed key for the Orders-nav unseen blink. site_config has no is_test column
+// (a non-transactional table — initial_schema :169), so the ENV lives in the key, not a column.
+const ORDERS_LAST_VIEWED_KEY = isTest ? 'orders_last_viewed_test' : 'orders_last_viewed_live';
 
 const CARRIER_CANONICAL: Record<string, 'USPS' | 'UPS' | 'FedEx' | 'DHL'> = {
   USPS: 'USPS',
@@ -98,18 +103,51 @@ export async function GET(request: Request) {
     return jsonResponse(request, { error: 'Failed to load orders' }, 500);
   }
 
-  return jsonResponse(request, { orders: data ?? [] });
+  // v3.5: unseen-order signal for the Orders-nav blink. Count completed, unshipped orders created AFTER
+  // the owner last viewed Orders (site_config, per-env). Independent of the list filter.
+  const { data: lv } = await supabase
+    .from('site_config')
+    .select('value')
+    .eq('key', ORDERS_LAST_VIEWED_KEY)
+    .maybeSingle();
+  const lastViewed = (lv?.value as { at?: string } | null)?.at ?? null;
+  let unseenQuery = supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_test', isTest)
+    .is('shipped_at', null)
+    .eq('status', 'completed');
+  if (lastViewed) unseenQuery = unseenQuery.gt('created_at', lastViewed);
+  const { count: unseenCount } = await unseenQuery;
+
+  return jsonResponse(request, { orders: data ?? [], unseen_count: unseenCount ?? 0, last_viewed: lastViewed });
 }
 
 export async function PATCH(request: Request) {
   const auth = await requireAdmin(request);
   if ('error' in auth) return auth.error;
   const { supabase } = auth;
+  const actor = 'user' in auth ? (auth.user.email ?? auth.user.id) : 'gpt';
 
   // Rewrite /api/orders/:id → /api/orders?id=:id surfaces the id in the query.
   const id = new URL(request.url).searchParams.get('id') ?? '';
   if (!id || !UUID_RE.test(id)) {
     return jsonResponse(request, { error: 'Invalid order id' }, 400);
+  }
+
+  // Never ship (or re-email) a refunded order — mirror the refund handler's 409 guard (:280-282).
+  // A refunded piece must not trigger a tracking email to the buyer.
+  const { data: existing, error: existingErr } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', id)
+    .eq('is_test', isTest)
+    .single();
+  if (existingErr || !existing) {
+    return jsonResponse(request, { error: 'Order not found' }, 404);
+  }
+  if (existing.status === 'refunded') {
+    return jsonResponse(request, { error: "This order is refunded — it can't be shipped." }, 409);
   }
 
   let body: PatchBody;
@@ -172,6 +210,13 @@ export async function PATCH(request: Request) {
   }
 
   const order = updated as unknown as OrderRow;
+
+  await logActivity({
+    actor,
+    action: 'order.ship',
+    summary: `Marked order #${order.id.slice(0, 8)} shipped`,
+    entityId: order.id,
+  });
 
   const recipient = order.customers?.email ?? order.customer_email ?? null;
   const customerName = order.customers?.name ?? undefined;
@@ -254,9 +299,25 @@ export async function POST(request: Request) {
   const auth = await requireAdmin(request);
   if ('error' in auth) return auth.error;
   const { supabase } = auth;
+  const actor = 'user' in auth ? (auth.user.email ?? auth.user.id) : 'gpt';
 
   const url = new URL(request.url);
-  if (url.searchParams.get('_action') !== 'refund') {
+  const action = url.searchParams.get('_action');
+
+  // v3.5: mark Orders as seen — stamp a per-env last-viewed time in site_config so the Orders-nav blink
+  // clears. Single-admin, so one timestamp per env is the whole mechanism.
+  if (action === 'seen') {
+    const { error: seenErr } = await supabase
+      .from('site_config')
+      .upsert({ key: ORDERS_LAST_VIEWED_KEY, value: { at: new Date().toISOString() } }, { onConflict: 'key' });
+    if (seenErr) {
+      console.error('Orders seen-stamp failed:', seenErr.message);
+      return jsonResponse(request, { error: 'Failed to record the view' }, 500);
+    }
+    return jsonResponse(request, { ok: true });
+  }
+
+  if (action !== 'refund') {
     return jsonResponse(request, { error: 'Unknown action' }, 400);
   }
   const id = url.searchParams.get('id') ?? '';
@@ -338,5 +399,11 @@ export async function POST(request: Request) {
   // (relistIds empty = goodwill/partial, nothing returned → NO status flip, empty relist; the response
   // `status` mirrors that — 'refunded' only when pieces actually flipped, else the order's unchanged
   // status, so the field never lies to the GPT. A full-PI refund still flips every sibling via charge.refunded.)
+  await logActivity({
+    actor,
+    action: 'order.refund',
+    summary: `Refunded $${(refundAmount / 100).toFixed(2)} on order #${id.slice(0, 8)}`,
+    entityId: id,
+  });
   return jsonResponse(request, { ok: true, status: relistIds.length ? 'refunded' : order.status, relist });
 }
