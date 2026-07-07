@@ -195,6 +195,10 @@
         <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
           <span>Shipping</span><span data-checkout-shipping>Free</span>
         </div>
+        <!-- Discount row — hidden until a code/sale is applied; painted by checkout.js paintSummary(). -->
+        <div data-checkout-discount-row style="display: none; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); color: #4A1942;">
+          <span data-checkout-discount-label>Discount</span><span data-checkout-discount></span>
+        </div>
         <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
           <span>Total</span><span data-checkout-total>—</span>
         </div>

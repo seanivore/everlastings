@@ -82,30 +82,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const confirmBtn = document.querySelector('[data-checkout-confirm]');
 
-  // Read-only listener: gate the Pay button, paint totals, and surface US-only / incomplete states.
-  // NEVER write back to the session here.
+  // Read-only listener: gate the Pay button, repaint the summary, surface US-only state.
+  // NEVER write back to the session here — paintSummary only reads + paints our own DOM.
   checkout.on('change', (session) => {
     if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
-
-    // session.total.total.amount / session.shippingOption.total.amount are the standard Basil
-    // Custom-Checkout session shape. NOTE: this shape was NOT separately captured in the Phase 0
-    // probe — it is verified FUNCTIONALLY at Phase 8.1 (apply a promo, confirm this Total drops).
-    // The optional chaining is deliberate: if the shape ever differs, the pre-painted cart total
-    // stands in rather than printing $NaN — and Phase 8.1 catches a wrong accessor.
-    const total = session.total?.total?.amount;
-    if (Number.isFinite(total)) {
-      const sale = window._activeSale;
-      const totalEl = document.querySelector('[data-checkout-total]');
-      if (totalEl && sale && sale.active && sale.type === 'percent' && total < getCartTotal()) {
-        totalEl.innerHTML = `<span class="price-sale"><span class="price-sale__was">${formatPrice(getCartTotal())}</span> <span class="price-sale__now">${formatPrice(total)}</span></span>`;
-      } else {
-        setText('[data-checkout-total]', formatPrice(total));
-      }
-    }
-
-    const ship = session.shippingOption?.total?.amount;
-    if (Number.isFinite(ship)) setText('[data-checkout-shipping]', ship === 0 ? 'Free' : formatPrice(ship));
-
+    paintSummary(checkout);
     // US-only messaging (server enforces allowed_countries; this is just UX).
     const country = session.shippingAddress?.address?.country;
     document.querySelector('[data-restricted-country]')?.classList.toggle('hidden', !(country && country !== 'US'));
@@ -154,11 +135,78 @@ function renderOrderSummary(cart) {
   if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
 }
 
+// Paint shipping / discount / total from the live Stripe session. CRITICAL: on this Basil bundle the
+// amount fields (session.total.{subtotal,discount,total}.amount) are PRE-FORMATTED STRINGS ("$185.00"),
+// and minorUnitsAmount is the integer cents. The old code did Number.isFinite(amount) — always false on
+// a string — so it silently skipped every repaint (the total never left the cart total, no discount ever
+// showed). Read checkout.session() fresh (the change-event arg can lag the discount). Display-only: paints
+// our own [data-checkout-*] elements and NEVER touches Stripe's mounted elements (no update* bridge).
+function paintSummary(checkout) {
+  let s;
+  try { s = checkout.session(); } catch (e) { return; }
+  const t = s && s.total;
+  if (!t) return;
+
+  // Shipping (shippingRate.minorUnitsAmount === 0 → Free)
+  const shipMinor = t.shippingRate?.minorUnitsAmount;
+  if (Number.isInteger(shipMinor)) setText('[data-checkout-shipping]', shipMinor === 0 ? 'Free' : t.shippingRate.amount);
+
+  // Discount row — shown only when a discount is actually applied.
+  const disc = t.discount;
+  const d0 = (s.discountAmounts && s.discountAmounts[0]) || null;
+  const row = document.querySelector('[data-checkout-discount-row]');
+  if (disc && Number.isInteger(disc.minorUnitsAmount) && disc.minorUnitsAmount > 0) {
+    const label = d0 && d0.percentOff != null ? `${d0.percentOff}% off`
+      : ((d0 && (d0.displayName || d0.promotionCode)) || 'Discount');
+    setText('[data-checkout-discount-label]', label);
+    setText('[data-checkout-discount]', '−' + disc.amount); // amount is already "$10.00"
+    if (row) row.style.display = 'flex';
+  } else if (row) {
+    row.style.display = 'none';
+  }
+
+  // Total — the discounted grand total, already a formatted string.
+  if (t.total && t.total.amount != null) setText('[data-checkout-total]', t.total.amount);
+}
+
+// Apply / Remove a promotion code, with a clear applied state so a shopper knows it worked BEFORE paying.
+// syncPromoState reflects the session: a live discount → the field shows the code (locked) + the button
+// becomes "Remove"; none → "Apply". The auto-apply paths call checkout.__syncPromo after they apply.
 function wirePromo(checkout) {
   const promoBtn = document.querySelector('[data-promo-apply]');
   const promoInput = document.getElementById('promo-code');
   if (!promoBtn || !promoInput) return;
+
+  function syncPromoState() {
+    let s; try { s = checkout.session(); } catch (e) { s = null; }
+    const d0 = s && s.discountAmounts && s.discountAmounts[0];
+    if (d0) {
+      promoInput.value = d0.promotionCode || d0.displayName || promoInput.value;
+      promoInput.readOnly = true;
+      promoBtn.textContent = 'Remove';
+      promoBtn.dataset.mode = 'remove';
+    } else {
+      promoInput.readOnly = false;
+      promoBtn.textContent = 'Apply';
+      promoBtn.dataset.mode = 'apply';
+    }
+    promoBtn.disabled = false;
+    paintSummary(checkout);
+  }
+  checkout.__syncPromo = syncPromoState; // auto-apply paths refresh the applied state through this
+
   promoBtn.addEventListener('click', async () => {
+    // Remove an applied code.
+    if (promoBtn.dataset.mode === 'remove') {
+      promoBtn.disabled = true;
+      promoBtn.textContent = 'Removing…';
+      try { if (typeof checkout.removePromotionCode === 'function') await checkout.removePromotionCode(); }
+      catch (err) { /* re-sync below reflects the real state either way */ }
+      promoInput.value = '';
+      syncPromoState();
+      return;
+    }
+    // Apply a code.
     const code = promoInput.value.trim();
     if (!code) return;
     promoBtn.disabled = true;
@@ -168,14 +216,20 @@ function wirePromo(checkout) {
       const apply = checkout.applyPromotionCode; // Phase 0: applyDiscount does not exist on the bundle.
       if (typeof apply === 'function') {
         const r = await apply.call(checkout, code);
-        if (r?.type === 'error') showError(r.error?.message || 'Could not apply this code.');
+        if (r?.type === 'error') {
+          showError(r.error?.message || 'Could not apply this code.');
+          promoBtn.disabled = false;
+          promoBtn.textContent = original;
+          return;
+        }
       }
     } catch (err) {
       showError('Could not apply this code. Please try again.');
-    } finally {
       promoBtn.disabled = false;
       promoBtn.textContent = original;
+      return;
     }
+    syncPromoState(); // paints the discount line + flips to the Remove state
   });
 }
 
@@ -196,6 +250,8 @@ async function autoApplyStoreWideSale(checkout) {
       // Fallback: prefill the visible field so the shopper can one-tap apply.
       const input = document.getElementById('promo-code');
       if (input) input.value = sale.code;
+    } else {
+      checkout.__syncPromo?.(); // show the discount line + applied state on load
     }
   } catch (err) {
     const input = document.getElementById('promo-code');
@@ -225,7 +281,7 @@ async function applyShareLinkCode(checkout) {
   if (input) input.value = code;
   const apply = checkout.applyPromotionCode; // Phase 4.0: the verified call on this bundle
   if (typeof apply !== 'function') return;   // fallback: field is prefilled; shopper taps Apply
-  try { await apply.call(checkout, code); } catch (err) { /* prefilled for manual retry */ }
+  try { await apply.call(checkout, code); checkout.__syncPromo?.(); } catch (err) { /* prefilled for manual retry */ }
 }
 
 function setText(sel, val) {
