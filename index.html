@@ -385,9 +385,9 @@
         .hero__spotlight { animation: none; }
       }
 
-      /* FEATURED CAROUSEL — independent horizontal-scroll rows (Netflix-style).
-         The carousel is a vertical stack of rows; each .featured-row is its own overflow-x scroller.
-         ≤5 featured items = one row; >5 = rows of ~3 (homepage.js chunks them). */
+      /* FEATURED HAVENS.
+         Mobile: one horizontal-scroll strip — swipe through the pieces.
+         Desktop: the SAME row wraps to a 3-column grid, as many rows as needed for all featured pieces. */
       .featured-carousel {
         display: flex;
         flex-direction: column;
@@ -408,8 +408,16 @@
         min-width: 260px;
       }
       @media (min-width: 768px) {
-        /* Rows of ≤3 fit the container, so no scrollbar; the min-width still forces one on narrow screens. */
-        .featured-row { overflow-x: visible; }
+        /* Desktop: stop scrolling, wrap into 3-per-row. min-width:0 lets the columns shrink to fit. */
+        .featured-row {
+          grid-auto-flow: row;
+          grid-template-columns: repeat(3, 1fr);
+          grid-auto-columns: auto;
+          overflow-x: visible;
+          scroll-snap-type: none;
+          padding-bottom: 0;
+        }
+        .featured-row > .product-tile { min-width: 0; }
       }
 
       /* BRAND PILLARS */

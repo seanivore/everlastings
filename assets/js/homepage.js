@@ -68,14 +68,9 @@ function populateFeatured(items) {
       </article>
     `;
   };
-  // Netflix-style independent rows: ≤5 items ride in a single scroller; >5 split into rows of ~3
-  // (each row is its own .featured-row overflow-x scroller, so the rows scroll independently).
-  const perRow = items.length <= 5 ? items.length : 3;
-  const rows = [];
-  for (let i = 0; i < items.length; i += perRow) rows.push(items.slice(i, i + perRow));
-  carousel.innerHTML = rows
-    .map((row) => `<div class="featured-row">${row.map(tile).join('')}</div>`)
-    .join('');
+  // One row of tiles: on mobile it's a single horizontal-scroll strip; on desktop the same row
+  // wraps to 3-per-row (as many rows as needed). Both behaviours are pure CSS on .featured-row.
+  carousel.innerHTML = `<div class="featured-row">${items.map(tile).join('')}</div>`;
 }
 
 function pickThumb(p) {
