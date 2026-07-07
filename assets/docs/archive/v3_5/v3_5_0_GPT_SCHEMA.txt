@@ -9,6 +9,7 @@ paths:
   /api/products:
     post:
       operationId: createProduct
+      x-openai-isConsequential: false
       summary: Create a new product as a draft (no Stripe yet). The response includes preview_url; publishProduct is what creates the Stripe listing and makes it live.
       requestBody:
         required: true
@@ -69,6 +70,7 @@ paths:
         '200': { description: Draft created; returns preview_url. }
     get:
       operationId: listProducts
+      x-openai-isConsequential: false
       summary: List all products with their status (live, draft, live-with-edits-pending, or archived). Use this to find a product (and its id) before editing, and to tell Em what is live vs still a draft vs archived. Read is_published + draft + archived_at to report status.
       responses:
         '200':
@@ -96,6 +98,7 @@ paths:
                         stripe_product_id: { type: string }
     put:
       operationId: editProduct
+      x-openai-isConsequential: false
       summary: Stage edits. On a published product, copy/SEO/photo changes stage a draft to preview (publish applies them); price, availability, and quantity apply live immediately (a price change rotates the Stripe price, same product/URL). checkout_* freeze after publish; for a temp discount, make a coupon.
       parameters:
         - in: query
@@ -155,6 +158,7 @@ paths:
   /api/products/publish:
     post:
       operationId: publishProduct
+      x-openai-isConsequential: false
       summary: Publish a product (or apply staged edits). For a new product this creates the Stripe product/price and makes it live.
       requestBody:
         required: true
@@ -170,6 +174,7 @@ paths:
   /api/products/archive:
     post:
       operationId: archiveProduct
+      x-openai-isConsequential: false
       summary: Remove a product from the store (reversible). Hides it from the shop + feed and archives it in Stripe; it stays findable and can be resurfaced. Use this to take a piece down — there is no hard delete.
       requestBody:
         required: true
@@ -185,6 +190,7 @@ paths:
   /api/products/unarchive:
     post:
       operationId: unarchiveProduct
+      x-openai-isConsequential: false
       summary: Bring an archived product back into the store (reverses archiveProduct).
       requestBody:
         required: true
@@ -200,6 +206,7 @@ paths:
   /api/products/discard:
     post:
       operationId: discardEdits
+      x-openai-isConsequential: false
       summary: Scrap a published product's pending (staged) edits without publishing them — the inverse of publish. The live page is left exactly as it is. Use when she changes her mind about edits she previewed. Only for a published product with edits pending; to drop a brand-new draft, archive it.
       requestBody:
         required: true
@@ -215,6 +222,7 @@ paths:
   /api/coupons:
     post:
       operationId: createCoupon
+      x-openai-isConsequential: false
       summary: Create a discount — a Stripe Coupon plus a shareable Promotion Code. Percent or amount off; optional product scope, minimum order amount, expiry, redemption cap, or auto_apply for the automatic store-wide sale. No buy-N/BOGO.
       requestBody:
         required: true
@@ -237,12 +245,14 @@ paths:
         '200': { description: Coupon created; returns the code. }
     get:
       operationId: listCoupons
+      x-openai-isConsequential: false
       summary: List active discounts (codes, percent/amount off, redemptions, expiry) so you can tell Em what's running and end one.
       responses:
         '200': { description: Active coupons. }
   /api/coupons/deactivate:
     post:
       operationId: deactivateCoupon
+      x-openai-isConsequential: false
       summary: End a discount now — deactivates the promotion code so it stops working. Existing orders keep their history.
       requestBody:
         required: true
@@ -258,6 +268,7 @@ paths:
   /api/products/by-slug/{slug}:
     get:
       operationId: getProduct
+      x-openai-isConsequential: false
       summary: Get ONE product (live or draft) by its slug, with full current values — use this when she names a specific piece, instead of listing everything. When the row has pending preview state it also returns a ready-to-share preview_url (origin-correct).
       parameters:
         - in: path
@@ -269,6 +280,7 @@ paths:
   /api/upload:
     post:
       operationId: uploadImage
+      x-openai-isConsequential: false
       summary: "Upload a photo or video to the CDN and return its url; call before createProduct/editProduct, then put the url into images[]/thumbnail/checkout_image/seo_thumbnail/media[]. By LINK (Drive share/URL) or video. If she ATTACHED photos, use uploadImages."
       requestBody:
         required: true
@@ -288,6 +300,7 @@ paths:
   /api/upload/attach:
     post:
       operationId: uploadImages
+      x-openai-isConsequential: false
       summary: "Upload one or more photos the owner ATTACHED to this chat (not a link). Call this with their attached images, then put each returned url into images[]/thumbnail on createProduct/editProduct. For media she gives as a Drive/direct LINK, or for video, use uploadImage instead."
       requestBody:
         required: true
@@ -312,6 +325,7 @@ paths:
   /api/orders:
     get:
       operationId: listOrders
+      x-openai-isConsequential: false
       summary: List orders for fulfillment. Optional status filter and free-text search.
       parameters:
         - in: query
@@ -334,6 +348,7 @@ paths:
   /api/orders/{id}:
     patch:
       operationId: markShipped
+      x-openai-isConsequential: false
       summary: Record a tracking number + carrier on an order and email the buyer automatically.
       parameters:
         - in: path
@@ -364,6 +379,7 @@ paths:
   /api/orders/{id}/refund:
     post:
       operationId: refundOrder
+      x-openai-isConsequential: false
       summary: "Refund an order via Stripe; emails the buyer. A Stripe refund is an AMOUNT against the whole purchase; one cart can be several orders on one payment. Default = refund THIS order's amount + relist THIS piece. For several pieces or a custom amount, pass amount_cents + relist_product_ids."
       parameters:
         - in: path
