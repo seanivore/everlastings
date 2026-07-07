@@ -1059,6 +1059,7 @@ async function handleCouponList(request: Request): Promise<Response> {
         coupons.push({
           code: pc.code,
           promotion_code_id: pc.id,
+          created: pc.created,   // promo creation epoch(s) — feeds the admin store-wide "since <date>"
           percent_off: pc.coupon?.percent_off ?? null,
           amount_off: pc.coupon?.amount_off ?? null,
           times_redeemed: pc.times_redeemed,
@@ -1092,7 +1093,7 @@ async function handleActiveSale(request: Request): Promise<Response> {
   const cacheHeaders = {
     ...corsHeaders(request),
     'Content-Type': 'application/json',
-    'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=120',
+    'Cache-Control': 'public, max-age=15, s-maxage=30',   // short: storefront sees a sale start/end in ~30s (admin no longer reads this — it derives from the uncached coupon list)
   };
   try {
     let scanned = 0;

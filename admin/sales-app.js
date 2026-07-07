@@ -7,7 +7,6 @@
   const { money } = D;
   const esc = P.esc;
   let coupons = [];
-  let storeWide = { active: false };
   const pickProducts = (D.products || []).filter((p) => !p.archived_at && p.is_published);
   let pickSel = new Set();
 
@@ -25,27 +24,23 @@
   function offText(c) { return c.percent_off != null ? c.percent_off + "% off" : (c.amount_display || money(c.amount_off)) + " off"; }
 
   /* ---------- store-wide automatic sale ---------- */
-  async function renderStoreWide() {
+  // Store-wide card — rendered from the store-wide row of the shared coupon list (the one auto_apply %
+  // owner sale) or null. NO active_sale fetch here: reading that edge-cached endpoint is what made the
+  // card lag ~10 min behind create/end. loadSales() is the single fresh source.
+  function renderStoreWide(sw) {
     const el = document.getElementById("storewide");
-    // GET active_sale is PUBLIC (no auth) — the ONE auto_apply % store-wide sale, or { active:false }.
-    try {
-      const res = await fetch("/api/products?_action=active_sale");
-      const data = res.ok ? await res.json() : { active: false };
-      storeWide = data && data.active ? data : { active: false };
-    } catch (e) { storeWide = { active: false }; }
-    if (storeWide.active) {
+    if (sw) {
       el.className = "storewide on";
       el.innerHTML = `<div class="storewide__top">
         <span class="storewide__icon">${IC.globe}</span>
-        <span class="storewide__txt"><h3>Running — <span class="storewide__big">${esc(storeWide.amount_display || (storeWide.value + (storeWide.type === "percent" ? "% off" : " off")))}</span> everything</h3>
-          <p>Automatic at checkout · <b>no code needed</b>${storeWide.started_at ? " · since " + fmtDate(storeWide.started_at) : ""}</p></span>
+        <span class="storewide__txt"><h3>Running — <span class="storewide__big">${sw.percent_off}% off</span> everything</h3>
+          <p>Automatic at checkout · <b>no code needed</b>${sw.created ? " · since " + fmtDate(sw.created * 1000) : ""}</p></span>
         <button class="btn btn--refund btn--sm" id="endStoreWide">End sale</button></div>`;
       el.querySelector("#endStoreWide").onclick = () => confirmDialog("End the store-wide sale?", "The automatic discount will stop applying at checkout right away.", "End sale", async () => {
-        // The single active store_wide + percent_off + auto_apply owner coupon — active_sale hands us its code.
         try {
-          const r = await fetch("/api/products?_action=coupon_deactivate", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(storeWide.promotion_code_id ? { promotion_code_id: storeWide.promotion_code_id } : { code: storeWide.code }) });
+          const r = await fetch("/api/products?_action=coupon_deactivate", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(sw.promotion_code_id ? { promotion_code_id: sw.promotion_code_id } : { code: sw.code }) });
           if (!r.ok) { const e = await r.json().catch(() => ({})); P.toast(e.error || "Couldn't end the sale", { kind: "danger" }); return; }
-          await renderStoreWide(); await renderCoupons(); P.toast("Store-wide sale ended");
+          await loadSales(); P.toast("Store-wide sale ended");
         } catch (err) { P.toast("Couldn't end the sale", { kind: "danger" }); }
       });
     } else {
@@ -54,25 +49,20 @@
         <span class="storewide__icon">${IC.globe}</span>
         <span class="storewide__txt"><h3>No store-wide sale running</h3><p>Apply a discount to <b>everything</b>, automatically, with no code — the holiday-sale case.</p></span></div>
       <div class="storewide__form">
-        <div class="field"><div class="field__top"><span class="field__label">Type</span></div>
-          <div class="select-wrap"><select class="select" id="sw-type"><option value="percent">% off</option><option value="amount">$ off</option></select>${IC.chev}</div></div>
-        <div class="field"><div class="field__top"><span class="field__label">Amount</span></div>
+        <div class="field"><div class="field__top"><span class="field__label">Percent off everything</span></div>
           <input class="input mono" id="sw-val" inputmode="decimal" placeholder="15" value="15"></div>
         <button class="btn" id="startStoreWide">Start sale</button></div>`;
       el.querySelector("#startStoreWide").onclick = async () => {
-        const type = el.querySelector("#sw-type").value, raw = parseFloat(el.querySelector("#sw-val").value);
-        if (isNaN(raw) || raw <= 0) { P.toast("Enter an amount", { kind: "danger" }); return; }
-        // % → auto_apply, struck store-wide sale (no code needed). $ → plain shareable code (value in cents).
-        // The form collects no code, so we omit it and let Stripe generate one; active_sale reads it back.
-        const payload = type === "percent"
-          ? { type: "percent", value: raw, auto_apply: true }
-          : { type: "amount", value: Math.round(raw * 100) };
+        const raw = parseFloat(el.querySelector("#sw-val").value);
+        if (isNaN(raw) || raw <= 0) { P.toast("Enter a percentage", { kind: "danger" }); return; }
+        // Store-wide is ALWAYS % + auto_apply (the struck, no-code sale). A $-off whole-store discount is a
+        // code coupon via "New sale". Server generates the (unused) code; active_sale reads it back.
         try {
-          const r = await fetch("/api/products?_action=coupon", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(payload) });
+          const r = await fetch("/api/products?_action=coupon", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify({ type: "percent", value: raw, auto_apply: true }) });
           const data = await r.json().catch(() => ({}));
           if (!r.ok) { P.toast(data.error || "Couldn't start the sale", { kind: "danger" }); return; }
-          await renderStoreWide(); await renderCoupons();
-          P.toast(type === "percent" ? "Store-wide sale is live — applies at checkout, no code" : "Sale code created — share it with customers", { kind: "live" });
+          await loadSales();
+          P.toast("Store-wide sale is live — applies at checkout, no code", { kind: "live" });
         } catch (err) { P.toast("Couldn't start the sale", { kind: "danger" }); }
       };
     }
@@ -93,13 +83,11 @@
       <div class="coupon__foot"><button class="btn btn--ghost btn--sm" data-share="${esc(c.code)}">Copy share link</button><span style="flex:1"></span><button class="btn btn--refund btn--sm" data-end="${esc(c.code)}">End sale</button></div>
     </div>`;
   }
-  async function renderCoupons() {
+  // Coupon tiles — rendered from the code-coupon rows (the auto_apply store-wide sale is already filtered
+  // out in loadSales, so it never duplicates here). Takes the pre-split list; no fetch of its own.
+  function renderCoupons(list) {
     const el = document.getElementById("coupons");
-    try {
-      const res = await fetch("/api/products?_action=coupon", { headers: { ...P.authHeader() } });
-      const data = res.ok ? await res.json() : { coupons: [] };
-      coupons = (data.coupons || []).map((c) => ({ ...c }));
-    } catch (e) { coupons = []; }
+    coupons = (list || []).map((c) => ({ ...c }));
     if (!coupons.length) { el.innerHTML = `<div class="empty" style="grid-column:1/-1">${IC.tag}<h3>No coupon sales running</h3><p>Create a code-based discount with “New sale”.</p></div>`; return; }
     el.innerHTML = coupons.map(couponHTML).join("");
     el.querySelectorAll("[data-end]").forEach((b) => b.addEventListener("click", () => {
@@ -108,7 +96,7 @@
           try {
             const r = await fetch("/api/products?_action=coupon_deactivate", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify({ code: b.dataset.end }) });
             if (!r.ok) { const e = await r.json().catch(() => ({})); P.toast(e.error || "Couldn't end the sale", { kind: "danger" }); return; }
-            await renderCoupons(); await renderStoreWide(); P.toast("Sale ended — code “" + b.dataset.end + "” deactivated");
+            await loadSales(); P.toast("Sale ended — code “" + b.dataset.end + "” deactivated");
           } catch (err) { P.toast("Couldn't end the sale", { kind: "danger" }); }
         })();
       });
@@ -118,6 +106,20 @@
       navigator.clipboard?.writeText(base + "/?code=" + encodeURIComponent(b.dataset.share));
       P.toast("Share link copied — paste into a newsletter or send to a customer", { kind: "live" });
     }));
+  }
+
+  // Single fresh source for the admin: ONE uncached coupon-list fetch, split into the store-wide sale
+  // (the auto_apply % owner coupon) and the code coupons. Every create/end calls this, so both surfaces
+  // reflect the change on the first click — no dependency on the edge-cached active_sale read.
+  async function loadSales() {
+    let rows = [];
+    try {
+      const res = await fetch("/api/products?_action=coupon", { headers: { ...P.authHeader() } });
+      const data = res.ok ? await res.json() : { coupons: [] };
+      rows = data.coupons || [];
+    } catch (e) { rows = []; }
+    renderStoreWide(rows.find((c) => c.auto_apply) || null);
+    renderCoupons(rows.filter((c) => !c.auto_apply));
   }
   function fmtDate(s) { try { return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch (e) { return ""; } }
 
@@ -237,7 +239,7 @@
       const r = await fetch("/api/products?_action=coupon", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(payload) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) { P.toast(data.error || "Couldn't create the sale", { kind: "danger" }); return; }
-      closeModal(); await renderCoupons();
+      closeModal(); await loadSales();
       P.toast("Sale live — code “" + (data.code || code) + "”", { kind: "live" });
     } catch (err) { P.toast("Couldn't create the sale", { kind: "danger" }); }
   }
@@ -259,7 +261,6 @@
   P.boot({ requireSession: true }).then(function (ok) {
     if (!ok) return;                 // signed out → boot() already redirected to /admin/account
     P.mountShell("sales"); // Orders badge = shared live PORTAL_DATA.unfulfilledCount()
-    renderStoreWide();
-    renderCoupons();
+    loadSales();
   }).catch(function (err) { P.toast(err.message, { kind: "danger" }); });
 })();
