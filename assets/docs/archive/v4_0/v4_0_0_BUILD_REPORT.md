@@ -53,7 +53,7 @@ Delegated by **file ownership** (not workstream) because five files are edited b
 - **Set `CRON_SECRET` in the Production Vercel scope** — this build's `isCronRequest` gates BOTH the scheduled-publish flip and the daily reconciliation; unset, both are silently inert in prod (a scheduled piece never publishes, no error). Optionally set `RECONCILE_ALERT_EMAIL` (else falls back to `ORDER_NOTIFY_EMAIL`).
 - **Apply the migrations on go-live** (they are now on the shared project, but confirm) and **run the commented `20260701000002_v3_5_drop_cart_holds.sql` DROP by hand** once the WS7 code is live and no `cart_holds` reference remains.
 - **Run the legacy sold-row backfill** (`20260616000001` cutover `UPDATE`) on the LIVE catalog before enabling any % sale (zeroes `quantity` on `available:false` rows so the quantity-based sold gate is honest).
-- **Flip the Custom GPT's Action server URL + auth to production** (it is currently pointed at the tester) and paste the shipped `v3_5_0_GPT_INSTRUCTIONS_TRIMMED.txt` + `v3_5_0_GPT_SCHEMA.txt` into Em's GPT.
+- **Flip the Custom GPT's Action server URL + auth to production** (it is currently pointed at the tester) and paste the shipped `v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` + `v4_0_0_GPT_SCHEMA.txt` (in `assets/docs/archive/v4_0/`) into Em's GPT.
 
 ## As-built doc-sync
 
