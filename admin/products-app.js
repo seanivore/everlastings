@@ -1103,6 +1103,12 @@
   async function handleFiles(files) {
     // §5.1a — client fan-out: N dropped/picked files → N single-file POST /api/upload multipart requests
     // (NO batch endpoint). Per-item progress via it._uploading. §5.1c: video adds skip_transform (MP4/WebM).
+    // Snapshot the FileList SYNCHRONOUSLY, before the awaits below. The picker's change handler clears
+    // e.target.value the instant handleFiles returns — which EMPTIES this live FileList — and a drop event
+    // releases its dataTransfer once its handler returns. Both fire before ensureSlug resolves, so reading
+    // [...files] after the await would iterate zero files (upload silently no-ops). Copy to a stable array now.
+    const list = [...files];
+    if (!list.length) return;
     const p = find(mProductId);
     const slug = await ensureSlug(p, mProductId);
     if (!slug) return;
@@ -1110,7 +1116,7 @@
     // out the same NN twice (a duplicate would overwrite an R2 key).
     let galNN = highestNN("gallery", (p.images || []).map((im) => im.url));
     let vidNN = highestNN("video", (p.media || []).map((m) => m.url));
-    [...files].forEach((file) => {
+    list.forEach((file) => {
       const isVideo = /video\//.test(file.type);
       const role = isVideo ? "video-" + padNN(++vidNN) : "gallery-" + padNN(++galNN);
       const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, _role: role, roles: new Set(isVideo ? [] : ["gallery"]) };
