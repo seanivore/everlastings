@@ -177,7 +177,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
 
       let aspectRatio = '4:5';
       let width = role.startsWith('thumbnail') ? 600 : 1200;
-      if (role === 'seo_thumbnail') { aspectRatio = '1.91:1'; width = 1200; } // OG / Twitter card
+      if (role === 'seo_thumbnail') { aspectRatio = '16:9'; width = 1200; } // OG / Twitter card — 16:9 (NOT 1.91:1: a decimal-in-a-ratio like ar_1.91:1 is invalid Cloudinary syntax → transform 502s; every working role uses an integer ratio)
       else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
       const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto/${publicId}`;
 
