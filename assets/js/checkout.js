@@ -151,90 +151,70 @@ function paintSummary(checkout) {
   const shipMinor = t.shippingRate?.minorUnitsAmount;
   if (Number.isInteger(shipMinor)) setText('[data-checkout-shipping]', shipMinor === 0 ? 'Free' : t.shippingRate.amount);
 
-  // Discount row — shown only when a discount is actually applied.
+  // Promo row: applied → show the code chip + −amount and hide the input; none → show the input, clear amount.
   const disc = t.discount;
   const d0 = (s.discountAmounts && s.discountAmounts[0]) || null;
-  const row = document.querySelector('[data-checkout-discount-row]');
-  if (disc && Number.isInteger(disc.minorUnitsAmount) && disc.minorUnitsAmount > 0) {
+  const applied = disc && Number.isInteger(disc.minorUnitsAmount) && disc.minorUnitsAmount > 0;
+  const input = document.querySelector('[data-promo-input]');
+  const chip = document.querySelector('[data-promo-applied]');
+  const amtEl = document.querySelector('[data-checkout-discount]');
+  if (applied) {
     const label = d0 && d0.percentOff != null ? `${d0.percentOff}% off`
       : ((d0 && (d0.displayName || d0.promotionCode)) || 'Discount');
     setText('[data-checkout-discount-label]', label);
-    setText('[data-checkout-discount]', '−' + disc.amount); // amount is already "$10.00"
-    if (row) row.style.display = 'flex';
-  } else if (row) {
-    row.style.display = 'none';
+    if (amtEl) amtEl.textContent = '−' + disc.amount; // amount is already "$10.00"
+    if (input) input.style.display = 'none';
+    if (chip) chip.style.display = 'inline-flex';
+  } else {
+    if (amtEl) amtEl.textContent = '';
+    if (input) input.style.display = '';
+    if (chip) chip.style.display = 'none';
   }
 
   // Total — the discounted grand total, already a formatted string.
   if (t.total && t.total.amount != null) setText('[data-checkout-total]', t.total.amount);
 }
 
-// Apply / Remove a promotion code, with a clear applied state so a shopper knows it worked BEFORE paying.
-// syncPromoState reflects the session: a live discount → the field shows the code (locked) + the button
-// becomes "Remove"; none → "Apply". The auto-apply paths call checkout.__syncPromo after they apply.
+// Promo code — no Apply button. Auto-applies on Enter or blur (a code typed, then click away), and the
+// applied state shows as a chip + circled ✕ in the summary flow (paintSummary swaps input↔chip). ✕ removes
+// it (removePromotionCode) so a shopper can drop a store-wide sale and enter their own code right there.
 function wirePromo(checkout) {
-  const promoBtn = document.querySelector('[data-promo-apply]');
-  const promoInput = document.getElementById('promo-code');
-  if (!promoBtn || !promoInput) return;
+  const input = document.querySelector('[data-promo-input]');
+  if (!input) return;
+  const clearBtn = document.querySelector('[data-promo-clear]');
   const promoMsg = document.querySelector('[data-promo-msg]');
-  const setMsg = (t) => { if (promoMsg) { promoMsg.textContent = t || ''; promoMsg.style.display = t ? 'block' : 'none'; } };
+  const setMsg = (msg) => { if (promoMsg) { promoMsg.textContent = msg || ''; promoMsg.style.display = msg ? 'block' : 'none'; } };
+  let busy = false;
 
-  function syncPromoState() {
-    setMsg(''); // clear any prior "invalid code" note
-    let s; try { s = checkout.session(); } catch (e) { s = null; }
-    const d0 = s && s.discountAmounts && s.discountAmounts[0];
-    if (d0) {
-      promoInput.value = d0.promotionCode || d0.displayName || promoInput.value;
-      promoInput.readOnly = true;
-      promoBtn.textContent = 'Remove';
-      promoBtn.dataset.mode = 'remove';
-    } else {
-      promoInput.readOnly = false;
-      promoBtn.textContent = 'Apply';
-      promoBtn.dataset.mode = 'apply';
-    }
-    promoBtn.disabled = false;
-    paintSummary(checkout);
-  }
-  checkout.__syncPromo = syncPromoState; // auto-apply paths refresh the applied state through this
-
-  promoBtn.addEventListener('click', async () => {
-    // Remove an applied code.
-    if (promoBtn.dataset.mode === 'remove') {
-      promoBtn.disabled = true;
-      promoBtn.textContent = 'Removing…';
-      try { if (typeof checkout.removePromotionCode === 'function') await checkout.removePromotionCode(); }
-      catch (err) { /* re-sync below reflects the real state either way */ }
-      promoInput.value = '';
-      syncPromoState();
-      return;
-    }
-    // Apply a code.
-    const code = promoInput.value.trim();
-    if (!code) return;
-    promoBtn.disabled = true;
-    setMsg('');
-    const original = promoBtn.textContent;
-    promoBtn.textContent = 'Applying…';
+  async function applyCode() {
+    const code = input.value.trim();
+    if (!code || busy) return;
+    busy = true; setMsg('');
     try {
       const apply = checkout.applyPromotionCode; // Phase 0: applyDiscount does not exist on the bundle.
       if (typeof apply === 'function') {
         const r = await apply.call(checkout, code);
-        if (r?.type === 'error') {
-          setMsg(r.error?.message || 'Could not apply this code.'); // inline + subtle, not the big pay-error block
-          promoBtn.disabled = false;
-          promoBtn.textContent = original;
-          return;
-        }
+        if (r?.type === 'error') { setMsg(r.error?.message || 'That code didn’t work.'); busy = false; return; }
       }
-    } catch (err) {
-      setMsg('Could not apply this code. Please try again.');
-      promoBtn.disabled = false;
-      promoBtn.textContent = original;
-      return;
-    }
-    syncPromoState(); // paints the discount line + flips to the Remove state
-  });
+    } catch (err) { setMsg('That code didn’t work. Please try again.'); busy = false; return; }
+    busy = false;
+    paintSummary(checkout); // swaps the input for the applied chip + −amount
+  }
+  async function clearCode() {
+    if (busy) return;
+    busy = true; setMsg('');
+    try { if (typeof checkout.removePromotionCode === 'function') await checkout.removePromotionCode(); }
+    catch (err) { /* paint below reflects the real state either way */ }
+    input.value = '';
+    busy = false;
+    paintSummary(checkout);
+    input.focus();
+  }
+  // Auto-apply: Enter, or blur with a code typed. No Apply button.
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
+  input.addEventListener('blur', () => { if (input.value.trim()) applyCode(); });
+  if (clearBtn) clearBtn.addEventListener('click', clearCode);
+  checkout.__syncPromo = () => paintSummary(checkout); // auto-apply paths refresh the chip through this
 }
 
 // v3.5 — read the public active store-wide sale and apply it at INIT (no shopper action). The keyword
