@@ -70,3 +70,4 @@ supabase/.temp/
 .agent/apple-ui-design/**.jpeg
 .agent/apple-ui-design/**.jpg
 .vercel
+.env*

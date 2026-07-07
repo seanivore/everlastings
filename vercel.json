@@ -2,26 +2,78 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "crons": [
-    { "path": "/api/product-feed", "schedule": "0 9 * * *" }
+    {
+      "path": "/api/product-feed",
+      "schedule": "0 9 * * *"
+    }
   ],
   "redirects": [
-    { "source": "/admin", "destination": "/admin/products", "permanent": false }
+    {
+      "source": "/admin",
+      "destination": "/admin/products",
+      "permanent": false
+    }
   ],
   "rewrites": [
-    { "source": "/product/:slug", "destination": "/product" },
-    { "source": "/api/checkout/reserve", "destination": "/api/checkout?_action=reserve" },
-    { "source": "/api/session-status", "destination": "/api/checkout?_action=session-status" },
-    { "source": "/api/orders/:id/refund", "destination": "/api/orders?id=:id&_action=refund" },
-    { "source": "/api/orders/:id", "destination": "/api/orders?id=:id" },
-    { "source": "/api/products/publish", "destination": "/api/products?_action=publish" },
-    { "source": "/api/products/archive", "destination": "/api/products?_action=archive" },
-    { "source": "/api/products/unarchive", "destination": "/api/products?_action=unarchive" },
-    { "source": "/api/products/discard", "destination": "/api/products?_action=discard" },
-    { "source": "/api/products/by-slug/:slug", "destination": "/api/products?slug=:slug" },
-    { "source": "/api/coupons", "destination": "/api/products?_action=coupon" },
-    { "source": "/api/coupons/deactivate", "destination": "/api/products?_action=coupon_deactivate" },
-    { "source": "/api/upload/attach", "destination": "/api/upload" },
-    { "source": "/api/cart-activity", "destination": "/api/cart?_action=activity" },
-    { "source": "/api/cart-recovery", "destination": "/api/cart?_action=recovery" }
+    {
+      "source": "/product/:slug",
+      "destination": "/product"
+    },
+    {
+      "source": "/api/checkout/reserve",
+      "destination": "/api/checkout?_action=reserve"
+    },
+    {
+      "source": "/api/session-status",
+      "destination": "/api/checkout?_action=session-status"
+    },
+    {
+      "source": "/api/orders/:id/refund",
+      "destination": "/api/orders?id=:id&_action=refund"
+    },
+    {
+      "source": "/api/orders/:id",
+      "destination": "/api/orders?id=:id"
+    },
+    {
+      "source": "/api/products/publish",
+      "destination": "/api/products?_action=publish"
+    },
+    {
+      "source": "/api/products/archive",
+      "destination": "/api/products?_action=archive"
+    },
+    {
+      "source": "/api/products/unarchive",
+      "destination": "/api/products?_action=unarchive"
+    },
+    {
+      "source": "/api/products/discard",
+      "destination": "/api/products?_action=discard"
+    },
+    {
+      "source": "/api/products/by-slug/:slug",
+      "destination": "/api/products?slug=:slug"
+    },
+    {
+      "source": "/api/coupons",
+      "destination": "/api/products?_action=coupon"
+    },
+    {
+      "source": "/api/coupons/deactivate",
+      "destination": "/api/products?_action=coupon_deactivate"
+    },
+    {
+      "source": "/api/upload/attach",
+      "destination": "/api/upload"
+    },
+    {
+      "source": "/api/cart-activity",
+      "destination": "/api/cart?_action=activity"
+    },
+    {
+      "source": "/api/cart-recovery",
+      "destination": "/api/cart?_action=recovery"
+    }
   ]
 }
