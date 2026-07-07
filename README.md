@@ -1,8 +1,8 @@
 # Everlastings by Emaline
 
-**Handcrafted havens for the stories that stay** — a custom e-commerce site for artisan miniature dioramas, built so the owner can run the *entire* store by chatting with an AI assistant.
+**Handcrafted havens for the stories that stay** — a custom e-commerce store for artisan miniature dioramas, built so a non-technical owner can run the *entire* thing — catalog, pricing, sales, inventory, refunds, fulfillment — mostly from her phone: by chatting with a Custom GPT, **or** from a purpose-built browser portal that does everything the chat does.
 
-**Status:** live (v3.3). The full store — on-site checkout + fulfillment **and** a by-chat AI management layer with **full /admin ↔ GPT parity** — lets a non-technical owner create, edit, preview, publish, price, discount, **refund**, and inventory the entire catalog by chatting with a Custom GPT, behind a draft → preview → publish safety net. v3.3 closed the loop: refunds + coupons on **both** surfaces, **photos attached straight in chat**, real multi-unit inventory, a reusable brand-neutral admin, and a new homepage experience. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v3.3 build packet](/assets/docs/archive/v3_3/).
+**Status:** v4.0.0 — built and verified on the `dev` preview; production cutover pending. This release lands the **Content Creator Portal** (a mobile-first store-management surface at `/admin`) at **full parity** with the by-chat Custom GPT, and adds **automatic store-wide sales**, a rebuilt **media modal**, **scheduled publish**, an **activity log**, sibling-aware **refunds with restock**, and end-to-end **money-integrity** fixes — all over the draft → preview → publish safety net that already lets the owner create, edit, price, discount, and inventory the whole catalog by chat. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v4.0 build packet](/assets/docs/archive/v4_0/).
 
 ---
 
@@ -20,7 +20,7 @@ In practice, the owner can — by chat — :
 | "Looks great — publish it"                                               | Creates the Stripe product + price, takes it live at the same URL                                         |
 | "Change the price to $145"                                               | Rotates the Stripe price **in place** — same page, same link — live immediately                           |
 | "Mark the Sage one sold" / "we got 3 more in"                            | Flips availability / stock **live**, no publish step                                                      |
-| "Run 20% off everything until New Year's"                                | Builds the coupon + promo code, scoped and dated                                                          |
+| "Run 20% off everything until New Year's"                                | Stands up a store-wide sale that **auto-applies at checkout** — struck prices across the site, no code for shoppers to type |
 | "Take the Fern down for now"                                             | Archives it (reversible — nothing is ever hard-deleted)                                                   |
 | "Refund Jane's order for the Cottage"                                    | Issues the Stripe refund, then asks whether to re-list each piece that came back                          |
 
@@ -42,7 +42,7 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
   + **Database-driven static site** — products live in Supabase, not in code; the public site is fast static HTML/JS reading through Row-Level-Security.
   + **On-site checkout** — Stripe Custom Checkout (`ui_mode: 'custom'`) keeps customers on-brand, never bounced to a hosted page.
   + **Draft/preview/publish CMS model** — staged edits, an unguessable preview link, a one-tap Publish — the standard safety UX non-technical owners need.
-  + **Two fully-capable surfaces, at parity** — every management task (incl. refunds + coupons) is doable by chat through a Custom GPT **and** through a polished browser admin; neither is a second-class fallback, so a GPT outage never strands the owner. The admin is deliberately **brand-neutral** — a reusable template that re-skins for the next client.
+  + **Two fully-capable surfaces, at parity** — every management task (incl. store-wide sales, refunds, and coupons) is doable by chat through a Custom GPT **and** through the **Content Creator Portal**, a mobile-first browser surface at `/admin`; neither is a second-class fallback, so a GPT outage never strands the owner. The portal is deliberately **brand-neutral** — a reusable template that re-skins for the next client.
   + **Built to be productized** — environment-scoped (test/live), template-friendly, and deliberately generic where it can be. The same architecture re-skins for the next client; the management layer is the reusable asset.
 
 ---
@@ -69,47 +69,49 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
 
 ---
 
-## Storefront + checkout (live)
+## Storefront (customer-facing)
 
   + **Product catalog** — rich product pages with 7–15 photo galleries, poetic story cards, and embedded checkout
-  + **On-site checkout** — Stripe Custom Checkout with cart and automatic inventory updates via webhooks
-  + **Fulfillment** — Shippo labels (owner prints in the Shippo UI), admin records tracking, Resend sends the branded email
-  + **Admin panel** — browser-based product + order management
+  + **On-site checkout** — Stripe Custom Checkout with cart and automatic inventory decrement via webhooks
+  + **Store-wide sales** — struck prices site-wide, a top utility bar, and a once-only popup; the discount auto-applies at checkout (mechanics below)
+  + **Fulfillment** — Shippo labels (owner prints in the Shippo UI), the portal records tracking, Resend sends the branded email
   + **Dynamic homepage** — rotating themes and a featured-product carousel driven by the database
   + **Smart filters** — shop grid with multi-select filtering by series, type, and availability
 
-## By-chat store management (live)
+## By-chat store management (the Custom GPT)
 
   + Custom GPT that can **create, edit, draft-preview, and publish** every product field (copy, SEO, photos — attached in chat or by link — price)
-  + **Live price rotation**, **mark-sold / restock**, and **coupons** (create / list / end) by chat
+  + **Live price rotation**, **mark-sold / restock**, **store-wide sales**, and **coupons** (create / list / end) by chat
+  + **Refunds by chat** — sibling-aware, with an offer to re-list each returned piece
   + **Archive / resurface** (no hard delete) and truthful **order status**
-  + Unified admin panel on the same draft → preview → publish path
-  + A "firelight" perspective-shift hero + a polished, compact product page
+  + Runs the same draft → preview → publish path as the portal, at full parity
 
-## Management parity + experience (v3.3 — live)
+## New in v4.0 — the Content Creator Portal + store-wide sales
 
-  + **Refunds by chat *and* in /admin** — amount-based (one cart can be several pieces on a single payment), so it refunds only the pieces that came back and offers to re-list each
-  + **Coupons in /admin too** — the full create / list / end surface the GPT already had, now on both surfaces, with plain-language dates
-  + **Photos attached straight in the chat** — no Drive link needed for the common case (a by-link path stays for video + large batches)
-  + **Real inventory** — a sale decrements stock; a multi-unit piece stays available until the last one sells
-  + **A reusable, brand-neutral admin** — clean, professional, and re-skins for any future client (the productizable asset)
-  + **A new homepage** — a hand-drawn title write-on over an old-film hero, with reduced-motion + SEO fallbacks intact
+  + **A purpose-built store-management portal at `/admin`** — mobile-first (the maker runs her store from her phone), organized around *intent* ("put this up," "take it down," "run a sale," "send a refund," "mark it shipped") rather than the data model. Products are a **spreadsheet of rows** with a **per-row state LED** (five colors: live · staged-edits · draft · sold · archived), edits **preview anytime** before they go live, and any control that's disabled says *why*. It's a deliberately **brand-neutral template** — cool indigo-slate, distinct from the storefront's warm-plum brand — so it re-skins for the next client. Four static pages (Products · Orders · Sales · Account); no SPA, no framework.
+  + **Full portal ↔ GPT parity** — every management task is equally doable in the portal *and* the Custom GPT, so a GPT outage never strands the owner and neither surface is a second-class fallback.
+  + **Automatic store-wide sales** — set a percentage and dates once; the discount **auto-applies at checkout** (no code for shoppers to type), with **struck prices** across shop / product / cart, a top utility bar, and a once-only popup. A shopper's own promo code cleanly **replaces** the sale.
+  + **Rebuilt media modal** — upload, reorder, and re-role images in one modal, with the gallery order persisted.
+  + **Scheduled publish** — stage a draft to go live at a future time, flipped by the existing daily cron.
+  + **Activity log** — an audit trail of every mutation (who did what: the signed-in admin, the GPT, or the cron), surfaced on the Account page.
+  + **Sibling-aware refunds with restock** — one cart can be several pieces on a single Stripe payment; a refund targets only the pieces that came back and, on the re-list switch, **restocks each one automatically** (+1 quantity, back on sale).
+  + **Money integrity** — orders record the **real per-item amounts** (a $310 + $88 cart writes $310 and $88, not an even $199/$199 split), and a daily reconciliation job catches any orphaned Stripe session.
 
-> Built and gap-reviewed across many cold review passes. The owner runs the whole catalog — money included — by chatting with her Custom GPT, or from a polished admin that does everything the chat does.
+> Built and gap-reviewed across many cold review passes, then verified on the `dev` preview. The owner runs the whole catalog — money included — by chatting with her Custom GPT, or from a polished portal that does everything the chat does.
 
 ---
 
 ## Technology Stack
 
-  + **Frontend**: Vanilla HTML/CSS/JS (no framework)
-  + **Backend**: Vercel Serverless Functions (TypeScript)
+  + **Frontend**: Vanilla HTML/CSS/JS — storefront *and* portal (no framework, no build step)
+  + **Backend**: Vercel Serverless Functions (TypeScript compiled to CommonJS; 11 functions on Hobby)
   + **Database**: Supabase (PostgreSQL + Auth + Row Level Security)
   + **Payments**: Stripe Custom Checkout (`ui_mode: 'custom'`)
   + **AI management**: OpenAI Custom GPT with Actions (JSON API), authenticated via a product API key
   + **Images**: Cloudinary (transform) → Cloudflare R2 (CDN at `cdn.everlastingsbyemaline.com`)
   + **Analytics**: Google Analytics 4 (gtag.js) + Meta Pixel (retargeting + Instagram Shopping)
   + **Email**: Resend (transactional — tracking, cart recovery coupons, newsletter welcome)
-  + **Shipping**: Shippo free tier (owner prints labels in Shippo UI, admin records tracking, Resend sends branded email)
+  + **Shipping**: Shippo free tier (owner prints labels in Shippo UI, the portal records tracking, Resend sends branded email)
   + **Hosting**: Vercel (auto-deploy on push)
 
 ---
@@ -118,14 +120,15 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
 
   ```
   everlastings-website/
-  ├── *.html                   # Frontend pages
-  ├── api/                     # Vercel serverless functions (TypeScript)
+  ├── *.html                   # Storefront pages
+  ├── api/                     # Vercel serverless functions (TypeScript → CommonJS)
+  ├── admin/                   # Content Creator Portal (/admin) — 4 static pages:
+  │                            #   products · orders · sales · account (+ portal.js/.css)
   ├── assets/
   │   ├── css/                 # Styles + design tokens
-  │   ├── js/                  # Frontend controllers
-  │   └── docs/                # Project documentation
-  ├── admin/                   # Admin panel
-  └── .agent/                  # AI agent instructions
+  │   ├── js/                  # Storefront controllers
+  │   └── docs/                # Project documentation + per-version build archive
+  └── .agent/                  # AI agent build rules
   ```
 
 **Full documentation**: [EVERLASTINGS_STORE.md](/assets/docs/EVERLASTINGS_STORE.md)
@@ -152,9 +155,9 @@ Vercel auto-scopes environment variables per branch, so the same codebase runs a
 | [GA4 KPIs + Advertising](/assets/docs/archive/FUTURE_RESOURCES/GA4_KPIS_AND_ADVERTISING.md) | KPI + ad strategy                                                                                                                 |
 | [Store Administration](/assets/docs/STORE_ADMINISTRATION.md)                                | Owner how-to: products + orders across GPT, Admin, Studio                                                                         |
 | [GPT Setup + AI Pipeline](/assets/docs/GPT_SETUP.md)                                        | Custom GPT brain + setup; agentic curl protocol                                                                                   |
-| [Client Ask List](/assets/docs/archive/CLIENT_ASK_LIST.md)                                  | One-email setup checklist                                                                                                         |
 | [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                                   | The by-chat management layer — IMPLEMENT, design/testing addenda, build report                                                    |
 | [v3.3 Build Packet](/assets/docs/archive/v3_3/)                                             | Management parity (refunds + coupons), chat-attach upload, inventory, admin polish, homepage — IMPLEMENT + addenda + build report |
+| [v4.0 Build Packet](/assets/docs/archive/v4_0/)                                             | Content Creator Portal + store-wide sales + media modal + scheduled publish + activity log + refund-restock + money integrity — IMPLEMENT + addenda + build report |
 
 ---
 
