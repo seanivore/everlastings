@@ -189,6 +189,9 @@
     const imgs = p.images || [];
     if (imgs.length < 1) miss.push("a hero image");
     else if (imgs.length < 6) miss.push("at least 5 gallery photos");
+    // v4.0 — a Share image is required (no more silent hero fallback). Set via the media modal's Share
+    // toggle → writes seo_thumbnail; the backend enforces the same at publish.
+    if (!str("seo_thumbnail")) miss.push("a share image");
     return { ok: miss.length === 0, missing: miss };
   }
 
@@ -560,7 +563,7 @@
       ${sq.length ? `<div class="media-sq">${sq.join("")}</div>` : ""}
       <div class="media-actions">
         <button class="media-add" data-open-media>${IC.upload} Add / edit media</button>
-        <span class="media-note">Share &amp; checkout reuse the hero unless you give them their own image.</span>
+        <span class="media-note">Every product needs a Share image — give any image the Share role. Checkout reuses the hero unless you set its own.</span>
       </div>
     </div>`;
   }
@@ -1145,10 +1148,11 @@
   }
   function updateFallback() {
     const cov = coverage(), note = document.getElementById("mediaFallback");
-    const bits = [];
-    if (!cov.share) bits.push("share");
-    if (!cov.checkout) bits.push("checkout");
-    note.innerHTML = bits.length ? `<span class="x">×</span> No ${bits.join(" / ")} image — the hero will be reused.` : "";
+    // v4.0 — Share is REQUIRED to publish (no hero fallback); Checkout still softly reuses the hero.
+    const parts = [];
+    if (!cov.share) parts.push(`<span class="x">×</span> Share image required to publish — give any image the Share role`);
+    if (!cov.checkout) parts.push(`<span class="faint">No checkout image — the hero will be reused</span>`);
+    note.innerHTML = parts.join("<br>");
   }
   async function applyMedia() {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // avoid iOS focus-zoom lingering

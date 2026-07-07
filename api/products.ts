@@ -299,8 +299,10 @@ const PRODUCT_TYPE_RULES: Record<string, TypeRules> = {
   },
 };
 // PUBLISH gate — Sean v3.5 authoritative required set. Runs on BOTH publish branches (never on create),
-// so a piece can go live only fully-formed. The six auto-generated fields (checkout_*/seo_*, Phase 2.5)
-// are deliberately NOT here — publish fills them, so they never block. Reports ALL problems at once.
+// so a piece can go live only fully-formed. The auto-generated identity fields (checkout_*, seo_title,
+// seo_description) are deliberately NOT here — publish fills them, so they never block. EXCEPTION (v4.0):
+// seo_thumbnail (the Share / og:image) IS gated below — it's a real required asset, not auto-filled.
+// Reports ALL problems at once.
 function validatePublishRules(p: Record<string, unknown>): string[] {
   const problems: string[] = [];
   const typeKey = typeof p.product_type === 'string' ? p.product_type : '';
@@ -353,6 +355,12 @@ function validatePublishRules(p: Record<string, unknown>): string[] {
     problems.push('Thumbnail URL required');
   }
   if (galleryImages.length < rules.minGallery) problems.push(`Minimum ${rules.minGallery} gallery images required`);
+
+  // v4.0 — a Share image (og:image = the seo_thumbnail column) is REQUIRED at publish. The old behavior
+  // auto-filled it from the 4:5 hero, which makes an off-shape social card (Sean: not a helpful fallback).
+  // Now the maker/GPT must set one — assign the Share role to any image and it crops 16:9. Gated on BOTH
+  // publish branches, so the portal (client-gated too) and the GPT (self-corrects on this 400) agree.
+  if (!str('seo_thumbnail')) problems.push('A Share image is required (seo_thumbnail) — give any image the Share role');
 
   // alt on every media asset (images + media[]).
   const altMissing = imgList.some((img) => !(typeof img?.alt === 'string' && img.alt.trim()));
@@ -807,7 +815,8 @@ async function handlePublish(request: Request): Promise<Response> {
     checkout_image: checkoutImage,
     seo_title: (row.seo_title as string) || (row.title as string),
     seo_description: (row.seo_description as string) || (row.description as string) || '',
-    seo_thumbnail: (row.seo_thumbnail as string) || (row.thumbnail as string) || checkoutImage,
+    // NOTE: seo_thumbnail is NO LONGER auto-filled here — v4.0 REQUIRES a real Share image (gated in
+    // validatePublishRules above), so the row already carries the maker's/GPT's own 16:9 card.
   };
   const { data: published, error: pubError } = await supabase
     .from('products')
