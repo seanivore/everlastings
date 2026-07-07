@@ -192,26 +192,27 @@
       <div style="margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-cream); border-radius: var(--radius-md);">
         <h3 style="margin-top: 0;">Order summary</h3>
         <div data-checkout-line-items></div>
+        <!-- Promo code — ABOVE Shipping (the discount is on the goods; shipping/tax don't count toward a
+             minimum). Two rows: a "Promo code" label, then [ code field + ✕ ] · (deal in parens) · −amount.
+             Auto-applies on Enter/blur; ✕ clears. Painted by checkout.js paintSummary()/wirePromo(). -->
+        <div style="padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
+          <div style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 4px;">Promo code</div>
+          <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <span style="flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--space-xs);">
+              <input id="promo-code" data-promo-input name="promo_code" type="text" placeholder="Add a promo code"
+                     style="flex: 0 1 210px; min-width: 130px; border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius-sm); background: #fff; padding: 6px 8px; font-size: var(--text-base); color: inherit;">
+              <button type="button" data-promo-clear aria-label="Remove promo code"
+                      style="display: none; border: 0; background: rgba(74,25,66,0.14); color: #4A1942; width: 18px; height: 18px; border-radius: 50%; line-height: 1; cursor: pointer; font-size: 11px; align-items: center; justify-content: center;">✕</button>
+              <span data-checkout-discount-deal style="color: var(--text-secondary); font-size: var(--text-sm);"></span>
+            </span>
+            <span data-checkout-discount style="flex: 0 0 auto; color: #4A1942; font-weight: 500;"></span>
+          </div>
+          <!-- Subtle inline promo feedback (invalid / under-minimum) — NOT the big payment-error block. -->
+          <div data-promo-msg style="display: none; margin-top: 4px; font-size: var(--text-sm); color: #b00020;"></div>
+        </div>
         <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
           <span>Shipping</span><span data-checkout-shipping>Free</span>
         </div>
-        <!-- Promo code — IN THE FLOW, like Shipping: a −amount adjustment between the items and the Total.
-             Left = inline code entry OR the applied code + a circled ✕ clear; right = the discount amount.
-             Auto-applies on Enter / blur (no Apply button) — wired in checkout.js paintSummary()/wirePromo(). -->
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
-          <span style="flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-xs);">
-            <input id="promo-code" data-promo-input name="promo_code" type="text" placeholder="Add a promo code"
-                   style="border: 0; background: transparent; width: 100%; padding: 2px 0; font-size: var(--text-base); color: inherit; outline: none;">
-            <span data-promo-applied style="display: none; align-items: center; gap: var(--space-xs); color: #4A1942;">
-              <span data-checkout-discount-label style="font-weight: 500;"></span>
-              <button type="button" data-promo-clear aria-label="Remove promo code"
-                      style="border: 0; background: rgba(74,25,66,0.14); color: #4A1942; width: 18px; height: 18px; border-radius: 50%; line-height: 1; cursor: pointer; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;">✕</button>
-            </span>
-          </span>
-          <span data-checkout-discount style="color: #4A1942;"></span>
-        </div>
-        <!-- Subtle inline promo feedback (invalid code, etc.) — NOT the big payment-error block. -->
-        <div data-promo-msg style="display: none; margin-top: var(--space-xs); font-size: var(--text-sm); color: #b00020;"></div>
         <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
           <span>Total</span><span data-checkout-total>—</span>
         </div>

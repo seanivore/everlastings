@@ -109,6 +109,10 @@ export async function GET(request: Request) {
   // reads the single active auto_apply owner_sale % coupon for struck pricing + checkout auto-apply.
   if (url.searchParams.get('_action') === 'active_sale') return handleActiveSale(request);
 
+  // v4.0.8: PUBLIC per-code terms lookup (?_action=coupon_lookup&code=CODE) — whitelisted worth +
+  // minimum for the checkout display + the "under the minimum" message. NEVER echoes metadata.
+  if (url.searchParams.get('_action') === 'coupon_lookup') return handleCouponLookup(request);
+
   // v1.5: list active discounts (?_action=coupon, GET) — admin/GPT only.
   if (url.searchParams.get('_action') === 'coupon') return handleCouponList(request);
 
@@ -1119,6 +1123,41 @@ async function handleActiveSale(request: Request): Promise<Response> {
   } catch (err) {
     console.error('Active-sale read failed (soft — treated as no sale):', err);
     return new Response(JSON.stringify({ active: false }), { status: 200, headers: corsHeaders(request) });
+  }
+}
+
+// ?_action=coupon_lookup&code=CODE (GET) — PUBLIC, no auth. Returns the whitelisted TERMS of ONE active
+// promotion code (its discount worth + minimum order) so the checkout can show "(20% off · min $100)" and
+// explain a below-minimum rejection. SECURITY: returns ONLY the worth + minimum — NEVER the code's
+// metadata (cart-recovery codes carry the customer's email + lost_items — PII), never times_redeemed /
+// max_redemptions (would leak single-use codes). Uniform { valid:false } on any miss/error (fails soft;
+// never confirms existence beyond the terms case). Env-scoped Stripe key keeps test/live separate.
+async function handleCouponLookup(request: Request): Promise<Response> {
+  const cacheHeaders = {
+    ...corsHeaders(request),
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, max-age=30, s-maxage=60',
+  };
+  const notValid = () => new Response(JSON.stringify({ valid: false }), { status: 200, headers: cacheHeaders });
+  const code = (new URL(request.url).searchParams.get('code') || '').trim();
+  if (!code) return notValid();
+  try {
+    const res = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+    const pc = res.data[0];
+    if (!pc || !pc.coupon) return notValid();
+    const minAmount = pc.restrictions?.minimum_amount ?? null;
+    return new Response(JSON.stringify({
+      valid: true,
+      type: pc.coupon.percent_off != null ? 'percent' : 'amount',
+      percent_off: pc.coupon.percent_off ?? null,
+      amount_off: pc.coupon.amount_off ?? null,
+      amount_display: pc.coupon.amount_off != null ? '$' + (pc.coupon.amount_off / 100).toFixed(2) : null,
+      min_amount: minAmount,
+      min_display: minAmount != null ? '$' + (minAmount / 100).toFixed(2) : null,
+    }), { status: 200, headers: cacheHeaders });
+  } catch (err) {
+    console.error('Coupon-lookup failed (soft — treated as invalid):', err);
+    return notValid();
   }
 }
 

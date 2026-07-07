@@ -135,12 +135,25 @@ function renderOrderSummary(cart) {
   if (totalEl) totalEl.textContent = formatPrice(getCartTotal());
 }
 
+// Look up a promo code's terms (worth + minimum) from our whitelisted public endpoint (never returns
+// metadata). Returns the terms object ({percent_off, amount_off, amount_display, min_amount, min_display})
+// or null (invalid / miss / error). Used to show the deal + the "under the minimum" message at checkout.
+async function lookupCode(code) {
+  try {
+    const res = await fetch('/api/products?_action=coupon_lookup&code=' + encodeURIComponent(code));
+    if (!res.ok) return null;
+    const t = await res.json();
+    return t && t.valid ? t : null;
+  } catch (e) { return null; }
+}
+
 // Paint shipping / discount / total from the live Stripe session. CRITICAL: on this Basil bundle the
 // amount fields (session.total.{subtotal,discount,total}.amount) are PRE-FORMATTED STRINGS ("$185.00"),
-// and minorUnitsAmount is the integer cents. The old code did Number.isFinite(amount) — always false on
-// a string — so it silently skipped every repaint (the total never left the cart total, no discount ever
-// showed). Read checkout.session() fresh (the change-event arg can lag the discount). Display-only: paints
-// our own [data-checkout-*] elements and NEVER touches Stripe's mounted elements (no update* bridge).
+// and minorUnitsAmount is the integer cents. Read checkout.session() fresh (the change-event arg can lag
+// the discount). Display-only: paints our own [data-checkout-*] elements, never Stripe's mounted elements.
+// Promo row: applied → the code sits read-only in the field + a ✕, the deal "(20% off · min $100)" beside
+// it, the −amount on the right; not applied → an editable field. The minimum comes from checkout.__promoTerms
+// (set by the lookup on apply); the base worth + the −amount come from the session.
 function paintSummary(checkout) {
   let s;
   try { s = checkout.session(); } catch (e) { return; }
@@ -151,33 +164,38 @@ function paintSummary(checkout) {
   const shipMinor = t.shippingRate?.minorUnitsAmount;
   if (Number.isInteger(shipMinor)) setText('[data-checkout-shipping]', shipMinor === 0 ? 'Free' : t.shippingRate.amount);
 
-  // Promo row: applied → show the code chip + −amount and hide the input; none → show the input, clear amount.
   const disc = t.discount;
   const d0 = (s.discountAmounts && s.discountAmounts[0]) || null;
   const applied = disc && Number.isInteger(disc.minorUnitsAmount) && disc.minorUnitsAmount > 0;
+  const terms = checkout.__promoTerms || null;
   const input = document.querySelector('[data-promo-input]');
-  const chip = document.querySelector('[data-promo-applied]');
+  const clearBtn = document.querySelector('[data-promo-clear]');
+  const dealEl = document.querySelector('[data-checkout-discount-deal]');
   const amtEl = document.querySelector('[data-checkout-discount]');
   if (applied) {
-    const label = d0 && d0.percentOff != null ? `${d0.percentOff}% off`
-      : ((d0 && (d0.displayName || d0.promotionCode)) || 'Discount');
-    setText('[data-checkout-discount-label]', label);
+    if (input) { input.value = (d0 && (d0.promotionCode || d0.displayName)) || input.value; input.readOnly = true; }
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+    // Deal (in parens): percent → "N% off"; else "$X off" (prefer the looked-up face); + " · min $Y" when known.
+    let deal = d0 && d0.percentOff != null ? d0.percentOff + '% off'
+      : (((terms && terms.amount_display) || disc.amount) + ' off');
+    if (terms && terms.min_display) deal += ' · min ' + terms.min_display;
+    if (dealEl) dealEl.textContent = '(' + deal + ')';
     if (amtEl) amtEl.textContent = '−' + disc.amount; // amount is already "$10.00"
-    if (input) input.style.display = 'none';
-    if (chip) chip.style.display = 'inline-flex';
   } else {
+    if (input) input.readOnly = false;
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (dealEl) dealEl.textContent = '';
     if (amtEl) amtEl.textContent = '';
-    if (input) input.style.display = '';
-    if (chip) chip.style.display = 'none';
   }
 
   // Total — the discounted grand total, already a formatted string.
   if (t.total && t.total.amount != null) setText('[data-checkout-total]', t.total.amount);
 }
 
-// Promo code — no Apply button. Auto-applies on Enter or blur (a code typed, then click away), and the
-// applied state shows as a chip + circled ✕ in the summary flow (paintSummary swaps input↔chip). ✕ removes
-// it (removePromotionCode) so a shopper can drop a store-wide sale and enter their own code right there.
+// Promo code — no Apply button. Auto-applies on Enter or blur; the code then sits read-only in the field
+// with a ✕ that removes it (so a shopper can drop a store-wide sale and type their own code). On apply we
+// also look up the code's terms so the row can show "(20% off · min $100)" and, if a code is rejected for
+// being under its minimum, tell the shopper exactly why (there's nowhere else for them to learn it).
 function wirePromo(checkout) {
   const input = document.querySelector('[data-promo-input]');
   if (!input) return;
@@ -190,15 +208,29 @@ function wirePromo(checkout) {
     const code = input.value.trim();
     if (!code || busy) return;
     busy = true; setMsg('');
+    const terms = await lookupCode(code);      // worth + minimum, or null
+    checkout.__promoTerms = terms;
+    let failed = null;
     try {
       const apply = checkout.applyPromotionCode; // Phase 0: applyDiscount does not exist on the bundle.
       if (typeof apply === 'function') {
         const r = await apply.call(checkout, code);
-        if (r?.type === 'error') { setMsg(r.error?.message || 'That code didn’t work.'); busy = false; return; }
+        if (r?.type === 'error') failed = r.error?.message || 'This promotion code is invalid.';
       }
-    } catch (err) { setMsg('That code didn’t work. Please try again.'); busy = false; return; }
+    } catch (err) { failed = 'That code didn’t work. Please try again.'; }
     busy = false;
-    paintSummary(checkout); // swaps the input for the applied chip + −amount
+    if (failed) {
+      // Smart minimum message: a valid code, but the items are under its minimum order.
+      let s; try { s = checkout.session(); } catch (e) { s = null; }
+      const subMinor = s && s.total && s.total.subtotal && s.total.subtotal.minorUnitsAmount;
+      if (terms && terms.min_amount != null && Number.isInteger(subMinor) && subMinor < terms.min_amount) {
+        setMsg('This code needs a ' + terms.min_display + ' minimum — your items are at ' + s.total.subtotal.amount + '.');
+      } else {
+        setMsg(failed);
+      }
+      return;
+    }
+    paintSummary(checkout); // code into the field (read-only) + ✕ + (deal) + −amount
   }
   async function clearCode() {
     if (busy) return;
@@ -206,15 +238,22 @@ function wirePromo(checkout) {
     try { if (typeof checkout.removePromotionCode === 'function') await checkout.removePromotionCode(); }
     catch (err) { /* paint below reflects the real state either way */ }
     input.value = '';
+    checkout.__promoTerms = null;
     busy = false;
     paintSummary(checkout);
     input.focus();
   }
-  // Auto-apply: Enter, or blur with a code typed. No Apply button.
+  // Auto-apply: Enter, or blur with a code typed (skip when already applied → the field is read-only).
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } });
-  input.addEventListener('blur', () => { if (input.value.trim()) applyCode(); });
+  input.addEventListener('blur', () => { if (!input.readOnly && input.value.trim()) applyCode(); });
   if (clearBtn) clearBtn.addEventListener('click', clearCode);
-  checkout.__syncPromo = () => paintSummary(checkout); // auto-apply paths refresh the chip through this
+  // Auto-apply paths (share link / store-wide sale): look up the applied code's terms, then paint.
+  checkout.__syncPromo = async () => {
+    let s; try { s = checkout.session(); } catch (e) { s = null; }
+    const code = s && s.discountAmounts && s.discountAmounts[0] && s.discountAmounts[0].promotionCode;
+    checkout.__promoTerms = code ? await lookupCode(code) : null;
+    paintSummary(checkout);
+  };
 }
 
 // v3.5 — read the public active store-wide sale and apply it at INIT (no shopper action). The keyword
