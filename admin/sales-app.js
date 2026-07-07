@@ -6,9 +6,9 @@
   const D = window.PORTAL_DATA, P = window.PORTAL;
   const { money } = D;
   const esc = P.esc;
-  let coupons = D.coupons.map((c) => ({ ...c }));
-  let storeWide = { ...D.storeWideSale };
-  const pickProducts = (D.products || []).filter((p) => !p.archived_at);
+  let coupons = [];
+  let storeWide = { active: false };
+  const pickProducts = (D.products || []).filter((p) => !p.archived_at && p.is_published);
   let pickSel = new Set();
 
   const IC = {
@@ -25,8 +25,14 @@
   function offText(c) { return c.percent_off != null ? c.percent_off + "% off" : (c.amount_display || money(c.amount_off)) + " off"; }
 
   /* ---------- store-wide automatic sale ---------- */
-  function renderStoreWide() {
+  async function renderStoreWide() {
     const el = document.getElementById("storewide");
+    // GET active_sale is PUBLIC (no auth) — the ONE auto_apply % store-wide sale, or { active:false }.
+    try {
+      const res = await fetch("/api/products?_action=active_sale");
+      const data = res.ok ? await res.json() : { active: false };
+      storeWide = data && data.active ? data : { active: false };
+    } catch (e) { storeWide = { active: false }; }
     if (storeWide.active) {
       el.className = "storewide on";
       el.innerHTML = `<div class="storewide__top">
@@ -34,7 +40,14 @@
         <span class="storewide__txt"><h3>Running — <span class="storewide__big">${esc(storeWide.amount_display || (storeWide.value + (storeWide.type === "percent" ? "% off" : " off")))}</span> everything</h3>
           <p>Automatic at checkout · <b>no code needed</b>${storeWide.started_at ? " · since " + fmtDate(storeWide.started_at) : ""}</p></span>
         <button class="btn btn--refund btn--sm" id="endStoreWide">End sale</button></div>`;
-      el.querySelector("#endStoreWide").onclick = () => confirmDialog("End the store-wide sale?", "The automatic discount will stop applying at checkout right away.", "End sale", () => { storeWide.active = false; renderStoreWide(); P.toast("Store-wide sale ended"); });
+      el.querySelector("#endStoreWide").onclick = () => confirmDialog("End the store-wide sale?", "The automatic discount will stop applying at checkout right away.", "End sale", async () => {
+        // The single active store_wide + percent_off + auto_apply owner coupon — active_sale hands us its code.
+        try {
+          const r = await fetch("/api/products?_action=coupon_deactivate", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(storeWide.promotion_code_id ? { promotion_code_id: storeWide.promotion_code_id } : { code: storeWide.code }) });
+          if (!r.ok) { const e = await r.json().catch(() => ({})); P.toast(e.error || "Couldn't end the sale", { kind: "danger" }); return; }
+          await renderStoreWide(); await renderCoupons(); P.toast("Store-wide sale ended");
+        } catch (err) { P.toast("Couldn't end the sale", { kind: "danger" }); }
+      });
     } else {
       el.className = "storewide";
       el.innerHTML = `<div class="storewide__top">
@@ -46,11 +59,21 @@
         <div class="field"><div class="field__top"><span class="field__label">Amount</span></div>
           <input class="input mono" id="sw-val" inputmode="decimal" placeholder="15" value="15"></div>
         <button class="btn" id="startStoreWide">Start sale</button></div>`;
-      el.querySelector("#startStoreWide").onclick = () => {
+      el.querySelector("#startStoreWide").onclick = async () => {
         const type = el.querySelector("#sw-type").value, raw = parseFloat(el.querySelector("#sw-val").value);
         if (isNaN(raw) || raw <= 0) { P.toast("Enter an amount", { kind: "danger" }); return; }
-        storeWide = { active: true, type, value: raw, amount_display: type === "percent" ? raw + "% off" : money(Math.round(raw * 100)) + " off", started_at: new Date().toISOString() };
-        renderStoreWide(); P.toast("Store-wide sale is live — applies at checkout, no code", { kind: "live" });
+        // % → auto_apply, struck store-wide sale (no code needed). $ → plain shareable code (value in cents).
+        // The form collects no code, so we omit it and let Stripe generate one; active_sale reads it back.
+        const payload = type === "percent"
+          ? { type: "percent", value: raw, auto_apply: true }
+          : { type: "amount", value: Math.round(raw * 100) };
+        try {
+          const r = await fetch("/api/products?_action=coupon", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(payload) });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) { P.toast(data.error || "Couldn't start the sale", { kind: "danger" }); return; }
+          await renderStoreWide(); await renderCoupons();
+          P.toast(type === "percent" ? "Store-wide sale is live — applies at checkout, no code" : "Sale code created — share it with customers", { kind: "live" });
+        } catch (err) { P.toast("Couldn't start the sale", { kind: "danger" }); }
       };
     }
   }
@@ -70,13 +93,24 @@
       <div class="coupon__foot"><button class="btn btn--ghost btn--sm" data-share="${esc(c.code)}">Copy share link</button><span style="flex:1"></span><button class="btn btn--refund btn--sm" data-end="${esc(c.code)}">End sale</button></div>
     </div>`;
   }
-  function renderCoupons() {
+  async function renderCoupons() {
     const el = document.getElementById("coupons");
+    try {
+      const res = await fetch("/api/products?_action=coupon", { headers: { ...P.authHeader() } });
+      const data = res.ok ? await res.json() : { coupons: [] };
+      coupons = (data.coupons || []).map((c) => ({ ...c }));
+    } catch (e) { coupons = []; }
     if (!coupons.length) { el.innerHTML = `<div class="empty" style="grid-column:1/-1">${IC.tag}<h3>No coupon sales running</h3><p>Create a code-based discount with “New sale”.</p></div>`; return; }
     el.innerHTML = coupons.map(couponHTML).join("");
     el.querySelectorAll("[data-end]").forEach((b) => b.addEventListener("click", () => {
       confirmDialog("End this sale?", "Code “" + b.dataset.end + "” will stop working immediately. You can always create a new one.", "End sale", () => {
-        coupons = coupons.filter((c) => c.code !== b.dataset.end); renderCoupons(); P.toast("Sale ended — code “" + b.dataset.end + "” deactivated");
+        (async () => {
+          try {
+            const r = await fetch("/api/products?_action=coupon_deactivate", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify({ code: b.dataset.end }) });
+            if (!r.ok) { const e = await r.json().catch(() => ({})); P.toast(e.error || "Couldn't end the sale", { kind: "danger" }); return; }
+            await renderCoupons(); await renderStoreWide(); P.toast("Sale ended — code “" + b.dataset.end + "” deactivated");
+          } catch (err) { P.toast("Couldn't end the sale", { kind: "danger" }); }
+        })();
       });
     }));
     el.querySelectorAll("[data-share]").forEach((b) => b.addEventListener("click", () => {
@@ -174,35 +208,38 @@
     if (c) c.textContent = `${pickSel.size} piece${pickSel.size === 1 ? "" : "s"} selected`;
   }
   function closeModal() { document.getElementById("saleModal").classList.remove("is-on"); document.getElementById("saleScrim").classList.remove("is-on"); }
-  function createSale() {
+  async function createSale() {
     const b = document.getElementById("saleBody");
     const type = b.querySelector("#c-type").value, val = parseFloat(b.querySelector("#c-val").value);
     if (isNaN(val) || val <= 0) { P.toast("Enter a discount amount", { kind: "danger" }); return; }
     const auto = b.querySelector("#c-auto").checked;
-    let code = (b.querySelector("#c-code").value || "").trim().toUpperCase();
+    const code = (b.querySelector("#c-code").value || "").trim().toUpperCase();
     if (!auto && !code) { P.toast("Add a code or choose auto-generate", { kind: "danger" }); return; }
-    if (auto) code = "SAVE" + Math.random().toString(36).slice(2, 6).toUpperCase();
-    if (coupons.some((c) => c.code === code)) { P.toast("That code already exists", { kind: "danger" }); return; }
     const minRaw = parseFloat(b.querySelector("#c-min").value), maxRaw = parseInt(b.querySelector("#c-max").value, 10);
     const endMode = b.querySelector("#c-endmode .seg2__b.is-on").dataset.end;
-    let expSec = null, expDisp = null;
-    if (endMode === "date") {
-      const mo = +b.querySelector("#c-mon").value, da = +b.querySelector("#c-day").value, ye = +b.querySelector("#c-year").value;
-      const d = new Date(ye, mo, da);
-      expSec = Math.floor(d.getTime() / 1000); expDisp = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    }
     const wholeStore = b.querySelector("#c-store").checked;
     if (!wholeStore && pickSel.size === 0) { P.toast("Pick at least one piece, or switch to Whole store", { kind: "danger" }); return; }
-    coupons.unshift({
-      code, promotion_code_id: "promo_" + code,
-      percent_off: type === "percent" ? val : null, amount_off: type === "amount" ? Math.round(val * 100) : null,
-      amount_display: type === "amount" ? money(Math.round(val * 100)) : null,
-      min_amount: isNaN(minRaw) ? null : Math.round(minRaw * 100), min_display: isNaN(minRaw) ? null : money(Math.round(minRaw * 100)),
-      times_redeemed: 0, max_redemptions: isNaN(maxRaw) ? null : maxRaw,
-      expires_at: expSec, expires_display: expDisp,
-      store_wide: wholeStore, product_ids: wholeStore ? null : [...pickSel],
-    });
-    closeModal(); renderCoupons(); P.toast("Sale live — code “" + code + "”", { kind: "live" });
+    // product_ids are STRIPE product ids — map the picked (published, non-archived) rows to stripe_product_id.
+    const idToStripe = new Map(pickProducts.map((p) => [String(p.id), p.stripe_product_id]));
+    const product_ids = wholeStore ? null : [...pickSel].map((id) => idToStripe.get(String(id))).filter(Boolean);
+    // $ off → value in cents; % off → value is the percent. min_amount is cents. auto → let Stripe make the code.
+    const payload = { type, value: type === "amount" ? Math.round(val * 100) : val };
+    if (!auto && code) payload.code = code;
+    if (product_ids && product_ids.length) payload.product_ids = product_ids;
+    if (!isNaN(minRaw)) payload.min_amount = Math.round(minRaw * 100);
+    if (!isNaN(maxRaw)) payload.max_redemptions = maxRaw;
+    if (endMode === "date") {
+      const mo = +b.querySelector("#c-mon").value, da = +b.querySelector("#c-day").value, ye = +b.querySelector("#c-year").value;
+      const pad = (n) => String(n).padStart(2, "0");
+      payload.expires_date = ye + "-" + pad(mo + 1) + "-" + pad(da);
+    }
+    try {
+      const r = await fetch("/api/products?_action=coupon", { method: "POST", headers: { "Content-Type": "application/json", ...P.authHeader() }, body: JSON.stringify(payload) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { P.toast(data.error || "Couldn't create the sale", { kind: "danger" }); return; }
+      closeModal(); await renderCoupons();
+      P.toast("Sale live — code “" + (data.code || code) + "”", { kind: "live" });
+    } catch (err) { P.toast("Couldn't create the sale", { kind: "danger" }); }
   }
 
   function confirmDialog(title, msg, label, onYes) {
