@@ -12,9 +12,10 @@
 > fetches), so **media can be attached in chat** (the `uploadImages` op, images only) **or sent by link**
 > (a Drive/direct URL — the backstop for video and large batches).
 
-**Created**: 2026-03-16 **Updated**: 2026-06-18 — **v3.3.0 BUILT** on the dev preview (`archive/v3_3/v3_3_0_BUILD_REPORT.md`): management parity (in-app + GPT **refund**, **coupons in /admin**), **chat-attach photo upload** (`uploadImages`), **inventory decrement** on a sale (`available = quantity>0`), brand-neutral **/admin** polish, and the **homepage** Lottie-title + old-film-hero code (their visual assets are render-tune placeholders) — layered on the v2.0.0 base below. **v2.0.0 BUILT + VERIFIED** on the dev preview (`archive/v2_0/v2_0_0_BUILD_REPORT.md`), with v2.1 post-review visual polish on top. v2.0.0 shipped the **AI store-management layer** (the whole "she runs it by chat" thesis): GPT/admin **create → preview → publish** with a real preview-token link; **edit stages a draft** (publish XOR discard) with live-compare change-detection; **price / `available` / `quantity` apply live**, copy/SEO stage; **same-product Stripe-price rotation**; **coupons** (create/list/deactivate, owner-tagged); **archive** (reversible, never hard-delete); **media-by-link** upload (Drive/direct URL → Cloudinary→R2); **`charge.refunded` order-status reflection**; strict `is_test` isolation on the public path; per-`product_type` validation (miniatures-only today). Everything folded into the existing functions (still 11/12 on Vercel Hobby). **Version**: v3.3.0 (as-built on dev; layered on v2.0.0 + v2.1) **Status**: **built on the dev preview; static gate + headless-API checks green** (`archive/v3_3/v3_3_0_BUILD_REPORT.md`). Sean's remaining checks: the Custom GPT behaviour (now incl. refund + chat-attach + coupons-in-/admin), a full Stripe checkout, the refund + inventory-decrement flows, and the homepage/admin design render-tune (incl. the HyperFrames hero + Lottie title assets). Launch/cutover to-dos remain (live Stripe keys + live-mode coupon bootstrap, point the GPT at production, remaining admin logins, content-placeholder gate, `charge.refunded` on the live endpoint, DNS, then `dev → main` ff-merge + tag). _(Per-version build history lives in the `archive/v1_4/`, `archive/v1_5/`, `archive/v1_6/`, `archive/v2_0/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_ **Build Guide** (the as-built source for v2.x):
+**Created**: 2026-03-16 **Updated**: 2026-07-07 — **v4.0.0 BUILT** on the dev preview (`archive/v4_0/v4_0_0_BUILD_REPORT.md`): the **/admin panel is now the Content Creator Portal** — four static pages under `admin/` (`products.html` / `orders.html` / `sales.html` / `account.html` + `portal.css` / `portal.js` / `data.js` + per-page `*-app.js`), replacing the old `admin/index.html` + `assets/js/admin.js` (auth/config bootstrap moved to `portal.js`: `PORTAL.boot` / `loadConfig` / `authHeader`; still no admin-specific serverless function). It also shipped the **automatic store-wide sale** (one owner `%` coupon tagged `metadata.auto_apply='true'` → on-site struck pricing + top utility bar + once-only popup + Custom-Checkout auto-apply + `?code=` share links), the rebuilt **media-upload modal** (persisted image order, per-image role checkboxes, per-video flags), the reconciled **sold-policy** (available-off on a *live* piece → Draft, Sold = `quantity` 0 from a real sale, storefront buy-gate `published && quantity>0`), the **activity log** (`activity_log` audit table + Account card), a **seen/unseen** Orders signal, **scheduled publish** (`scheduled_publish_at`, folded into the daily feed cron), the **even-split money fix** (`orders.amount` = the real per-item `amount_total`, #228 — verified live $310/$88), **cart-hold retirement** (the 15-min reservation removed, #224), an **order↔Stripe reconciliation** cron job, storefront bug fixes (structured PDP spec fields now render, data-derived series filter, independent featured rows, `/complete` drops the raw `cs_` id), and **GPT parity** for the sale + refund guidance (shipped `v4_0_0_GPT_SCHEMA.txt` + `v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`). Layered on the **v3.3.0** base (management parity: in-app + GPT refund, coupons in /admin, chat-attach photo upload, inventory decrement on a sale, brand-neutral admin polish, homepage Lottie-title + old-film-hero) and the **v2.0.0** base below. **v2.0.0 BUILT + VERIFIED** on the dev preview (`archive/v2_0/v2_0_0_BUILD_REPORT.md`), with v2.1 post-review visual polish on top. v2.0.0 shipped the **AI store-management layer** (the whole "she runs it by chat" thesis): GPT/admin **create → preview → publish** with a real preview-token link; **edit stages a draft** (publish XOR discard) with live-compare change-detection; **price / `available` / `quantity` apply live**, copy/SEO stage; **same-product Stripe-price rotation**; **coupons** (create/list/deactivate, owner-tagged); **archive** (reversible, never hard-delete); **media-by-link** upload (Drive/direct URL → Cloudinary→R2); **`charge.refunded` order-status reflection**; strict `is_test` isolation on the public path; per-`product_type` validation (miniatures-only today). Everything folded into the existing functions (still 11/12 on Vercel Hobby). **Version**: v4.0.0 (as-built on dev; layered on v3.3.0 + v2.0.0) **Status**: **built + pushed to the dev preview (14 build commits `e190d78…97a03e0`); static gate green (tsc-clean · 11 functions · 1 cron · migrations monotonic · GPT `.txt` 7978/8000) + live-preview verification green** — full store-wide-sale lifecycle, a real 2-piece unequal-price purchase writing the real per-item amounts, a real refund-with-restock, the cron gate + scheduled-publish + reconciliation, and the activity log all confirmed on `everlastings-git-dev-seanivore.vercel.app` (`archive/v4_0/v4_0_0_BUILD_REPORT.md`). Build-time bugs caught + fixed: the three v3.5 migrations were applied to the remote DB (`supabase db push`); the refund "Relist" switch now auto-restocks the returned piece (`quantity+1`). Sean's remaining checks: the Custom GPT parity spot-check (in Em's ChatGPT), the media modal via the UI, and the `/checkout` custom total-line display (money is correct — the Stripe session carries the discount — but the display-only element shows the pre-discount amount). Go-live to-dos remain: **set `CRON_SECRET` in the Production scope** (unset = scheduled-publish + reconciliation are silently inert), run the commented `20260701000002_v3_5_drop_cart_holds.sql` DROP by hand once no `cart_holds` reference remains, run the legacy sold-row backfill (`20260616000001` cutover `UPDATE`) on the live catalog before enabling any % sale, flip the Custom GPT's Action server URL + auth to production and paste the `v4_0_0` GPT `.txt` files, plus the pre-existing launch items (live Stripe keys, `charge.refunded` + "Refunds" customer-email on the live endpoint, remaining admin logins, content-placeholder gate, DNS, then `dev → main` ff-merge + tag). _(Per-version build history lives in the `archive/v1_4/`, `archive/v1_5/`, `archive/v1_6/`, `archive/v2_0/` packets and their `*_BUILD_REPORT.md` / `*_GAP_REVIEW_*` files — not duplicated here.)_ **Build Guide** (the as-built source, newest first):
+  - `assets/docs/archive/v4_0/v4_0_0_IMPLEMENT.md` — the exclusively-executable v4.0.0 build (Content Creator Portal + v3.5 store/checkout backlog); `v4_0_0_ADDENDUM_DESIGN.md` + `v4_0_0_ADDENDUM_TESTING.md` are its addenda, `v4_0_0_BUILD_REPORT.md` is the as-built deltas + build-time bugs (this doc is reconciled against it), `_RATIONALE.md` holds the design reasoning
   - `assets/docs/archive/v2_0/v2_0_0_IMPLEMENT.md` — the exclusively-executable build (AI store-management + design); `v2_0_0_ADDENDUM_DESIGN.md` + `v2_0_0_ADDENDUM_TESTING.md` are its addenda (the v1_5/v1_6 packets are its gap-review changelog)
-  - `assets/docs/archive/v2_0/v2_0_0_BUILD_REPORT.md` — what actually shipped in v2.0.0 + deviations (this doc is reconciled against it)
+  - `assets/docs/archive/v2_0/v2_0_0_BUILD_REPORT.md` — what actually shipped in v2.0.0 + deviations
   - `assets/docs/archive/v1_4/v1_4_9_FINISH_TRACK_C.md` + `v1_4_9_BUILD_REPORT.md` — the prior wave (checkout repair, merchant email, admin/GPT fulfillment, Supabase keep-alive cron), retained for history **Operating docs** (living; how the store is run day-to-day):
   - `assets/docs/STORE_ADMINISTRATION.md` — the client's plain how-to (products + orders across the Custom GPT, Admin panel, and Supabase Studio)
   - `assets/docs/GPT_SETUP.md` — the "Sunkeeper" Custom GPT brain + setup, plus the agentic/curl product protocol
@@ -59,7 +60,7 @@
 
 Terms used throughout the implementation guides that are easy to misread if you're coming from a different stack:
 
-- **Apply migrations** — Run the SQL that creates all 8 tables + the RLS rules + the auto-update triggers. Equivalent: run the create-tables SQL once.
+- **Apply migrations** — Run the SQL that creates the tables + the RLS rules + the auto-update triggers. Equivalent: run the create-tables SQL once. (Migration count grows over time; as of v4.0.0 there are 10 migration files — verify with `supabase migration list`.)
 - **Migrations via MCP** — Using the Supabase MCP server tool to run that SQL. Optional — Supabase CLI does the same. Default: **Supabase CLI `supabase db push`**.
 - **Supabase DB webhook** — *Despite the name, a SQL trigger, not a Studio setting:* `notify_stripe_sync()` (`AFTER INSERT ON products`, migration `…0003`) `POST`s to `/api/stripe-sync` to push a new product into Stripe. **Since v1.5 it skips drafts** — returns early when `is_test=true` OR `is_published=false`, so it fires only for a published, non-test insert. Stripe is normally created at **publish** (inline in `handlePublish`), not here; this trigger is just the backstop for a direct published insert. (The old `?sync=true`-on-create bypass is retired.)
 - **Stripe webhook** — Stripe's outbound notification when a payment completes. Standard Stripe webhook. Unrelated to the Supabase DB webhook above.
@@ -91,7 +92,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │              FRONTEND — Vanilla HTML/CSS/JS on Vercel            │
 │                                                                  │
 │  index.html     shop.html     product.html     checkout.html     │
-│  about.html     contact.html     /admin (protected)              │
+│  about.html     contact.html     /admin = Creator Portal (4 pg)  │
 │                                                                  │
 │  - JS fetches product data from Supabase REST API                │
 │  - Stripe.js renders custom checkout (ui_mode: 'custom')         │
@@ -104,8 +105,9 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │            VERCEL SERVERLESS FUNCTIONS — TypeScript                 │
 │            (11 deployed functions; public URLs below)               │
 │                                                                     │
-│  POST   /api/checkout/reserve  → availability + 15-min soft hold    │
-│  POST   /api/checkout          → create Stripe session (post-hold)  │
+│  POST   /api/checkout/reserve  → availability + subscriber capture  │
+│                                  (no hold — reservation retired #224)│
+│  POST   /api/checkout          → create Stripe session (post-check) │
 │  GET    /api/session-status    → return page payment verification   │
 │  POST   /api/webhook           → Stripe events: paid + charge.refund│
 │  POST   /api/stripe-sync       → create Stripe Product+Price (DB    │
@@ -115,7 +117,9 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │                                  (multipart OR JSON {url} by-link)  │
 │  POST   /api/cart-recovery     → sold-in-cart promo code + email    │
 │  GET/POST/PUT /api/products    → product CRUD + draft→publish +     │
-│                                  coupon/archive ?_action= sub-routes│
+│                                  coupon/archive/active_sale/activity │
+│                                  ?_action= sub-routes (active_sale = │
+│                                  public store-wide-sale read)        │
 │  GET    /api/orders            → admin: list orders by ship status  │
 │  PATCH  /api/orders/:id        → admin: record tracking + fire email│
 │  POST   /api/cart-activity     → product interest notification      │
@@ -125,7 +129,8 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │  POST   /api/contact           → contact form handler               │
 │                                                                     │
 │  Helpers (not deployed):                                            │
-│    api/_lib/         cors, env, adminAuth, stripeSync               │
+│    api/_lib/         cors, env, adminAuth, stripe, stripeSync,      │
+│                      activityLog (audit-log write/read helper)      │
 │    api/_emails/      Resend templates (tracking, welcome, recovery) │
 │    api/_bootstrap/   one-time scripts (Stripe coupons)              │
 │                                                                     │
@@ -145,8 +150,8 @@ Terms used throughout the implementation guides that are easy to misread if you'
 │    site_config           │   │    checkout_image-{slug}.webp      │
 │    webhook_events        │   │                                    │
 │    product_interests     │   │  /brand/                           │
-│    cart_holds            │   │    logo.svg, favicon, etc.         │
-│                          │   │                                    │
+│    activity_log          │   │    logo.svg, favicon, etc.         │
+│  (cart_holds RETIRED)    │   │                                    │
 │  Auth: admin login       │   │  Public CDN access via             │
 │  RLS: row-level security │   │  cdn.everlastingsbyemaline.com     │
 │  DB trigger (publish)    │   │                                    │
@@ -184,7 +189,7 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   9. **Cloudinary as stateless image transform layer** — Proven in 360-design project. Raw images uploaded to Cloudinary → transformed (4:5 crop, WebP, compress) → downloaded → uploaded to R2 → deleted from Cloudinary. Stays on free tier.
 
-  10. **AI-assisted store management (v2.0.0; refund + chat-attach upload added v3.3)** — the Custom GPT (and any AI assistant) runs the whole store by chat via the `api/products.ts` action set: `createProduct` (→ draft + preview link), `editProduct` (stages a draft / live-applies price·available·quantity), `publishProduct`, `discardEdits`, `listProducts` / `getProduct`, `archiveProduct` / `unarchiveProduct`, `createCoupon` / `listCoupons` / `deactivateCoupon`, plus `uploadImages` (v3.3 — chat-attached photos via `openaiFileIdRefs`) and `uploadImage` (by-link backstop / video). Orders (`listOrders` / `markShipped`) shipped in v1.4.9; `refundOrder` (v3.3 — amount-based, state-aware relist) on `api/orders.ts`. See `GPT_SETUP.md`.
+  10. **AI-assisted store management (v2.0.0; refund + chat-attach upload added v3.3; store-wide sale + scheduled publish added v4.0)** — the Custom GPT (and any AI assistant) runs the whole store by chat via the `api/products.ts` action set: `createProduct` (→ draft + preview link), `editProduct` (stages a draft / live-applies price·available·quantity; **v4.0 also `scheduled_publish_at`** + the take-down→Draft / re-list-via-`publishProduct` semantics), `publishProduct`, `discardEdits`, `listProducts` / `getProduct`, `archiveProduct` / `unarchiveProduct`, `createCoupon` (**v4.0: `auto_apply:true` = the automatic store-wide sale — percent-only, on-site struck pricing; creating one supersedes the prior**) / `listCoupons` / `deactivateCoupon`, plus `uploadImages` (v3.3 — chat-attached photos via `openaiFileIdRefs`) and `uploadImage` (by-link backstop / video). Public/admin reads folded into `api/products.ts` in v4.0: `GET ?_action=active_sale` (public, the storefront's struck-pricing read) and `GET ?_action=activity` (admin, newest-25 activity feed). Orders (`listOrders` / `markShipped`) shipped in v1.4.9; `refundOrder` (v3.3 — amount-based, sibling-aware; the caller does the per-piece restock) on `api/orders.ts`. The GPT reaches all of this through **16 declared Actions** (all `x-openai-isConsequential:false`). See `GPT_SETUP.md`.
 
   11. **Environment-based Stripe keys** — Vercel env vars scoped by environment. Preview deployments use test keys, production uses live keys. Frontend Stripe key served via `api/config.ts` (not hardcoded).
 
@@ -200,15 +205,17 @@ Terms used throughout the implementation guides that are easy to misread if you'
 
   17. **Email capture CTAs** — Product interest CTA (sticky card), cart exit intent modal, 3-minute contemplation popup with 5% off. `product_interests` table tracks email + product slug for real notification capability.
 
-  18. **Availability check BEFORE any PII** (v1.4) — `/cart.html` fires `POST /api/checkout/reserve` on {CHECKOUT} click, creating a 15-min soft hold in the `cart_holds` table. 409 recovery happens on the cart page, before the user has entered address or payment details. Stripe session is created only after the hold is confirmed. See IMPL_GUIDE AR #28, #29.
+  18. **Availability check BEFORE any PII** (v1.4) — ~~SUPERSEDED in v4.0 (#224).~~ The `POST /api/checkout/reserve` endpoint stays (it still runs the availability check + captures the subscriber on {CHECKOUT} click, and 409 recovery still happens on the cart page before any PII), but it **no longer creates a hold** — the reservation was removed. Sold-out is caught by the availability re-check at Stripe-session creation. See AR #28 (SUPERSEDED).
 
-  19. **Soft cart holds, not hard reservations** (v1.4) — 15-minute TTL. Availability is `products.available = true AND NOT EXISTS (hold by different session)`. No infinite lock; items free after 15 minutes of user inactivity.
+  19. **Soft cart holds, not hard reservations** (v1.4) — ~~SUPERSEDED in v4.0 (#224): the `cart_holds` table + the 15-min soft hold are retired.~~ The hold self-locked an abandoning/retrying shopper and mis-fired the apology coupon. The store returns to the **no-reservation** design: a two-shopper race on a one-of-a-kind piece is an accepted low-volume trade-off (`record_sale` keeps `quantity ≥ 0`; a rare true double-pay is recovered by the amount-based refund with an empty `relist_product_ids`). No code path reads/writes `cart_holds`; the physical table remains pending a manual go-live DROP. See AR #29 (SUPERSEDED).
 
   20. **Shipping pipeline: Shippo (labels) + Resend (branded tracking email)** (v1.4) — Emy uses Shippo free-tier UI to print labels (30/mo free) and pastes tracking number into admin UI. `PATCH /api/orders/:id` records tracking and fires a branded tracking email via Resend (free tier, 3k/mo, no credit card).
 
   21. **Coupon = rule, promotion code = single-use delivery** (v1.4) — Stripe coupons are `Duration: Forever`, `Max redemptions: BLANK`. Every user event generates a unique promotion code via `stripe.promotionCodes.create` with `max_redemptions: 1` and 30-day expiry. Code is emailed via Resend.
 
   22. **Placeholder hygiene** (v1.4) — Track B hardcoded content wrapped in `<!-- PLACEHOLDER: name -->` tags (and equivalents for CSS/JS). Track C begins and ends with a grep against the codebase to guarantee nothing slips through.
+
+  23. **`/admin` is the Content Creator Portal (v4.0)** — the admin surface is **four static pages** under `admin/` — `products.html` / `orders.html` / `sales.html` / `account.html` — each a plain shell wired by a per-page app (`products-app.js` / `orders-app.js` / `sales-app.js` / `account-app.js`), sharing `portal.css` (a deliberately distinct **cool indigo-slate** template look, not the warm-plum storefront brand — reusable for future clients), `portal.js` (the auth/config bootstrap: `PORTAL.boot` / `loadConfig` / `authHeader`, preserved from the retired `assets/js/admin.js`), and `data.js` (`window.PORTAL_DATA` render helpers). `/admin` rewrites to `/admin/products` (`vercel.json`). It replaced `admin/index.html` + `assets/js/admin.js` (both retired; `admin.js` still sits in the tree as dead code, referenced only by porting comments). **No new serverless function** — auth reuses `/api/config` + the CDN `@supabase/supabase-js`; every management capability keeps GPT/portal parity. The portal's innovation is entropy-lowering detail (per-row state LED across all five states, field-border rings, hard toggles, preview-anytime) in familiar layouts (a spreadsheet of rows, plain forms), mobile-first. `computeState()` is the single source of truth for the row dot/word (precedence: `archived > draft > staged-edits > sold(qty0) > live`).
 
 ---
 
@@ -294,7 +301,7 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - At least 1 hero image required (role prefix `hero-`)
       - A thumbnail URL required
       - Minimum 5 gallery images required (role prefix `gallery-`)
-      - Enforced by the shared `validateProductRules` in `api/products.ts` — run at **create** AND at **both publish branches** (first-publish + edit-publish), so a published product is always well-formed even if an edit blanked `story_card`/`images`. Rules are keyed by `product_type` (only `miniature` today; new types are a config entry, not a validator rewrite — unknown types fall back to the miniature shape).
+      - Enforced by `validatePublishRules` in `api/products.ts` — run at **both publish branches** (first-publish + edit-publish), so a published product is always well-formed even if an edit blanked `story_card`/`images`. **Create is now lenient** (v4.0): `validateCreateShape` only requires title + a positive price, so a draft can be built up incrementally; the full role/field gate lands at publish. Rules are keyed by `product_type` (only `miniature` today; new types are a config entry, not a validator rewrite — unknown types fall back to the miniature shape).
   25. **Meta Pixel for retargeting + Instagram Shopping attribution**
       - Base pixel code in `<head>` alongside GA4. Events fire in parallel
       - Server-side CAPI for Purchase deduplication via webhook
@@ -307,16 +314,16 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
       - `api/product-feed.ts` serves CSV of all products
       - Meta Commerce Manager polls daily — products auto-sync to Instagram Shopping
       - Same pattern extends to Pinterest Shopping (post-launch)
-  28. **Availability check BEFORE any PII is entered**
+  28. **Availability check BEFORE any PII is entered** — **SUPERSEDED in v4.0 (#224): the hold is gone; the availability check + subscriber capture stay.**
       - `/cart.html` shows items + cost estimate + optional email/name capture
-      - `[CHECKOUT]` button fires `POST /api/checkout/reserve` — runs availability check + creates 15-min soft hold in `cart_holds` table
+      - `[CHECKOUT]` button fires `POST /api/checkout/reserve` — runs the availability check + captures the subscriber (**no hold created — the `cart_holds` write was removed**)
       - 409 recovery happens on the cart page, before the user types any address or payment data
-      - Stripe session created only AFTER availability is confirmed (no wasted sessions)
-  29. **Soft cart holds, not hard reservations**
-      - `cart_holds` table: 15-min TTL, per browser session
-      - Availability check = `products.available AND NOT EXISTS (active hold by different session)`
-      - No infinite lock — if the user walks away, the item frees after 15 minutes
-      - Holds are refreshed on any checkout-page interaction
+      - Stripe session created only AFTER availability is re-confirmed (no wasted sessions)
+  29. **Soft cart holds, not hard reservations** — **SUPERSEDED in v4.0 (#224): `cart_holds` + the 15-min reservation are retired.**
+      - The hold self-locked an abandoning/retrying shopper and mis-fired the apology coupon; the store returns to the no-reservation design
+      - Availability is now just `is_published=true AND available=true AND quantity>=1 AND archived_at IS NULL` (`checkout.ts:54` single / `:169` cart) — no `NOT EXISTS (cart_hold …)` term
+      - A two-shopper race on a one-of-a-kind piece is an accepted low-volume trade-off (`record_sale` floors `quantity` at 0; a rare true double-pay is recovered by the amount-based refund)
+      - No code path reads/writes `cart_holds`; the physical table remains pending a manual go-live DROP (`20260701000002_v3_5_drop_cart_holds.sql` ships the DROP commented)
   30. **Shipping pipeline: Shippo (labels) + Resend (branded tracking email)**
       - Emy generates USPS/UPS labels in Shippo's free tier UI (~30 labels/mo free)
       - Admin UI `/admin/orders` shows "Needs shipping" queue with copy-to-clipboard addresses
@@ -341,7 +348,8 @@ Implementation-level architectural decisions, cited as "AR #N" throughout the v1
 
   34. **Vercel Hobby tier function-cap drives endpoint consolidation**
       - Hobby plan caps deployments at 12 serverless functions. Project stays on Hobby (~$0/mo for compute) by routing related actions through a single file via `?_action=...` query param + `vercel.json` rewrites.
-      - Pattern: `api/checkout.ts` handles `session | reserve | session-status`; `api/orders.ts` handles `list | :id` (PATCH); `api/cart.ts` handles `activity | recovery`.
+      - Pattern: `api/checkout.ts` handles `session | reserve | session-status`; `api/orders.ts` handles `list | :id` (PATCH) + `seen` + `:id/refund`; `api/cart.ts` handles `activity | recovery`; `api/products.ts` handles CRUD + `publish | discard | archive | unarchive | coupon | coupon_deactivate | active_sale | activity`.
+      - **v4.0 additions all folded in — count still 11/12.** The public store-wide-sale read (`?_action=active_sale`), the admin activity feed (`?_action=activity`), the `createCoupon` `auto_apply` marker, the Orders `?_action=seen` + unseen signal, and the two cron-gated jobs (scheduled-publish flip + order↔Stripe reconciliation) added **zero** new files — active_sale/activity joined `products.ts`, seen/refund joined `orders.ts`, and both cron jobs joined the single existing `api/product-feed.ts` daily cron (still **1/1** cron).
       - Public URLs are unchanged via rewrites in `vercel.json`. Frontend, integration tests, AI product pipeline (curl protocol in `GPT_SETUP.md`), and the Custom GPT all hit unchanged URLs.
       - Adding new endpoints: consolidate into existing namespaces (e.g. a new admin endpoint joins `api/orders.ts` or a new `api/admin.ts`) rather than creating standalone files. Buffer is 1 below cap (11/12).
       - `vercel dev` does NOT enforce the cap — must verify against a real preview deploy before merging.
@@ -385,16 +393,29 @@ The safety UX that lets the owner run the store by chat without a "test mode": e
 
 - **Create** inserts an **unpublished draft** (`is_published=false`, no Stripe). The response returns a `preview_url` carrying an unguessable `preview_token` — a **capability** (possessing the link is the authority to publish; no login).
 - **Preview** — `GET /product/{slug}?preview=<token>` fetches the draft through the **service-role API** (the anon client can't read unpublished rows under RLS) and renders the real page with `draft` overlaid, topped by a "Draft preview — not yet live" Publish bar (+ a review panel for the hidden SEO/checkout/image-crop fields — v2.1).
-- **Publish** (the Publish bar, or `publishProduct` / `?_action=publish`): new product → create Stripe + flip `is_published=true`, `published_at=now`; published-row edit → apply `draft` → live columns. Either way **clear `draft` + rotate/clear `preview_token`** so a stale link can't republish. First-publish and edit-publish both re-run `validateProductRules`, so a published product is always well-formed.
+- **Publish** (the Publish bar, or `publishProduct` / `?_action=publish`): new product → create Stripe + flip `is_published=true`, `published_at=now`; published-row edit → apply `draft` → live columns. Either way **clear `draft`, clear `scheduled_publish_at`, + rotate/clear `preview_token`** so a stale link can't republish. First-publish and edit-publish both re-run **`validatePublishRules`** (renamed from `validateProductRules` in v4.0; the leaner **`validateCreateShape`** gates create), so a published product is always well-formed.
+- **Required-but-auto-generated at first publish (v4.0)** — `seo_title, seo_description, checkout_name, checkout_description, checkout_image, seo_thumbnail` are **never a publish blocker**: if still blank, `handlePublish` generates them from the other fields and **persists them to the row** (so /admin shows them locked, not blank), then `checkout_*` **lock** (`FROZEN_AFTER_PUBLISH`). `checkout_image` defaults to the hero if unset. `published_at` is preserved when already set (`?? now`) so a paused piece relisting through this branch keeps its original publish date. (`syncProductToStripe` still reads `checkout_name || title` etc., so Stripe is unchanged.)
 - **Edit a published row** stages changes in `draft` (the live page keeps serving until publish); admin shows **"live · edits pending."** Each edit **re-stages the draft and rotates the preview token** (only the latest link works). **Discard** (`discardEdits` / `?_action=discard`) scraps a staged draft without publishing.
-- **Apply-live exceptions** (no preview/publish step): `price` (rotates the Stripe Price), `available` (sold flag), and `quantity` (stock) apply to the live columns **immediately** — they gate purchasability, so staging them would risk an oversell / stale-stock report. Everything else (copy/SEO/photos/media) stages.
+- **Apply-live exceptions** (no preview/publish step): `price` (rotates the Stripe Price), `available` (sold flag), `quantity` (stock), and **`scheduled_publish_at`** (the auto-publish directive — it's not copy) apply to the live columns **immediately** — the first three gate purchasability, so staging them would risk an oversell / stale-stock report. Everything else (copy/SEO/photos/media) stages. **Available toggled OFF on a *live* piece → the piece becomes a Draft (unpublish/hide), never "Sold"** (Sold is only a `quantity`-0 outcome of a real sale).
+- **Scheduled publish (v4.0)** — `scheduled_publish_at` (an ISO timestamp, nullable) set/cleared via `PUT`, applied live (never staged). A "Scheduled · <when>" chip shows on the row. The flip folds into the **daily `product-feed` cron** (date-granular; reuses `?_action=publish` under `X-Actor:cron`) — no new cron. A past-due scheduled draft that isn't publish-ready logs `product.schedule_skipped`, not an error.
 - **Change-detection:** `draft` holds exactly the fields differing from live, so a live-only edit never stages a phantom draft and a re-save of staged values never clobbers them. The admin editor and the GPT both edit the **staged** state (admin `openEditor` overlays `draft`; `getProduct` returns an additive `effective` view).
 - **RLS gate:** the public read policy is `USING (is_published = true AND archived_at IS NULL)` — drafts + archived rows are invisible to the site; admin/GPT read via the service-role API (bypasses RLS). `main.js` also filters `is_test` to the deployment (`/api/config` returns `isTest`), so production never shows test rows.
-- **Routes:** publish / archive / unarchive / discard / coupon / coupon_deactivate are `?_action=` sub-routes of `api/products.ts` reached via `vercel.json` rewrites — **no new Vercel function** (count stays 11/12).
+- **Routes:** publish / archive / unarchive / discard / coupon / coupon_deactivate / **active_sale** (public, no-auth) / **activity** (admin) are `?_action=` sub-routes of `api/products.ts` reached via `vercel.json` rewrites — **no new Vercel function** (count stays 11/12).
 
 ## Archive (remove = reversible, never hard-delete)
 
 "Remove / delete / take down" (admin or GPT) sets `archived_at = now()` + mirrors Stripe `active:false`. The piece leaves the shop, feed, product page, and checkout but stays in the DB — searchable + **resurfaceable** (`unarchiveProduct` reverses both). Distinct from `available` (sold, stays visible with a badge) and `is_published` (draft/live). The only hard delete is a deferred, **disabled** `pg_cron` purge (Phase 1 ships it commented) that always skips order-referenced rows.
+
+## Automatic store-wide sale (v4.0)
+
+A no-code, whole-store discount the owner runs by chat or from the Sales surface.
+
+- **One owner coupon represents it** — a **percentage** Stripe coupon (`%` only; on-site struck pricing needs a percent — a `$`-off "store-wide" sale stays a plain checkout code with no struck pricing) tagged `metadata.source='owner_sale'` + `metadata.auto_apply='true'` + a known promo code (`api/products.ts > handleCoupon`). Creating one **supersedes** every other active `auto_apply` owner_sale (best-effort sweep) — **only one is ever active**. "auto_apply ⇒ store-wide" is a server invariant (a product-scoped `%` coupon is never stamped `auto_apply`).
+- **The storefront reads it** via the public `GET /api/products?_action=active_sale` → `{active, type:'percent', value, code, amount_display}` or `{active:false}`.
+- **On-site display** (storefront's own warm-plum tokens): struck **%** prices on shop cards + product page + cart/total (`.price-sale`, gated on `!sold` — never a struck price on an unbuyable piece); a thin **top utility bar** (free-shipping reminder normally, the sale line when active); a **once-only** upper-right popup (dismissible, `localStorage everlastings.saleSeen`, code-scoped). Mounted from `main.js` on `DOMContentLoaded` (`getActiveSale().then(mountSaleChrome)`).
+- **Auto-apply at checkout** — `checkout.js` applies the sale's promo code on Custom Checkout load (the #219 probe confirmed `applyPromotionCode()` fires reliably at `ui_mode:'custom'` session init for the loaded Basil bundle), so the shopper types nothing. The keyword field stays visible + removable/replaceable: entering a personal code **replaces** the sale (Stripe allows one discount/order). No new server `discounts` param — `allow_promotion_codes:true` stays.
+- **Share links (`?code=`)** — a coupon "Copy share link" produces `<siteUrl>/?code=CODE`; `main.js` captures `?code=` on any page → `sessionStorage`, and `checkout.js` applies it at checkout **instead of** the auto-sale (mutually exclusive).
+- **Known display-only gap** (BUILD_REPORT): the `/checkout` custom `[data-checkout-total]` line still shows the pre-discount amount because the `change`-event session shape doesn't expose `total.total.amount`. The **money is correct** — the Stripe session carries the discount and the shopper is charged the discounted amount; only that one custom label lags. Appears pre-existing to `checkout.js`, not a v4.0 regression.
 
 ---
 
@@ -508,8 +529,18 @@ stripe listen --forward-to localhost:3000/api/webhook
   ├── checkout.html                    # Embedded Stripe checkout
   ├── about.html                       # About Emaline
   ├── contact.html                     # Contact + commissions
-  ├── admin/                           # Admin panel (Supabase Auth protected)
-  │   └── index.html                   # Product management UI
+  ├── admin/                           # Content Creator Portal (Supabase Auth protected; v4.0)
+  │   ├── products.html                # Products surface shell  (→ /admin, the landing)
+  │   ├── orders.html                  # Orders surface shell
+  │   ├── sales.html                   # Sales/coupons surface shell
+  │   ├── account.html                 # Account + activity-log card shell
+  │   ├── products-app.js              # Products app: editor, media modal, computeState, LEDs
+  │   ├── orders-app.js                # Orders app: queue, mark-shipped, sibling-aware refund
+  │   ├── sales-app.js                 # Sales app: coupons + store-wide sale
+  │   ├── account-app.js               # Account app: sign-in, env chip, activity card
+  │   ├── portal.js                    # Auth/config bootstrap (PORTAL.boot/loadConfig/authHeader)
+  │   ├── portal.css                   # Cool indigo-slate template design system
+  │   └── data.js                      # window.PORTAL_DATA render helpers (money(), etc.)
   │
   ├── assets/
   │   ├── css/
@@ -519,8 +550,8 @@ stripe listen --forward-to localhost:3000/api/webhook
   │   │   ├── product.js                # Product page: fetch + render from Supabase
   │   │   ├── shop.js                   # Shop grid: filters, sort, tile rendering
   │   │   ├── homepage.js               # Homepage: featured carousel, theme rotation
-  │   │   ├── checkout.js               # Stripe custom checkout mount
-  │   │   ├── admin.js                  # Admin panel: CRUD, image upload
+  │   │   ├── checkout.js               # Stripe custom checkout mount + sale auto-apply
+  │   │   ├── admin.js                  # RETIRED v4.0 — replaced by admin/*-app.js; dead code, still in tree
   │   │   └── newsletter.js             # Newsletter signup handler
   │   ├── docs/                         # Project documentation
   │   │   ├── EVERLASTINGS_STORE.md     # This file
@@ -544,7 +575,7 @@ stripe listen --forward-to localhost:3000/api/webhook
   │   ├── webhook.ts                    # Handle Stripe payment webhooks
   │   ├── _bootstrap/                   # One-time helpers (coupons.ts) — not deployed
   │   ├── _emails/                      # Resend templates (index.ts) — not deployed
-  │   └── _lib/                         # Shared utilities (cors, env, adminAuth, stripeSync) — not deployed
+  │   └── _lib/                         # Shared utilities (cors, env, adminAuth, stripe, stripeSync, activityLog) — not deployed
   │
   ├── vercel.json                       # Vercel config: rewrites, headers
   ├── package.json                      # Dependencies (stripe, @supabase/supabase-js)
@@ -577,25 +608,27 @@ stripe listen --forward-to localhost:3000/api/webhook
   * **`assets/js/product.js`** — Product page controller
     + Fetches product by slug from Supabase
     + Renders two-column layout (story + details)
-    + Image gallery with lightbox
+    + **v4.0: renders the seven structured spec fields** (dimensions / weight / materials / care / shipping details as a Details list + `artist_note`) — only when set; they were never read before
+    + Image gallery with lightbox; struck sale price on the sticky buy card (gated `!sold`)
     + Stripe checkout button handler
 
   * **`assets/js/shop.js`** — Shop grid controller
     + Fetches all products from Supabase
     + Multi-select filter by series, product_type, availability
-    + Sort by price, date, name
+    + **v4.0: the Series filter is data-derived** (slugifies both sides); header/footer `?series=` deep-links pre-check a box only when the target slug matches a live series' slug
+    + Sort by price, date, name; struck sale price + "One of a kind" badge on `!sold` tiles; grid Sold state is `published && quantity===0`
     + Smart filter: hides single-option dropdowns
 
   * **`assets/js/homepage.js`** — Homepage controller
-    + Fetches featured products for carousel
+    + Fetches featured products for carousel — **v4.0: independent horizontal-scroll rows** (≤5 = one row, >5 = ~3-per-row decoupled scrollers)
     + Loads theme config from site_config table
     + Theatrical lighting effects (CSS masks + scroll transforms)
     + Theme rotation on return visits
 
 ### Key API Functions
 
-  * **`api/checkout.ts`** — Cart hold + Stripe session + return-page status
-    + `POST /api/checkout/reserve` (rewritten to `?_action=reserve`): availability check + 15-min soft hold
+  * **`api/checkout.ts`** — Availability check + Stripe session + return-page status (the reserve endpoint no longer holds — v4.0 #224)
+    + `POST /api/checkout/reserve` (rewritten to `?_action=reserve`): availability check + subscriber capture (**v4.0: no hold — the 15-min reservation was retired, #224**). The buy-gate here is the strict `is_published===true && available===true && quantity>=1 && archived_at IS NULL` (`checkout.ts:169`)
     + `POST /api/checkout` (no `_action`): creates Stripe checkout session with `ui_mode: 'custom'`, collects email + shipping (US only) — **phone collection removed in v1.4.9** (no mounted element rendered a phone field, which kept `confirm()` permanently un-satisfiable) — passes `{ items: [{id, slug}] }` metadata, returns `client_secret` for the frontend
     + `GET /api/session-status` (rewritten to `?_action=session-status`): retrieves session and returns payment status for the completion page
     + Single deployed file behind path-based dispatch — see AR #34
@@ -604,23 +637,26 @@ stripe listen --forward-to localhost:3000/api/webhook
     + `POST /api/cart-activity` (rewritten to `?_action=activity`): product interest ping
     + `POST /api/cart-recovery` (rewritten to `?_action=recovery`): generates a one-time Stripe promo code + queues a Resend email when an item sells while in someone else's cart
 
-  * **`api/orders.ts`** — Admin order pipeline (`requireAdmin` accepts a Supabase JWT **or** `PRODUCT_API_KEY`, so the GPT drives it too)
-    + `GET /api/orders`: lists orders by shipping status for the admin UI queue; also accepts `?payment_intent=` to load a cart's full sibling set for the refund panel (chains after the `is_test` filter)
-    + `PATCH /api/orders/:id` (rewritten to `?id=:id`): records tracking number/carrier and fires the branded tracking email via Resend
-    + `POST /api/orders/:id/refund` (rewritten to `?id=:id&_action=refund`, **v3.3**): an owner-confirmed Stripe refund. A Stripe refund is an **amount against the PaymentIntent**, and **one cart = N sibling `orders` rows sharing one `stripe_payment_intent`** (`webhook.ts` writes one row per product) — so it refunds `amount_cents` (default = this order's line) and flips + relists **only** the pieces in `relist_product_ids` (default = this piece), never the whole cart by surprise. Relist is state-aware and restores stock both axes (`unarchiveProduct` if archived AND `quantity + 1`); a refund never auto-relists. Guards: 404 unknown / 409 already-refunded / 409 no payment / 400 no amount / 502 Stripe error.
+  * **`api/orders.ts`** — Admin order pipeline (`requireAdmin` accepts a Supabase JWT **or** `PRODUCT_API_KEY`, so the GPT drives it too; every mutation writes an `activity_log` row via `logActivity`)
+    + `GET /api/orders`: lists orders by shipping status for the admin UI queue; also accepts `?payment_intent=` to load a cart's full sibling set for the refund panel (chains after the `is_test` filter). **v4.0 also returns `unseen_count` + `last_viewed`** (`orders.ts:106-123`) — the count of completed, unshipped orders created after the per-env `site_config.orders_last_viewed_{env}` timestamp, which drives the Orders-nav blink.
+    + `PATCH /api/orders/:id` (rewritten to `?id=:id`): records tracking number/carrier and fires the branded tracking email via Resend. **v4.0: a `refunded` order returns 409** ("This order is refunded — it can't be shipped", `orders.ts:149`) — mirrors the refund handler's guard so a refunded piece never triggers a tracking email.
+    + `POST /api/orders?_action=seen` (**v4.0**; no id needed, no dedicated pretty-URL rewrite): stamps `site_config.orders_last_viewed_{env}` = now, so `GET`'s `unseen_count` resets. **As-built note:** this endpoint exists but the shipped v4.0 portal does **not** call it yet — `orders-app.js` clears the transient "new" highlight in-session (a JS `Set`, `orders-app.js:13`) and reads `last_viewed` from `GET`, so `orders_last_viewed_{env}` currently stays unset and `unseen_count` tracks the live needs-shipping total. Wire the `seen` POST when a persistent clear is wanted.
+    + `POST /api/orders/:id/refund` (rewritten to `?id=:id&_action=refund`, **v3.3**): an owner-confirmed Stripe refund. A Stripe refund is an **amount against the PaymentIntent** (refunds aren't line-item-aware), and **one cart = N sibling `orders` rows sharing one `stripe_payment_intent`** (`webhook.ts` writes one row per product) — so it refunds `amount_cents` (default = this order's line) and flips **order status** to `refunded` for **only** the pieces named in `relist_product_ids` (default = this piece), never the whole cart by surprise. **The backend does NOT restock the product itself** — it flips order status and **returns a `relist[]` array** (each piece's `product_id/slug/title/available/quantity/archived`); the **caller** (portal `orders-app.js` / the GPT) owns the restore: `unarchiveProduct` if archived + `PUT {available:true, quantity+1}` so `available` follows the `quantity>0` rule (`orders.ts:371-408`; see BUILD_REPORT bug #2 — the v4.0 portal now auto-restocks the returned piece). An empty `relist_product_ids` = a goodwill/partial amount with no status flip and nothing returned. `charge.refunded` (`webhook.ts:60`) independently flips every sibling on a full-PI refund (idempotent overlap). Guards: 404 unknown / 409 already-refunded / 409 no payment / 400 no amount / 502 Stripe error.
 
   * **`api/webhook.ts`** — Stripe event handler
     + Reads raw body via `request.text()` for signature verification
     + Validates webhook signature with `stripe.webhooks.constructEvent()`
     + Idempotency: INSERT-as-claim into `webhook_events` on `event.id` **before** any side effect (`webhook.ts:50`); a `23505` unique-violation short-circuits a duplicate delivery
-    + On `checkout.session.completed`: extracts metadata, upserts customer record, **decrements each purchased product's stock via the `record_sale` RPC** (`webhook.ts:157` — `quantity = max(quantity-1,0)`, `available = (quantity>0)`, atomic per row; `archived_at` + Stripe untouched), creates one order row per product, fires the merchant new-order email + Meta CAPI Purchase (both non-blocking)
+    + On `checkout.session.completed`: extracts metadata, upserts customer record, **decrements each purchased product's stock via the `record_sale` RPC** (`webhook.ts:157` — `quantity = greatest(quantity - n, 0)`, `available = (quantity - n) > 0`, count-aware + atomic per row; `archived_at` + Stripe untouched), creates one order row per product, fires the merchant new-order email + Meta CAPI Purchase (both non-blocking)
+    + **Per-line money (v4.0, #228 even-split fix):** each `orders.amount` is the **real per-item** `amount_total` — the webhook fetches the session's line items with `expand:['data.price.product']` (`webhook.ts:165`) and maps each line's `amount_total` back to its Supabase product id (`webhook.ts:171`). Only if that fetch fails does it fall back to splitting `session.amount_total` evenly (`webhook.ts:175-178`). So an unequal-price cart ($310 + $88) writes $310 and $88, not an even $199/$199 (verified live).
     + On `charge.refunded` (`webhook.ts:60`): on a **full** refund, sets `orders.status='refunded'` for the matching `stripe_payment_intent` (terminal — overwrites a prior `shipped`/`delivered`). A **partial** refund is logged, not reflected (the enum has no partial state). Requires the `charge.refunded` event enabled on the webhook endpoint in **both** Stripe test + live mode.
     + Every other event type is a logged no-op (`webhook.ts:91`)
 
   * **`api/products.ts`** — Product CRUD + draft/publish/coupon/archive for AI assistants (service-role client, so it bypasses RLS and can read drafts/archived)
-    + GET: by slug, by id, list, or **preview-by-token**. A public (unauthorized) read returns only live, non-archived, non-test rows, **column-stripped via `publicView`** (never `draft`/`preview_token`/`is_test`/checkout/status fields). An authorized read returns the full row, plus an `effective` view (live + staged draft) and an origin-correct `preview_url` when a draft/token exists. A valid `?preview=<token>` grants a one-off read of the draft with `draft` overlaid (the preview page).
-    + POST: create product as an **unpublished draft** (`PRODUCT_API_KEY` or Supabase JWT auth; per-type validation; server-normalizes the GPT-derived slug; allow-listed fields only; **no Stripe** — created at publish). Also routes the `?_action=` sub-routes: publish / coupon / coupon_deactivate / archive / unarchive / discard.
-    + PUT: edit — stages copy/SEO into `draft` on a published row, or applies to live columns on an unpublished draft; `price`/`available`/`quantity` apply live immediately; `checkout_*` frozen after publish (price rotates).
+    + GET: by slug, by id, list, **preview-by-token**, plus two v4.0 `?_action=` reads. A public (unauthorized) read returns only live, non-archived, non-test rows, **column-stripped via `publicView`** (`products.ts:50`; never `draft`/`preview_token`/`is_test`/checkout/status fields). An authorized read returns the full row, plus an `effective` view (live + staged draft) and an origin-correct `preview_url` when a draft/token exists. A valid `?preview=<token>` grants a one-off read of the draft with `draft` overlaid (the preview page). **`?_action=active_sale`** (`products.ts:1014`) is a **PUBLIC, no-auth** read returning the one active store-wide sale — `{active, type:'percent', value, code, amount_display}` or `{active:false}` — for storefront struck pricing + checkout auto-apply. **`?_action=activity`** (`products.ts:1050`) is an **admin/GPT** read returning the newest 25 `activity_log` rows (`{ at, actor, action, summary }`) for the Account activity card.
+    + POST: create product as an **unpublished draft** (`PRODUCT_API_KEY` or Supabase JWT auth; the lean **`validateCreateShape`** gate — title + price minimum; server-normalizes the GPT-derived slug; allow-listed fields only; **no Stripe** — created at publish). Also routes the `?_action=` sub-routes: publish / coupon / coupon_deactivate / archive / unarchive / discard.
+    + PUT: edit — stages copy/SEO into `draft` on a published row, or applies to live columns on an unpublished draft; `price`/`available`/`quantity`/**`scheduled_publish_at`** apply live immediately; **`available` toggled off on a live row unpublishes it to Draft** (never "sold"); `slug` is rejected regardless of publish state (`products.ts:415`, immutable from creation); `checkout_*` frozen after publish (`FROZEN_AFTER_PUBLISH`, `products.ts:392`; price rotates the Stripe Price). The full publish gate is **`validatePublishRules`** (`products.ts:304`), re-run on both publish branches.
+    + Coupons (`?_action=coupon`, `handleCoupon` `products.ts:831`): create a Stripe Coupon + Promotion Code. **v4.0 `auto_apply` marker** — when `auto_apply:true` **AND** `type:'percent'` **AND** not product-scoped, the coupon is stamped `metadata.source='owner_sale'` + `metadata.auto_apply='true'` (`products.ts:880-882`) = the automatic store-wide sale; creating one **supersedes** every other active `auto_apply` owner_sale promo (best-effort sweep, `products.ts:895-902`), so only one is ever active. "auto_apply ⇒ store-wide" is a **server invariant** — a product-scoped `%` coupon is never stamped `auto_apply`.
 
   * **`api/config.ts`** — Public configuration
     + Returns Stripe publishable key and Supabase config per environment
@@ -630,6 +666,11 @@ stripe listen --forward-to localhost:3000/api/webhook
     + Called by the `notify_stripe_sync` SQL trigger — **only** for a published, non-test direct insert (skips drafts)
     + Delegates to the shared idempotent helper at `api/_lib/stripeSync.ts`
     + Normally just a backstop: Stripe is created at **publish**, inline in `api/products.ts > handlePublish` (the `?sync=true`-on-create path is retired)
+
+  * **`api/product-feed.ts`** — Meta Commerce CSV feed + the Supabase keep-alive read (public GET) **+ two v4.0 cron-gated jobs**. The feed itself is public (Google/Meta poll it); the two jobs run **only** inside an `isCronRequest(req)` gate (`product-feed.ts:162`) that checks `Authorization: Bearer ${CRON_SECRET}` — the documented Vercel Cron auth. Both use one shared service-role client `feedAdmin`.
+    + `publishDueScheduled` (`product-feed.ts:29`): auto-publishes any product whose `scheduled_publish_at` has passed, `is_test`-scoped (Vercel's daily prod cron = Live; a preview cron hit scans Test), reusing `?_action=publish` under `X-Actor:cron`. A due-but-not-ready draft logs `product.schedule_skipped`.
+    + `reconcileOrders` (`product-feed.ts:106`): compares Stripe's completed sessions for the day against the `orders` table and emails on any paid-session-without-order gap (to `RECONCILE_ALERT_EMAIL` || `ORDER_NOTIFY_EMAIL`). Raw signature-400s are NOT emailed (bot noise).
+    + **`CRON_SECRET` is a net-new production dependency (v4.0)** — unset in a scope, BOTH jobs are silently inert there (a scheduled piece never publishes, no error). Must be set in the **Production** Vercel scope at go-live.
 
 ---
 
@@ -646,7 +687,7 @@ stripe listen --forward-to localhost:3000/api/webhook
     ↓
   (03) Emy opens the preview → the real page rendered with `draft` overlaid + a "Publish" bar
     ↓
-  (04) Publish (bar / publishProduct) → validateProductRules, then syncProductToStripe INLINE:
+  (04) Publish (bar / publishProduct) → validatePublishRules, then syncProductToStripe INLINE:
        create Stripe Product + Price, write the IDs back, flip is_published=true / published_at=now,
        clear draft + preview_token
     ↓
@@ -688,11 +729,13 @@ stripe listen --forward-to localhost:3000/api/webhook
   (11) Webhook validates signature, extracts items from metadata
     ↓
   (12) Decrements each purchased product's stock via the record_sale RPC (webhook.ts:157):
-       quantity = max(quantity-1, 0) and available = (quantity > 0), atomic per row. It does NOT
-       touch any Stripe object — the Stripe Product/Price stay active; a sale never deactivates a
-       Price — and archived_at is untouched (a sale never archives). One cart dedupes by product_id
-       (main.js:121) and each Checkout line-item is quantity:1 (checkout.ts:96), so a piece sells to
-       separate sequential orders, never N-in-one-cart. (See "Flag reference" below.)
+       quantity = greatest(quantity-n, 0) and available = (quantity-n > 0), count-aware + atomic
+       per row. It does NOT touch any Stripe object — the Stripe Product/Price stay active; a sale
+       never deactivates a Price — and archived_at is untouched (a sale never archives). One cart
+       dedupes by product_id (main.js:143) and each Checkout line-item is quantity:1 (checkout.ts:71),
+       so a piece sells to separate sequential orders, never N-in-one-cart. (See "Flag reference" below.)
+       Real per-line amounts (#228): each orders.amount = the Stripe line's amount_total, not an even
+       split of the cart total (webhook.ts:165-178).
     ↓
   (13) Creates order record per product in Supabase orders table
     ↓
@@ -701,17 +744,17 @@ stripe listen --forward-to localhost:3000/api/webhook
 
 ### Data States
 
-  1. **Product available**: `available=true` AND `quantity>0` (both gate purchasability, `checkout.ts:79`) — Add to Cart active
-  2. **Product sold**: `available=false` in Supabase — "Sold" badge, buttons disabled, appears in Sold Archive. A sale **decrements `quantity`** (via `record_sale`) and sets `available = (quantity > 0)`, so a one-of-a-kind piece (qty 1) goes 1→0→`available:false` exactly as before, while a multi-stock piece stays available until its last unit sells. `archived_at` and the Stripe Product/Price are untouched (stay active).
+  1. **Product available**: `is_published=true` AND `quantity>0` — Add to Cart active. **The storefront buy-gate is quantity-based: `published && quantity > 0`** (WS6); `available` is a *consequence* of stock, not the gate. The server checkout/reserve gate is deliberately stricter — `is_published===true && available===true && quantity>=1 && archived_at IS NULL` (`checkout.ts:54` single-item / `:169` cart). Four enforcers honor the same model: the portal `computeState()`, the storefront buy-gate, the webhook `record_sale`, and the server checkout gate.
+  2. **Product sold**: `quantity=0` from a **real sale** (automatic) — "Sold" badge, buttons disabled, its own **Sold** tab in the portal (a browsable record kept until the maker Archives it). A sale **decrements `quantity`** (via `record_sale`) and derives `available = (quantity > 0)`, so a one-of-a-kind piece (qty 1) goes 1→0→`available:false`. `archived_at` and the Stripe Product/Price are untouched (stay active). **Distinct from unpublish:** turning the **Available toggle OFF on a *live* piece makes it a Draft** (unpublish/hide), NOT "Sold" — Sold is only a `quantity`-0 sale outcome. Wording is "Sold", never "Sold out / out of stock".
   3. **Product featured**: `featured=true` — Appears in homepage carousel
-  4. **In cart**: Product stored in localStorage cart — availability re-checked at checkout creation
+  4. **In cart**: Product stored in localStorage cart — availability re-checked at checkout creation (no reservation held; v4.0 #224)
 
 ### Flag reference — which "on/off" flips, and exactly when
 
 Three places hold an on/off flag. **A sale only ever writes our Supabase columns — it never touches Stripe.** Inventory lives only in Supabase; Stripe has no stock field (the Checkout line-item `quantity` is transactional and forgotten after charging).
 
 - **`products.available`** (Supabase — the storefront sold flag the frontend reads): **true** on publish / relist / restock; on a sale it is **derived** from the post-decrement stock (`available = (quantity > 0)`), so it flips **false** only when a sale brings `quantity` to 0; also **false** when the owner pulls a piece off sale.
-- **`products.quantity`** (Supabase — stock count, the only inventory record anywhere): owner-set; applied live on an admin/GPT edit. **A sale decrements it** (v3.3): the purchase webhook calls `record_sale`, which does `quantity = max(quantity-1, 0)` and `available = (quantity > 0)` atomically per row. A one-of-a-kind piece (qty 1) behaves exactly as before (1→0→`available:false`); a multi-stock piece stays available until its last unit sells. A refund relist restores the unit (`quantity + 1`, which makes `available` true again).
+- **`products.quantity`** (Supabase — stock count, the only inventory record anywhere): owner-set; applied live on an admin/GPT edit. **A sale decrements it** (v3.3): the purchase webhook calls `record_sale`, which does `quantity = greatest(quantity - n, 0)` and `available = (quantity - n > 0)` atomically per row (count-aware — `n` is that piece's multiplicity in the cart, today always 1). A one-of-a-kind piece (qty 1) behaves exactly as before (1→0→`available:false`); a multi-stock piece stays available until its last unit sells. A refund relist restores the unit — the **caller** (portal `orders-app.js` / GPT) does `PUT {available:true, quantity+1}` (+ `unarchiveProduct` if archived), which makes `available` true again; the backend refund only flips order status + returns the pieces.
 - **`products.archived_at`** (Supabase — retire): set on archive, cleared on unarchive. Independent of a sale.
 - **Stripe Product `active`**: **true** on publish + unarchive; **false** only on archive. **Never** on a sale.
 - **Stripe Price `active`**: **true** when created (publish); **false** only on **price rotation** (a price-amount change creates a new Price + archives the old) or on archive. **Never** on a sale — the same Price sells unlimited times, so **re-selling a sold-out piece needs no new Price**.
@@ -794,6 +837,7 @@ Three places hold an on/off flag. **A sale only ever writes our Supabase columns
   4. **`api/` file count is not 1:1 with public URLs**
     - Several public URLs (`/api/checkout/reserve`, `/api/session-status`, `/api/orders/:id`, `/api/cart-activity`, `/api/cart-recovery`) are rewritten in `vercel.json` to `?_action=...` query params on consolidated handler files. Frontend code should always hit the public URL, never `?_action=...` directly. See AR #34.
     - **Supabase keep-alive (v1.4.8):** a daily Vercel cron in `vercel.json` (`/api/product-feed`) runs a real DB read so the free-tier project never pauses (~7-day inactivity limit). It deliberately **reuses an existing function** — a dedicated `/api/keepalive` would push past the 11-function Hobby cap. Crons run on production only (activates at launch). Reactive recovery (dashboard Restore / Management API) is a Sean-only step. See `v1_4_9_FINISH_TRACK_C.md` Phase 7.
+    - **Two more jobs ride that same daily cron (v4.0):** `publishDueScheduled` (scheduled-publish flip) and `reconcileOrders` (order↔Stripe reconciliation) run **only** behind an `isCronRequest(req)` gate (`Authorization: Bearer ${CRON_SECRET}`), so a public/preview feed poll never self-publishes or reconciles. **`CRON_SECRET` must be set in the Production scope** or both are silently inert — a scheduled piece never publishes, with no error or log. Still **1/1** cron; no new function.
 
   5. **Endpoint consolidation is intentional, not lazy**
     - The 11-deployable-function shape is a design constraint (Vercel Hobby cap of 12). Splitting `checkout.ts`, `orders.ts`, or `cart.ts` back into one-file-per-action would break the deploy. Add new endpoints into the existing namespaces, or check the cap before introducing a new top-level file. See AR #34.
@@ -921,6 +965,8 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `META_ACCESS_TOKEN`        | Meta Conversions API token                                  | Yes      |
 | `RESEND_API_KEY`           | Resend transactional email API key                          | Yes      |
 | `RESEND_FROM_EMAIL`        | Verified sender, e.g. `sunkeeper@everlastingsbyemaline.com` | Yes      |
+| `CRON_SECRET`              | **v4.0** — arms the cron-gated jobs (scheduled-publish flip + order↔Stripe reconciliation) in `api/product-feed.ts`. Vercel Cron sends it as `Authorization: Bearer`. **Unset in a scope = BOTH jobs silently inert there.** Set in **Production** at go-live | Prod     |
+| `RECONCILE_ALERT_EMAIL`    | **v4.0** — recipient for the reconciliation gap-email; falls back to `ORDER_NOTIFY_EMAIL`     | No       |
 
 **Note**: Stripe keys are scoped per Vercel environment. Test keys for Preview+Development, live keys for Production. See `assets/docs/archive/v1_4/v1_4_2_IMPL_GUIDE.md` > Environment Strategy. Shippo uses the web UI in v1 — no API key required until post-launch.
 
@@ -1042,6 +1088,7 @@ The theme ("replace manual rituals with AI-managed workflows") carries through f
 | draft                | jsonb    | Nullable — staged edits overlaying a published row (publish XOR discard) |
 | preview_token        | text     | Unique, nullable — capability link for the draft preview; rotates each edit/publish |
 | archived_at          | timestamptz | Nullable — set = archived (removed; reversible; never hard-deleted) |
+| scheduled_publish_at | timestamptz | Nullable (v3.5 mig `…20260701000001`) — auto-publish directive; the daily feed cron flips a due row live; applied live via PUT, never staged. Partial index `idx_products_scheduled_publish` |
 | created_at        | timestamptz | Auto                                           |
 | updated_at        | timestamptz | Auto                                           |
 | is_test           | boolean     | NOT NULL DEFAULT false — dev/preview isolation |
@@ -1126,20 +1173,26 @@ Used for webhook idempotency. Prevents duplicate processing when Stripe retries 
 
 Unique constraint on (email, product_slug). Tracks who wants to be notified about specific products.
 
-### `cart_holds` table (NEW in v1.4)
+### `activity_log` table (NEW in v3.5 / shipped v4.0)
 
-| Column     | Type        | Notes                                |
-| ---------- | ----------- | ------------------------------------ |
-| id         | uuid        | PK                                   |
-| session_id | text        | Browser session (localStorage UUID)  |
-| product_id | uuid        | FK to products (ON DELETE CASCADE)   |
-| expires_at | timestamptz | 15 minutes after creation; soft hold |
-| created_at | timestamptz | Auto                                 |
-| is_test    | boolean     | NOT NULL DEFAULT false — dev/preview |
+| Column     | Type        | Notes                                                              |
+| ---------- | ----------- | ------------------------------------------------------------------ |
+| id         | uuid        | PK, auto-generated                                                 |
+| at         | timestamptz | NOT NULL DEFAULT now()                                             |
+| actor      | text        | Signed-in email (JWT) or `'gpt'` (`PRODUCT_API_KEY`) or `'cron'`   |
+| action     | text        | NOT NULL — machine key: `product.*` / `sale.*` / `order.*` (prefix → dot color) |
+| summary    | text        | NOT NULL — the human one-liner rendered on the Account card        |
+| entity_id  | text        | Nullable — product/order uuid OR Stripe promo id (mixed → text)    |
+| meta       | jsonb       | Nullable                                                           |
+| is_test    | boolean     | NOT NULL DEFAULT false — dev/preview isolation                     |
 
-Index on `(product_id, expires_at)` for efficient availability lookups. A product is "available for purchase by session X" if `products.available = true AND NOT EXISTS (cart_hold WHERE product_id = X AND session_id != X AND expires_at > now())`. This prevents the "sold while entering payment" UX shock — availability is checked and held when the user clicks {CHECKOUT} on `/cart.html`, before any PII is entered.
+Migration `20260702000001`. Index `idx_activity_log_recent (is_test, at DESC)` for the newest-first, env-scoped read. Admin-only (service-role RLS; anon/authenticated get nothing, mirrors `webhook_events`). The `logActivity` write-helper (`api/_lib/activityLog.ts`) is called from every mutating endpoint (publish, save-draft, create/end sale, refund, mark-shipped, archive, scheduled-publish, …); `resolveActor` maps a JWT → email, `X-Actor:cron` → `'cron'`, else `PRODUCT_API_KEY` → `'gpt'`. Read via `GET /api/products?_action=activity` (newest 25).
 
-**`is_test` isolation (all six core tables).** `products`, `customers`, `orders`, `subscribers`, `product_interests`, and `cart_holds` each carry `is_test boolean NOT NULL DEFAULT false` (migration `20260421000001`) — the backbone of dev/preview vs. production data separation (see **Environment Strategy** + AR #37). Partial indexes `idx_products_live` / `idx_subscribers_live` (`WHERE is_test = false`) keep production reads fast on the mixed-data tables. `site_config` and `webhook_events` are the two tables **without** `is_test` (global config + idempotency ledger; environment-agnostic). The flag is set by the deployment, not the caller (`isTest = VERCEL_ENV !== 'production'`, `api/_lib/env.ts`), and every product/order read+write — including the Stripe webhook, the admin panel, and the Custom GPT — is scoped to it: a caller sees test data only when it targets a preview deployment and live data only when it targets production (the URL it points at chooses the world). This is also the toggle for testing the GPT vs. handing it off — see `GPT_SETUP.md`.
+### ~~`cart_holds` table~~ (added v1.4 — **RETIRED in v3.5 / v4.0, #224**)
+
+**No code path reads or writes `cart_holds` any more.** The 15-min soft reservation was removed in v4.0 — it self-locked an abandoning/retrying shopper and mis-fired the apology coupon. `api/checkout.ts` (`handleSession` + `handleReserve`) and `api/webhook.ts` no longer touch it; its RLS policy + index are dead. The store returns to the no-reservation design (a two-shopper race on a one-of-a-kind piece is an accepted low-volume trade-off). The **table physically remains** until a manual go-live DROP: `20260701000002_v3_5_drop_cart_holds.sql` ships the `DROP TABLE IF EXISTS cart_holds;` **commented** (so `supabase db push` is a no-op), to be uncommented + run by hand once the v4.0 code is live on prod and no `cart_holds` reference lingers.
+
+**`is_test` isolation (six env-scoped tables).** `products`, `customers`, `orders`, `subscribers`, `product_interests`, and (v4.0) `activity_log` each carry `is_test boolean NOT NULL DEFAULT false` — the backbone of dev/preview vs. production data separation (see **Environment Strategy** + AR #37). Partial indexes `idx_products_live` / `idx_subscribers_live` (`WHERE is_test = false`) keep production reads fast on the mixed-data tables. `site_config` and `webhook_events` are the two tables **without** `is_test` (global config + idempotency ledger; environment-agnostic). The flag is set by the deployment, not the caller (`isTest = VERCEL_ENV !== 'production'`, `api/_lib/env.ts`), and every product/order/activity read+write — including the Stripe webhook, the portal, and the Custom GPT — is scoped to it: a caller sees test data only when it targets a preview deployment and live data only when it targets production (the URL it points at chooses the world). This is also the toggle for testing the GPT vs. handing it off — see `GPT_SETUP.md`.
 
 ---
 
@@ -1147,10 +1200,20 @@ Index on `(product_id, expires_at)` for efficient availability lookups. A produc
 
 Compared to v1.3.1:
 
-1. **8 tables** (was 7) — added `cart_holds`
+1. **8 tables** (was 7) — added `cart_holds` *(retired in v3.5/v4.0 — see below)*
 2. **`orders`** — added `tracking_number`, `tracking_carrier`, `shipped_at`, `delivered_at`, and `idx_orders_needs_shipping` partial index for the shipping fulfillment pipeline
 3. **`subscribers`** — added `promo_code`, `promo_code_expires_at` so newsletter welcome / contemplation-offer coupons can be looked up by admin
 4. **Source values** expanded to include `checkout-started` (captured on /cart.html {CHECKOUT} click even if user doesn't complete purchase)
+
+## Key Schema Changes in v1.5 → v4.0
+
+- **v1.5** (`…20260605000001`) — `products` gained the Draft→Preview→Publish columns: `is_published`, `published_at`, `draft`, `preview_token`, `archived_at`, plus the `checkout_*` / `seo_thumbnail` checkout-identity fields.
+- **v3.1** (`…20260616000001`) — the `record_sale(p_ids uuid[])` RPC (inventory decrement + `available` derivation); ships the legacy sold-row backfill `UPDATE` **commented** (run once by hand on the live catalog at go-live, before enabling any % sale).
+- **v3.5 / v4.0**:
+  - `products.scheduled_publish_at` timestamptz + `idx_products_scheduled_publish` (`…20260701000001`) — scheduled auto-publish.
+  - `cart_holds` **RETIRED** (`…20260701000002`) — the DROP ships commented (manual go-live step); the 15-min reservation is removed (#224).
+  - `activity_log` table + `idx_activity_log_recent` (`…20260702000001`) — the audit trail behind the Account activity card.
+  - **Net active table set: still 8** (products, customers, orders, subscribers, site_config, webhook_events, product_interests, **activity_log**) — `cart_holds` swapped out for `activity_log`, though `cart_holds` physically persists until its manual DROP.
 
 ---
 
@@ -1159,7 +1222,7 @@ Compared to v1.3.1:
   - **Brand Guide**: `assets/docs/BRAND.md`
   - **Store Administration (client how-to)**: `assets/docs/STORE_ADMINISTRATION.md`
   - **AI pipeline + Custom GPT**: `assets/docs/GPT_SETUP.md`
-  - **Current build guide (v3.3 as-built)**: `assets/docs/archive/v3_3/v3_3_0_IMPLEMENT.md` + `v3_3_0_ADDENDUM_{DESIGN,TESTING}.md` + `v3_3_0_BUILD_REPORT.md` (the `archive/v2_0/` packet is its base; prior waves kept for history)
+  - **Current build guide (v4.0 as-built)**: `assets/docs/archive/v4_0/v4_0_0_IMPLEMENT.md` + `v4_0_0_ADDENDUM_{DESIGN,TESTING}.md` + `v4_0_0_BUILD_REPORT.md` + `_RATIONALE.md` (the `archive/v3_3/` + `archive/v2_0/` packets are its base; prior waves kept for history). Shipped GPT files: `v4_0_0_GPT_SCHEMA.txt` + `v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`
   - **KPI + Advertising Pitch**: `assets/docs/archive/v1_4/GA4_KPIS_AND_ADVERTISING.md`
   - **Previous Version (archived)**: `assets/docs/archive/v1_3/v1_3_1_IMPL_GUIDE.md`
   - **Project Brief**: `assets/docs/archive/v1_1/v1_1_PREP.md`
