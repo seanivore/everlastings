@@ -8,11 +8,132 @@
   const D = window.PORTAL_DATA, P = window.PORTAL;
   const { money } = D;
   const esc = P.esc;
-  let products = D.products.map((p) => ({ ...p }));
+  let products = [];   // integration: loaded from GET /api/products in PORTAL.boot().then (was the D.products mock)
   let tab = "live", query = "", openId = null;
   // GAP #7: explicit default order (newest-first by created_at) + sort + pagination state
   let sortKey = "created", sortDir = "desc"; // "created" desc = the natural/default order
   let page = 1, pageSize = 25;
+
+  /* ============================================================================
+     INTEGRATION — real /api/products calls (replaces the prototype no-ops/mocks).
+     Every call carries PORTAL.authHeader(); writes add Content-Type: application/json.
+     Endpoints: GET/POST /api/products · PUT /api/products?id= · POST ?_action=publish |
+     archive | unarchive | discard. MEDIA (images/media/thumbnail/checkout_image/
+     seo_thumbnail) is owned by the media modal (WS5) — autosave/persist here NEVER send
+     media fields, and checkout identity + slug are excluded too (slug is immutable on PUT;
+     the checkout identity auto-generates at publish then freezes).
+     ============================================================================ */
+  const effOf = (p, k) => (p.draft && p.draft[k] != null ? p.draft[k] : p[k]);
+  const nn = (v) => { const s = typeof v === "string" ? v.trim() : v; return s === "" || s == null ? null : s; };
+  const isNewRow = (p) => String(p.id).startsWith("new-"); // never-persisted client draft (no server row yet)
+
+  async function apiJSON(url, opts) {
+    const res = await fetch(url, opts);
+    let body = {}; try { body = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error(body.error || ("Something went wrong (" + res.status + ")"));
+    return body;
+  }
+  function apiGet() {
+    return apiJSON("/api/products", { headers: { ...P.authHeader() } })
+      .then((b) => (Array.isArray(b.products) ? b.products : []));
+  }
+  function apiCreate(payload) {
+    return apiJSON("/api/products", { method: "POST", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  }
+  function apiUpdate(id, patch) {
+    return apiJSON("/api/products?id=" + encodeURIComponent(id), { method: "PUT", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  }
+  function apiAction(action, body) {
+    return apiJSON("/api/products?_action=" + action, { method: "POST", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  }
+
+  // buildProductPayload contract (assets/js/admin.js:561-617): serialize the editor's EFFECTIVE model
+  // state to the API body. price is ALREADY integer cents in the model (bindField converts on input);
+  // list fields are ALREADY string[] (the data-list handler splits one-per-line); dimensions/weight are
+  // ALREADY assembled by bindField — so this maps field-for-field, empty scalars → null. NO slug (added
+  // only on create — a PUT with slug 400s as immutable, products.ts:414), NO checkout_*/media.
+  function editorPayload(p) {
+    const arr = (k) => (Array.isArray(effOf(p, k)) ? effOf(p, k).filter((x) => String(x).trim()) : []);
+    return {
+      title: String(effOf(p, "title") || "").trim(),
+      headline: nn(effOf(p, "headline")),
+      story_card: effOf(p, "story_card") || "",
+      description: nn(effOf(p, "description")),
+      artist_note: nn(effOf(p, "artist_note")),
+      series: nn(p.series),
+      product_type: p.product_type || "miniature",
+      features: arr("features"),
+      materials: arr("materials"),
+      care_instructions: arr("care_instructions"),
+      shipping_details: arr("shipping_details"),
+      dimensions: nn(effOf(p, "dimensions")),
+      weight: nn(effOf(p, "weight")),
+      power_supply: nn(effOf(p, "power_supply")),
+      seo_title: nn(effOf(p, "seo_title")),
+      seo_description: nn(effOf(p, "seo_description")),
+      price: Number.isFinite(p.price) ? p.price : 0,   // already cents
+      quantity: p.quantity == null ? 0 : p.quantity,
+      available: !!p.available,
+      featured: !!p.featured,
+    };
+  }
+
+  // Fold a server response back into the in-memory model (real id/slug/sku/preview_token/draft),
+  // preserving the client-only preview gate + retargeting openId when a new- draft becomes a real row.
+  function reconcile(p, res, oldId) {
+    if (!res) return;
+    const row = res.product || res;
+    const wasPreviewed = p._previewed;
+    if (row && typeof row === "object") Object.assign(p, row);
+    if (res.preview_url) p.preview_url = res.preview_url;
+    if (wasPreviewed) p._previewed = true;
+    if (openId === oldId && p.id !== oldId) openId = p.id;
+  }
+
+  // Persist the editor: brand-new → POST (only when title+price present); existing → PUT ?id=.
+  // Returns true when a write happened (a truly-blank New closed writes nothing).
+  async function persist(p, id) {
+    if (isNewRow(p)) {
+      const hasTitle = !!String(effOf(p, "title") || "").trim();
+      const hasPrice = Number.isFinite(p.price) && p.price > 0;
+      if (!hasTitle || !hasPrice) return false;
+      const payload = editorPayload(p);
+      if (p.slug) payload.slug = p.slug;   // slug is create-only
+      reconcile(p, await apiCreate(payload), id);
+      return true;
+    }
+    reconcile(p, await apiUpdate(p.id, editorPayload(p)), id);
+    return true;
+  }
+
+  // Republish chain (Available ON / relist / restock): [PUT quantity] → PUT available:true →
+  // POST ?_action=publish {id}. A publish-gate 400 SURFACES as a field-list toast (never a silent no-op).
+  async function republish(p, id, qty) {
+    try {
+      if (qty != null && qty !== p.quantity) reconcile(p, await apiUpdate(p.id, { quantity: qty }), id);
+      reconcile(p, await apiUpdate(p.id, { available: true }), id);
+      reconcile(p, await apiAction("publish", { id: p.id }), id);
+      render();
+      P.toast("Back in the shop · live now", { kind: "live" });
+    } catch (err) {
+      render();
+      P.toast(err.message, { kind: "danger" });   // e.g. "Cannot publish — Missing required fields: …"
+    }
+  }
+
+  // Open the storefront preview in a new tab. Clean live row → /product/<slug>; draft/staged → ensure
+  // the latest edits are persisted (so a fresh preview_token exists) then open preview_url. A blank tab is
+  // opened SYNCHRONOUSLY so the awaited POST/PUT doesn't trip the popup blocker.
+  async function openPreviewTab(p, id) {
+    if (p.is_published && !p.draft && p.slug) { window.open(P.siteUrl() + "/product/" + p.slug, "_blank", "noopener"); return; }
+    const w = window.open("about:blank", "_blank");
+    try {
+      const wrote = await persist(p, id);
+      const url = p.preview_url || (p.slug && p.preview_token ? P.siteUrl() + "/product/" + p.slug + "?preview=" + p.preview_token : null);
+      if (!url) { if (w) w.close(); P.toast(wrote ? "Preview unavailable — try saving again" : "Add a title and price first, then preview", { kind: "danger" }); return; }
+      if (w) w.location.href = url; else window.open(url, "_blank", "noopener");
+    } catch (err) { if (w) w.close(); P.toast(err.message, { kind: "danger" }); }
+  }
 
   /* ---------- state model (Sean v1: Available OFF on a live piece → Draft) ---------- */
   function computeState(p) {
@@ -271,61 +392,89 @@
   }
   function closeEditor() { if (openId != null) { autosave(openId); openId = null; render(); } }
 
-  /* optimistic-safe commerce edits */
-  function commitPrice(id, val, inp) {
+  /* optimistic-safe commerce edits — live-apply PUT ?id= {price}/{quantity}; revert on server error */
+  async function commitPrice(id, val, inp) {
     const p = find(id), cents = Math.round(parseFloat(String(val).replace(/[^0-9.]/g, "")) * 100);
     if (isNaN(cents) || cents < 0 || cents === p.price) { inp.value = (p.price / 100).toFixed(2); return; }
+    const prev = p.price;
     p.price = cents; inp.value = (cents / 100).toFixed(2);
+    if (isNewRow(p)) { P.toast("Price set — save the draft to keep it"); return; }
     P.toast("Price saved · live now — " + money(cents), { kind: "live" });
+    try { reconcile(p, await apiUpdate(id, { price: cents }), id); }
+    catch (err) { p.price = prev; inp.value = (prev / 100).toFixed(2); P.toast(err.message, { kind: "danger" }); render(); }
   }
-  function commitQty(id, val, inp) {
+  async function commitQty(id, val, inp) {
     const p = find(id), q = parseInt(String(val).replace(/[^0-9]/g, ""), 10);
     if (isNaN(q) || q === p.quantity) { inp.value = p.quantity; return; }
+    const prev = p.quantity;
     p.quantity = Math.max(0, q); inp.value = p.quantity;
+    if (isNewRow(p)) { P.toast("Quantity set — save the draft to keep it"); render(); return; }
     P.toast("Quantity saved · live now — " + p.quantity + " in stock", { kind: "live" });
     render();
+    try { reconcile(p, await apiUpdate(id, { quantity: p.quantity }), id); }
+    catch (err) { p.quantity = prev; P.toast(err.message, { kind: "danger" }); render(); }
   }
-  // Available OFF (live piece) → Draft; ON (draft) → republish (prompt stock if 0)
+  // Available OFF (live piece) → PUT {available:false} → server UNPUBLISHES to draft (Phase 2.2);
+  // ON (draft) → republish chain (prompt stock if 0). A never-persisted draft can't go live yet.
   function commitAvail(id, t) {
     const p = find(id);
     if (t.checked) {
+      if (isNewRow(p)) { t.checked = false; P.toast("Finish and save this draft first, then publish it"); return; }
       if (p.quantity === 0) { t.checked = false; promptStock(p, t); return; }
-      const wasDraft = !p.is_published;
-      p.available = true; p.is_published = true;
-      P.toast(wasDraft ? "Published · live now" : "Back in the shop · live now", { kind: "live" });
-      syncToggles(id, "avail", true); render();
+      syncToggles(id, "avail", true);
+      republish(p, id, null);
     } else {
       // turning off a live piece makes it a DRAFT (hidden), not "sold"
       p.available = false; p.is_published = false;
-      const undo = () => { p.available = true; p.is_published = true; render(); };
-      P.toast("Moved to Drafts — hidden from the shop", { undo });
-      render();
+      syncToggles(id, "avail", false); render();
+      if (isNewRow(p)) return; // never persisted — nothing to unpublish server-side
+      P.toast("Moved to Drafts — hidden from the shop", { undo: () => republish(p, id, null) });
+      apiUpdate(id, { available: false })
+        .then((res) => reconcile(p, res, id))
+        .catch((err) => { p.available = true; p.is_published = true; render(); P.toast(err.message, { kind: "danger" }); });
     }
   }
-  function commitFeature(id, t) { const p = find(id); p.featured = t.checked; syncToggles(id, "feature", t.checked); P.toast(p.featured ? "Featured on the homepage" : "No longer featured"); }
+  // featured — server routes it: staged on a published piece, live on a draft.
+  function commitFeature(id, t) {
+    const p = find(id);
+    syncToggles(id, "feature", t.checked);
+    if (isNewRow(p)) { p.featured = t.checked; P.toast(t.checked ? "Will be featured once saved" : "Not featured"); return; }
+    apiUpdate(id, { featured: t.checked })
+      .then((res) => { reconcile(p, res, id); render(); P.toast(res.staged ? "Featured change staged — publish to apply" : (t.checked ? "Featured on the homepage" : "No longer featured")); })
+      .catch((err) => { syncToggles(id, "feature", p.featured); P.toast(err.message, { kind: "danger" }); });
+  }
   function syncToggles(id, kind, on) { document.querySelectorAll(`[data-${kind === "feature" ? "feature" : "avail"}="${id}"]`).forEach((o) => (o.checked = on)); }
   function commitArchive(id) {
     const p = find(id), was = !!p.archived_at;
+    if (isNewRow(p)) { // never persisted — archiving just discards the unsaved draft
+      products = products.filter((x) => x !== p);
+      if (openId === id) openId = null;
+      render();
+      P.toast("Draft discarded — nothing was saved");
+      return;
+    }
     p.archived_at = was ? null : new Date().toISOString();
     if (openId === id) openId = null;
     render();
-    P.toast(was ? "Resurfaced — back in your shop" : "Archived — anything can be revived", { undo: () => { p.archived_at = was ? new Date().toISOString() : null; render(); } });
+    P.toast(was ? "Resurfaced — back in your shop" : "Archived — anything can be revived", { undo: () => commitArchive(id) });
+    apiAction(was ? "unarchive" : "archive", { id: p.id })
+      .then((res) => reconcile(p, res, id))
+      .catch((err) => { p.archived_at = was ? new Date().toISOString() : null; render(); P.toast(err.message, { kind: "danger" }); });
   }
   function openPreview(id) {
     const p = find(id);
     // GATE #2: opening the storefront preview counts as "previewed at least once",
     // which is what unlocks Publish (see publishBtn / actionsNote).
     p._previewed = true;
-    // GAP #3 (spec pointer): the storefront preview shows the REVIEW BAR, which is the
-    // intended primary publish path this gate leads into. out/ does not reinvent it —
-    // the live site's canonical bar is assets/js/product.js `mountPreviewBanner`
-    // (SEO title/description + checkout name/line with Copy, Thumbnail 4:5 / OG 1.91:1 /
-    // Checkout 1:1 crops, gold Publish, "Hide draft details" toggle; POSTs /api/products/publish).
-    P.toast("Opening preview — " + (p.title || "this product") + " · publish right from the preview (capability URL, no login)");
-    // reflect the now-satisfied preview gate in an open editor
-    const sheet = document.getElementById("sheet");
-    if (sheet && sheet.classList.contains("is-on") && openId === id) refreshGate(sheet, id);
-    else if (openId === id) { const host = document.querySelector(`[data-host="${id}"]`); if (host) refreshGate(host, id); }
+    // The storefront preview shows the REVIEW BAR — the intended primary publish path this gate leads
+    // into (assets/js/product.js mountPreviewBanner; POSTs /api/products?_action=publish {token}).
+    openPreviewTab(p, id).then(() => {
+      const curId = openId; // reconcile may have retargeted openId when a new- draft became a real row
+      if (curId == null) return;
+      const sheet = document.getElementById("sheet");
+      const scope = (sheet && sheet.classList.contains("is-on")) ? sheet : document.querySelector(`[data-host="${curId}"]`);
+      if (scope) refreshGate(scope, curId); else render();
+    });
   }
 
   /* stock prompt */
@@ -340,7 +489,7 @@
     pop.style.top = window.scrollY + r.bottom + 6 + "px";
     pop.style.left = Math.max(8, Math.min(window.scrollX + r.left - 60, window.innerWidth - pop.offsetWidth - 8)) + "px";
     const qty = pop.querySelector("#stockqty"); qty.focus(); qty.select();
-    pop.querySelector("#stockok").onclick = () => { p.quantity = Math.max(1, parseInt(qty.value, 10) || 1); p.available = true; p.is_published = true; closeStock(); render(); P.toast(`${p.quantity} in stock · now in the shop · live now`, { kind: "live" }); };
+    pop.querySelector("#stockok").onclick = () => { const q = Math.max(1, parseInt(qty.value, 10) || 1); closeStock(); republish(p, p.id, q); };
     pop.querySelector("#stockcancel").onclick = closeStock;
     setTimeout(() => document.addEventListener("click", outsideStock), 0);
   }
@@ -439,7 +588,7 @@
               ${f({ label: "Title", req: true, tip: "The name shown in your shop.", value: eff("title"), span2: true, ring: ring("title", true), field: "title", rec: 60, ph: "Name this product" })}
               ${f({ label: "Headline", req: true, tip: "The one line under the title.", value: eff("headline"), span2: true, ring: ring("headline", true), field: "headline", rec: 80 })}
               ${f({ label: "Collection", tip: "Also called the series — an optional grouping in the shop.", value: p.series || "— No series —", type: "select", options: seriesOpts, field: "series" })}
-              ${f({ label: "Product", req: true, tip: "The kind of product. Only ‘miniature’ is in scope today — a new type needs development.", value: p.product_type, type: "select", options: ["miniature", "printable", "storybook"], locked: published, field: "product_type" })}
+              ${f({ label: "Product", req: true, tip: "The kind of product. Only ‘miniature’ is in scope today — a new type needs development.", value: p.product_type, type: "select", options: ["miniature"], locked: published, field: "product_type" })}
             </div>
             ${f({ label: "Story card", req: true, tip: "The short story that gives the piece its world.", value: eff("story_card"), type: "textarea", span2: true, ring: ring("story_card", true), field: "story_card", rec: 220, minH: 116, ph: "Tell the little story this piece holds…" })}
             ${f({ label: "Description", req: true, tip: "Materials and the making, in plain words.", value: eff("description"), type: "textarea", span2: true, ring: ring("description", true), field: "description", rec: 320, minH: 116 })}
@@ -535,14 +684,27 @@
       refreshGate(scope, id);
     }));
     // lifecycle
-    const disc = scope.querySelector("[data-discard]"); if (disc) disc.addEventListener("click", () => { p.draft = null; rerenderEditor(id); P.toast("Edits discarded — back to what's live"); });
-    const rel = scope.querySelector("[data-relist]"); if (rel) rel.addEventListener("click", () => { if (p.quantity === 0) p.quantity = 1; p.available = true; p.is_published = true; rerenderEditor(id); P.toast("Relisted — back in your shop · live now", { kind: "live" }); });
+    const disc = scope.querySelector("[data-discard]"); if (disc) disc.addEventListener("click", () => {
+      apiAction("discard", { id: p.id })
+        .then((res) => { reconcile(p, res, id); rerenderEditor(id); P.toast("Edits discarded — back to what's live"); })
+        .catch((err) => P.toast(err.message, { kind: "danger" }));
+    });
+    const rel = scope.querySelector("[data-relist]"); if (rel) rel.addEventListener("click", async () => {
+      try {
+        if (p.archived_at) reconcile(p, await apiAction("unarchive", { id: p.id }), id);
+        await republish(p, id, p.quantity > 0 ? p.quantity : 1); // sets stock, available, republishes
+      } catch (err) { P.toast(err.message, { kind: "danger" }); }
+    });
     const sched = scope.querySelector("[data-schedule]"); if (sched) sched.addEventListener("click", (e) => openSchedule(e.currentTarget, id));
-    const unsched = scope.querySelector("[data-unschedule]"); if (unsched) unsched.addEventListener("click", () => { p.scheduled_publish_at = null; rerenderEditor(id); P.toast("Schedule cleared"); });
+    const unsched = scope.querySelector("[data-unschedule]"); if (unsched) unsched.addEventListener("click", () => {
+      const prev = p.scheduled_publish_at; p.scheduled_publish_at = null; rerenderEditor(id); P.toast("Schedule cleared");
+      if (isNewRow(p)) return;
+      apiUpdate(id, { scheduled_publish_at: null }).then((res) => reconcile(p, res, id)).catch((err) => { p.scheduled_publish_at = prev; rerenderEditor(id); P.toast(err.message, { kind: "danger" }); });
+    });
     // actions
     const arch = scope.querySelector("[data-archive2]"); if (arch) arch.addEventListener("click", () => commitArchive(id));
     const prev = scope.querySelector("[data-ed-preview]"); if (prev) prev.addEventListener("click", () => openPreview(id));
-    const save = scope.querySelector("[data-save]"); if (save) save.addEventListener("click", () => { autosave(id); P.toast("Saved", { kind: "live" }); closeAndExit(id); });
+    const save = scope.querySelector("[data-save]"); if (save) save.addEventListener("click", async () => { const wrote = await autosave(id); if (wrote) P.toast("Saved", { kind: "live" }); closeAndExit(id); });
     const pub = scope.querySelector("[data-publish]"); if (pub) pub.addEventListener("click", () => doPublish(id));
     // media
     scope.querySelectorAll("[data-open-media]").forEach((b) => b.addEventListener("click", () => openMedia(id)));
@@ -573,12 +735,25 @@
     pop.style.top = Math.max(12, Math.min(r.bottom + 6, window.innerHeight - pop.offsetHeight - 12)) + "px";
     const close = () => pop.remove();
     pop.querySelector("#schedCancel").onclick = close;
-    const clearBtn = pop.querySelector("#schedClear"); if (clearBtn) clearBtn.onclick = () => { p.scheduled_publish_at = null; close(); rerenderEditor(id); P.toast("Schedule cleared"); };
-    pop.querySelector("#schedSave").onclick = () => {
+    const clearBtn = pop.querySelector("#schedClear"); if (clearBtn) clearBtn.onclick = () => {
+      const prev = p.scheduled_publish_at; p.scheduled_publish_at = null; close(); rerenderEditor(id); P.toast("Schedule cleared");
+      if (isNewRow(p)) return;
+      apiUpdate(id, { scheduled_publish_at: null }).then((res) => reconcile(p, res, id)).catch((err) => { p.scheduled_publish_at = prev; rerenderEditor(id); P.toast(err.message, { kind: "danger" }); });
+    };
+    pop.querySelector("#schedSave").onclick = async () => {
       const dv = pop.querySelector("#schedDate").value, tv = pop.querySelector("#schedTime").value || "09:00";
       if (!dv) { P.toast("Pick a date first", { kind: "danger" }); return; }
-      p.scheduled_publish_at = new Date(dv + "T" + tv).toISOString();
-      close(); rerenderEditor(id); P.toast("Publish scheduled for " + fmtSched(p.scheduled_publish_at), { kind: "live" });
+      const prev = p.scheduled_publish_at;
+      const iso = new Date(dv + "T" + tv).toISOString();
+      p.scheduled_publish_at = iso;
+      close(); rerenderEditor(id); P.toast("Publish scheduled for " + fmtSched(iso), { kind: "live" });
+      try {
+        // scheduled_publish_at isn't in editorPayload, so a never-saved draft is POSTed first (real id),
+        // then the schedule is applied — otherwise the create would drop it.
+        if (isNewRow(p)) { const wrote = await persist(p, id); if (!wrote) throw new Error("Add a title and price before scheduling"); }
+        reconcile(p, await apiUpdate(p.id, { scheduled_publish_at: iso }), id);
+        rerenderEditor(openId != null ? openId : id);
+      } catch (err) { p.scheduled_publish_at = prev; rerenderEditor(openId != null ? openId : id); P.toast(err.message, { kind: "danger" }); }
     };
     setTimeout(() => document.addEventListener("pointerdown", function h(ev) { if (!pop.contains(ev.target) && ev.target !== anchor) { close(); document.removeEventListener("pointerdown", h); } }), 0);
   }
@@ -642,14 +817,29 @@
     const note = actionsNote(p, r);
     if (note) { const s = document.createElement("span"); s.className = "btn-why ed-actions__why"; s.textContent = note; bar.appendChild(s); }
   }
-  function autosave(id) { /* prototype: model already mutated live; real app PUTs here. */ }
+  // §2.1b — existing row → PUT ?id=; brand-new + title/price → POST. Returns true when it wrote.
+  async function autosave(id) {
+    const p = find(id); if (!p) return false;
+    try { const wrote = await persist(p, id); if (wrote && openId == null) render(); return wrote; }
+    catch (err) { P.toast(err.message, { kind: "danger" }); return false; }
+  }
   function rerenderEditor(id) { render(); }
   function closeAndExit(id) { openId = null; render(); const m = document.getElementById("sheet"); if (m && m.classList.contains("is-on")) closeSheet(); }
-  function doPublish(id) {
-    const p = find(id); p.is_published = true; p.draft = null; if (!p.published_at) p.published_at = new Date().toISOString();
-    if (!p.slug && p.title) p.slug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    if (p.quantity > 0) p.available = true;
-    render(); P.toast("Published · live now", { kind: "live" });
+  // §2.1e — staged edits on a published piece publish directly (POST {id}); a never-published piece
+  // persists then opens the storefront preview, where the real Publish fires (POST {token}).
+  async function doPublish(id) {
+    const p = find(id);
+    try {
+      if (p.published_at && p.draft) {
+        reconcile(p, await apiAction("publish", { id: p.id }), id);
+        render(); P.toast("Published · live now", { kind: "live" });
+      } else if (!p.published_at) {
+        await openPreviewTab(p, id);
+        P.toast("Preview open — hit Publish on the preview page to go live");
+      } else {
+        P.toast("This piece is already live");
+      }
+    } catch (err) { P.toast(err.message, { kind: "danger" }); }
   }
 
   /* ---------- mobile sheet ---------- */
@@ -943,6 +1133,17 @@
       });
     })();
 
-    render();
+    // DESIGN §A — the static rail's View Site link points at the CURRENT environment's storefront
+    // (a Test preview → the preview storefront, not hardcoded prod).
+    const viewSite = document.querySelector(".rail__foot");
+    if (viewSite) viewSite.href = P.siteUrl();
+
+    // Real catalog: GET /api/products replaces the D.products mock, then paint.
+    apiGet()
+      .then(function (rows) { products = rows; render(); })
+      .catch(function (err) { P.toast(err.message, { kind: "danger" }); render(); });
+
+    // WS8 §8.3b — light the Orders nav blink + badge from the real signal (post-boot: authHeader() is set).
+    if (P.refreshOrdersSignal) P.refreshOrdersSignal();
   }).catch(function (err) { PORTAL.toast(err.message, { kind: "danger" }); });
 })();
