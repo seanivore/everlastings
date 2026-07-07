@@ -71,7 +71,23 @@ paths:
     get:
       operationId: listProducts
       x-openai-isConsequential: false
-      summary: List all products with their status (live, draft, live-with-edits-pending, or archived). Use this to find a product (and its id) before editing, and to tell Em what is live vs still a draft vs archived. Read is_published + draft + archived_at to report status.
+      summary: List products with status. For "what's in the store" pass status=active&view=summary (live + drafts + pending edits, compact — NO archived test pieces). Pull any combo with fields=title,hero,price etc. Widen to view=full / getProduct only when you truly need a piece's full record. Read is_published + has_pending_edits + archived_at (or the derived status) to report state.
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema: { type: string, enum: [active, live, draft, pending, archived, all] }
+          description: "Which pieces. active = the working set (live + drafts + pending edits, NO archived) — use for 'show me the store'. live = published/in the shop. draft = unpublished/hidden. pending = live with edits waiting to publish. archived = removed test/old pieces (only when asked). all = everything incl. archived (avoid — can be large). Omitted returns all."
+        - in: query
+          name: view
+          required: false
+          schema: { type: string, enum: [summary, full] }
+          description: "summary = compact per piece (id, slug, title, price, available, quantity, featured, is_published, archived_at, has_pending_edits, stripe_product_id). full = every field incl. images/media/story (heavy — a big list can exceed the response limit). Ignored when fields is set."
+        - in: query
+          name: fields
+          required: false
+          schema: { type: string }
+          description: "Comma-separated fields, any combo — e.g. title  OR  title,hero  OR  slug,price,quantity. id is ALWAYS included. Real columns (title, slug, price, quantity, available, featured, seo_title, ...) plus derived compact tokens: hero (one hero image URL), thumbnail (card image URL), has_pending_edits (bool), status (live/draft/pending/archived word). Use this to keep responses tiny (just names, or names + hero images)."
       responses:
         '200':
           description: Products list.
@@ -84,7 +100,7 @@ paths:
                     type: array
                     items:
                       type: object
-                      description: "A product row. Read these to find a piece, report its status, and scope a coupon: id (UUID — pass to editProduct/publishProduct/archiveProduct/createCoupon), slug, title, price (cents), available, quantity, is_published, archived_at, draft (non-null = edits pending), stripe_product_id (needed to scope a coupon to ONE piece — only present once published)."
+                      description: "A product row (which fields are present depends on view/fields). id (UUID — pass to editProduct/publishProduct/archiveProduct/createCoupon), slug, title, price (cents), available, quantity, featured, is_published, archived_at (non-null = archived), has_pending_edits (true = edits waiting to publish), draft (full staged copy — only in view=full), stripe_product_id (scope a coupon to ONE piece — only once published), hero/thumbnail (compact image URLs when requested)."
                       properties:
                         id: { type: string }
                         slug: { type: string }
@@ -92,10 +108,14 @@ paths:
                         price: { type: integer }
                         available: { type: boolean }
                         quantity: { type: integer }
+                        featured: { type: boolean }
                         is_published: { type: boolean }
                         archived_at: { type: string }
+                        has_pending_edits: { type: boolean }
                         draft: { type: object }
                         stripe_product_id: { type: string }
+                        hero: { type: string }
+                        thumbnail: { type: string }
     put:
       operationId: editProduct
       x-openai-isConsequential: false

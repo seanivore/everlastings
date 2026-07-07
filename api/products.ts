@@ -57,6 +57,43 @@ function publicView<T extends Record<string, unknown>>(row: T) {
   return pub;
 }
 
+// --- Authorized list projection (GPT/admin) -------------------------------------------------
+// The list endpoint returns full rows by default (the dashboard renders its tabs from them).
+// An authorized caller can instead ask for a subset with ?view=summary or ?fields=a,b,c so a
+// large catalog — or a pile of archived test pieces each dragging its images/media JSON — can't
+// burst ChatGPT's ~100k-char Action response cap. `id` is ALWAYS returned (the capability to act
+// on the piece); `preview_token` is NEVER projectable; derived tokens compute a compact value
+// instead of the raw blob (e.g. `hero` = one URL, not the whole images array).
+function heroImageUrl(row: Record<string, unknown>): string | null {
+  const imgs = Array.isArray(row.images) ? (row.images as Array<Record<string, unknown>>) : [];
+  const hero = imgs.find((i) => /\/(?:test_)?hero-/.test(String((i && i.url) || '')));
+  return (hero && (hero.url as string)) || (imgs[0] && (imgs[0].url as string)) || null;
+}
+function thumbFieldUrl(row: Record<string, unknown>): string | null {
+  if (row.thumbnail) return row.thumbnail as string;
+  return heroImageUrl(row);
+}
+const DERIVED_FIELDS: Record<string, (row: Record<string, unknown>) => unknown> = {
+  hero: heroImageUrl,
+  thumbnail: thumbFieldUrl,
+  has_pending_edits: (row) => row.draft != null,
+  status: (row) =>
+    row.archived_at ? 'archived' : row.draft != null ? 'pending' : row.is_published ? 'live' : 'draft',
+};
+const SUMMARY_FIELDS = [
+  'slug', 'title', 'price', 'available', 'quantity', 'featured',
+  'is_published', 'archived_at', 'has_pending_edits', 'stripe_product_id',
+];
+function projectRow(row: Record<string, unknown>, fields: string[]) {
+  const out: Record<string, unknown> = { id: row.id };
+  for (const f of fields) {
+    if (!f || f === 'id' || f === 'preview_token') continue;
+    if (f in DERIVED_FIELDS) out[f] = DERIVED_FIELDS[f](row);
+    else if (f in row) out[f] = row[f];
+  }
+  return out;
+}
+
 export async function OPTIONS(request: Request) {
   return preflight(request)!;
 }
@@ -146,6 +183,10 @@ export async function GET(request: Request) {
     return jsonResponse(request, data);
   }
 
+  const status = (url.searchParams.get('status') || '').toLowerCase();  // active|live|draft|pending|archived|all
+  const view = (url.searchParams.get('view') || '').toLowerCase();       // summary|full
+  const fieldsParam = url.searchParams.get('fields');                    // e.g. title,hero,price (any combo)
+
   let listQuery = supabase
     .from('products')
     .select('*')
@@ -154,6 +195,13 @@ export async function GET(request: Request) {
     listQuery = listQuery.eq('is_test', false).eq('is_published', true).is('archived_at', null);
   } else {
     listQuery = listQuery.eq('is_test', isTest);
+    // Opt-in status filter (authorized callers). No/unknown status ('all') = the full set — the
+    // dashboard relies on that, it renders its live/draft/archived tabs client-side.
+    if (status === 'active') listQuery = listQuery.is('archived_at', null);
+    else if (status === 'live') listQuery = listQuery.eq('is_published', true).is('archived_at', null);
+    else if (status === 'draft') listQuery = listQuery.eq('is_published', false).is('archived_at', null);
+    else if (status === 'pending') listQuery = listQuery.not('draft', 'is', null).is('archived_at', null);
+    else if (status === 'archived') listQuery = listQuery.not('archived_at', 'is', null);
   }
 
   const { data, error } = await listQuery;
@@ -161,9 +209,19 @@ export async function GET(request: Request) {
     console.error('Product GET (list) failed:', error.message);
     return jsonResponse(request, { error: 'Failed to load products' }, 500);
   }
-  return jsonResponse(request, {
-    products: isAuthorized ? (data ?? []) : (data ?? []).map(publicView),
-  });
+  if (!isAuthorized) {
+    return jsonResponse(request, { products: (data ?? []).map(publicView) });
+  }
+  // Authorized field trimming (opt-in): ?fields=a,b,c wins; else ?view=summary; else full rows
+  // (the dashboard sends neither and is unchanged). Keeps a large catalog under the Action cap.
+  let rows: unknown[] = data ?? [];
+  if (fieldsParam) {
+    const fields = fieldsParam.split(',').map((s) => s.trim()).filter(Boolean);
+    rows = (data ?? []).map((r) => projectRow(r as Record<string, unknown>, fields));
+  } else if (view === 'summary') {
+    rows = (data ?? []).map((r) => projectRow(r as Record<string, unknown>, SUMMARY_FIELDS));
+  }
+  return jsonResponse(request, { products: rows });
 }
 
 export async function POST(request: Request) {
