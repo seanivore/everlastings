@@ -93,7 +93,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // The optional chaining is deliberate: if the shape ever differs, the pre-painted cart total
     // stands in rather than printing $NaN — and Phase 8.1 catches a wrong accessor.
     const total = session.total?.total?.amount;
-    if (Number.isFinite(total)) setText('[data-checkout-total]', formatPrice(total));
+    if (Number.isFinite(total)) {
+      const sale = window._activeSale;
+      const totalEl = document.querySelector('[data-checkout-total]');
+      if (totalEl && sale && sale.active && sale.type === 'percent' && total < getCartTotal()) {
+        totalEl.innerHTML = `<span class="price-sale"><span class="price-sale__was">${formatPrice(getCartTotal())}</span> <span class="price-sale__now">${formatPrice(total)}</span></span>`;
+      } else {
+        setText('[data-checkout-total]', formatPrice(total));
+      }
+    }
 
     const ship = session.shippingOption?.total?.amount;
     if (Number.isFinite(ship)) setText('[data-checkout-shipping]', ship === 0 ? 'Free' : formatPrice(ship));
@@ -104,6 +112,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   wirePromo(checkout);
+  // v3.5 — an explicit ?code= share link WINS over the automatic store-wide sale (Stripe = one
+  // discount/order). Apply the share code if present (from the main.js stash or ?code=) and SKIP the
+  // auto-sale; else auto-apply the sale. Mutually exclusive → no apply-order race between the two paths.
+  if (readShareCode()) applyShareLinkCode(checkout);
+  else autoApplyStoreWideSale(checkout); // v3.5 — store-wide sale on init (Phase 4.0 probe: init-apply works)
 
   confirmBtn?.addEventListener('click', async () => {
     if (confirmBtn.disabled) return;
@@ -164,6 +177,55 @@ function wirePromo(checkout) {
       promoBtn.textContent = original;
     }
   });
+}
+
+// v3.5 — read the public active store-wide sale and apply it at INIT (no shopper action). The keyword
+// field (wirePromo) stays VISIBLE + usable: a shopper types a personal code, which REPLACES the sale
+// code via applyPromotionCode (Stripe swaps the promotion), so "delete the sale, use mine" still works.
+// Phase 4.0 probe (this bundle): apply-at-init succeeds, the change listener sees the discounted total,
+// removePromotionCode exists, and a SECOND code REPLACES the first — so the primary init path is used as-is.
+async function autoApplyStoreWideSale(checkout) {
+  let sale;
+  try { sale = await getActiveSale(); } catch { return; }
+  if (!sale || !sale.active || sale.type !== 'percent' || !sale.code) return;
+  const apply = checkout.applyPromotionCode; // Phase 0/4.0: the verified call on this bundle
+  if (typeof apply !== 'function') return;
+  try {
+    const r = await apply.call(checkout, sale.code);
+    if (r && r.type === 'error') {
+      // Fallback: prefill the visible field so the shopper can one-tap apply.
+      const input = document.getElementById('promo-code');
+      if (input) input.value = sale.code;
+    }
+  } catch (err) {
+    const input = document.getElementById('promo-code');
+    if (input) input.value = sale.code;
+  }
+}
+
+// v3.5 — resolve a "Copy share link" code from the main.js stash (§4.7.0 — set when the shopper landed
+// on the homepage /?code=) OR a direct /checkout?code=. The stash is how the code survives homepage →
+// add-to-cart → /checkout; location.search is the fallback for a direct checkout hit.
+function readShareCode() {
+  let code = null;
+  try { code = sessionStorage.getItem('everlastings.shareCode'); } catch {}
+  if (!code) code = new URLSearchParams(location.search).get('code');
+  return code;
+}
+
+// v3.5 — honor a coupon "Copy share link" (<siteUrl>/?code=CODE). Resolve the code (stash or query),
+// prefill the visible #promo-code field, and apply it through the SAME applyPromotionCode path the
+// store-wide auto-apply uses. Called INSTEAD of autoApplyStoreWideSale when a code is present (mutually
+// exclusive — Stripe = one discount/order). Fails soft: a bad/inactive code just leaves the field prefilled.
+async function applyShareLinkCode(checkout) {
+  const code = readShareCode();
+  if (!code) return;
+  try { sessionStorage.removeItem('everlastings.shareCode'); } catch {} // one-shot — consumed
+  const input = document.getElementById('promo-code');
+  if (input) input.value = code;
+  const apply = checkout.applyPromotionCode; // Phase 4.0: the verified call on this bundle
+  if (typeof apply !== 'function') return;   // fallback: field is prefilled; shopper taps Apply
+  try { await apply.call(checkout, code); } catch (err) { /* prefilled for manual retry */ }
 }
 
 function setText(sel, val) {
