@@ -93,4 +93,29 @@ I can confirm that the birthday mike code did work on Stripe. And YAY it disappe
 
 So that all works but again, it is dealing with the Stripe objects, so I think you'd want to look in the code to see exactly what it is that we're currently using (where it says the product and the total, etc.) and then see online if we can find how to just add it in to the flow so that it subtracts and shows that discount. 
 
-**NOTE**: I still don't see the $150 site-wide discount (COUPON OBJECT) applied... wires seem crossed. Stripe CLI logs show it created. 
+**NOTE**: I still don't see the $150 site-wide discount (COUPON OBJECT) applied... wires seem crossed. Stripe CLI logs show it created.
+
+---
+
+## RESOLVED — v4.0.8 (commit `e98141b`, on `dev`)
+
+Root-caused by three parallel explore agents. Every symptom was admin **wiring + a CDN cache** — *not* the Stripe object model.
+
+**The two Stripe types, plainly.** Every sale creates the SAME pair: a Stripe **Coupon** (the discount) + a **Promotion Code** (the code). "Store-wide" vs "code coupon" differ by exactly one flag — `metadata.auto_apply='true'` — and it must be a **percent** (Stripe needs `%` for on-site struck pricing).
+- **Store-wide sale** = a `%` `auto_apply` coupon → top card + homepage banner, applies automatically, no code.
+- **Code coupon** = anything else (`$`-off, or product-scoped) → a shareable code, lower tiles.
+
+**Why the tests looked broken:**
+- **KJPCVB8J ($150) and OPENING_DAY ($10) could never show as store-wide** — `$`-off is *always* a code coupon, never auto-apply. The old top card offered a "$ off" option that silently made one of these → the "$150 vanished" mystery.
+- **~10-min delay + 4-5-click delete** — the admin read store-wide state from an edge-cached endpoint (`active_sale`, ~3-min TTL, no purge on change) that also feeds the homepage. The action hit Stripe immediately, but the cached read kept showing the old state.
+- **Store-wide leaking into the tiles** — the coupon list returns the store-wide sale too (tagged `auto_apply`); the admin never filtered it out (and the tile shows irrelevant expiry/usage/scope fields).
+
+**Fixes** (`admin/sales-app.js` + one field in `api/products.ts`):
+- Admin now derives BOTH the top card and the tiles from ONE uncached coupon-list fetch → create/end reflect on the **first click**, and the store-wide sale is filtered out of the tiles (`!auto_apply`).
+- Top card is **percent-only** — the `$`-off trap is gone. ($-off whole-store discounts still live under "New sale".)
+- Restored the "since &lt;date&gt;" line (`created`) + the durable `promotion_code_id` deactivate handle.
+- Trimmed the `active_sale` cache (→ homepage banner reflects a sale start/end in ~30s; admin no longer depends on it).
+
+**Verified** by a deterministic curl trace on the dev preview: create `%` sale → appears in `active_sale` + tagged for the card, filtered from tiles; `$`-coupons stay as tiles, never in `active_sale`; deactivate clears on ONE call. KJPCVB8J + OPENING_DAY were left in place — end them in the UI to see the one-click delete.
+
+**Still open (next cycle):** the checkout discount line + Apply "applied" state (the "Order summary" section above). No way to see a coupon applied before charging — needs a live Stripe-session probe; planned separately. 
