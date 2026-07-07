@@ -134,7 +134,10 @@
 
   /* full-viewport ribbons that snake down behind the sign-in card and shy away from the pointer */
   function initLoginFx() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // No reduced-motion guard here (deliberate — do not "restore" it). This ambient sign-in
+    // background is admin-only (Em + the admins; never customer-facing), and Sean opted to always
+    // show it so a Reduce-Motion phone still gets the animated ribbons instead of a blank page.
+    // Customer-facing motion guards (hero, etc.) are untouched.
     if (window.__fxStop) window.__fxStop();
     const c = document.getElementById("fx"); if (!c) return;
     const ctx = c.getContext("2d"), dpr = Math.min(window.devicePixelRatio || 1, 2);
