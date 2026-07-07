@@ -15,7 +15,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #   5. stripe-sync         — confirms the trigger -> Stripe Product/Price.
 #   6. checkout            — needs a synced product.
 #   7. race condition      — independent.
-#   8. hold expiry         — independent.
 #   9. webhook contract    — needs `stripe listen` running.
 #  10. full purchase flow  — same.
 #  11. webhook idempotency — needs at least one prior checkout.session.completed event.
@@ -33,7 +32,6 @@ TESTS=(
   "05_stripe_sync.sh"
   "06_checkout.sh"
   "07_race_condition.sh"
-  "08_hold_expiry.sh"
   "09_webhook_contract.sh"
   "10_full_purchase_flow.sh"
   "11_webhook_idempotency.sh"

@@ -12,8 +12,6 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY!,
 );
 
-const HOLD_TTL_MINUTES = 15;
-
 interface CartItem {
   product_id: string;
   slug: string;
@@ -41,29 +39,6 @@ async function handleSession(request: Request): Promise<Response> {
     }
 
     const productIds = items.map((i) => i.product_id);
-    const nowIso = new Date().toISOString();
-
-    const { data: holds, error: holdsError } = await supabase
-      .from('cart_holds')
-      .select('product_id, session_id')
-      .in('product_id', productIds)
-      .gt('expires_at', nowIso);
-
-    if (holdsError) throw holdsError;
-
-    const ownHeldIds = new Set(
-      (holds || [])
-        .filter((h) => h.session_id === session_id)
-        .map((h) => h.product_id),
-    );
-    const missingHolds = productIds.filter((id) => !ownHeldIds.has(id));
-
-    if (missingHolds.length > 0) {
-      return Response.json(
-        { error: 'hold_expired' },
-        { status: 410, headers: corsHeaders(request) },
-      );
-    }
 
     const { data: products, error: productsError } = await supabase
       .from('products')
@@ -179,34 +154,19 @@ async function handleReserve(request: Request): Promise<Response> {
       }
     }
 
-    const nowIso = new Date().toISOString();
-
-    const [{ data: products, error: productsError }, { data: activeHolds, error: holdsError }] =
-      await Promise.all([
-        supabase
-          .from('products')
-          .select('id, slug, available, quantity, series, is_published, archived_at')
-          .in('id', productIds),
-        supabase
-          .from('cart_holds')
-          .select('product_id, session_id')
-          .in('product_id', productIds)
-          .gt('expires_at', nowIso),
-      ]);
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, slug, available, quantity, series, is_published, archived_at')
+      .in('id', productIds);
 
     if (productsError) throw productsError;
-    if (holdsError) throw holdsError;
 
     const productMap = new Map((products || []).map((p) => [p.id, p]));
 
     const unavailable = items
       .filter((item) => {
         const product = productMap.get(item.product_id);
-        if (!product || product.is_published !== true || product.archived_at != null || product.available !== true || (product.quantity ?? 0) < 1) return true;
-        const conflict = (activeHolds || []).some(
-          (h) => h.product_id === item.product_id && h.session_id !== session_id,
-        );
-        return conflict;
+        return !product || product.is_published !== true || product.archived_at != null || product.available !== true || (product.quantity ?? 0) < 1;
       })
       .map((item) => ({ product_id: item.product_id, slug: item.slug }));
 
@@ -258,26 +218,6 @@ async function handleReserve(request: Request): Promise<Response> {
       );
     }
 
-    const expiresAt = new Date(Date.now() + HOLD_TTL_MINUTES * 60 * 1000).toISOString();
-
-    const { error: deleteError } = await supabase
-      .from('cart_holds')
-      .delete()
-      .eq('session_id', session_id)
-      .in('product_id', productIds);
-
-    if (deleteError) throw deleteError;
-
-    const holdRows = items.map((i) => ({
-      session_id,
-      product_id: i.product_id,
-      expires_at: expiresAt,
-      is_test: isTest,
-    }));
-
-    const { error: insertError } = await supabase.from('cart_holds').insert(holdRows);
-    if (insertError) throw insertError;
-
     let customerPrefill: { email: string | null; name: string | null; phone: string | null; shipping_address: unknown } = {
       email: email ?? null,
       name: name ?? null,
@@ -306,7 +246,6 @@ async function handleReserve(request: Request): Promise<Response> {
     return Response.json(
       {
         ok: true,
-        expires_at: expiresAt,
         customer_prefill: customerPrefill,
       },
       { headers: corsHeaders(request) },

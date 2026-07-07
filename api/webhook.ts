@@ -162,7 +162,7 @@ export async function POST(request: Request) {
     // Per-line-item amount: prefer Stripe's authoritative line items; fall back to splitting amount_total.
     const perItemAmounts: Record<string, number> = {};
     try {
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100, expand: ['data.price.product'] });
       for (const li of lineItems.data) {
         const supabaseId = li.price?.product && typeof li.price.product !== 'string'
           ? (li.price.product as Stripe.Product).metadata?.supabase_id
@@ -239,17 +239,6 @@ export async function POST(request: Request) {
         await sendEmail({ to: notifyTo, subject, html });
       } catch (notifyErr) {
         console.error(`New-order notification failed for ${event.id} (non-blocking):`, notifyErr);
-      }
-    }
-
-    const holdSessionId = session.metadata?.hold_session_id ?? session.metadata?.session_id ?? null;
-    if (holdSessionId) {
-      const { error: holdsErr } = await supabase
-        .from('cart_holds')
-        .delete()
-        .eq('session_id', holdSessionId);
-      if (holdsErr) {
-        console.error(`Cart holds clear failed for ${event.id} (session ${holdSessionId}):`, holdsErr);
       }
     }
 

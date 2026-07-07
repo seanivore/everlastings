@@ -1,0 +1,11 @@
+-- v3.5 — retire cart_holds (#224). The 15-minute soft reservation is removed: it self-locked an
+-- abandoning/retrying shopper and mis-fired the apology coupon. After the WS7 code deploy, NOTHING
+-- reads or writes cart_holds — api/checkout.ts (handleSession + handleReserve) and api/webhook.ts no
+-- longer touch it, and its RLS policy (rls_policies.sql:88-91) + index (initial_schema.sql:165) are dead.
+--
+-- The DROP ships COMMENTED on purpose (mirrors 20260616000001's cutover convention): `supabase db push`
+-- applies this file as a no-op and never destroys a table automatically. Once the WS7 build is LIVE on
+-- prod (confirm no lingering cart_holds reference), uncomment the line below and run it once by hand.
+-- DROP TABLE cascades the "Service role can manage cart holds" policy and idx_cart_holds_product_active.
+--
+-- DROP TABLE IF EXISTS cart_holds;
