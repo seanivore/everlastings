@@ -90,13 +90,15 @@
     if (openId === oldId && p.id !== oldId) openId = p.id;
   }
 
-  // Persist the editor: brand-new → POST (only when title+price present); existing → PUT ?id=.
+  // Persist the editor: brand-new → POST (only when a title is present); existing → PUT ?id=.
   // Returns true when a write happened (a truly-blank New closed writes nothing).
   async function persist(p, id) {
     if (isNewRow(p)) {
+      // A draft needs only a TITLE to persist (title → slug → a real row so media can upload to R2).
+      // Price is a PUBLISH-gate field (readiness + validatePublishRules), NOT a create-gate one — so
+      // media/preview/schedule all work before pricing. editorPayload sends price:0 for an unpriced draft.
       const hasTitle = !!String(effOf(p, "title") || "").trim();
-      const hasPrice = Number.isFinite(p.price) && p.price > 0;
-      if (!hasTitle || !hasPrice) return false;
+      if (!hasTitle) return false;
       const payload = editorPayload(p);
       if (p.slug) payload.slug = p.slug;   // slug is create-only
       reconcile(p, await apiCreate(payload), id);
@@ -130,7 +132,7 @@
     try {
       const wrote = await persist(p, id);
       const url = p.preview_url || (p.slug && p.preview_token ? P.siteUrl() + "/product/" + p.slug + "?preview=" + p.preview_token : null);
-      if (!url) { if (w) w.close(); P.toast(wrote ? "Preview unavailable — try saving again" : "Add a title and price first, then preview", { kind: "danger" }); return; }
+      if (!url) { if (w) w.close(); P.toast(wrote ? "Preview unavailable — try saving again" : "Add a title first, then preview", { kind: "danger" }); return; }
       if (w) w.location.href = url; else window.open(url, "_blank", "noopener");
     } catch (err) { if (w) w.close(); P.toast(err.message, { kind: "danger" }); }
   }
@@ -756,7 +758,7 @@
       try {
         // scheduled_publish_at isn't in editorPayload, so a never-saved draft is POSTed first (real id),
         // then the schedule is applied — otherwise the create would drop it.
-        if (isNewRow(p)) { const wrote = await persist(p, id); if (!wrote) throw new Error("Add a title and price before scheduling"); }
+        if (isNewRow(p)) { const wrote = await persist(p, id); if (!wrote) throw new Error("Add a title before scheduling"); }
         reconcile(p, await apiUpdate(p.id, { scheduled_publish_at: iso }), id);
         rerenderEditor(openId != null ? openId : id);
       } catch (err) { p.scheduled_publish_at = prev; rerenderEditor(openId != null ? openId : id); P.toast(err.message, { kind: "danger" }); }
@@ -834,7 +836,7 @@
     const note = actionsNote(p, r);
     if (note) { const s = document.createElement("span"); s.className = "btn-why ed-actions__why"; s.textContent = note; bar.appendChild(s); }
   }
-  // §2.1b — existing row → PUT ?id=; brand-new + title/price → POST. Returns true when it wrote.
+  // §2.1b — existing row → PUT ?id=; brand-new + title → POST. Returns true when it wrote.
   async function autosave(id) {
     const p = find(id); if (!p) return false;
     try { const wrote = await persist(p, id); if (wrote && openId == null) render(); return wrote; }
@@ -941,13 +943,13 @@
   function nextNumberedRole(base, urls) { return base + "-" + padNN(highestNN(base, urls) + 1); }
   const roleOfUrl = (u) => (/\/(?:test_)?hero-/.test(u) ? "hero" : /\/(?:test_)?gallery-/.test(u) ? "gallery" : null);
   // persist-first (WS5 §5.5): a brand-new `new-xxx` draft has no server row/slug. An upload needs the real
-  // slug and a media PUT needs the real id, so POST the draft first (title+price required). reconcile folds
+  // slug and a media PUT needs the real id, so POST the draft first (title required; price optional). reconcile folds
   // the real id/slug back in. Returns the slug, or null (caller aborts + we've toasted why).
   async function ensureSlug(p, id) {
     if (isNewRow(p)) {
       const oldId = p.id;
       const wrote = await persist(p, id);
-      if (!wrote) { P.toast("Add a title and price first, then add media", { kind: "danger" }); return null; }
+      if (!wrote) { P.toast("Add a title first, then add media", { kind: "danger" }); return null; }
       // FIX #1 (hard crash) — reconcile retargets openId but NOT mProductId. Once persist swaps the
       // new-xxx id for the real UUID, every later find(mProductId) would return undefined → the 2nd upload
       // / Apply throws + orphans the R2 files. Mirror reconcile's openId retarget here.

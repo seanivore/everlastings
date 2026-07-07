@@ -250,7 +250,9 @@ export async function POST(request: Request) {
   for (const k of CREATE_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(product, k)) cleanCreate[k] = product[k];
   }
-  const insertRow = { ...cleanCreate, is_test: isTest, is_published: false, preview_token: previewToken };
+  // price defaults to 0 for an unpriced draft (the column is NOT NULL; publish still gates price > 0).
+  // cleanCreate.price overrides when the caller supplied one.
+  const insertRow = { price: 0, ...cleanCreate, is_test: isTest, is_published: false, preview_token: previewToken };
 
   const { data, error } = await supabase
     .from('products')
@@ -378,8 +380,11 @@ function validatePublishRules(p: Record<string, unknown>): string[] {
 function validateCreateShape(p: Record<string, unknown>): string[] {
   const problems: string[] = [];
   if (typeof p.title !== 'string' || !p.title.trim()) problems.push('title is required');
-  if (!Number.isInteger(p.price) || (p.price as number) <= 0) {
-    problems.push('Price must be a positive integer in cents');
+  // Price is NOT required to CREATE a draft — it's a PUBLISH-gate field (validatePublishRules requires
+  // price > 0), so media/preview can happen before pricing. An unpriced draft is price 0/absent (the
+  // insert defaults an absent price to 0; the column is NOT NULL). If a price IS given, shape-check it.
+  if (p.price !== undefined && p.price !== null && (!Number.isInteger(p.price) || (p.price as number) < 0)) {
+    problems.push('Price must be a non-negative integer in cents');
   }
   return problems;
 }
