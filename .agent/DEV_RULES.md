@@ -166,11 +166,11 @@ Which model runs which seat is a real lever — pick it by the seat's actual wor
 - **Orchestrator (fold + byte-anchored edits + versioning + memory) = agentic coding + discipline.** Here Opus 4.8 has a *measured* lead — SWE-bench Pro **69.2 vs 63.2**, Terminal-Bench **82.7 vs 80.4** — and the fold role's failure mode (precise multi-file edits, not forgetting a version bump) is exactly that axis. Keep the orchestrator on **Opus 4.8**; if a fold feels thin, **raise its effort** (medium → high/xhigh) rather than switch models — effort and model are orthogonal, and the SDK data shows Sonnet-for-the-orchestrator would trade a proven lead for thinking tokens on the one axis it just failed.
 - **Old-model discount myth:** Opus 4.7/4.6/4.5 are priced *identically* to 4.8 ($5/$25) — no reason to run a superseded Opus. The only real cost lever is Opus→Sonnet (2.5×) or the effort dial.
 
-| Cycle | Seat | Model · effort | Verdict |
-|---|---|---|---|
-| Everlastings v3.6 A-gate (SDK) | all seats | Opus 4.8 · MAX | ✗ environment failures — SDK harness, not the model |
-| Everlastings v3.7 B/C/D (in-CC) | reviewers | Sonnet 5 · MAX | ✓ gate-grade — 5 spawned peers (2 breadth + B/C/D) read the real backend, line-checked vs the tree, caught real load-bearing issues + self-flagged false alarms; burn ~280/322k breadth, 371/420/488k B/C/D; **no rate limits on 20X** |
-| Everlastings v3.7 B/C/D (in-CC) | orchestrator | Opus 4.8 · MAX | ✓ held — byte-anchored folds across 5 living docs, careful version-identity + ledger 78–84 ×4, dash-safe count bump, per-file commit; no thin folds (ran MAX via 20X; high+ likely suffices) |
+| Cycle                           | Seat         | Model · effort | Verdict                                                                                                                                                                                                                                |
+| ------------------------------- | ------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Everlastings v3.6 A-gate (SDK)  | all seats    | Opus 4.8 · MAX | ✗ environment failures — SDK harness, not the model                                                                                                                                                                                    |
+| Everlastings v3.7 B/C/D (in-CC) | reviewers    | Sonnet 5 · MAX | ✓ gate-grade — 5 spawned peers (2 breadth + B/C/D) read the real backend, line-checked vs the tree, caught real load-bearing issues + self-flagged false alarms; burn ~280/322k breadth, 371/420/488k B/C/D; **no rate limits on 20X** |
+| Everlastings v3.7 B/C/D (in-CC) | orchestrator | Opus 4.8 · MAX | ✓ held — byte-anchored folds across 5 living docs, careful version-identity + ledger 78–84 ×4, dash-safe count bump, per-file commit; no thin folds (ran MAX via 20X; high+ likely suffices)                                           |
 
 ---
 
@@ -235,6 +235,16 @@ When a build's gate clears and execution completes, the living architecture doc 
 - **`vX_Y_Z_BUGS.md`** — bug log tied to a release; **kept standing** (a terminal record, cited later). In patch mode, a confirmed cluster can promote straight to a small BUILD. *How bugs flow into versions* (the recorded flow, not the early guess): a fix found **on the fly during a build** is recorded in the BUILD_REPORT — no new IMPLEMENT; a **provided bug list** that needs research/planning gets a **genuinely new** IMPLEMENT round (new planning ⇒ a new doc, not a rename of a prior one).
 
 Plus dated **`YYYY_MM_DD_FEEDBACK.md`** (human review of an IMPLEMENT round) and **unversioned sketch files** (notes whose actionable content migrates into the next IMPLEMENT, then move to `processed/`).
+
+### The execution kickoff bundle — what an orchestrator is handed
+
+A gate-cleared, exclusively-executable build is handed off as a **fixed bundle**, not a lone IMPLEMENT. Four things start the build session: the **`vX_Y_Z_IMPLEMENT.md`** + its **two addenda** (`…_ADDENDUM_DESIGN.md` + `…_ADDENDUM_TESTING.md`) + a **`vX_Y_Z_EXECUTION_PROMPT.md`** — the single kickoff message the human pastes to launch the orchestrator. (The **`_RATIONALE.md`** rides along as consult-only; it is NOT part of required reading — see *The execution copy*.) The EXECUTION_PROMPT is generated from **`.agent/_TEMPLATES/_EXECUTION_PROMPT.md`**, so writing it is a fill-in, never from scratch, and every run surfaces the same guarantees.
+
+Two of those guarantees are the reason the prompt exists — both were once relied on from memory and got skipped:
+- **Pre-flight triage (surface it, don't assume it's empty).** Every human-facing precondition the plan named — the TESTING addendum's "Before you start," plus any env/service/account step — is triaged into **(A) already done, (B) actually the orchestrator's to do, (C) written at the human but the orchestrator can handle it.** Only the items *genuinely only the human can do* (an account they alone control, a dashboard the agent can't reach) survive as human items — and note *when* each is actually needed, so a late-stage item (e.g. a testing-stage account repoint) doesn't stall the whole build. Run this when the docs are cut and record the result in the prompt; **silence is not "nothing for the human."** (This is the *surface-steps-early* discipline made mandatory: default to the agent doing it, justify why any step is the human's.)
+- **Orchestration starting point.** The prompt points the orchestrator at the IMPLEMENT's own *orchestrator's blueprint* (§ above) as its parallelization starting point — foundation-first work, the parallel tracks, the shared-file edit order — so it never designs the fan-out cold.
+
+The EXECUTION_PROMPT is a **kickoff message, not a spec**: it points at the docs and never restates them (no mixed truth). It also carries the standing build contract — read every essential doc in full, commit per file, keep a memory progress note, CURRENT/NEW is the byte-anchor, STOP-and-surface on any decision-shaped question, test on the preview (never localhost), and the as-built doc-sync is a **fresh-agent** task (never this session's tail — § *As-built doc-sync*).
 
 ### Two operating modes — route correctly
 
