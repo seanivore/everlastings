@@ -406,6 +406,24 @@ The safety UX that lets the owner run the store by chat without a "test mode": e
 
 "Remove / delete / take down" (admin or GPT) sets `archived_at = now()` + mirrors Stripe `active:false`. The piece leaves the shop, feed, product page, and checkout but stays in the DB — searchable + **resurfaceable** (`unarchiveProduct` reverses both). Distinct from `available` (sold, stays visible with a badge) and `is_published` (draft/live). The only hard delete is a deferred, **disabled** `pg_cron` purge (Phase 1 ships it commented) that always skips order-referenced rows.
 
+## How discounts work — Coupon + Promotion Code (the two-object model)
+
+Every discount is **two** Stripe objects, and the split is the whole trick — read it once so a fresh instance never re-derives it from Stripe's docs:
+
+1. **Coupon = the rule (the discount math).** Percent-off or amount-off + `duration`. Created **once per event or purpose** and reused — `newsletter-welcome-5` (5% off), `cart-recovery-10` (10% off), and one coupon per store-wide sale (`api/_bootstrap/coupons.ts` seeds the two base ones). Holds **no code and no minimum**.
+2. **Promotion Code = the customer-facing code + its redemption rules.** The string a shopper types, pointing at a coupon, and carrying the conditions: **`restrictions.minimum_amount`** (the minimum order — lives HERE, on the promotion code, *not* on the coupon), `expires_at`, `max_redemptions`.
+
+**How we use them**
+- **Per-person codes (newsletter welcome, cart-recovery):** a promotion code is minted **on the fly, per user** — a unique random code wrapping the shared coupon, with **`max_redemptions: 1`** + a 30-day expiry, emailed to that one person (`api/subscribe.ts`, `api/cart.ts`). Once used, it's dead. That's why nobody can reuse a shared "NEWSLETTER" code 100× — **there is no shared public code; each is unique and single-use.**
+- **The one exception — the store-wide sale:** the **only** place we share a promotion code publicly + widely, and the only place it is **not** single-use. A store-wide "holiday" (or whatever-purpose) sale is a `%` coupon + an auto-applied promotion code that any shopper may use as many times as they like, **until the sale ends** — intended, because a public sale is meant to be used by everyone, repeatedly. (Mechanics in the next section.)
+
+**The gotchas (the second layer of complexity)**
+- The **minimum order lives on the *promotion code*** (`restrictions.minimum_amount`), not the coupon — so anything needing a code's minimum (e.g. the checkout "you're under the $100 minimum" note) must look up the promotion code (`stripe.promotionCodes.list({ code, active:true, limit:1 })` returns the coupon's worth AND the minimum in one call).
+- `times_redeemed` / `max_redemptions` are **totals across everyone**, not per-customer. Stripe does **not** meter per-customer for public codes; our per-person codes are single-use-total (unique code + `max_redemptions:1`).
+- Checkout is **pure guest** — **no Stripe Customer object** is created. Binding a code to a specific customer is optional (a big-retailer fraud/analytics feature) and would fight the guest Custom-Checkout flow; we don't need it.
+- Stripe allows **one discount per checkout** — a personal code **replaces** a store-wide sale, never stacks.
+- These are **not gift cards** — no stored balance, no rollover; a code applies its full deal or nothing, so there's nothing to "report back" about a remaining amount.
+
 ## Automatic store-wide sale (v4.0)
 
 A no-code, whole-store discount the owner runs by chat or from the Sales surface.

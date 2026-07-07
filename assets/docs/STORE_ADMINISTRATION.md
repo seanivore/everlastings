@@ -76,6 +76,20 @@ Two kinds of discount, both easy — run either from the **Sales** page in the p
 
 *"What sales are running?"* lists them; *"end the sale"* / *"end HOLIDAY15"* (or **Deactivate** on the Sales page) stops it on the spot. The Sunkeeper only ever touches **your** sales (the store's built-in welcome / cart codes are left alone). Stripe allows **one discount per order**, so if a shopper has a personal code during a store-wide sale, their code simply takes its place — nothing to worry about. (No "buy-one-get-one" — that one it can't do.)
 
+### How the codes work under the hood (worth knowing once)
+
+Every discount is really **two** pieces in Stripe:
+
+- **The coupon** is the *rule* — "5% off," "10% off" — made **once per purpose** and reused.
+- **The code** a shopper types is a separate **promotion code** that points at that rule and carries the fine print (a minimum order, an expiry, how many times it can be used).
+
+Because of that split, the store stays safe automatically:
+
+- **Every welcome / cart-recovery code is unique and single-use.** When someone signs up or leaves a cart, the store mints **their own** random code (tied to the shared "5% off" / "10% off" rule) that works **exactly once** and expires in 30 days. Nobody can pass around one "NEWSLETTER" code and use it forever — there isn't one; each person gets their own one-shot code.
+- **The store-wide sale is the only public, reusable code.** A "whole shop 20% off" sale is *meant* to be used by everyone, over and over, until you end it — so it's the one and only code that isn't locked to a single use.
+
+Good-to-knows: a **minimum order** (if you set one) lives on the code, and the checkout tells a shopper when they haven't reached it; Stripe only allows **one discount per order**; and these are **not** gift cards — there's no leftover balance to carry over, a code just applies its full deal or not at all.
+
 ## Take a piece down (archive — it's reversible)
 
 "Take the Cottage down" / "remove it" **archives** the piece: it leaves the shop and its page, but it's **kept** — bring it back anytime with "resurface it." **Nothing is ever truly deleted.** (Different from *sold*, which keeps the piece visible with a Sold note.)
