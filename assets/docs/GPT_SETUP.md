@@ -73,7 +73,7 @@ Every product is a row in Supabase. Creating or editing a product makes a DRAFT 
 
 ### 1C. Photos
 
-- **Minimum 7** per product: 1 hero, 1 thumbnail, ≥5 gallery. Ideal 10–15.
+- **Minimum 6 distinct shots** per product: 1 hero + ≥5 gallery. (The DB also needs a thumbnail; the portal auto-derives it from the hero and the GPT re-uploads the hero under the `thumbnail` role — so **7 files** land but only **6 distinct** shots are needed.) Ideal 10–15.
 - Roles for `uploadImage`: `hero`, `thumbnail`, `gallery-01`…`gallery-15`, `detail-01`…`detail-05`, `video-01`…`video-05`. Use `skip_transform=true` for videos. (GIFs are retired — use a short MP4 instead.)
 - Shots: hero (clean front, = thumbnail), angles (3–4), details (2–3), lighting modes (2–3), one scale reference, 1–2 lifestyle.
 - The system crops to 4:5, converts to WebP, compresses, and uploads to the CDN. She just sends the photos.
@@ -99,7 +99,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 > **Paste the instructions from the canonical `.txt`, verbatim.** The shipped, paste-able instructions are **`assets/docs/archive/v4_0/v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt`** — **7978 / 8000 bytes** (the 8000-char cap is a hard ceiling; over it the GPT silently truncates its own prompt). Copy the whole file into the GPT's *Instructions* field byte-for-byte; do not retype from a summary. The beats it carries, so you can sanity-check the paste:
 
 - **Intro + posture** — warm plain-language studio assistant; never expose keys/URLs/jargon; **do reversible things without asking, confirm only the irreversible ones** (the initiative nudge).
-- **Create flow** — slug → upload photos → `createProduct` → share preview → publish; required fields; ATTACHED photos → `uploadImages`, LINK/URL photos + video → `uploadImage`; assign the role, write alt; 7-image minimum.
+- **Create flow** — slug → upload photos → `createProduct` → share preview → publish; required fields; ATTACHED photos → `uploadImages`, LINK/URL photos + video → `uploadImage`; assign the role, write alt; 6-distinct-shot minimum (the hero doubles as the thumbnail).
 - **THE SLUG** — derive once, fold accents to plain ASCII, reuse the exact string everywhere.
 - **EDITING** — build edits from `effective`; price/availability/quantity go live instantly, copy/SEO/photos stage a draft; `featured`/`series`; `discardEdits`.
 - **PUBLISHING** — **`createProduct` is lenient (title+price min saves a partial) — the field gate is at PUBLISH**; a publish-400 names the missing field in plain labels (`Story` = the story, headline = the tagline); recover a lost preview via `getProduct`.
@@ -112,7 +112,7 @@ The GPT has a **`refundOrder`** Action (v3.3, on `api/orders.ts`). Flow: find th
 
 ### 2B. Actions schema (OpenAPI)
 
-> **Paste the schema from the canonical `.txt`, verbatim.** YAML whitespace is significant — copy from **`assets/docs/archive/v4_0/v4_0_0_GPT_SCHEMA.txt`**, never from rendered markdown. It is OpenAPI 3.1.0 with `info.version: 3.5.0` (the file was renamed to v4.0.0; the internal version string was left at 3.5.0 and is cosmetic — OpenAI ignores it). **16 operations**, all on the `servers:` URL `https://everlastingsbyemaline.com` (change that URL per environment — see 2C + Part 3). The operations:
+> **Paste the schema from the canonical `.txt`, verbatim.** YAML whitespace is significant — copy from **`assets/docs/archive/v4_0/v4_0_0_GPT_SCHEMA.txt`**, never from rendered markdown. It is OpenAPI 3.1.0 with `info.version: 4.0.0`. **16 operations**, all on the `servers:` URL `https://everlastingsbyemaline.com` (change that URL per environment — see 2C + Part 3). The operations:
 
 - **Products (8):** `createProduct` (POST `/api/products` — draft, no Stripe yet), `listProducts` (GET), `editProduct` (PUT `?id=`), `publishProduct`, `archiveProduct`, `unarchiveProduct`, `discardEdits`, `getProduct` (GET `/api/products/by-slug/{slug}`).
 - **Media (2):** `uploadImage` (POST `/api/upload` — by LINK/URL, or a video), `uploadImages` (POST `/api/upload/attach` — photos ATTACHED in chat, `openaiFileIdRefs`, up to 10).

@@ -56,6 +56,16 @@ Delegated by **file ownership** (not workstream) because five files are edited b
 - **Run the legacy sold-row backfill** (`20260616000001` cutover `UPDATE`) on the LIVE catalog before enabling any % sale (zeroes `quantity` on `available:false` rows so the quantity-based sold gate is honest).
 - **Flip the Custom GPT's Action server URL + auth to production** (it is currently pointed at the tester) and paste the shipped `v4_0_0_GPT_INSTRUCTIONS_TRIMMED.txt` + `v4_0_0_GPT_SCHEMA.txt` (in `assets/docs/archive/v4_0/`) into Em's GPT.
 
-## As-built doc-sync
+## As-built doc-sync (completed)
 
-Deferred to a **fresh agent** (per DEV_RULES → as-built doc-sync): walk the build-adjusted IMPLEMENT line-by-line (this report for deltas, code as tiebreaker) to bring `EVERLASTINGS_STORE.md`, `STORE_ADMINISTRATION.md`, `BRAND.md`, `GPT_SETUP.md`, `README.md` current. NOT done in this build session.
+Done by **five fresh agents** (one per doc — `EVERLASTINGS_STORE.md`, `STORE_ADMINISTRATION.md`, `GPT_SETUP.md`, `BRAND.md`, `README.md`), each a full end-to-end read + line-by-line update with the code as the tiebreaker, then a **sixth cross-doc consistency reviewer**. The sync itself caught real drift: doc-vs-code contradictions (photo floor 7→6, "Available OFF = sold" → unpublish-to-draft, a stale confirm-before-shipping, "Needs shipping"→"Unfulfilled" tab), the stale 3-state `tokens.css` vs the shipped 6-state palette, a GPT_SETUP embed rotted to a v2.0.0 snapshot, and — most valuably — the **unwired `?_action=seen` signal** (bug #3 above, fixed). The cross-doc reviewer confirmed the five docs are otherwise consistent + honest (sold-policy, refund, GPT files, function/cron counts, cart_holds, the two brands, all headline features).
+
+## Workflow notes (v4.0.0)
+
+The gap-review + exclusively-executable planning worked as designed, and it shows in the outcome versus prior builds:
+- **Execution was LOCATE-and-APPLY, not discover-and-decide.** Backend `api/*.ts` anchors were byte-clean; the only drift was exactly where the IMPLEMENT predicted (the polished `admin/` surface apps). No scope or decision surprises surfaced during the build — the front-loaded gap-review had already resolved them.
+- **File-ownership delegation** (one agent per file, ordered stacked edits) let ~10 agents build concurrently with zero shared-file collisions — cleaner than a workstream split.
+- **Layered review caught bugs early and in isolation, so nothing compounded** — the difference from past builds. The WS5 own-review caught a hard crash (would have orphaned R2 uploads on the core new-product path); verification E2E caught the un-applied migrations and proved the money fixes with real transactions ($310/$88 per-item split, $156 auto-apply, $88 refund+restock); the fresh-agent doc-sync surfaced the unwired seen signal; and Sean's own testing caught the refund-restock gap and the flashing badge. Each was a small, contained miss found at a distinct stage — never a compounding cascade.
+- **One process gap to codify:** applying the DB migrations (`supabase db push`) wasn't an explicit deploy step (it was implicit in the preflight), which caused the activity-log 500 until caught in verification. Make "apply migrations after deploy" an explicit preflight + go-live checklist item.
+
+Net: the ~90/10 plan-heavy method front-loaded the uncertainty into a reviewable plan, so the code phase produced few bugs, all non-compounding, each caught by one of the process's own layers.
