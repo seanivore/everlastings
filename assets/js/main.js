@@ -29,6 +29,28 @@ function formatPrice(cents) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
+// v3.5 — store-wide sale (public read, cached once per page load onto window._activeSale). Percent-only.
+let _activeSalePromise = null;
+async function getActiveSale() {
+  if (_activeSalePromise) return _activeSalePromise;
+  _activeSalePromise = fetch('/api/products?_action=active_sale')
+    .then((r) => (r.ok ? r.json() : { active: false }))
+    .catch(() => ({ active: false }))
+    .then((s) => { window._activeSale = s; return s; });
+  return _activeSalePromise;
+}
+
+// Struck-price markup for a cents amount when a % store-wide sale is live; plain price otherwise.
+// Numbers only (no user text) → the innerHTML sites that consume this are injection-safe.
+function priceHTML(cents, sale) {
+  sale = sale || window._activeSale;
+  if (sale && sale.active && sale.type === 'percent' && Number.isFinite(cents)) {
+    const discounted = Math.round(cents * (1 - sale.value / 100));
+    return `<span class="price-sale"><span class="price-sale__was">${formatPrice(cents)}</span> <span class="price-sale__now">${formatPrice(discounted)}</span></span>`;
+  }
+  return formatPrice(cents);
+}
+
 function slugify(title) {
   return title.toLowerCase().replaceAll(' ', '-');
 }
@@ -266,8 +288,75 @@ window.addEventListener('email-cta-already-subscribed', (e) => {
   }
 });
 
+// v3.5 — thin reusable top utility bar (free-shipping reminder by default, sale line when active) +
+// a once-only dismissible upper-right sale popup. Storefront tokens only (this is the shopper brand,
+// NOT the neutral portal). The bar sits in normal flow above the sticky header, so it scrolls away and
+// the header then pins to top:0 (no layout hack needed — verified against .site-header position:sticky).
+function mountSaleChrome(sale) {
+  sale = sale || window._activeSale || { active: false };
+
+  // --- top utility bar ---
+  const bar = document.createElement('div');
+  bar.className = 'sale-bar' + (sale.active ? ' sale-bar--on' : '');
+  bar.setAttribute('role', 'status');
+  bar.textContent = (sale.active && sale.type === 'percent')
+    ? `${sale.value}% off everything — applied automatically at checkout, no code needed.`
+    : 'Free shipping on every order.';
+  document.body.insertBefore(bar, document.body.firstChild);
+
+  // v3.7.3 (D#1) — expose the header's REAL bottom so fixed/anchored chrome (the sale popup below,
+  // and the pre-existing .mobile-nav drawer) clears it. The bar is normal-flow and ALWAYS present
+  // (free-shipping default), so the sticky header sits BELOW it — a static --header-height offset
+  // would overlap the header (cart icon) on every page, worse when the popup is up.
+  const setHeaderOffset = () => {
+    const hdr = document.querySelector('.site-header');
+    if (hdr) document.documentElement.style.setProperty('--header-offset', hdr.getBoundingClientRect().bottom + 'px');
+  };
+  setHeaderOffset();
+  window.addEventListener('resize', setHeaderOffset);
+  // v3.7.4 (D#3 / B#4 / journey): keep it current as the page SCROLLS too. The sale-bar is normal-flow, so
+  // once it scrolls out of view the sticky header's real bottom shrinks — a .mobile-nav opened AFTER scrolling
+  // would otherwise inherit the stale (too-tall) mount value and open with a gap under the header. rAF-throttled
+  // so it costs ~nothing, and it stays self-contained (setHeaderOffset is scoped to this IIFE — no cross-file
+  // nav-handler hook needed). The once-only sale popup fires at unscrolled load and is already correct.
+  let _hoTick = 0;
+  window.addEventListener('scroll', () => { if (_hoTick) return; _hoTick = requestAnimationFrame(() => { _hoTick = 0; setHeaderOffset(); }); }, { passive: true });
+
+  // --- once-only upper-right popup (only when a sale is live) ---
+  if (!(sale.active && sale.type === 'percent')) return;
+  // localStorage key carries the CODE so a NEW sale re-announces once; the same sale never nags twice.
+  const SEEN_KEY = 'everlastings.saleSeen';
+  if (localStorage.getItem(SEEN_KEY) === sale.code) return;
+
+  const pop = document.createElement('div');
+  pop.className = 'sale-pop';
+  pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-label', 'Store-wide sale');
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'sale-pop__close';
+  close.setAttribute('aria-label', 'Dismiss');
+  close.textContent = '✕';
+  const body = document.createElement('div');
+  body.className = 'sale-pop__body';
+  const h = document.createElement('strong');
+  h.textContent = `${sale.value}% off, storewide`;
+  const p = document.createElement('p');
+  p.textContent = 'The discount is applied automatically at checkout — no code to remember.';
+  body.append(h, p);
+  pop.append(close, body);
+  const dismiss = () => { localStorage.setItem(SEEN_KEY, sale.code); pop.remove(); };
+  close.addEventListener('click', dismiss);
+  document.body.appendChild(pop);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initConfig();
+  getActiveSale().then(mountSaleChrome); // v3.5 — top utility bar + once-only sale popup (#221)
+  // v3.5 — a coupon "Copy share link" lands on the homepage root (<siteUrl>/?code=CODE, §4.6). main.js
+  // runs on every page, so capture ?code= here and stash it; the /checkout reader (§4.7) applies it once
+  // the shopper has items in the cart. sessionStorage survives the same-tab navigation to /checkout.
+  try { const _sc = new URLSearchParams(location.search).get('code'); if (_sc) sessionStorage.setItem('everlastings.shareCode', _sc); } catch {}
   // cart-ui.js paints [data-cart-badge] on its own load; no badge call needed here.
   // Re-apply persisted consent on every page load so settings carry across navigation.
   const stored = localStorage.getItem(CONSENT_STORAGE_KEY);

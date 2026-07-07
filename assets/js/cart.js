@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderLineItems(cart, withItems);
   updateTotals();
+  getActiveSale().then(() => { renderLineItems(getCart(), withItems); updateTotals(); }); // v3.5 struck preview
   prefillEmail();
   wireRemoveButtons();
   wireCheckoutButton();
@@ -61,7 +62,7 @@ function renderLineItems(cart, container) {
         <p style="margin: var(--space-xs) 0 0; font-style: italic; font-size: var(--text-sm); color: var(--text-secondary);">One-of-a-kind. Availability confirmed at checkout.</p>
       </div>
       <div style="text-align: right;">
-        <p style="margin: 0 0 var(--space-sm); font-family: var(--font-display); font-size: var(--text-xl); color: var(--accent-primary);">${formatPrice(item.price || 0)}</p>
+        <p style="margin: 0 0 var(--space-sm); font-family: var(--font-display); font-size: var(--text-xl); color: var(--accent-primary);">${priceHTML(item.price || 0, window._activeSale)}</p>
         <button type="button" class="btn btn-ghost btn-sm" data-cart-remove data-product-id="${escapeAttr(item.product_id)}">Remove</button>
       </div>
     `;
@@ -73,10 +74,14 @@ function renderLineItems(cart, container) {
 
 function updateTotals() {
   const total = getCartTotal();
+  const sale = window._activeSale;
+  const struck = sale && sale.active && sale.type === 'percent';
   const subtotalEl = document.querySelector('[data-cart-subtotal]');
   const estimateEl = document.querySelector('[data-cart-estimate]');
+  // Subtotal is the pre-sale line sum; the estimate previews the store-wide discount (applied for real
+  // by Stripe at checkout). Percent-only, no minimum on the auto sale, so this preview matches checkout.
   if (subtotalEl) subtotalEl.textContent = formatPrice(total);
-  if (estimateEl) estimateEl.textContent = formatPrice(total);
+  if (estimateEl) estimateEl.innerHTML = struck ? priceHTML(total, sale) : formatPrice(total);
 }
 
 function prefillEmail() {

@@ -308,7 +308,7 @@ p:last-child { margin-bottom: 0; }
 /* Mobile nav drawer */
 .mobile-nav {
   position: fixed;
-  inset: var(--header-height) 0 0 0;
+  inset: var(--header-offset, var(--header-height)) 0 0 0;
   background: var(--bg-primary);
   z-index: calc(var(--z-header) - 1);
   padding: var(--space-xl) var(--container-padding);
@@ -586,6 +586,12 @@ select:focus {
 .badge-featured {
   background: var(--bg-primary);
   border: 1px solid var(--color-gold);
+  color: var(--accent-primary);
+}
+
+.badge-unique {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-primary);
   color: var(--accent-primary);
 }
 
@@ -1088,3 +1094,46 @@ select:focus {
 @media (prefers-reduced-motion: reduce) {
   .firelight-glow::after { animation: none;
     --fz1:oklch(74% 0.13 228); --fz2:oklch(88% 0.16 98); --fz3:oklch(66% 0.19 52); --fz4:oklch(48% 0.18 30); } }
+
+/* ---------------------------------------------------------------------------
+   12. Store-wide sale — struck pricing, top utility bar, once-only popup (v3.5)
+   --------------------------------------------------------------------------- */
+.price-sale { display: inline-flex; align-items: baseline; gap: var(--space-sm); }
+.price-sale__was { text-decoration: line-through; color: var(--text-muted); font-weight: 400; }
+.price-sale__now { color: var(--accent-primary); font-weight: 600; }
+
+.sale-bar {
+  text-align: center;
+  font-size: var(--text-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-ink);
+  color: var(--text-inverse);
+  letter-spacing: 0.02em;
+}
+.sale-bar--on { background: var(--accent-primary); }
+
+.sale-pop {
+  position: fixed;
+  top: calc(var(--header-offset, var(--header-height)) + var(--space-md));   /* v3.7.3 D#1: the REAL header bottom — the sale-bar pushes the sticky header down at unscrolled load */
+  right: var(--space-md);
+  z-index: calc(var(--z-modal) + 10);   /* above header, below cookie banner (--z-cookie: 400) */
+  max-width: 320px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-lg);
+}
+.sale-pop__close {
+  position: absolute; top: var(--space-sm); right: var(--space-sm);
+  background: none; border: 0; cursor: pointer;
+  font-size: var(--text-lg); line-height: 1; color: var(--text-muted);
+}
+.sale-pop__body strong { display: block; font-family: var(--font-display); font-size: var(--text-2xl); color: var(--accent-primary); margin-bottom: var(--space-xs); }
+.sale-pop__body p { margin: 0; font-size: var(--text-sm); color: var(--text-secondary); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sale-pop { animation: sale-pop-in var(--transition-base) both; }
+  @keyframes sale-pop-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+}
