@@ -326,10 +326,20 @@
     } catch (err) { P.toast(err.message, { kind: "danger" }); }
   }
 
+  // WS8 §8.2b — mark Orders as SEEN once on view: POST ?_action=seen stamps
+  // site_config.orders_last_viewed_{env}=now so the Orders-nav blink clears (unseen_count → 0) until a
+  // genuinely newer order arrives. Best-effort; refresh the nav signal so the blink clears on this page too.
+  async function markSeen() {
+    try {
+      await fetch("/api/orders?_action=seen", { method: "POST", headers: { ...P.authHeader() } });
+      if (P.refreshOrdersSignal) P.refreshOrdersSignal();
+    } catch { /* best-effort — the blink just persists until the next stamp */ }
+  }
+
   P.boot({ requireSession: true }).then(function (ok) {
     if (!ok) return;                 // signed out → boot() already redirected to /admin/account
     P.mountShell("orders"); // shell owns the env chip + Orders nav signal
-    loadOrders();
+    loadOrders().then(markSeen); // WS8 §8.2b — stamp last_viewed after the initial load so the nav blink clears on view
     // No push channel (data-flow.md:116-117) → poll so freshly-arrived orders surface + re-highlight.
     // Skip while a modal/ship-form is open so the poll never yanks in-progress work.
     setInterval(function () {
