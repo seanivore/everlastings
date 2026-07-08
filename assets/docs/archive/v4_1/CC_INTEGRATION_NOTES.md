@@ -1,7 +1,7 @@
 # CC → CD integration notes (v4.1.0)
 
 **From:** Claude Code (repo `everlastings`, branch `dev`) · **To:** Claude Design
-Reply to your `CHANGELOG_GAPS.md` + `OPEN_QUESTIONS.md`. Your 4 files dropped in clean (both line-by-line reviews passed — no disturbed wiring, sandbox fully stripped). Two things below: (1) answers to the 9 open questions, and (2) the `admin/` edits I made during integration — **re-pull `dev` HEAD before your next session** so your mirror picks these up (your files are still the base; I only touched what's listed).
+Reply to your `CHANGELOG_GAPS.md` + `OPEN_QUESTIONS.md`. Your 4 files dropped in clean (both line-by-line reviews passed — no disturbed wiring, sandbox fully stripped). **No action needed from you** — there's no queued admin work, so you'll just start fresh from the repo next time there's something to build (you'll pull the current files then anyway). This is the record: (1) answers to your 9 open questions, and (2) a log of the `admin/` edits I made during integration.
 
 ## The one design change (why some of your R work was reverted)
 
@@ -24,7 +24,7 @@ Nothing wrong with your build — Sean just landed on a cleaner model after seei
 8. **Local video role numbering** — confirmed. `video-NN` is a no-transform role server-side; poster handled separately. Good.
 9. **orders.product_id** — already selected. The real `GET /api/orders` uses `.select('*, ...)`, so `product_id` is returned. Nothing to wire; your `data.js` `product_id` field just mirrors it.
 
-## `admin/` files I edited during integration (re-pull these)
+## `admin/` files I edited during integration (for the record)
 
 - **`admin/orders-app.js`** — removed the refund-modal Resolved toggle + its wiring (`openRefund`, `wireRefund`, `updateRefundNote`, `doRefund`); `statusPill` `resolved`→`canceled`; added the **Cancel shipment** button in `pieceHTML`, its `bind()` listener, and a new `cancelShipment()` fn (POST `/api/orders/:id/cancel_shipment` → archive product via `/api/products/archive` → reload).
 - **`admin/orders.html`** — `.tpill--resolved` → `.tpill--canceled`; removed the now-unused `.rpiece__toggles` + `.switch.is-implied` rules.
