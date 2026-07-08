@@ -217,7 +217,7 @@ function mountPreviewBanner(product, token) {
       const img = document.createElement('img');
       img.src = src; img.alt = labelTxt; img.loading = 'lazy';
       // Crop to the TARGET ratio (cover) so the cell shows how the image will actually be cropped at
-      // that aspect — a 1:1 cell reads square, a 1.91:1 cell reads wide, a 4:5 cell reads portrait.
+      // that aspect — a 1:1 cell reads square, a 16:9 cell reads wide.
       img.style.cssText = 'height:74px;aspect-ratio:' + ratio + ';object-fit:cover;border:1px solid rgba(0,0,0,0.18);border-radius:4px;background:#fff;display:block;';
       cell.appendChild(img);
     } else {
@@ -234,8 +234,11 @@ function mountPreviewBanner(product, token) {
     textCell('SEO description', product.seo_description),
     textCell('Checkout name', product.checkout_name),
     textCell('Checkout line', product.checkout_description),
-    imgCell('Thumbnail (4:5)', product.thumbnail, '4 / 5'),
-    imgCell('OG image (1.91:1)', product.seo_thumbnail, '1.91 / 1'),
+    // The two meta images the page itself never renders: the Thumbnail (the landscape image that shows
+    // when a link is shared) and the square checkout image. The hero is already on the page below, so we
+    // don't re-show it here — and there is no separate "OG"/4:5 crop (that was a phantom slot; the share
+    // image is stored + cropped as a true 16:9 `seo_thumbnail`).
+    imgCell('Thumbnail (16:9)', product.seo_thumbnail, '16 / 9'),
     imgCell('Checkout image (1:1)', product.checkout_image, '1 / 1'),
   );
 
