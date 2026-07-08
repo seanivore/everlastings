@@ -32,6 +32,10 @@
       "destination": "/api/orders?id=:id&_action=refund"
     },
     {
+      "source": "/api/orders/:id/cancel_shipment",
+      "destination": "/api/orders?id=:id&_action=cancel_shipment"
+    },
+    {
       "source": "/api/orders/:id",
       "destination": "/api/orders?id=:id"
     },
