@@ -119,6 +119,18 @@ type UploadResult = { ok: true; url: string; filename: string } | { ok: false; e
 // The per-file validation + Cloudinary/R2 pipeline, returning a result object (not a Response) so both
 // the single-file POST path and the chat-attach batch path can drive it. Moved verbatim from the old
 // inlined POST tail; each error path returns { ok:false, error, status } and success returns { ok:true }.
+// fetch with a hard timeout so one hung Cloudinary/source hop can't stall the whole function budget (a batch
+// upload fires many of these concurrently from the client — a single stuck request must fail fast, not block).
+async function fetchWithTimeout(url: string, opts: RequestInit = {}, ms = 25000): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function processOne(file: File, slug: string, role: string, skipTransformField: string | null): Promise<UploadResult> {
   if (!slug || !role) return { ok: false, error: 'Missing file, slug, or role', status: 400 };
   if (!ROLE_PATTERN.test(role)) return { ok: false, error: 'Invalid role', status: 400 };
@@ -141,6 +153,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   let finalBuffer: Buffer;
   let contentType: string;
   let extension: string;
+  let destroyPromise: Promise<void> | null = null; // Cloudinary cleanup — runs concurrently with the R2 put
 
   try {
     if (shouldTransform) {
@@ -160,9 +173,10 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       uploadForm.append('timestamp', String(uploadTimestamp));
       uploadForm.append('signature', uploadSignature);
 
-      const uploadRes = await fetch(
+      const uploadRes = await fetchWithTimeout(
         `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/upload`,
         { method: 'POST', body: uploadForm },
+        30000,
       );
       if (!uploadRes.ok) {
         const detail = await uploadRes.text();
@@ -181,7 +195,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
       const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto/${publicId}`;
 
-      const transformedRes = await fetch(transformUrl);
+      const transformedRes = await fetchWithTimeout(transformUrl, {}, 30000);
       if (!transformedRes.ok) {
         console.error('Cloudinary transform fetch failed:', transformedRes.status);
         return { ok: false, error: 'Cloudinary transform failed', status: 502 };
@@ -199,13 +213,16 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       destroyForm.append('timestamp', String(timestamp));
       destroyForm.append('signature', signature);
 
-      const destroyRes = await fetch(
+      // Non-fatal cleanup — DON'T await here on the critical path. Kick it off and await it CONCURRENTLY with
+      // the R2 put below (total = max(destroy, put), not destroy + put). It still runs, so no orphaned
+      // Cloudinary originals; it just no longer serializes before the response.
+      destroyPromise = fetchWithTimeout(
         `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`,
         { method: 'POST', body: destroyForm },
-      );
-      if (!destroyRes.ok) {
-        console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text());
-      }
+        15000,
+      )
+        .then(async (destroyRes) => { if (!destroyRes.ok) console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text()); })
+        .catch((err) => { console.error('Cloudinary destroy error (non-fatal):', err); });
     } else {
       finalBuffer = Buffer.from(await file.arrayBuffer());
       contentType = file.type;
@@ -219,14 +236,17 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       ? `test/${slug}/${filename}`
       : `products/${slug}/${filename}`;
 
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: env('R2_BUCKET_NAME'),
-        Key: key,
-        Body: finalBuffer,
-        ContentType: contentType,
-      }),
-    );
+    await Promise.all([
+      s3.send(
+        new PutObjectCommand({
+          Bucket: env('R2_BUCKET_NAME'),
+          Key: key,
+          Body: finalBuffer,
+          ContentType: contentType,
+        }),
+      ),
+      ...(destroyPromise ? [destroyPromise] : []), // overlaps the cleanup with the write; never rejects (caught above)
+    ]);
 
     const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
     return { ok: true, url: publicUrl, filename };
@@ -273,7 +293,7 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
       continue;
     }
     let mediaRes: Response;
-    try { mediaRes = await fetch(link, { redirect: 'follow' }); }
+    try { mediaRes = await fetchWithTimeout(link, { redirect: 'follow' }, 20000); }
     catch { failures.push({ index: i + 1, error: 'could not fetch the attached file' }); continue; }
     const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
@@ -341,7 +361,7 @@ export async function POST(request: Request) {
     }
     let mediaRes: Response;
     try {
-      mediaRes = await fetch(safeUrl, { redirect: 'follow' });
+      mediaRes = await fetchWithTimeout(safeUrl, { redirect: 'follow' }, 20000);
     } catch {
       return jsonResponse(request, { error: 'Could not fetch that media link' }, 400);
     }
