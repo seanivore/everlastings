@@ -51,10 +51,11 @@
   // state to the API body. price is ALREADY integer cents in the model (bindField converts on input);
   // list fields are ALREADY string[] (the data-list handler splits one-per-line); dimensions/weight are
   // ALREADY assembled by bindField — so this maps field-for-field, empty scalars → null. NO slug (added
-  // only on create — a PUT with slug 400s as immutable, products.ts:414), NO checkout_*/media.
+  // only on create — a PUT with slug 400s as immutable), NO media. checkout_name/description ARE sent while
+  // never-published (persist → show in the preview bar); once published they freeze server-side, omitted then.
   function editorPayload(p) {
     const arr = (k) => (Array.isArray(effOf(p, k)) ? effOf(p, k).filter((x) => String(x).trim()) : []);
-    return {
+    const out = {
       title: String(effOf(p, "title") || "").trim(),
       headline: nn(effOf(p, "headline")),
       story_card: effOf(p, "story_card") || "",
@@ -76,6 +77,14 @@
       available: !!p.available,
       featured: !!p.featured,
     };
+    // Checkout name/line are editable + auto-generated (F-1) only while never-published — persist them then
+    // so the storefront preview bar shows real values (server accepts pre-publish, freezes at publish). On a
+    // published piece they're frozen (FROZEN_AFTER_PUBLISH), so we never send them.
+    if (!p.published_at) {
+      out.checkout_name = nn(effOf(p, "checkout_name"));
+      out.checkout_description = nn(effOf(p, "checkout_description"));
+    }
+    return out;
   }
 
   // Fold a server response back into the in-memory model (real id/slug/sku/preview_token/draft),
@@ -622,7 +631,7 @@
             <div class="ed-card">
               <div class="ed-card__cap">Listing &amp; SEO</div>
               <div class="ed-grid">
-                ${f({ label: "Slug", req: true, tip: "The shop URL handle. Auto-made from the title.", value: p.slug || "", locked: everPublished, lockNote: "Locks after publish", field: "slug", rec: 50, ph: "auto-from-title" })}
+                ${f({ label: "Slug", req: true, tip: "The shop URL handle, made automatically from the title.", value: p.slug || "", locked: !isNewRow(p), lockNote: "Auto from the title · locks once saved", field: "slug", rec: 50, ph: "auto-from-title" })}
                 ${f({ label: "SKU", tip: "Created automatically when the product is made. Never editable.", value: p.sku, locked: true, lockNote: "Created automatically; cannot be edited" })}
                 ${f({ label: "Checkout name", tip: "What buyers see at checkout.", value: p.checkout_name || eff("title"), locked: everPublished, lockNote: "Locks after publish", field: "checkout_name", rec: 60 })}
                 ${f({ label: "SEO title", tip: "The title for search results and shared links.", value: eff("seo_title") || "", field: "seo_title", rec: 60 })}
@@ -861,7 +870,7 @@
     else if (key === "quantity") { const q = parseInt(val, 10); if (!isNaN(q)) p.quantity = Math.max(0, q); }
     else if (key.startsWith("dim_")) { p.dimensions = `${dimVal(scope, "dim_w")}" W x ${dimVal(scope, "dim_d")}" D x ${dimVal(scope, "dim_h")}" H`; }
     else if (key === "weight") { const n = val.replace(/[^0-9.]/g, ""); setEff(p, "weight", n ? n + " lbs" : ""); }
-    else if (["title", "headline", "description", "story_card", "artist_note", "seo_title", "seo_description"].includes(key)) setEff(p, key, val);
+    else if (["title", "headline", "description", "story_card", "artist_note", "seo_title", "seo_description", "checkout_name", "checkout_description"].includes(key)) setEff(p, key, val);
     else if (key === "slug" || key === "series" || key === "product_type") p[key] = val;
     // update this field's ring (F-2 — price/dimensions need value-aware emptiness, not just a blank string)
     const fieldEl = el.closest(".field");
