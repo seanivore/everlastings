@@ -292,6 +292,23 @@
 /* new-upload highlight: pale-yellow double pulse */
 @keyframes mflash{0%,50%{background:oklch(94% 0.08 96);}25%,100%{background:transparent;}}
 .mitem.is-new{animation:mflash 2.4s var(--ease-weight) 1; border-radius:var(--r-md);}
+
+/* "Start here" (bug #2): a brand-new product rings Price + Title solid orange-red with a pulsing tint, plus
+   a message up top — both clear the moment each field is filled (bindField toggles [data-startreq]/hidden). */
+.field[data-startreq]{--startred:color-mix(in oklch, var(--danger), var(--waiting) 42%);}
+.field[data-startreq] .input{border-color:var(--startred); animation:startflash 1.5s var(--ease-weight) infinite;}
+.field[data-startreq] .input:focus{border-color:var(--startred); animation:none; box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 62%);}
+@keyframes startflash{
+  0%,100%{box-shadow:0 0 0 1.5px color-mix(in oklch,var(--startred),transparent 55%); background-color:transparent;}
+  50%{box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 25%); background-color:color-mix(in oklch,var(--startred),transparent 90%);}
+}
+.start-hint{--startred:color-mix(in oklch, var(--danger), var(--waiting) 42%);
+  display:flex; align-items:center; gap:9px; padding:10px 13px; margin-bottom:16px; border-radius:var(--r-md);
+  font-size:var(--t-sm); font-weight:600; color:color-mix(in oklch,var(--danger),black 6%);
+  background:color-mix(in oklch,var(--startred),white 88%); border:1px solid color-mix(in oklch,var(--startred),white 52%);}
+.start-hint[hidden]{display:none;}
+.start-hint__dot{width:9px; height:9px; border-radius:50%; flex:none; background:var(--startred); animation:starthintdot 1.5s var(--ease-weight) infinite;}
+@keyframes starthintdot{0%,100%{opacity:.55; transform:scale(.82);}50%{opacity:1; transform:scale(1);}}
 /* square secondary tiles in the editor media display */
 .media-sq{display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; margin-top:10px;}
 .msq{position:relative; aspect-ratio:1/1; border-radius:var(--r-md); overflow:hidden; border:1px solid var(--hairline); background:var(--surface-sunk); cursor:pointer;}
