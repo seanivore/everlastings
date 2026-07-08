@@ -16,6 +16,8 @@ You already set this up earlier and it worked: pull the 11 real files from `ever
 - **Build the items below**, expanding wherever the design wants to go further than the spec (that's encouraged — the fast prototype surfaces requirements we couldn't spec up front).
 - **Hand back:** the changed `admin/` files (byte-identical drop-ins) + a **reverse-handoff** — `CHANGELOG_GAPS.md` (what you changed, per file, and why) + `OPEN_QUESTIONS.md` (anything that needs a backend answer). Claude Code then reviews every changed file line-by-line — not a mechanical safety check, but the hunt for backend work a UX change silently created — wires it, and tests on the live preview.
 
+**Reference screenshots:** the images named throughout this doc (e.g. `v4-product-preview-media-1.jpg`) are **pasted by Sean in this chat** — they're gitignored, so you can't fetch them from the repo. Match each to its item by the filename.
+
 **The data contract below is what you design against.** Design *to* it; don't implement the backend — that seam is what keeps the front end backend-aware but backend-untouching.
 
 ---
@@ -75,7 +77,7 @@ The field rules were carefully specified during the v4.0.0 build (`v4_0_0_IMPLEM
 **Build:**
 - [ ] **R-1** In the per-item refund card (`orders-app.js` ~:227-240, beside the existing "Relist" toggle), add a **"Resolved"** toggle. Subtext/hint: *"No longer needs shipping."* Collect the checked pieces' `product_id`s and send them as **`resolved_product_ids`** in the refund POST (~:280) — see **Contract A**.
 - [ ] **R-2** Add a **"Resolved"** pill to `statusPill` (~:68) so a `'resolved'` line reads truthfully (today it only knows refunded / shipped / needs-shipping).
-- [ ] **R-3** (design polish) The refund modal is part of the editor/refund visual pass — clean up the layout so the three choices (amount · Relist · Resolved) read as clearly independent. Reference: `assets/docs/archive/images/v4-site-two-purchase-refund-gap.jpg` (current), `…-refund-gap-2.jpg` (the relist-toggle style to mirror).
+- [ ] **R-3** (design polish) The refund modal is part of the editor/refund visual pass — clean up the layout so the three choices (amount · Relist · Resolved) read as clearly independent. Reference screenshots (pasted in chat): `v4-site-two-purchase-refund-gap-1.jpg` (the current lingering-order state), `v4-site-two-purchase-refund-gap-2.jpg` (the refund modal / Relist-toggle style to mirror).
 
 ---
 
