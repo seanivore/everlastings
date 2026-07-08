@@ -187,9 +187,9 @@
 .dimcell .input:not(:placeholder-shown) + .dimunit{opacity:1;}
 
 /* ===== media center ===== */
-.media-center{display:flex; flex-direction:column; gap:12px;}
-.media-cover{display:grid; grid-template-columns:132px 1fr; gap:12px;}
-@media (max-width:560px){.media-cover{grid-template-columns:1fr;}}
+.media-center{display:flex; flex-direction:column; gap:12px; min-width:0;}
+.media-cover{display:grid; grid-template-columns:132px minmax(0,1fr); gap:12px;} /* V-1 — minmax(0,…) stops the gallery strip forcing the grid wider than the viewport on mobile */
+@media (max-width:560px){.media-cover{grid-template-columns:minmax(0,1fr);}}
 .mtile{position:relative; border-radius:var(--r-md); overflow:hidden; background:var(--surface-sunk); border:1.5px solid var(--hairline);
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--ink-faint); cursor:pointer; min-height:96px; text-align:center;
   transition:border-color var(--dur-base) var(--ease-weight), color var(--dur-base) var(--ease-weight);}
@@ -209,7 +209,7 @@
 .mtile__open{position:absolute; top:5px; right:5px; z-index:2; width:22px; height:22px; border-radius:6px;
   background:color-mix(in oklch,var(--ink),transparent 22%); color:#fff; display:flex; align-items:center; justify-content:center;}
 .mtile__open svg{width:12px; height:12px;}
-.mgallery{border-radius:var(--r-md); border:1.5px solid var(--hairline); background:var(--surface-sunk); padding:10px; cursor:pointer; display:flex; flex-direction:column; gap:8px;}
+.mgallery{border-radius:var(--r-md); border:1.5px solid var(--hairline); background:var(--surface-sunk); padding:10px; cursor:pointer; display:flex; flex-direction:column; gap:8px; min-width:0;}
 .mgallery:hover{border-color:var(--accent);}
 .mgallery.filled{border-color:var(--live-bd);}
 .mgallery__head{display:flex; align-items:center; justify-content:space-between; font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-muted);}
@@ -224,9 +224,7 @@
 .mgallery__strip img{width:56px; height:56px; flex:none; border-radius:var(--r-sm); object-fit:cover; border:1px solid var(--hairline);}
 .mgallery__empty{display:flex; align-items:center; gap:7px; color:var(--ink-faint); font-size:var(--t-sm); min-height:56px;}
 .mgallery__empty svg{width:18px; height:18px;}
-.media-secondary{display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px;}
-@media (max-width:560px){.media-secondary{grid-template-columns:1fr 1fr;}}
-.media-secondary .mtile{min-height:76px;}
+/* V-1 — .media-secondary removed: the JS no longer emits that class (secondary media render as .media-sq). */
 .media-add{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 18px; min-height:76px;
   border:1.5px solid var(--accent); color:var(--accent); border-radius:var(--r-md); cursor:pointer; font-weight:600; font-size:var(--t-sm); background:var(--accent-soft); white-space:nowrap;}
 .media-add:hover{background:color-mix(in oklch,var(--accent-soft),var(--accent) 12%);}
@@ -322,6 +320,18 @@
 .mprog{height:4px; border-radius:2px; background:var(--surface-sunk); overflow:hidden;}
 .mprog i{display:block; height:100%; width:30%; background:var(--accent); animation:load 1.1s var(--ease-weight) infinite;}
 @keyframes load{0%{width:8%;}50%{width:78%;}100%{width:97%;}}
+/* M-3 — media preview keeps its true aspect (JS sets the width; height stays 72) instead of forced-square */
+.mitem__thumb{align-self:flex-start;}
+/* M-4 — the role rides faintly beside the filename in the type line */
+.mitem__role{color:var(--ink-faint); font-weight:400;}
+/* M-5 — Apply "thinking" overlay + spinner so uploads never look frozen */
+.modal__card{position:relative;}
+.modal__busy{position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  background:color-mix(in oklch,var(--surface),transparent 14%); backdrop-filter:blur(2px); border-radius:inherit;}
+.modal__busy-msg{font-size:var(--t-sm); font-weight:600; color:var(--ink-muted);}
+.spin{width:26px; height:26px; border-radius:50%; border:2.5px solid var(--hairline); border-top-color:var(--accent); animation:spin .7s linear infinite;}
+.btn.is-busy{opacity:.85;}
+@keyframes spin{to{transform:rotate(360deg);}}
 .modal__foot{position:sticky; bottom:0; display:flex; align-items:center; gap:10px; padding:13px 16px; background:var(--surface); border-top:1px solid var(--hairline);}
 .modal__foot .grow{flex:1;}
 .fallback-note{font-size:var(--t-xs); color:var(--ink-muted); display:flex; align-items:center; gap:6px;}

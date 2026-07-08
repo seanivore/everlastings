@@ -49,6 +49,9 @@
 .tpill--shipped .pdot{background:var(--live);}
 .tpill--refunded{color:color-mix(in oklch,var(--sold),black 16%); background:var(--sold-bg); border-color:var(--sold-bd);}
 .tpill--refunded .pdot{background:var(--sold);}
+/* R-2 — Resolved: a calm slate pill, distinct from shipped-green / refunded-blue / needs-orange */
+.tpill--resolved{color:var(--accent-strong); background:var(--accent-soft); border-color:color-mix(in oklch,var(--accent),white 68%);}
+.tpill--resolved .pdot{background:var(--accent);}
 
 /* email sent/unsent micro-pill */
 .empill{font-size:10px; font-weight:600; color:var(--ink-faint); display:inline-flex; align-items:center; gap:4px;}
@@ -84,10 +87,20 @@
 .rpiece__info{flex:1; min-width:0;}
 .rpiece__title{font-size:var(--t-sm); font-weight:600;}
 .rpiece__sub{font-size:var(--t-xs); color:var(--ink-faint);}
-.rpiece__ctrls{display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex:none;}
+.rpiece__ctrls{display:flex; flex-direction:column; gap:8px; align-items:flex-end; flex:none;}
 .rpiece__ctrls .switch__label{font-size:var(--t-xs); font-weight:600;}
+/* R-3 — the two per-piece toggles grouped so amount (+ Add) and Resolved/Relist read as separate choices */
+.rpiece__toggles{display:flex; flex-direction:column; gap:6px; align-items:flex-end; padding:7px 0 0; border-top:1px dashed var(--hairline); width:100%;}
+.rpiece__add{align-self:flex-end;}
+.switch.is-implied{opacity:.7;}
+.switch.is-implied .switch__label::after{content:" · via Relist"; color:var(--ink-faint); font-weight:400;}
 [data-radd].is-added{background:var(--live-bg); border-color:var(--live-bd); color:color-mix(in oklch,var(--live),black 18%);}
 .refund-amt{margin-top:14px;}
+/* R-3 — the three-choice explainer */
+.refund-guide{margin:12px 0 0; font-size:var(--t-xs); color:var(--ink-muted);}
+.refund-guide p{margin:0 0 5px;}
+.refund-guide ul{margin:0; padding-left:16px; display:flex; flex-direction:column; gap:3px;}
+.refund-guide b{color:var(--ink);}
 .relist-row{display:flex; align-items:center; gap:10px; padding:9px 0 0; flex-wrap:wrap;}
 .relist-row .switch__label{font-size:var(--t-xs); font-weight:600;}
 .refund-sum{display:flex; align-items:center; justify-content:space-between; margin:14px 0 4px; font-size:var(--t-base); font-weight:700;}

@@ -169,6 +169,8 @@
     m.w = grab(/([\d.]+)\s*"?\s*W/i); m.d = grab(/([\d.]+)\s*"?\s*D/i); m.h = grab(/([\d.]+)\s*"?\s*H/i);
     return m;
   }
+  // F-1 helper — mirror the server slug generator (lowercase, dash-join, trim, cap length).
+  function slugify(s) { return String(s || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60); }
   function readiness(p) {
     const miss = [];
     const eff = (k) => (p.draft && p.draft[k] != null ? p.draft[k] : p[k]);
@@ -193,7 +195,7 @@
     else if (imgs.length < 6) miss.push("at least 5 gallery photos");
     // v4.0 — a Share image is required (no more silent hero fallback). Set via the media modal's Share
     // toggle → writes seo_thumbnail; the backend enforces the same at publish.
-    if (!str("seo_thumbnail")) miss.push("a share image");
+    if (!str("seo_thumbnail")) miss.push("a thumbnail image");
     return { ok: miss.length === 0, missing: miss };
   }
 
@@ -514,13 +516,15 @@
 
   /* ============================ EDITOR ============================ */
   function tipI(t) { return `<span class="tip"><button type="button" class="tip__btn" aria-label="More info">i</button><span class="tip__pop">${esc(t)}</span></span>`; }
-  function lockChip() { return `<span class="tip"><button type="button" class="tip__btn tip__btn--lock" aria-label="Locks after first publish">${IC.lock}</button><span class="tip__pop">Locks after first publish</span></span>`; }
+  function lockChip(copy) { const c = copy || "Locks after publish"; return `<span class="tip"><button type="button" class="tip__btn tip__btn--lock" aria-label="${esc(c)}">${IC.lock}</button><span class="tip__pop">${esc(c)}</span></span>`; }
 
   function f(o) {
     const ring = o.ring ? ` data-ring="${o.ring}"` : "";
     const rec = o.rec ? ` data-rec="${o.rec}"` : "";
     const span = o.span2 ? " ed-span2" : "";
-    const lock = o.locked ? lockChip() : "";
+    // F-4 — a lock CHIP shows the whole time when lockNote is set (so the maker sees a field WILL lock),
+    // even while the input is still editable; the input only DISABLES when o.locked is true.
+    const lock = o.lockNote ? lockChip(o.lockNote) : (o.locked ? lockChip() : "");
     const fld = o.field ? ` data-field="${o.field}"` : "";
     let ctrl;
     if (o.type === "textarea") ctrl = `<textarea class="textarea" data-autogrow${fld} ${o.locked ? "disabled" : ""} placeholder="${esc(o.ph || "")}" style="min-height:${o.minH || 92}px">${esc(o.value || "")}</textarea>`;
@@ -538,7 +542,7 @@
     const ring = o.ring ? ` data-ring="${o.ring}"` : "";
     const items = (o.value || []).filter((x) => String(x).trim());
     return `<label class="field${o.span2 ? " ed-span2" : ""}"${ring}>
-      <div class="field__top"><span class="field__label">${esc(o.label)}${o.req ? '<span class="req">*</span>' : ""}${tipI("Write one per line — each line becomes a bullet on the page.")}</span></div>
+      <div class="field__top"><span class="field__label">${esc(o.label)}${o.req ? '<span class="req">*</span>' : ""}${tipI("Write one per line. Each line becomes a bullet on the page.")}</span></div>
       <textarea class="textarea bullets-ta" data-list="${o.field}" data-autogrow style="min-height:90px" placeholder="One per line…">${esc(items.join("\n"))}</textarea></label>`;
   }
 
@@ -552,7 +556,7 @@
     const openIcon = (url) => url ? `<a class="mtile__open" href="${url}" target="_blank" rel="noopener" title="Open full asset" onclick="event.stopPropagation()">${IC.ext}</a>` : "";
     // only filled secondary media render — as uniform squares (never empty upload buttons)
     const sq = [];
-    if (shareUrl) sq.push(`<div class="msq" data-open-url="${shareUrl}" title="Open share image in new tab"><img src="${shareUrl}" alt="" onerror="this.remove()">${openIcon(shareUrl)}<span class="msq__lbl">Share</span></div>`);
+    if (shareUrl) sq.push(`<div class="msq" data-open-url="${shareUrl}" title="Open thumbnail image in new tab"><img src="${shareUrl}" alt="" onerror="this.remove()">${openIcon(shareUrl)}<span class="msq__lbl">Thumbnail</span></div>`);
     if (checkoutUrl) sq.push(`<div class="msq" data-open-url="${checkoutUrl}" title="Open checkout image in new tab"><img src="${checkoutUrl}" alt="" onerror="this.remove()">${openIcon(checkoutUrl)}<span class="msq__lbl">Checkout</span></div>`);
     vids.forEach((v, i) => {
       const lbl = vids.length > 1 ? `Video ${i + 1}` : "Video";
@@ -576,13 +580,13 @@
       ${sq.length ? `<div class="media-sq">${sq.join("")}</div>` : ""}
       <div class="media-actions">
         <button class="media-add" data-open-media>${IC.upload} Add / edit media</button>
-        <span class="media-note">Every product needs a Share image — give any image the Share role. Checkout reuses the hero unless you set its own.</span>
+        <span class="media-note">Every product needs a Thumbnail image — give any image the Thumbnail role. Checkout reuses the hero unless you set its own.</span>
       </div>
     </div>`;
   }
 
   function editorHTML(p) {
-    const r = readiness(p), published = p.is_published, archived = !!p.archived_at;
+    const r = readiness(p), published = p.is_published, everPublished = !!p.published_at, archived = !!p.archived_at;
     const eff = (k) => (p.draft && p.draft[k] != null ? p.draft[k] : p[k]);
     const edited = (k) => p.draft && p.draft[k] != null;
     const ring = (k, req) => { const v = eff(k); const empty = Array.isArray(v) ? !v.length : !String(v || "").trim(); if (req && empty) return "red"; if (edited(k)) return "yellow"; if (req) return "green"; return edited(k) ? "yellow" : null; };
@@ -596,8 +600,8 @@
 
         <!-- INSTANT-COMMERCE: price + quantity only; context appears on focus -->
         <div class="commerce">
-          ${f({ label: "Price", req: true, tip: "Changes the shop price the moment you save it — no publish needed.", value: (p.price / 100).toFixed(2), type: "price", ring: "green", field: "price", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
-          ${f({ label: "Quantity", req: true, tip: "0 = sold out. Applies to the shop instantly.", value: String(p.quantity), ring: p.quantity === 0 ? "yellow" : "green", field: "quantity", inputmode: "numeric", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
+          ${f({ label: "Price", req: true, tip: "Sets the shop price the moment you save. No publish needed.", value: (p.price / 100).toFixed(2), type: "price", ring: p.price > 0 ? "green" : "red", field: "price", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
+          ${f({ label: "Quantity", req: true, tip: "0 means sold out. Applies to the shop instantly.", value: String(p.quantity), ring: p.quantity == null ? "red" : (p.quantity === 0 ? "yellow" : "green"), field: "quantity", inputmode: "numeric", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
         </div>
 
         <div class="section-h">The product <span class="line"></span></div>
@@ -606,24 +610,24 @@
             <div class="ed-grid">
               ${f({ label: "Title", req: true, tip: "The name shown in your shop.", value: eff("title"), span2: true, ring: ring("title", true), field: "title", rec: 60, ph: "Name this product" })}
               ${f({ label: "Headline", req: true, tip: "The one line under the title.", value: eff("headline"), span2: true, ring: ring("headline", true), field: "headline", rec: 80 })}
-              ${f({ label: "Collection", tip: "Also called the series — an optional grouping in the shop.", value: p.series || "— No series —", type: "select", options: seriesOpts, field: "series" })}
-              ${f({ label: "Product", req: true, tip: "The kind of product. Only ‘miniature’ is in scope today — a new type needs development.", value: p.product_type, type: "select", options: ["miniature"], locked: published, field: "product_type" })}
+              ${f({ label: "Collection", tip: "An optional grouping in the shop, also called the series.", value: p.series || "— No series —", type: "select", options: seriesOpts, field: "series" })}
+              ${f({ label: "Product", req: true, tip: "The kind of product. Only miniature is in scope today; a new type needs development.", value: p.product_type, type: "select", options: ["miniature"], locked: everPublished, field: "product_type" })}
             </div>
             ${f({ label: "Story card", req: true, tip: "The short story that gives the piece its world.", value: eff("story_card"), type: "textarea", span2: true, ring: ring("story_card", true), field: "story_card", rec: 220, minH: 116, ph: "Tell the little story this piece holds…" })}
             ${f({ label: "Description", req: true, tip: "Materials and the making, in plain words.", value: eff("description"), type: "textarea", span2: true, ring: ring("description", true), field: "description", rec: 320, minH: 116 })}
-            ${f({ label: "Artist note", tip: "Optional — an aside in your own voice.", value: eff("artist_note"), type: "textarea", span2: true, field: "artist_note", rec: 240 })}
+            ${f({ label: "Artist note", tip: "Optional aside in your own voice.", value: eff("artist_note"), type: "textarea", span2: true, field: "artist_note", rec: 240 })}
           </div>
 
           <aside class="ed-side">
             <div class="ed-card">
               <div class="ed-card__cap">Listing &amp; SEO</div>
               <div class="ed-grid">
-                ${f({ label: "Slug", req: true, tip: "The shop URL handle. Auto-made from the title; edit if you like.", value: p.slug || "", locked: published, field: "slug", rec: 50, ph: "auto-from-title" })}
-                ${f({ label: "SKU", tip: "Generated for you the moment a product is created. Never editable.", value: p.sku, locked: true })}
-                ${f({ label: "Checkout name", tip: "What buyers see at checkout. Auto-filled from the title.", value: p.checkout_name || eff("title"), locked: published, rec: 60 })}
-                ${f({ label: "SEO title", tip: "Search results & shared links. Auto-filled if left blank.", value: p.seo_title || "", field: "seo_title", rec: 60 })}
-                ${f({ label: "SEO description", tip: "Search snippet. Auto-filled from the description if blank.", value: p.seo_description || "", type: "textarea", field: "seo_description", rec: 155, minH: 70 })}
-                ${f({ label: "Checkout description", tip: "Shown at checkout. Auto-filled.", value: p.checkout_description || "", locked: published, rec: 90 })}
+                ${f({ label: "Slug", req: true, tip: "The shop URL handle. Auto-made from the title.", value: p.slug || "", locked: everPublished, lockNote: "Locks after publish", field: "slug", rec: 50, ph: "auto-from-title" })}
+                ${f({ label: "SKU", tip: "Created automatically when the product is made. Never editable.", value: p.sku, locked: true, lockNote: "Created automatically; cannot be edited" })}
+                ${f({ label: "Checkout name", tip: "What buyers see at checkout.", value: p.checkout_name || eff("title"), locked: everPublished, lockNote: "Locks after publish", field: "checkout_name", rec: 60 })}
+                ${f({ label: "SEO title", tip: "The title for search results and shared links.", value: eff("seo_title") || "", field: "seo_title", rec: 60 })}
+                ${f({ label: "SEO description", tip: "The snippet shown in search results.", value: eff("seo_description") || "", type: "textarea", field: "seo_description", rec: 155, minH: 70 })}
+                ${f({ label: "Checkout description", tip: "The line buyers see at checkout.", value: p.checkout_description || "", locked: everPublished, lockNote: "Locks after publish", field: "checkout_description", rec: 90 })}
               </div>
             </div>
           </aside>
@@ -631,13 +635,13 @@
 
         <div class="section-h">Details <span class="line"></span></div>
         <div class="ed-grid ed-grid--2">
-          <div class="field"><div class="field__top"><span class="field__label">Dimensions<span class="req">*</span>${tipI("Width, depth, height — entered separately so the format stays consistent on the page.")}</span></div>
+          <div class="field" data-ring="${ring('dimensions', true)}"><div class="field__top"><span class="field__label">Dimensions<span class="req">*</span>${tipI("Width, depth and height. Enter inches with the \" symbol, or feet with '.")}</span></div>
             <div class="dims">
               <label class="dimcell"><input class="input mono" data-field="dim_w" inputmode="decimal" value="${esc(dm.w)}" placeholder="Width" aria-label="Width"><span class="dimunit">W</span></label>
               <label class="dimcell"><input class="input mono" data-field="dim_d" inputmode="decimal" value="${esc(dm.d)}" placeholder="Depth" aria-label="Depth"><span class="dimunit">D</span></label>
               <label class="dimcell"><input class="input mono" data-field="dim_h" inputmode="decimal" value="${esc(dm.h)}" placeholder="Height" aria-label="Height"><span class="dimunit">H</span></label>
             </div></div>
-          <div class="field" data-ring="${ring("weight", true)}"><div class="field__top"><span class="field__label">Weight<span class="req">*</span>${tipI("Just the number — lbs is added for you.")}</span></div>
+          <div class="field" data-ring="${ring("weight", true)}"><div class="field__top"><span class="field__label">Weight<span class="req">*</span>${tipI("Just the number; lbs is added for you.")}</span></div>
             <label class="dimcell"><input class="input mono" data-field="weight" inputmode="decimal" value="${esc(String(eff("weight") || "").replace(/[^0-9.]/g, ""))}" placeholder="0.0" aria-label="Weight in pounds"><span class="dimunit">lbs</span></label></div>
           ${listField({ label: "Materials", req: true, value: eff("materials"), field: "materials", ring: ring("materials", true) })}
           ${listField({ label: "Features", req: true, value: eff("features"), field: "features", ring: ring("features", true) })}
@@ -652,7 +656,7 @@
         <div class="row-actions" style="flex-wrap:wrap;gap:8px">
           ${p.draft ? `<button class="btn btn--ghost btn--sm" data-discard>Discard staged edits</button>` : ""}
           ${p.is_published && (p.quantity === 0 || !p.available) ? `<button class="btn btn--ghost btn--sm" data-relist>Relist this piece</button>` : ""}
-          <button class="btn btn--ghost btn--sm" data-schedule>${p.scheduled_publish_at ? "Reschedule…" : "Schedule publish…"}</button>
+          ${(p.scheduled_publish_at || (r.ok && !(p.is_published && !p.draft))) ? `<button class="btn btn--ghost btn--sm" data-schedule>${p.scheduled_publish_at ? "Reschedule…" : "Schedule publish…"}</button>` : ""}
           ${p.scheduled_publish_at ? `<span class="sched-chip">Scheduled · ${fmtSched(p.scheduled_publish_at)}<button data-unschedule aria-label="Cancel schedule">×</button></span>` : ""}
         </div>
         <div style="margin-top:10px">
@@ -673,17 +677,20 @@
 
   function publishBtn(p, r) {
     if (!r.ok) return `<button class="btn" disabled aria-disabled="true">${IC.check} Publish</button>`;
-    // GATE #2: ready, but the storefront preview must be opened at least once before
-    // publishing (a new listing) or pushing staged edits. Preview sets p._previewed.
-    if ((!p.is_published || p.draft) && !p._previewed) return `<button class="btn" disabled aria-disabled="true">${IC.check} Publish</button>`;
+    // P-1 — the preview requirement fires ONLY the first time a piece goes live (never published yet).
+    // Once published, editing in the open accordion IS the review: staged edits publish directly, and a
+    // Featured-only toggle stays live (Claude Code's Featured-live change makes no draft). No re-preview,
+    // and no re-arm on p.draft (the old `|| p.draft` clause forced a re-preview after any staged edit).
+    const everPublished = !!p.published_at;
+    if (!everPublished && !p._previewed) return `<button class="btn" disabled aria-disabled="true">${IC.check} Publish</button>`;
     if (p.draft) return `<button class="btn btn--publish-edits" data-publish>${IC.check} Publish changes</button>`;
     if (!p.is_published) return `<button class="btn btn--publish-new" data-publish>${IC.check} Publish · go live</button>`;
     return `<button class="btn" disabled aria-disabled="true">${IC.check} Published</button>`;
   }
-  // the note under the actions row: readiness first, then the preview gate
+  // the note under the actions row: readiness first, then the FIRST-publish preview gate
   function actionsNote(p, r) {
     if (!r.ok) return "To publish, add " + listMissing(r.missing) + ".";
-    if ((!p.is_published || p.draft) && !p._previewed) return "Preview this product before publishing — you can publish right from the preview.";
+    if (!p.published_at && !p._previewed) return "Preview this product before publishing — you can publish right from the preview.";
     return "";
   }
   function listMissing(m) { if (m.length === 1) return m[0]; if (m.length === 2) return m[0] + " and " + m[1]; return m.slice(0, -1).join(", ") + ", and " + m[m.length - 1]; }
@@ -696,10 +703,40 @@
     scope.querySelectorAll("[data-feature]").forEach((t) => t.addEventListener("change", () => commitFeature(id, t)));
     // live-bound fields → update model, re-check publish gate + ring
     scope.querySelectorAll("[data-field]").forEach((el) => el.addEventListener("input", () => bindField(p, el, scope)));
+    // F-1 — on-blur field generation, NEVER-published pieces only (the published-edit edge is flagged in
+    // OPEN_QUESTIONS). Title blur fills slug + checkout name/line; Description blur fills the SEO fields.
+    // Fill-when-blank only (never clobber a manual edit); values populate IN PLACE (no full re-render, so a
+    // Save/Preview click is never eaten). slug + seo_* ride existing persistence → show in the preview bar.
+    if (!p.published_at) {
+      const putVal = (sel, v) => { const el = scope.querySelector(sel); if (el && el !== document.activeElement) el.value = v; };
+      const titleEl = scope.querySelector('[data-field="title"]');
+      if (titleEl) titleEl.addEventListener("blur", () => {
+        const title = String(effOf(p, "title") || "").trim(); if (!title) return;
+        let ch = false;
+        if (isNewRow(p) && !p.slug) { p.slug = slugify(title); putVal('[data-field="slug"]', p.slug); ch = true; }
+        if (!String(effOf(p, "checkout_name") || "").trim()) { setEff(p, "checkout_name", title); putVal('[data-field="checkout_name"]', title); ch = true; }
+        const cd = String(effOf(p, "description") || "").trim() || String(effOf(p, "headline") || "").trim();
+        if (cd && !String(effOf(p, "checkout_description") || "").trim()) { setEff(p, "checkout_description", cd); putVal('[data-field="checkout_description"]', cd); ch = true; }
+        if (ch) refreshGate(scope, id);
+      });
+      const descEl = scope.querySelector('[data-field="description"]');
+      if (descEl) descEl.addEventListener("blur", () => {
+        const title = String(effOf(p, "title") || "").trim(), desc = String(effOf(p, "description") || "").trim();
+        if (title && !String(effOf(p, "seo_title") || "").trim()) { setEff(p, "seo_title", title); putVal('[data-field="seo_title"]', title); }
+        if (desc && !String(effOf(p, "seo_description") || "").trim()) { setEff(p, "seo_description", desc); putVal('[data-field="seo_description"]', desc); }
+      });
+    }
     // list fields → bullets preview + model
     scope.querySelectorAll("[data-list]").forEach((ta) => ta.addEventListener("input", () => {
       const key = ta.dataset.list, items = ta.value.split("\n").map((x) => x.trim()).filter(Boolean);
       setEff(p, key, items);
+      // F-3 — a required list field stayed RED after text was entered because only data-field inputs updated
+      // their ring. Update this field's ring here too: empty+required → red, else green (clears on input).
+      const fieldEl = ta.closest(".field");
+      if (fieldEl && fieldEl.hasAttribute("data-ring")) {
+        const req = fieldEl.querySelector(".req");
+        fieldEl.setAttribute("data-ring", (!items.length && req) ? "red" : "green");
+      }
       refreshGate(scope, id);
     }));
     // lifecycle
@@ -826,10 +863,14 @@
     else if (key === "weight") { const n = val.replace(/[^0-9.]/g, ""); setEff(p, "weight", n ? n + " lbs" : ""); }
     else if (["title", "headline", "description", "story_card", "artist_note", "seo_title", "seo_description"].includes(key)) setEff(p, key, val);
     else if (key === "slug" || key === "series" || key === "product_type") p[key] = val;
-    // update this field's ring
+    // update this field's ring (F-2 — price/dimensions need value-aware emptiness, not just a blank string)
     const fieldEl = el.closest(".field");
     if (fieldEl && fieldEl.hasAttribute("data-ring")) {
-      const req = fieldEl.querySelector(".req"); const empty = !String(val).trim();
+      const req = fieldEl.querySelector(".req");
+      let empty;
+      if (key.startsWith("dim_")) empty = !(dimVal(scope, "dim_w") && dimVal(scope, "dim_d") && dimVal(scope, "dim_h"));
+      else if (key === "price") empty = !(parseFloat(String(val).replace(/[^0-9.]/g, "")) > 0);
+      else empty = !String(val).trim();
       fieldEl.setAttribute("data-ring", empty && req ? "red" : "green");
     }
     refreshGate(scope, find(openId).id);
@@ -1009,8 +1050,8 @@
   }
   // role-aware labels & numbering across the modal list
   function computeLabels() {
-    const ROLE_LABEL = { hero: "Hero image", share: "Share image", checkout: "Checkout image", poster: "Video poster" };
-    const SHORT = { hero: "Hero", gallery: "Gallery", share: "Share", checkout: "Checkout", poster: "Video poster" };
+    const ROLE_LABEL = { hero: "Hero image", share: "Thumbnail image", checkout: "Checkout image", poster: "Video poster" };
+    const SHORT = { hero: "Hero", gallery: "Gallery", share: "Thumbnail", checkout: "Checkout", poster: "Video poster" };
     const ORDER = ["hero", "gallery", "share", "checkout", "poster"];
     const gal = mItems.filter((m) => m.kind === "image" && m.roles.has("gallery"));
     const unrouted = mItems.filter((m) => m.kind === "image" && m.roles.size === 0);
@@ -1018,30 +1059,42 @@
     const yts = mItems.filter((m) => m.kind === "youtube");
     const galTok = (m) => (gal.length > 1 ? "Gallery " + (gal.indexOf(m) + 1) : "Gallery");
     mItems.forEach((m) => {
+      let roleLabel;
       if (m.kind === "image") {
         const roles = ORDER.filter((r) => m.roles.has(r));
-        if (roles.length === 0) { m._label = unrouted.length > 1 ? "Image " + (unrouted.length - unrouted.indexOf(m)) : "Image"; return; }
-        if (roles.length === 1) {
-          m._label = roles[0] === "gallery" ? (gal.length > 1 ? "Gallery image " + (gal.indexOf(m) + 1) : "Gallery image") : ROLE_LABEL[roles[0]];
-          return;
-        }
-        // multi-role: name it after every role it fills
-        const parts = roles.map((r) => (r === "gallery" ? galTok(m) : SHORT[r]));
-        m._label = parts.join(", ") + " image";
+        if (roles.length === 0) roleLabel = unrouted.length > 1 ? "Image " + (unrouted.length - unrouted.indexOf(m)) : "Image";
+        else if (roles.length === 1) roleLabel = roles[0] === "gallery" ? (gal.length > 1 ? "Gallery image " + (gal.indexOf(m) + 1) : "Gallery image") : ROLE_LABEL[roles[0]];
+        else roleLabel = roles.map((r) => (r === "gallery" ? galTok(m) : SHORT[r])).join(", ") + " image";
       } else if (m.kind === "video") {
-        m._label = vids.length > 1 ? "Video " + (vids.length - vids.indexOf(m)) : "Video";
+        roleLabel = vids.length > 1 ? "Video " + (vids.length - vids.indexOf(m)) : "Video";
       } else {
-        m._label = yts.length > 1 ? "YouTube " + (yts.length - yts.indexOf(m)) : "YouTube";
+        roleLabel = yts.length > 1 ? "YouTube " + (yts.length - yts.indexOf(m)) : "YouTube";
       }
+      m._roleLabel = roleLabel;
+      // M-4 — a real filename (captured at drop) leads the label; the role rides along as a faint suffix.
+      m._label = m.name ? prettyName(m.name) : roleLabel;
     });
   }
-  const ROLE_DEFS = [["hero", "Hero"], ["gallery", "Gallery"], ["share", "Share"], ["checkout", "Checkout"], ["poster", "Video poster"]];
+  // M-4 — trim a filename to a consistent ~24 chars, keeping the start + extension (middle ellipsis) so a
+  // long name stays identifiable and every upload's label reads about the same length.
+  function prettyName(name) {
+    const s = String(name || "").trim(); if (!s) return "";
+    const max = 24; if (s.length <= max) return s;
+    const dot = s.lastIndexOf("."); const ext = (dot > 0 && s.length - dot <= 6) ? s.slice(dot) : "";
+    const stem = ext ? s.slice(0, s.length - ext.length) : s;
+    const keep = max - ext.length - 1, head = Math.ceil(keep * 0.6), tail = Math.floor(keep * 0.4);
+    return stem.slice(0, head) + "…" + stem.slice(stem.length - tail) + ext;
+  }
+  // M-3 — preview width from the media's true aspect (fixed 72px height), clamped so the row stays tidy.
+  function thumbW(aspect) { const a = aspect && isFinite(aspect) ? aspect : 1; return Math.round(Math.max(44, Math.min(128, 72 * a))); }
+  const ROLE_DEFS = [["hero", "Hero"], ["gallery", "Gallery"], ["share", "Thumbnail"], ["checkout", "Checkout"], ["poster", "Video poster"]];
   function mItemHTML(it, i) {
     let thumb;
     if (it.kind === "youtube") thumb = `<span class="yt">${IC.play}</span>`;
     else if (it.kind === "video") thumb = it.url && !it._uploading ? `<video src="${it.url}" muted></video>` : IC.play;
     else thumb = it.url ? `<img src="${it.url}" alt="" onerror="this.replaceWith(document.createTextNode('🖼'))">` : IC.img;
     const typeLabel = it._label || (it.kind === "youtube" ? "YouTube" : it.kind === "video" ? "Video" : "Image");
+    const roleSuffix = (it.name && it._roleLabel) ? ` <span class="mitem__role">· ${esc(it._roleLabel)}</span>` : "";
     let controls;
     if (it.kind === "image") {
       const mp = find(mProductId), everPub = !!(mp && mp.published_at != null);
@@ -1060,9 +1113,9 @@
     }
     const altMissing = !String(it.alt || "").trim();
     return `<div class="mitem ${it._new ? "is-new" : ""}${it.errored ? " mitem--errored" : ""}" data-i="${i}">
-      <div class="mitem__thumb">${it._uploading ? `<div class="mprog" style="width:100%"><i></i></div>` : thumb}</div>
+      <div class="mitem__thumb" style="width:${thumbW(it._aspect)}px">${it._uploading ? `<div class="mprog" style="width:100%"><i></i></div>` : thumb}</div>
       <div class="mitem__body">
-        <div class="mitem__type"><span class="dot"></span>${typeLabel}</div>
+        <div class="mitem__type"><span class="dot"></span>${esc(typeLabel)}${roleSuffix}</div>
         <div class="field" ${altMissing ? 'data-ring="red"' : 'data-ring="green"'} style="gap:3px">
           <input class="input" data-alt="${i}" value="${esc(it.alt || "")}" placeholder="Alt text (required)">
         </div>
@@ -1099,50 +1152,61 @@
       mItems.unshift(it); inp.value = ""; renderMedia(); clearNewFlag();
       return;
     }
-    // §5.1b — direct image/.mp4/Drive/Dropbox link → POST /api/upload JSON {url, slug, role, skip_transform?}
-    const p = find(mProductId);
-    const slug = await ensureSlug(p, mProductId);
-    if (!slug) return;
+    // M-2 — image/.mp4/Drive/Dropbox link: preview by URL now, UPLOAD ON APPLY (no POST on add). Its role
+    // starts empty of applied uploads (openedRoles empty) so applyMedia's diff uploads whatever role it ends on.
     const isVideo = kind === "video";
-    const role = isVideo
-      ? nextNumberedRole("video", (p.media || []).map((m) => m.url))
-      : nextNumberedRole("gallery", (p.images || []).map((im) => im.url));
-    const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, _role: role, roles: new Set(isVideo ? [] : ["gallery"]) };
+    const it = { kind: isVideo ? "video" : "image", url, alt: "", _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
     if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
-    it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
-    mItems.unshift(it); inp.value = ""; renderMedia();
-    uploadMedia({ url, slug, role, isVideo })
-      .then((body) => { it.url = body.url; it._uploading = false; renderMedia(); clearNewFlag(); })
-      .catch((err) => { const i = mItems.indexOf(it); if (i > -1) mItems.splice(i, 1); renderMedia(); P.toast(err.message, { kind: "danger" }); });
+    it.openedRoles = new Set();
+    measureAspect(it);
+    mItems.unshift(it); inp.value = ""; renderMedia(); clearNewFlag();
   }
   function clearNewFlag() { setTimeout(() => { mItems.forEach((m) => { m._new = false; }); }, 2500); }
-  async function handleFiles(files) {
-    // §5.1a — client fan-out: N dropped/picked files → N single-file POST /api/upload multipart requests
-    // (NO batch endpoint). Per-item progress via it._uploading. §5.1c: video adds skip_transform (MP4/WebM).
-    // Snapshot the FileList SYNCHRONOUSLY, before the awaits below. The picker's change handler clears
-    // e.target.value the instant handleFiles returns — which EMPTIES this live FileList — and a drop event
-    // releases its dataTransfer once its handler returns. Both fire before ensureSlug resolves, so reading
-    // [...files] after the await would iterate zero files (upload silently no-ops). Copy to a stable array now.
+  // M-3 — learn each item's true aspect ratio (from the local File or the url) so its preview isn't forced
+  // square. Debounced re-render so a burst of drops repaints once, and never while an input is focused.
+  let _measureTimer = null;
+  function scheduleMediaRerender() {
+    clearTimeout(_measureTimer);
+    _measureTimer = setTimeout(() => {
+      const m = document.getElementById("mediaModal");
+      if (!m || !m.classList.contains("is-on")) return;
+      if (m.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName || "")) return;
+      renderMedia();
+    }, 150);
+  }
+  function measureAspect(it) {
+    try {
+      if (it.kind === "image") {
+        const img = new Image();
+        img.onload = () => { if (img.naturalWidth && img.naturalHeight) { it._aspect = img.naturalWidth / img.naturalHeight; scheduleMediaRerender(); } };
+        img.src = it.url;
+      } else if (it.kind === "video") {
+        const v = document.createElement("video");
+        v.onloadedmetadata = () => { if (v.videoWidth && v.videoHeight) { it._aspect = v.videoWidth / v.videoHeight; scheduleMediaRerender(); } };
+        v.src = it.url;
+      }
+    } catch (_) { /* preview stays square if the browser can't measure it */ }
+  }
+  function handleFiles(files) {
+    // M-2 — local preview ONLY: hold the File, show it via createObjectURL, do NOT POST /api/upload here.
+    // Uploads fire once per assigned role on Apply (see applyMedia). This is what kills the on-drop "3–6×
+    // violent loading bars" (uploads racing before roles are chosen) AND defers the draft persist to Apply.
+    // M-4 — capture file.name for the label. M-3 — measure the natural aspect for a true-ratio preview.
     const list = [...files];
     if (!list.length) return;
-    const p = find(mProductId);
-    const slug = await ensureSlug(p, mProductId);
-    if (!slug) return;
-    // resolve gallery/video NN up front off current p.images/p.media so a simultaneous batch can't hand
-    // out the same NN twice (a duplicate would overwrite an R2 key).
-    let galNN = highestNN("gallery", (p.images || []).map((im) => im.url));
-    let vidNN = highestNN("video", (p.media || []).map((m) => m.url));
     list.forEach((file) => {
       const isVideo = /video\//.test(file.type);
-      const role = isVideo ? "video-" + padNN(++vidNN) : "gallery-" + padNN(++galNN);
-      const it = { kind: isVideo ? "video" : "image", url: "", alt: "", _uploading: true, _new: true, _role: role, roles: new Set(isVideo ? [] : ["gallery"]) };
+      const it = {
+        kind: isVideo ? "video" : "image",
+        url: URL.createObjectURL(file), file: file, _local: true, name: file.name,
+        alt: "", _new: true, roles: new Set(isVideo ? [] : ["gallery"]),
+      };
       if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
-      it.openedRoles = new Set(it.roles); // fresh upload's baseline = its uploaded role → no self-diff on Apply
-      mItems.unshift(it); renderMedia();
-      uploadMedia({ file, slug, role, isVideo })
-        .then((body) => { it.url = body.url; it._uploading = false; renderMedia(); clearNewFlag(); })
-        .catch((err) => { const i = mItems.indexOf(it); if (i > -1) mItems.splice(i, 1); renderMedia(); P.toast(err.message, { kind: "danger" }); });
+      it.openedRoles = new Set(); // fresh — Apply uploads every assigned role
+      measureAspect(it);
+      mItems.unshift(it);
     });
+    renderMedia(); clearNewFlag();
   }
   // role logic: one hero; hero≠gallery; share/checkout/poster combine freely
   function toggleRole(i, role) {
@@ -1163,9 +1227,21 @@
     const cov = coverage(), note = document.getElementById("mediaFallback");
     // v4.0 — Share is REQUIRED to publish (no hero fallback); Checkout still softly reuses the hero.
     const parts = [];
-    if (!cov.share) parts.push(`<span class="x">×</span> Share image required to publish — give any image the Share role`);
+    if (!cov.share) parts.push(`<span class="x">×</span> Thumbnail image required to publish — give any image the Thumbnail role`);
     if (!cov.checkout) parts.push(`<span class="faint">No checkout image — the hero will be reused</span>`);
     note.innerHTML = parts.join("<br>");
+  }
+  // M-5 — Apply feedback. Toggle a "thinking" state: disabled + spinner button, plus a modal overlay with
+  // a live message, so the maker isn't left staring at a frozen modal while uploads + the persist run.
+  function setApplyBusy(on, msg) {
+    const btn = document.getElementById("mediaApply");
+    if (btn) { btn.disabled = on; btn.textContent = on ? "Applying…" : "Apply"; btn.classList.toggle("is-busy", on); }
+    const card = document.querySelector("#mediaModal .modal__card"); if (!card) return;
+    let ov = card.querySelector(".modal__busy");
+    if (on) {
+      if (!ov) { ov = document.createElement("div"); ov.className = "modal__busy"; ov.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="modal__busy-msg"></span>`; card.appendChild(ov); }
+      ov.querySelector(".modal__busy-msg").textContent = msg || "Working…";
+    } else if (ov) { ov.remove(); }
   }
   async function applyMedia() {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // avoid iOS focus-zoom lingering
@@ -1173,10 +1249,14 @@
     const missingAlt = mItems.some((m) => !String(m.alt || "").trim());
     if (missingAlt) { P.toast("Every piece of media needs alt text", { kind: "danger" }); return; }
     if (mItems.some((m) => m._uploading)) { P.toast("Hold on — media is still uploading", { kind: "danger" }); return; }
+    // M-5 — show the busy state up front; ensureSlug may POST a brand-new draft, then uploads run below.
+    setApplyBusy(true, "Saving the draft…");
     // persist-first: a brand-new draft needs a real id + slug before the media PUT / any re-role upload.
     const slug = await ensureSlug(p, mProductId);
-    if (!slug) return;
+    if (!slug) { setApplyBusy(false); return; }
     const everPublished = p.published_at != null;
+    // M-2 — a held LOCAL file uploads multipart (the File); an existing/pasted item re-roles by-link (url).
+    const uploadRole = (it, role) => uploadMedia(it.file ? { file: it.file, slug, role, isVideo: false } : { url: it.url, slug, role, isVideo: false });
 
     // §5.4c.i — Apply-time re-role DIFF. Per image item, compute added/removed roles vs openedRoles; POST
     // /api/upload (JSON by-link) ONLY for an ADDED role that renames the R2 key (hero/gallery/seo_thumbnail/
@@ -1209,7 +1289,7 @@
             const resolved = targetArray === "hero"
               ? "hero"
               : nextNumberedRole("gallery", knownImgUrls.concat(nextImages.map((e) => e.url))); // sequential: sees NNs taken so far
-            try { arrUrl = (await uploadMedia({ url: it.url, slug, role: resolved, isVideo: false })).url; it.url = arrUrl; }
+            try { setApplyBusy(true, "Uploading media…"); arrUrl = (await uploadRole(it, resolved)).url; it.url = arrUrl; }
             catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || targetArray; }
           }
         }
@@ -1220,7 +1300,7 @@
       if (it.roles.has("share")) {
         if (added.includes("share")) {
           if (stopUploads) { itPending = true; }
-          else { try { seoUrl = (await uploadMedia({ url: it.url, slug, role: "seo_thumbnail", isVideo: false })).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "share"; } }
+          else { try { setApplyBusy(true, "Uploading thumbnail…"); seoUrl = (await uploadRole(it, "seo_thumbnail")).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "thumbnail"; } }
         } // unchanged share → seoUrl already correct
       } else if (removed.includes("share")) {
         seoUrl = ""; // dropped → blank so the storefront auto-reuses the hero
@@ -1230,7 +1310,7 @@
       if (it.roles.has("checkout")) {
         if (added.includes("checkout") && !everPublished) {
           if (stopUploads) { itPending = true; }
-          else { try { checkoutUrl = (await uploadMedia({ url: it.url, slug, role: "checkout_image", isVideo: false })).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "checkout"; } }
+          else { try { setApplyBusy(true, "Uploading checkout image…"); checkoutUrl = (await uploadRole(it, "checkout_image")).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "checkout"; } }
         }
       } else if (removed.includes("checkout") && !everPublished) {
         checkoutUrl = null;
@@ -1240,7 +1320,7 @@
       // diff. If anything is still pending (failed or skipped-after-failure), LEAVE openedRoles + mark
       // errored so the next Apply picks up exactly where this one stopped.
       if (itPending) { it.errored = true; }
-      else { it.openedRoles = new Set(it.roles); it.errored = false; }
+      else { it.openedRoles = new Set(it.roles); it.errored = false; delete it.file; it._local = false; } // M-2 — local File consumed once its role(s) uploaded
     }
 
     // rebuild images (hero pinned first); honors deletes + reorder (mItems order) + re-roles
@@ -1250,8 +1330,22 @@
     p.seo_thumbnail = seoUrl;
     if (!everPublished) p.checkout_image = checkoutUrl;
 
+    // M-2 — upload any LOCAL video files (held from drop) now, before serializing p.media below.
+    if (!stopUploads) {
+      const existingVidUrls = (p.media || []).map((m) => m.url).filter(Boolean);
+      for (const v of mItems.filter((m) => m.kind === "video" && m.file)) {
+        if (stopUploads) break;
+        try {
+          setApplyBusy(true, "Uploading video…");
+          const role = nextNumberedRole("video", existingVidUrls.concat(mItems.filter((m) => m.kind === "video" && m.url && !m.file).map((m) => m.url)));
+          v.url = (await uploadMedia({ file: v.file, slug, role, isVideo: true })).url;
+          delete v.file; v._local = false;
+        } catch (err) { stopUploads = true; failedRole = failedRole || "video"; }
+      }
+    }
     // §5.2c — emit the exact keys the storefront reads: rename mute→muted, add poster; YouTube stays {type,url,alt}.
-    p.media = mItems.filter((m) => m.kind === "video" || m.kind === "youtube").map((m) =>
+    // A still-local (failed/skipped) video is EXCLUDED so a blob: URL never persists — it stays in mItems for retry.
+    p.media = mItems.filter((m) => (m.kind === "video" && !m.file) || m.kind === "youtube").map((m) =>
       m.kind === "youtube"
         ? { type: "youtube", url: m.url, alt: m.alt }
         : { type: "video", url: m.url, alt: m.alt, loop: !!m.loop, autoplay: !!m.autoplay, controls: !!m.controls, muted: !!m.mute, ...(m.poster ? { poster: m.poster } : {}) });
@@ -1269,6 +1363,7 @@
     try {
       reconcile(p, await apiUpdate(p.id, patch), mProductId);
     } catch (err) {
+      setApplyBusy(false);
       P.toast(err.message, { kind: "danger" });
       renderMedia(); // keep the modal open so nothing is lost; the maker can retry Apply
       return;
@@ -1276,10 +1371,12 @@
     if (stopUploads) {
       // §5.4c.i partial-failure recovery: partial state IS persisted above (no orphaned R2 uploads). Keep the
       // modal open, show the errored item, and toast the role that failed so retry re-runs only what's left.
+      setApplyBusy(false);
       renderMedia();
       P.toast("Couldn't set " + (failedRole || "media") + " — try Apply again.", { kind: "danger" });
       return;
     }
+    setApplyBusy(false);
     closeMedia(); rerenderEditor(mProductId); P.toast("Media updated", { kind: "live" });
   }
 

@@ -67,6 +67,9 @@
   function thumb(pi) { return pi.products?.thumbnail ? `<img src="${pi.products.thumbnail}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="ph" style="display:none">${IC.img}</span>` : `<span class="ph">${IC.img}</span>`; }
   function statusPill(l) {
     if (l.status === "refunded") return `<span class="tpill tpill--refunded"><span class="pdot"></span>Refunded</span>`;
+    // R-2 — a 'resolved' line (returned/kept, taken off the shipping queue via the refund modal) reads
+    // truthfully instead of lingering as "Needs shipping". Backend sets status 'resolved' (Contract A).
+    if (l.status === "resolved") return `<span class="tpill tpill--resolved"><span class="pdot"></span>Resolved</span>`;
     if (l.shipped_at) return `<span class="tpill tpill--shipped"><span class="pdot"></span>Shipped</span>`;
     return `<span class="tpill tpill--ship"><span class="pdot"></span>Needs shipping</span>`;
   }
@@ -224,20 +227,32 @@
     }
     refundPieces = pieces;
     if (!pieces.length) { body.innerHTML = `<p class="faint" style="font-size:var(--t-sm)">Every piece in this purchase is already refunded.</p>`; return; }
+    // R-1 + R-3 — each piece carries three INDEPENDENT choices (Contract A): + Add (money), Resolved
+    // (off the shipping queue), Relist (back on sale). Relist implies Resolved — wired in wireRefund.
     body.innerHTML = pieces.map((l) => {
       return `<div class="rpiece" data-rline="${l.id}">
         <span class="rpiece__thumb">${l.products?.thumbnail ? `<img src="${l.products.thumbnail}" alt="" onerror="this.remove()">` : ""}</span>
         <span class="rpiece__info"><span class="rpiece__title">${esc(l.products?.title || "Piece")}</span>
           <span class="rpiece__sub">Paid ${money(l.amount)}</span></span>
         <span class="rpiece__ctrls">
-          <button class="btn btn--ghost btn--sm" data-radd="${l.id}" data-amt="${l.amount}">+ Add ${money(l.amount)}</button>
-          <label class="switch switch--feature" title="Relist this piece (separate from the refund)"><input type="checkbox" data-rrelist="${l.product_id}"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">Relist</span></label>
+          <button class="btn btn--ghost btn--sm rpiece__add" data-radd="${l.id}" data-amt="${l.amount}">+ Add ${money(l.amount)}</button>
+          <span class="rpiece__toggles">
+            <label class="switch" title="Take this piece off the shipping queue — it no longer needs to ship"><input type="checkbox" data-rresolve="${l.product_id}"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">Resolved</span></label>
+            <label class="switch switch--feature" title="Put this piece back on sale (also resolves it)"><input type="checkbox" data-rrelist="${l.product_id}"><span class="switch__track"><span class="switch__thumb"></span></span><span class="switch__label">Relist</span></label>
+          </span>
         </span>
       </div>`;
     }).join("") + `<div class="refund-amt">
-      <label class="field"><div class="field__top"><span class="field__label">Refund amount</span><span class="field__spacer"></span><span class="faint" style="font-size:var(--t-xs)">edit any time</span></div>
+      <label class="field"><div class="field__top"><span class="field__label">Refund amount</span><span class="field__spacer"></span><span class="faint" style="font-size:var(--t-xs)">optional — edit any time</span></div>
         <div class="price" style="max-width:170px"><span class="price__sym">$</span><input class="input mono" id="refundAmount" inputmode="decimal" value="0.00"></div></label></div>
-      <p class="faint" style="font-size:var(--t-xs);margin:10px 0 0">Tap <b>+ Add</b> to sum a piece's price into the amount, then edit it freely for a partial or goodwill refund. <b>Relist</b> is a separate choice.</p>`;
+      <div class="refund-guide">
+        <p><b>Three independent choices</b> — mix them however the situation needs:</p>
+        <ul>
+          <li><b>Amount</b> — tap <b>+ Add</b> to sum a piece's price in, then edit freely for a partial or goodwill refund.</li>
+          <li><b>Resolved</b> — the piece no longer needs shipping (a return you've handled, or one the buyer keeps). It leaves the Unfulfilled queue.</li>
+          <li><b>Relist</b> — put the piece back on sale. Relisting resolves it too.</li>
+        </ul>
+      </div>`;
     wireRefund();
     // Single non-refunded piece → pre-toggle its + Add so the amount pre-fills (multi-piece stays owner-selected).
     if (pieces.length === 1) body.querySelector("[data-radd]")?.click();
@@ -252,7 +267,17 @@
       document.getElementById("refundAmount").value = (cents / 100).toFixed(2);
       updateRefundNote();
     }));
-    body.querySelectorAll("[data-rrelist]").forEach((t) => t.addEventListener("change", updateRefundNote));
+    // Relist implies Resolved — ticking Relist auto-ticks + locks that piece's Resolved toggle (you can't
+    // ship a piece you put back on sale); un-ticking Relist frees it again. Keeps the UI honest to Contract A.
+    body.querySelectorAll("[data-rrelist]").forEach((t) => t.addEventListener("change", () => {
+      const row = t.closest(".rpiece"), resolve = row && row.querySelector("[data-rresolve]");
+      if (resolve) {
+        if (t.checked) { resolve.checked = true; resolve.disabled = true; resolve.closest(".switch")?.classList.add("is-implied"); }
+        else { resolve.disabled = false; resolve.closest(".switch")?.classList.remove("is-implied"); }
+      }
+      updateRefundNote();
+    }));
+    body.querySelectorAll("[data-rresolve]").forEach((t) => t.addEventListener("change", updateRefundNote));
     document.getElementById("refundAmount").addEventListener("input", updateRefundNote);
     updateRefundNote();
   }
@@ -260,24 +285,41 @@
   function updateRefundNote() {
     const body = document.getElementById("refundBody");
     const relisting = [...body.querySelectorAll("[data-rrelist]:checked")].length;
-    document.getElementById("refundNote").innerHTML = relisting ? `${relisting} piece${relisting > 1 ? "s" : ""} will be relisted` : "";
+    const resolving = [...body.querySelectorAll("[data-rresolve]:checked")].length; // includes relist-implied
+    const cents = refundCents();
+    const bits = [];
+    if (cents > 0) bits.push(`${money(cents)} refund`);
+    const resolveOnly = resolving - relisting;
+    if (resolveOnly > 0) bits.push(`${resolveOnly} resolved`);
+    if (relisting > 0) bits.push(`${relisting} relisted`);
+    document.getElementById("refundNote").innerHTML = bits.join(" · ");
+    // truthful primary button: money in play → "Refund"; resolve/relist only → "Resolve"
+    const doBtn = document.getElementById("refundDo");
+    if (doBtn) doBtn.textContent = cents > 0 ? "Refund" : (resolving ? "Resolve" : "Refund");
   }
   function closeRefund() { document.getElementById("refundModal").classList.remove("is-on"); document.getElementById("refundScrim").classList.remove("is-on"); }
   async function doRefund() {
     const body = document.getElementById("refundBody"), cents = refundCents();
-    if (cents <= 0) { P.toast("Enter a refund amount (tap + Add or type one)", { kind: "danger" }); return; }
-    // relist_product_ids = the Relist SWITCHES (each carries its piece's product_id) — NOT the + Add
-    // toggles (those only build the amount). Backend flips + relists exactly these product_ids.
-    const relistIds = [...body.querySelectorAll("[data-rrelist]:checked")].map((t) => t.dataset.rrelist);
+    // relist_product_ids = the Relist switches; resolved_product_ids = the Resolved switches (each carries
+    // its piece's product_id). + Add toggles only build the amount. Relist implies Resolved, so union the
+    // two into resolved_product_ids (Contract A — backend auto-includes relisted anyway; explicit is safe).
+    const relistIds = [...body.querySelectorAll("[data-rrelist]:checked")].map((t) => t.dataset.rrelist).filter(Boolean);
+    const resolveIds = [...body.querySelectorAll("[data-rresolve]:checked")].map((t) => t.dataset.rresolve).filter(Boolean);
+    const resolvedIds = [...new Set(resolveIds.concat(relistIds))];
+    // Amount is OPTIONAL now: you can resolve/relist a lingering piece WITHOUT a full (or any) refund — the
+    // exact gap Sean hit (a partial refund left the sibling piece stuck in shipping). Require at least one action.
+    if (cents <= 0 && !resolvedIds.length) { P.toast("Enter a refund amount, or mark a piece Resolved / Relist", { kind: "danger" }); return; }
     const orderId = (refundPieces[0] || {}).id;
     if (!orderId) { P.toast("Nothing to refund", { kind: "danger" }); return; }
     const doBtn = document.getElementById("refundDo"), note = document.getElementById("refundNote");
     doBtn.disabled = true;
     try {
+      const payload = { relist_product_ids: relistIds, resolved_product_ids: resolvedIds };
+      if (cents > 0) payload.amount_cents = cents; // omit when resolve-only
       const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/refund`, {
         method: "POST",
         headers: { ...P.authHeader(), "Content-Type": "application/json" },
-        body: JSON.stringify({ amount_cents: cents, relist_product_ids: relistIds }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`); // 409/502 → surfaced inline below
@@ -300,7 +342,13 @@
       }
       closeRefund();
       await loadOrders(); // GET reload is authoritative — backend owns the status/relist flip
-      P.toast(money(cents) + " refunded via Stripe" + (relisted ? " · " + relisted + " relisted (+1 stock)" : "") + (relistFailed ? " · " + relistFailed + " relist failed — restock from Products" : ""), { kind: relistFailed ? "danger" : "live" });
+      const bits = [];
+      if (cents > 0) bits.push(money(cents) + " refunded via Stripe");
+      const resolveOnly = resolvedIds.length - relisted;
+      if (resolveOnly > 0) bits.push(resolveOnly + " marked resolved");
+      if (relisted) bits.push(relisted + " relisted (+1 stock)");
+      if (relistFailed) bits.push(relistFailed + " relist failed — restock from Products");
+      P.toast(bits.join(" · ") || "Done", { kind: relistFailed ? "danger" : "live" });
     } catch (err) {
       doBtn.disabled = false;
       note.innerHTML = `<span style="color:var(--danger)">${esc(err.message)}</span>`; // inline, not a dead screen
