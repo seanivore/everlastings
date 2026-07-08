@@ -301,7 +301,7 @@
 
       <span class="prow__cols">
         <span class="cell-price"><span class="sym">$</span>
-          <input class="pin mono" data-price="${p.id}" inputmode="decimal" value="${(p.price / 100).toFixed(2)}" aria-label="Price for ${esc(p.title)}" ${archived ? "disabled" : ""}></span>
+          <input class="pin mono" data-price="${p.id}"${isNewRow(p) && !(p.price > 0) ? " data-startreq" : ""} inputmode="decimal" value="${(p.price / 100).toFixed(2)}" aria-label="Price for ${esc(p.title)}" ${archived ? "disabled" : ""}></span>
         <span class="cell-qty"><input class="qin${p.quantity === 0 ? " zero" : ""}" data-qty="${p.id}" inputmode="numeric" value="${p.quantity}" aria-label="Quantity for ${esc(p.title)}" ${archived ? "disabled" : ""}></span>
         <span class="cell-toggle">${smallToggle("avail", p.id, p.available, archived)}</span>
         <span class="cell-toggle">${smallToggle("feature", p.id, p.featured, archived)}</span>
@@ -389,6 +389,7 @@
     list.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => toggleOpen(b.dataset.open)));
     list.querySelectorAll("[data-price]").forEach((inp) => {
       inp.addEventListener("focus", () => inp.select());
+      inp.addEventListener("input", () => refreshStartHint(inp.dataset.price)); // Bug #2 — clear the price flash live
       inp.addEventListener("change", () => commitPrice(inp.dataset.price, inp.value, inp));
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
     });
@@ -894,15 +895,30 @@
       else if (key === "price") empty = !(parseFloat(String(val).replace(/[^0-9.]/g, "")) > 0);
       else empty = !String(val).trim();
       fieldEl.setAttribute("data-ring", empty && req ? "red" : "green");
-      // Bug #2 — a brand-new product's Price + Title flash orange-red until filled; clear each live, and hide
-      // the "start here" hint once BOTH are done (no re-render, so a Save/Preview click is never eaten).
-      if (isNewRow(p) && (key === "price" || key === "title")) {
-        if (empty) fieldEl.setAttribute("data-startreq", ""); else fieldEl.removeAttribute("data-startreq");
-        const hint = scope.querySelector("[data-starthint]");
-        if (hint) hint.hidden = !scope.querySelector(".field[data-startreq]");
-      }
     }
+    // Bug #2 — re-sync the "start here" flash + hint as the maker types Title (Price lives in the row, wired
+    // separately in bindRows). No re-render, so a Save/Preview click is never eaten.
+    if (isNewRow(p) && (key === "title" || key === "price")) refreshStartHint(p.id);
     refreshGate(scope, find(openId).id);
+  }
+  // Bug #2 — the "start here" flash spans two subtrees that share the open .prow: the row's inline price
+  // input (.pin, visible on desktop) and the editor's Title (+ the mobile-only .commerce price). Re-sync every
+  // marker + the hint from LIVE field values (parse the input, not the not-yet-committed model) so each clears
+  // the instant it's filled and the hint hides only once BOTH are done.
+  function refreshStartHint(id) {
+    const p = find(id); if (!p || !isNewRow(p)) return;
+    const host = document.querySelector(`.editor-host[data-host="${id}"]`);
+    const priceInp = document.querySelector(`[data-price="${id}"]`);
+    const titleInp = host ? host.querySelector('[data-field="title"]') : null;
+    const priceVal = priceInp ? parseFloat(String(priceInp.value).replace(/[^0-9.]/g, "")) : p.price / 100;
+    const titleVal = titleInp ? titleInp.value : String(effOf(p, "title") || "");
+    const priceEmpty = !(priceVal > 0), titleEmpty = !String(titleVal).trim();
+    if (priceInp) priceInp.toggleAttribute("data-startreq", priceEmpty);
+    const commerceField = host ? host.querySelector('.commerce [data-field="price"]') : null;
+    if (commerceField) commerceField.closest(".field").toggleAttribute("data-startreq", priceEmpty);
+    if (titleInp) titleInp.closest(".field").toggleAttribute("data-startreq", titleEmpty);
+    const hint = host ? host.querySelector("[data-starthint]") : null;
+    if (hint) hint.hidden = !(priceEmpty || titleEmpty);
   }
   function dimVal(scope, f) { const el = scope.querySelector(`[data-field="${f}"]`); return el ? el.value.replace(/[^0-9.]/g, "") : ""; }
   function refreshGate(scope, id) {

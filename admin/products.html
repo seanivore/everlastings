@@ -293,14 +293,19 @@
 @keyframes mflash{0%,50%{background:oklch(94% 0.08 96);}25%,100%{background:transparent;}}
 .mitem.is-new{animation:mflash 2.4s var(--ease-weight) 1; border-radius:var(--r-md);}
 
-/* "Start here" (bug #2): a brand-new product rings Price + Title solid orange-red with a pulsing tint, plus
-   a message up top — both clear the moment each field is filled (bindField toggles [data-startreq]/hidden). */
-.field[data-startreq]{--startred:color-mix(in oklch, var(--danger), var(--waiting) 42%);}
-.field[data-startreq] .input{border-color:var(--startred); animation:startflash 1.5s var(--ease-weight) infinite;}
-.field[data-startreq] .input:focus{border-color:var(--startred); animation:none; box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 62%);}
+/* "Start here" (bug #2): a brand-new product rings Price + Title orange-red with a pulsing halo, plus a
+   message up top — each clears the moment its field is filled (refreshStartHint toggles [data-startreq]). */
+.field[data-startreq],.pin[data-startreq]{--startred:color-mix(in oklch, var(--danger), var(--waiting) 42%);}
+/* Ring the visible control: Title / mobile-Price inputs live in the editor (.field .input); on desktop the
+   editor's .commerce price is display:none, so the visible price is the product row's inline .pin input.
+   The halo is a box-shadow (follows each control's own radius; nothing clips it) — never the hidden inner box. */
+.field[data-startreq] .input,
+.pin[data-startreq]{border-color:var(--startred); animation:startflash 1.4s var(--ease-weight) infinite;}
+.field[data-startreq] .input:focus,
+.pin[data-startreq]:focus{animation:none; box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 50%);}
 @keyframes startflash{
-  0%,100%{box-shadow:0 0 0 1.5px color-mix(in oklch,var(--startred),transparent 55%); background-color:transparent;}
-  50%{box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 25%); background-color:color-mix(in oklch,var(--startred),transparent 90%);}
+  0%,100%{box-shadow:0 0 0 2px color-mix(in oklch,var(--startred),transparent 40%);}
+  50%{box-shadow:0 0 0 3px color-mix(in oklch,var(--startred),transparent 8%), 0 0 10px 2px color-mix(in oklch,var(--startred),transparent 45%);}
 }
 .start-hint{--startred:color-mix(in oklch, var(--danger), var(--waiting) 42%);
   display:flex; align-items:center; gap:9px; padding:10px 13px; margin-bottom:16px; border-radius:var(--r-md);
