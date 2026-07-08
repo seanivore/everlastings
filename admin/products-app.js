@@ -531,6 +531,8 @@
     const ring = o.ring ? ` data-ring="${o.ring}"` : "";
     const rec = o.rec ? ` data-rec="${o.rec}"` : "";
     const span = o.span2 ? " ed-span2" : "";
+    // "Start here" flash — a brand-new product rings Price + Title orange-red until each is filled (bug #2).
+    const startreq = o.startreq ? " data-startreq" : "";
     // F-4 — a lock CHIP shows the whole time when lockNote is set (so the maker sees a field WILL lock),
     // even while the input is still editable; the input only DISABLES when o.locked is true.
     const lock = o.lockNote ? lockChip(o.lockNote) : (o.locked ? lockChip() : "");
@@ -542,7 +544,7 @@
     else ctrl = `<input class="input"${fld} ${o.locked ? "disabled" : ""} value="${esc(o.value || "")}" placeholder="${esc(o.ph || "")}" inputmode="${o.inputmode || "text"}">`;
     const countTop = o.rec ? '<span class="field__spacer"></span><span class="count" data-count-out></span>' : "";
     const meta = o.ctx ? `<div class="field__meta"><span class="field__ctx ${o.ctxLive ? "field__ctx--live" : ""}">${esc(o.ctx)}</span></div>` : "";
-    return `<label class="field${span}"${ring}${rec}>
+    return `<label class="field${span}"${ring}${rec}${startreq}>
       <div class="field__top"><span class="field__label">${esc(o.label)}${o.req ? '<span class="req">*</span>' : ""}${lock}${o.tip ? tipI(o.tip) : ""}</span>${countTop}</div>
       ${ctrl}${meta}</label>`;
   }
@@ -604,12 +606,13 @@
 
     return `<div class="editor">
       <div class="ed-body">
+        ${isNewRow(p) ? `<div class="start-hint" data-starthint${(p.price > 0 && String(eff("title") || "").trim()) ? " hidden" : ""}><span class="start-hint__dot"></span><span>Title and price first to activate other fields.</span></div>` : ""}
         ${archived ? `<div class="banner banner--warn" style="margin-bottom:16px">${IC.archive}<span>This product is archived — out of the shop. Resurface it to edit and relist. Nothing is ever deleted.</span></div>` : ""}
         ${p.draft ? `<div class="banner banner--warn" style="margin-bottom:16px">${IC.eye}<span>You have staged edits waiting. They go live next time you publish — the fields you changed are ringed orange.</span></div>` : ""}
 
         <!-- INSTANT-COMMERCE: price + quantity only; context appears on focus -->
         <div class="commerce">
-          ${f({ label: "Price", req: true, tip: "Sets the shop price the moment you save. No publish needed.", value: (p.price / 100).toFixed(2), type: "price", ring: p.price > 0 ? "green" : "red", field: "price", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
+          ${f({ label: "Price", req: true, tip: "Sets the shop price the moment you save. No publish needed.", value: (p.price / 100).toFixed(2), type: "price", ring: p.price > 0 ? "green" : "red", field: "price", startreq: isNewRow(p) && !(p.price > 0), ctx: "Applies to the shop the moment you save.", ctxLive: true })}
           ${f({ label: "Quantity", req: true, tip: "0 means sold out. Applies to the shop instantly.", value: String(p.quantity), ring: p.quantity == null ? "red" : (p.quantity === 0 ? "yellow" : "green"), field: "quantity", inputmode: "numeric", ctx: "Applies to the shop the moment you save.", ctxLive: true })}
         </div>
 
@@ -617,7 +620,7 @@
         <div class="ed-cols">
           <div class="ed-main">
             <div class="ed-grid">
-              ${f({ label: "Title", req: true, tip: "The name shown in your shop.", value: eff("title"), span2: true, ring: ring("title", true), field: "title", rec: 60, ph: "Name this product" })}
+              ${f({ label: "Title", req: true, tip: "The name shown in your shop.", value: eff("title"), span2: true, ring: ring("title", true), field: "title", startreq: isNewRow(p) && !String(eff("title") || "").trim(), rec: 60, ph: "Name this product" })}
               ${f({ label: "Headline", req: true, tip: "The one line under the title.", value: eff("headline"), span2: true, ring: ring("headline", true), field: "headline", rec: 80 })}
               ${f({ label: "Collection", tip: "An optional grouping in the shop, also called the series.", value: p.series || "— No series —", type: "select", options: seriesOpts, field: "series" })}
               ${f({ label: "Product", req: true, tip: "The kind of product. Only miniature is in scope today; a new type needs development.", value: p.product_type, type: "select", options: ["miniature"], locked: everPublished, field: "product_type" })}
@@ -713,26 +716,36 @@
     // live-bound fields → update model, re-check publish gate + ring
     scope.querySelectorAll("[data-field]").forEach((el) => el.addEventListener("input", () => bindField(p, el, scope)));
     // F-1 — on-blur field generation, NEVER-published pieces only (the published-edit edge is flagged in
-    // OPEN_QUESTIONS). Title blur fills slug + checkout name/line; Description blur fills the SEO fields.
-    // Fill-when-blank only (never clobber a manual edit); values populate IN PLACE (no full re-render, so a
-    // Save/Preview click is never eaten). slug + seo_* ride existing persistence → show in the preview bar.
+    // OPEN_QUESTIONS). Title blur fills slug + checkout name; headline/description blur fills the checkout
+    // line (from the first source entered) and the SEO fields. Fill-when-blank only (never clobber a manual
+    // edit); values populate IN PLACE (no full re-render, so a Save/Preview click is never eaten). slug +
+    // seo_* + checkout_* ride existing persistence → show in the preview bar.
     if (!p.published_at) {
       const putVal = (sel, v) => { const el = scope.querySelector(sel); if (el && el !== document.activeElement) el.value = v; };
+      // Checkout line = the short line buyers see at checkout. Fill from the FIRST source the maker enters —
+      // headline (a tagline, fits the ~90-char line) preferred, else description. Fill-when-blank; manual-safe.
+      const fillCheckoutLine = (src) => {
+        const v = String(src || "").trim();
+        if (!v || String(effOf(p, "checkout_description") || "").trim()) return false;
+        setEff(p, "checkout_description", v); putVal('[data-field="checkout_description"]', v); return true;
+      };
       const titleEl = scope.querySelector('[data-field="title"]');
       if (titleEl) titleEl.addEventListener("blur", () => {
         const title = String(effOf(p, "title") || "").trim(); if (!title) return;
         let ch = false;
         if (isNewRow(p) && !p.slug) { p.slug = slugify(title); putVal('[data-field="slug"]', p.slug); ch = true; }
         if (!String(effOf(p, "checkout_name") || "").trim()) { setEff(p, "checkout_name", title); putVal('[data-field="checkout_name"]', title); ch = true; }
-        const cd = String(effOf(p, "description") || "").trim() || String(effOf(p, "headline") || "").trim();
-        if (cd && !String(effOf(p, "checkout_description") || "").trim()) { setEff(p, "checkout_description", cd); putVal('[data-field="checkout_description"]', cd); ch = true; }
+        if (fillCheckoutLine(effOf(p, "headline") || effOf(p, "description"))) ch = true;
         if (ch) refreshGate(scope, id);
       });
+      const headlineEl = scope.querySelector('[data-field="headline"]');
+      if (headlineEl) headlineEl.addEventListener("blur", () => { fillCheckoutLine(effOf(p, "headline")); });
       const descEl = scope.querySelector('[data-field="description"]');
       if (descEl) descEl.addEventListener("blur", () => {
         const title = String(effOf(p, "title") || "").trim(), desc = String(effOf(p, "description") || "").trim();
         if (title && !String(effOf(p, "seo_title") || "").trim()) { setEff(p, "seo_title", title); putVal('[data-field="seo_title"]', title); }
         if (desc && !String(effOf(p, "seo_description") || "").trim()) { setEff(p, "seo_description", desc); putVal('[data-field="seo_description"]', desc); }
+        fillCheckoutLine(effOf(p, "description"));
       });
     }
     // list fields → bullets preview + model
@@ -881,6 +894,13 @@
       else if (key === "price") empty = !(parseFloat(String(val).replace(/[^0-9.]/g, "")) > 0);
       else empty = !String(val).trim();
       fieldEl.setAttribute("data-ring", empty && req ? "red" : "green");
+      // Bug #2 — a brand-new product's Price + Title flash orange-red until filled; clear each live, and hide
+      // the "start here" hint once BOTH are done (no re-render, so a Save/Preview click is never eaten).
+      if (isNewRow(p) && (key === "price" || key === "title")) {
+        if (empty) fieldEl.setAttribute("data-startreq", ""); else fieldEl.removeAttribute("data-startreq");
+        const hint = scope.querySelector("[data-starthint]");
+        if (hint) hint.hidden = !scope.querySelector(".field[data-startreq]");
+      }
     }
     refreshGate(scope, find(openId).id);
   }
@@ -1265,72 +1285,111 @@
     if (!slug) { setApplyBusy(false); return; }
     const everPublished = p.published_at != null;
     // M-2 — a held LOCAL file uploads multipart (the File); an existing/pasted item re-roles by-link (url).
+    // M-2 — a held LOCAL file uploads multipart (the File → each role crops from the ORIGINAL bytes, never a
+    // re-crop of another role's derivative); an existing/pasted item re-roles by-link (url).
     const uploadRole = (it, role) => uploadMedia(it.file ? { file: it.file, slug, role, isVideo: false } : { url: it.url, slug, role, isVideo: false });
 
-    // §5.4c.i — Apply-time re-role DIFF. Per image item, compute added/removed roles vs openedRoles; POST
-    // /api/upload (JSON by-link) ONLY for an ADDED role that renames the R2 key (hero/gallery/seo_thumbnail/
-    // checkout_image) — the server re-fetches the CDN url + re-crops under the new filename. We REBUILD the
-    // images array from the (url-corrected) items so a promoted hero can't ALSO linger as a gallery entry
-    // (the duplicate-on-PDP bug §5.4c.i exists to prevent). alt rides along in each images[] entry / thumbnail_alt.
+    // §5.4c.i — Apply-time re-role DIFF, now PARALLEL so a 12-image batch uploads concurrently instead of
+    // one-at-a-time. Three phases: (A) PLAN every item's roles up front — gallery/video NNs pre-assigned in
+    // mItems order (numbering can't wait on prior uploads finishing); (B) UPLOAD through a bounded pool across
+    // items, keeping each item's OWN roles in sequence (preserves by-link it.url reassignment + the crop-from-
+    // original invariant: hero=4:5, thumbnail=16:9, checkout=1:1 each come from it.file, never from each other);
+    // (C) ASSEMBLE in mItems order so hero pins to images[0] and "last share wins" hold exactly as before.
     const baselineUrls = (p.images || []).map((im) => im.url);        // for gallery-NN scans
     const knownImgUrls = baselineUrls.concat(mItems.filter((m) => m.kind === "image").map((m) => m.url).filter(Boolean));
     const nextImages = [];        // gallery entries, in mItems order
     let heroEntry = null;         // hero pinned to images[0]
     let seoUrl = p.seo_thumbnail; // share column — preserve unless the maker adds/removes share
     let checkoutUrl = p.checkout_image;
-    let stopUploads = false;      // set true after the first upload failure — no more POSTs, but keep going
-    let failedRole = null;        // name of the role whose upload failed (for the toast)
+    let failedRole = null;        // name of a role whose upload failed (for the toast)
 
+    // --- (A) PLAN — added/removed diff per item; reserve gallery-NN (and video-NN) deterministically now ---
     const imageItems = mItems.filter((m) => m.kind === "image" && m.roles && m.roles.size > 0); // zero-role images dropped
-    for (const it of imageItems) {
+    const galReserved = []; // reserved gallery-NN role-urls so each planned item sees the NNs taken so far
+    const plans = imageItems.map((it) => {
       const opened = it.openedRoles || new Set();
       const added = [...it.roles].filter((r) => !opened.has(r));
       const removed = [...opened].filter((r) => !it.roles.has(r));
-      let itPending = false; // this item still has an upload that failed OR was skipped after an earlier failure
-
-      // --- array role (hero | gallery): re-upload iff the target role's filename differs from the current one ---
+      const plan = { it, arrUrl: it.url, isHero: false, isGallery: false, arrayRole: null,
+        share: false, dropShare: false, checkout: false, dropCheckout: false, seoUrl: null, checkoutUrl: null, failed: false };
+      // array role (hero | gallery): re-upload iff the target role's filename differs from the current one
       const targetArray = it.roles.has("hero") ? "hero" : it.roles.has("gallery") ? "gallery" : null;
-      if (targetArray) {
-        let arrUrl = it.url;
-        if (targetArray !== roleOfUrl(it.url)) { // a rename is needed
-          if (stopUploads) { itPending = true; } // an earlier item failed → skip this POST, keep the file at its old url
-          else {
-            const resolved = targetArray === "hero"
-              ? "hero"
-              : nextNumberedRole("gallery", knownImgUrls.concat(nextImages.map((e) => e.url))); // sequential: sees NNs taken so far
-            try { setApplyBusy(true, "Uploading media…"); arrUrl = (await uploadRole(it, resolved)).url; it.url = arrUrl; }
-            catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || targetArray; }
-          }
+      if (targetArray === "hero") {
+        plan.isHero = true;
+        if (roleOfUrl(it.url) !== "hero") plan.arrayRole = "hero";
+      } else if (targetArray === "gallery") {
+        plan.isGallery = true;
+        if (roleOfUrl(it.url) !== "gallery") {
+          plan.arrayRole = nextNumberedRole("gallery", knownImgUrls.concat(galReserved)); // sees NNs reserved so far
+          galReserved.push("/" + plan.arrayRole + "-x.webp");
         }
-        const entry = { url: arrUrl, alt: it.alt };
-        if (targetArray === "hero") heroEntry = entry; else nextImages.push(entry);
       }
-      // --- share (seo_thumbnail) column: re-upload only when newly added ---
-      if (it.roles.has("share")) {
-        if (added.includes("share")) {
-          if (stopUploads) { itPending = true; }
-          else { try { setApplyBusy(true, "Uploading thumbnail…"); seoUrl = (await uploadRole(it, "seo_thumbnail")).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "thumbnail"; } }
-        } // unchanged share → seoUrl already correct
-      } else if (removed.includes("share")) {
-        seoUrl = ""; // dropped → blank so the storefront auto-reuses the hero
-      }
-      // --- checkout (checkout_image) column: FROZEN after first publish (§5.4e) — never re-upload on an
-      //     ever-published piece (a changed checkout_image 400s), and it's excluded from the PUT below too ---
-      if (it.roles.has("checkout")) {
-        if (added.includes("checkout") && !everPublished) {
-          if (stopUploads) { itPending = true; }
-          else { try { setApplyBusy(true, "Uploading checkout image…"); checkoutUrl = (await uploadRole(it, "checkout_image")).url; } catch (err) { stopUploads = true; itPending = true; failedRole = failedRole || "checkout"; } }
-        }
-      } else if (removed.includes("checkout") && !everPublished) {
-        checkoutUrl = null;
-      }
+      // share (seo_thumbnail): re-upload only when newly added; removed → blank so the storefront reuses the hero
+      if (it.roles.has("share")) { if (added.includes("share")) plan.share = true; }
+      else if (removed.includes("share")) plan.dropShare = true;
+      // checkout (checkout_image): FROZEN after first publish (§5.4e) — never re-upload / clear on an ever-published piece
+      if (it.roles.has("checkout")) { if (added.includes("checkout") && !everPublished) plan.checkout = true; }
+      else if (removed.includes("checkout") && !everPublished) plan.dropCheckout = true;
+      return plan;
+    });
+    const localVideos = mItems.filter((m) => m.kind === "video" && m.file);
+    const vidScan = (p.media || []).map((m) => m.url).filter(Boolean)
+      .concat(mItems.filter((m) => m.kind === "video" && m.url && !m.file).map((m) => m.url));
+    const vidReserved = [];
+    localVideos.forEach((v) => { v._uprole = nextNumberedRole("video", vidScan.concat(vidReserved)); vidReserved.push("/" + v._uprole + "-x.webp"); });
 
-      // §5.4c.i idempotency: advance a FULLY-applied item's baseline so a retry re-runs ONLY the remaining
-      // diff. If anything is still pending (failed or skipped-after-failure), LEAVE openedRoles + mark
-      // errored so the next Apply picks up exactly where this one stopped.
-      if (itPending) { it.errored = true; }
+    // --- (B) UPLOAD — bounded-concurrency pool across items; each item's roles stay in sequence ---
+    const total = plans.reduce((n, pl) => n + (pl.arrayRole ? 1 : 0) + (pl.share ? 1 : 0) + (pl.checkout ? 1 : 0), 0) + localVideos.length;
+    let done = 0;
+    const tick = () => { done++; setApplyBusy(true, `Uploading ${Math.min(done, total)} of ${total}…`); };
+    const runPool = async (items, worker, limit) => {
+      let i = 0;
+      await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (i < items.length) { const idx = i++; await worker(items[idx]); }
+      }));
+    };
+    const imageJob = async (plan) => {
+      const it = plan.it;
+      if (plan.arrayRole) {
+        try { plan.arrUrl = (await uploadRole(it, plan.arrayRole)).url; it.url = plan.arrUrl; tick(); }
+        catch (err) { plan.failed = true; failedRole = failedRole || (plan.isHero ? "hero" : "gallery"); return; }
+      }
+      if (plan.share) {
+        try { plan.seoUrl = (await uploadRole(it, "seo_thumbnail")).url; tick(); }
+        catch (err) { plan.failed = true; failedRole = failedRole || "thumbnail"; return; }
+      }
+      if (plan.checkout) {
+        try { plan.checkoutUrl = (await uploadRole(it, "checkout_image")).url; tick(); }
+        catch (err) { plan.failed = true; failedRole = failedRole || "checkout"; return; }
+      }
+    };
+    const videoJob = async (v) => {
+      try { v.url = (await uploadMedia({ file: v.file, slug, role: v._uprole, isVideo: true })).url; delete v.file; v._local = false; tick(); }
+      catch (err) { v._viderror = true; failedRole = failedRole || "video"; }
+    };
+    setApplyBusy(true, total ? `Uploading 0 of ${total}…` : "Saving media…");
+    await Promise.all([
+      runPool(plans.filter((pl) => pl.arrayRole || pl.share || pl.checkout), imageJob, 5),
+      runPool(localVideos, videoJob, 5),
+    ]);
+
+    // --- (C) ASSEMBLE — in mItems order (hero pins first, last-share-wins) + per-item baseline bookkeeping ---
+    for (const plan of plans) {
+      const it = plan.it;
+      if (plan.isHero) heroEntry = { url: plan.arrUrl, alt: it.alt };        // on failure arrUrl stays the old url
+      else if (plan.isGallery) nextImages.push({ url: plan.arrUrl, alt: it.alt });
+      if (plan.share && !plan.failed) seoUrl = plan.seoUrl;
+      else if (plan.dropShare) seoUrl = ""; // dropped → blank so the storefront auto-reuses the hero
+      if (!everPublished) {
+        if (plan.checkout && !plan.failed) checkoutUrl = plan.checkoutUrl;
+        else if (plan.dropCheckout) checkoutUrl = null;
+      }
+      // §5.4c.i idempotency: a FULLY-applied item advances its baseline so a retry re-runs ONLY what's left; a
+      // failed item keeps its File + openedRoles + is flagged errored so the next Apply picks up where it stopped.
+      if (plan.failed) { it.errored = true; }
       else { it.openedRoles = new Set(it.roles); it.errored = false; delete it.file; it._local = false; } // M-2 — local File consumed once its role(s) uploaded
     }
+    const anyFailed = plans.some((pl) => pl.failed) || localVideos.some((v) => v._viderror);
 
     // rebuild images (hero pinned first); honors deletes + reorder (mItems order) + re-roles
     p.images = heroEntry ? [heroEntry, ...nextImages] : nextImages.slice();
@@ -1338,20 +1397,6 @@
     if (heroEntry) { p.thumbnail = heroEntry.url; p.thumbnail_alt = heroEntry.alt; }
     p.seo_thumbnail = seoUrl;
     if (!everPublished) p.checkout_image = checkoutUrl;
-
-    // M-2 — upload any LOCAL video files (held from drop) now, before serializing p.media below.
-    if (!stopUploads) {
-      const existingVidUrls = (p.media || []).map((m) => m.url).filter(Boolean);
-      for (const v of mItems.filter((m) => m.kind === "video" && m.file)) {
-        if (stopUploads) break;
-        try {
-          setApplyBusy(true, "Uploading video…");
-          const role = nextNumberedRole("video", existingVidUrls.concat(mItems.filter((m) => m.kind === "video" && m.url && !m.file).map((m) => m.url)));
-          v.url = (await uploadMedia({ file: v.file, slug, role, isVideo: true })).url;
-          delete v.file; v._local = false;
-        } catch (err) { stopUploads = true; failedRole = failedRole || "video"; }
-      }
-    }
     // §5.2c — emit the exact keys the storefront reads: rename mute→muted, add poster; YouTube stays {type,url,alt}.
     // A still-local (failed/skipped) video is EXCLUDED so a blob: URL never persists — it stays in mItems for retry.
     p.media = mItems.filter((m) => (m.kind === "video" && !m.file) || m.kind === "youtube").map((m) =>
@@ -1377,7 +1422,7 @@
       renderMedia(); // keep the modal open so nothing is lost; the maker can retry Apply
       return;
     }
-    if (stopUploads) {
+    if (anyFailed) {
       // §5.4c.i partial-failure recovery: partial state IS persisted above (no orphaned R2 uploads). Keep the
       // modal open, show the errored item, and toast the role that failed so retry re-runs only what's left.
       setApplyBusy(false);
