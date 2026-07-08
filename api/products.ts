@@ -458,12 +458,14 @@ const DRAFTABLE = [
   'power_supply', 'care_instructions', 'shipping_details', 'series', 'product_type', 'artist_note',
   'homepage_theme',
 ];
-// `available` + `quantity` stay in DRAFTABLE for the UNPUBLISHED-draft branch (where everything applies
-// to live columns anyway — nothing's live yet). On a PUBLISHED row they're BOTH pulled out and applied
-// LIVE immediately (like price) — see the published branch's
-// `DRAFTABLE.filter(k => k !== 'available' && k !== 'quantity')`. `price` is NOT frozen — it rotates in
-// place (handled in the published branch below). The checkout IDENTITY fields + the Stripe IDs stay
-// frozen after publish; `sku` is DB-generated (never caller-set) and also immutable.
+// `available` + `quantity` + `featured` stay in DRAFTABLE for the UNPUBLISHED-draft branch (where
+// everything applies to live columns anyway — nothing's live yet). On a PUBLISHED row all three are
+// pulled out and applied LIVE immediately (like price) — see the published branch's
+// `DRAFTABLE.filter(k => k !== 'available' && k !== 'quantity' && k !== 'featured')`. `featured` is a
+// row-level toggle flipped OUTSIDE the editor accordion, so staging it would force a spurious re-review
+// before the toggle took effect (the "toggling Featured made me preview again" bug). `price` is NOT
+// frozen — it rotates in place (handled in the published branch below). The checkout IDENTITY fields +
+// the Stripe IDs stay frozen after publish; `sku` is DB-generated (never caller-set) and also immutable.
 const FROZEN_AFTER_PUBLISH = [
   'checkout_name', 'checkout_description', 'checkout_image',
   'sku', 'stripe_product_id', 'stripe_price_id',
@@ -633,6 +635,20 @@ export async function PUT(request: Request) {
       }
       liveUpdate.quantity = updates.quantity;
     }
+    // `featured` (homepage "Featured Havens" inclusion) goes LIVE immediately on a published row, like
+    // available/quantity — it's a single toggle the maker flips right on the product row (outside the
+    // editor accordion), never a copy edit that needs a preview. Staging it would set `draft`, which
+    // re-arms the publish gate and forces a spurious re-review before the toggle even took effect. So
+    // apply it live and exclude it from staging below. CHANGE-DETECT so a no-op re-send doesn't write.
+    if (
+      updates.featured !== undefined &&
+      updates.featured !== (current as Record<string, unknown>).featured
+    ) {
+      if (typeof updates.featured !== 'boolean') {
+        return jsonResponse(request, { error: 'Featured must be true or false' }, 400);
+      }
+      liveUpdate.featured = updates.featured;
+    }
     // scheduled_publish_at: an auto-publish directive, applied LIVE (never staged — it's not copy). A
     // string ISO timestamp arms it; null clears it. The daily product-feed fold (WS2 Phase 2.6) does the
     // actual publish, and publishing clears it (Phase 2.5) so it fires at most once.
@@ -677,6 +693,7 @@ export async function PUT(request: Request) {
         (k) =>
           k !== 'available' &&
           k !== 'quantity' &&
+          k !== 'featured' &&
           JSON.stringify(updates[k]) !== JSON.stringify((current as Record<string, unknown>)[k]),
       ),
     );
@@ -721,6 +738,7 @@ export async function PUT(request: Request) {
       ...(liveUpdate.price !== undefined ? { price_updated: true } : {}),
       ...(liveUpdate.available !== undefined ? { availability_updated: true } : {}),
       ...(liveUpdate.quantity !== undefined ? { quantity_updated: true } : {}),
+      ...(liveUpdate.featured !== undefined ? { featured_updated: true } : {}),
       ...(liveUpdate.is_published === false ? { unpublished: true } : {}),
       ...(liveUpdate.scheduled_publish_at !== undefined ? { scheduled_updated: true } : {}),
       ...(hasDraftable
