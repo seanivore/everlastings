@@ -74,18 +74,40 @@ async function sha1Hex(input: string): Promise<string> {
     .join('');
 }
 
-// Google Drive "share" URLs (…/file/d/<id>/view, …/open?id=<id>, …/uc?id=<id>) serve an HTML page,
-// not the bytes. Rewrite them to the direct-download form. Any non-Drive URL passes through unchanged.
-// NOTE: very large Drive files (videos > ~25 MB) hit Google's virus-scan interstitial and return HTML,
-// not the file — the content-type check in POST catches that and returns a friendly "share as a direct
-// link" error. Em's typical product clips are small; flag a confirm-token follow-up for v1.1 if needed.
+// Google Drive and Dropbox "share" URLs serve an HTML PAGE, not the bytes. Rewrite them to their
+// direct-download forms. Anything else passes through unchanged.
+//
+// This is the ONLY route a large video can take: a multipart upload dies at Vercel's 4.5 MB edge cap,
+// while a link is fetched server-side and so is capped only by processOne's own 50 MB video limit.
+// The Custom GPT is link-only for video too — so if this rewrite is wrong, Emy simply cannot add a
+// video by any means. It is load-bearing.
 function normalizeMediaUrl(raw: string): string {
   try {
     const u = new URL(raw);
-    if (u.hostname !== 'drive.google.com') return raw;
-    const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
-    const id = pathMatch?.[1] ?? u.searchParams.get('id');
-    return id ? `https://drive.google.com/uc?export=download&id=${id}` : raw;
+    const host = u.hostname.replace(/^www\./, '');
+
+    // Google Drive. v4.1.2: `confirm=t` is REQUIRED, not optional. Without it Drive serves an HTML
+    // virus-scan interstitial instead of the file for anything over ~25 MB — and every real video is
+    // over 25 MB, so the old form worked only for the small clips this code assumed she'd have. The
+    // content-type check would then reject it as "not a file", which is true but unhelpable.
+    if (host === 'drive.google.com' || host === 'drive.usercontent.google.com') {
+      const pathMatch = u.pathname.match(/\/file\/d\/([^/]+)/);
+      const id = pathMatch?.[1] ?? u.searchParams.get('id');
+      return id
+        ? `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`
+        : raw;
+    }
+
+    // Dropbox. A share link renders an HTML PAGE, not the file — so pasting one (which the media
+    // field openly invites) could never have worked. `dl=1` forces the raw file, and carries the
+    // ?rlkey= token that newer /scl/fi/ links depend on.
+    if (host === 'dropbox.com') {
+      u.searchParams.set('dl', '1');
+      u.searchParams.delete('st'); // a stale ?st= token 404s the direct download
+      return u.toString();
+    }
+
+    return raw;
   } catch {
     return raw; // not a parseable URL — let the fetch fail with the friendly error
   }
