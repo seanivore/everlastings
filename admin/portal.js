@@ -79,10 +79,29 @@
       b.addEventListener("click", (e) => { e.stopPropagation(); opts.undo(); dismiss(); });
       el.appendChild(b);
     }
+
+    // v4.1.2 — an ERROR is the one toast that has something to teach you: which file, how big, what
+    // the limit is, what to do instead. 2.6s was not enough time to READ it, let alone act on it.
+    // Errors now stay up long enough to be read (and screenshotted), carry a visible ✕, and stop
+    // counting down while the pointer is over them.
+    const isError = opts.kind === "danger";
+    const life = opts.duration != null ? opts.duration : (isError ? 14000 : opts.undo ? 5000 : 2600);
+    if (isError) {
+      const x = document.createElement("button");
+      x.className = "toast__x"; x.type = "button"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "✕";
+      x.addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
+      el.appendChild(x);
+    }
+
     wrap.appendChild(el);
     requestAnimationFrame(() => el.classList.add("is-on"));
-    let hideT = setTimeout(dismiss, opts.undo ? 5000 : 2600);
+    let hideT = setTimeout(dismiss, life);
     function dismiss() { clearTimeout(hideT); el.classList.remove("is-on"); setTimeout(() => el.remove(), 240); }
+    // hovering an error means you're still reading it — don't yank it away mid-sentence
+    if (isError) {
+      el.addEventListener("mouseenter", () => clearTimeout(hideT));
+      el.addEventListener("mouseleave", () => { hideT = setTimeout(dismiss, 4000); });
+    }
     // tap to dismiss
     el.addEventListener("click", dismiss);
     // swipe to dismiss (up, or horizontal)

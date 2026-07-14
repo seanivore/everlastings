@@ -450,6 +450,12 @@ a{color:inherit;}
 .toast--live{background:color-mix(in oklch,var(--live),black 28%);}
 .toast--danger{background:color-mix(in oklch,var(--danger),black 22%);}
 .toast .toast__undo{margin-left:4px; color:color-mix(in oklch,var(--surface),var(--live) 30%); font-weight:700; cursor:pointer; background:none; border:0; font-size:var(--t-sm);}
+/* v4.1.2 — errors say something worth reading, so they sit still, wrap, and carry a visible dismiss */
+.toast--danger{align-items:flex-start; max-width:min(94vw,520px); line-height:1.45;}
+.toast--danger > span{padding-top:1px;}
+.toast .toast__x{margin-left:6px; flex:none; align-self:flex-start; color:color-mix(in oklch,var(--surface),transparent 35%);
+  font-weight:700; cursor:pointer; background:none; border:0; font-size:var(--t-sm); line-height:1.4; padding:0 2px;}
+.toast .toast__x:hover{color:var(--surface);}
 
 /* modal / sheet scrim */
 .scrim{position:fixed; inset:0; z-index:0; background:oklch(24% 0.03 262 / .42); opacity:0; pointer-events:none; transition:opacity var(--dur-settle) var(--ease-weight);}
