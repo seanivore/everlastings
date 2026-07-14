@@ -43,13 +43,13 @@ You already set this up earlier and it worked: pull the 11 real files from `ever
 ### Contract B — Media upload (`POST /api/upload`, multipart)
 - One POST **per assigned role**, sent **on Apply** (not on drop). Each carries the file + a `role` field. Server crops per role and stores to R2 as `${role}-${slug}`:
 
-| Role (chip)        | `role` value      | Crop (aspect / width) |
-|--------------------|-------------------|-----------------------|
-| Hero               | `hero`            | 4:5 / 1200            |
-| Gallery            | `gallery-01`…`15` | 4:5 / 1200            |
-| **Thumbnail** (was "Share") | `seo_thumbnail` | **16:9 / 1200**   |
-| Checkout           | `checkout_image`  | 1:1 / 600             |
-| Video poster       | `poster`          | no upload (copies the chosen image URL onto each video's `poster`) |
+| Role (chip)                 | `role` value      | Crop (aspect / width)                                              |
+| --------------------------- | ----------------- | ------------------------------------------------------------------ |
+| Hero                        | `hero`            | 4:5 / 1200                                                         |
+| Gallery                     | `gallery-01`…`15` | 4:5 / 1200                                                         |
+| **Thumbnail** (was "Share") | `seo_thumbnail`   | **16:9 / 1200**                                                    |
+| Checkout                    | `checkout_image`  | 1:1 / 600                                                          |
+| Video poster                | `poster`          | no upload (copies the chosen image URL onto each video's `poster`) |
 
 - **The same image with multiple roles is uploaded once per role** (separate crops, separate filenames) — this already works and is correct; keep it. Example: a Hero+Thumbnail image → two POSTs (`hero-slug` 4:5 + `seo_thumbnail-slug` 16:9).
 - The only change is **timing**: preview locally on drop (`URL.createObjectURL`), POST only on Apply.
