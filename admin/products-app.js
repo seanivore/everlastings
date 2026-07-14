@@ -1077,6 +1077,12 @@
       res = await fetch("/api/upload", { method: "POST", headers: { ...P.authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
     }
     const b = await res.json().catch(() => ({}));
+    // v4.1.2 — a 413 is returned by VERCEL'S EDGE, not by us: the body isn't even JSON, so b.error is
+    // empty and this used to surface as a bare "Upload failed (413)". Say what actually happened.
+    if (res.status === 413) {
+      const size = opts.file ? mb(opts.file.size) + " MB" : "too large";
+      throw new Error(`it's ${size} — over the 4.3 MB upload limit`);
+    }
     if (!res.ok) throw new Error(b.error || ("Upload failed (" + res.status + ")"));
     return b;
   }
@@ -1094,6 +1100,7 @@
       <div class="dropzone" id="dropzone">${IC.upload}
         <p><b>Drop images and video</b></p>
         <button class="btn btn--sm" id="pickBtn">Upload</button>
+        <p class="dz-limits">Photos over 4.3 MB are resized to fit — it won't change how they look.<br>Video over 4.3 MB can't be uploaded directly: paste a Drive, Dropbox or .mp4 link below.</p>
       </div>
       <div class="urlrow">
         <input class="input" id="urlInput" placeholder="Paste an image / .mp4 / YouTube / Drive / Dropbox link" autocomplete="off">
@@ -1241,13 +1248,118 @@
       }
     } catch (_) { /* preview stays square if the browser can't measure it */ }
   }
-  function handleFiles(files) {
+  // v4.1.2 — Vercel refuses any request body over 4.5 MB AT THE EDGE, before /api/upload ever runs.
+  // Confirmed by hand: 7.5 MB and 5.4 MB photos both failed, 4.5 MB went through. So the server's own
+  // "max 10MB" check is unreachable on the multipart path, and a big photo fails with no useful reason.
+  // Hold a little under the cap — multipart adds boundary/field overhead on top of the file itself.
+  const MAX_UPLOAD_BYTES = 4.3 * 1024 * 1024;
+  const mb = (n) => (n / (1024 * 1024)).toFixed(1);
+
+  // Shrink an oversized photo so it fits through the door. This is LOSSLESS AS FAR AS THE SITE IS
+  // CONCERNED: every crop we ever produce is at most 1200px wide (hero/gallery 4:5, thumbnail 16:9,
+  // checkout 1:1), so a 2400px source is still twice the largest output in each dimension. It is also
+  // the FULL, uncropped frame — each role still gets cropped from it independently, exactly as before.
+  async function shrinkToFit(file) {
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); } // honour EXIF rotation
+    catch { try { bmp = await createImageBitmap(file); } catch { return null; } }
+
+    const MAX_EDGE = 2400;
+    let w = bmp.width, h = bmp.height;
+    const scale = Math.min(1, MAX_EDGE / Math.max(w, h));
+    w = Math.max(1, Math.round(w * scale));
+    h = Math.max(1, Math.round(h * scale));
+
+    // webp keeps alpha and is far smaller; fall back to jpeg if the browser won't encode it.
+    let type = "image/webp", quality = 0.92;
+    for (let i = 0; i < 8; i++) {
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
+      const blob = await new Promise((res) => cv.toBlob(res, type, quality));
+      if (!blob) { if (type === "image/webp") { type = "image/jpeg"; continue; } break; }
+      if (blob.size <= MAX_UPLOAD_BYTES) {
+        bmp.close?.();
+        const ext = type === "image/webp" ? "webp" : "jpg";
+        return new File([blob], file.name.replace(/\.[^.]+$/, "") + "." + ext, { type });
+      }
+      if (quality > 0.68) quality -= 0.08;          // squeeze quality first…
+      else { w = Math.round(w * 0.85); h = Math.round(h * 0.85); } // …then pixels
+    }
+    bmp.close?.();
+    return null;
+  }
+
+  // Small yes/no, styled off the media modal's own classes (portal.css .scrim + products.html .modal*).
+  function askDialog(title, msg, yesLabel) {
+    return new Promise((resolve) => {
+      const wrap = document.createElement("div");
+      wrap.className = "modal is-on";
+      wrap.style.zIndex = "80"; // above the media modal
+      wrap.innerHTML = `<div class="scrim is-on"></div><div class="modal__card" style="max-width:430px">
+        <div class="modal__body" style="display:block">
+          <h3 style="margin:0 0 6px;font-size:var(--t-lg);font-weight:600"></h3>
+          <p style="margin:0;color:var(--ink-muted);font-size:var(--t-sm)"></p>
+        </div>
+        <div class="modal__foot"><span class="grow"></span>
+          <button class="btn btn--ghost" data-no>Cancel</button>
+          <button class="btn btn--primary" data-yes></button>
+        </div></div>`;
+      wrap.querySelector("h3").textContent = title;
+      wrap.querySelector("p").textContent = msg;
+      wrap.querySelector("[data-yes]").textContent = yesLabel;
+      const done = (v) => { wrap.remove(); resolve(v); };
+      wrap.querySelector("[data-yes]").onclick = () => done(true);
+      wrap.querySelector("[data-no]").onclick = () => done(false);
+      wrap.querySelector(".scrim").onclick = () => done(false);
+      document.body.appendChild(wrap);
+    });
+  }
+
+  async function handleFiles(files) {
     // M-2 — local preview ONLY: hold the File, show it via createObjectURL, do NOT POST /api/upload here.
     // Uploads fire once per assigned role on Apply (see applyMedia). This is what kills the on-drop "3–6×
     // violent loading bars" (uploads racing before roles are chosen) AND defers the draft persist to Apply.
     // M-4 — capture file.name for the label. M-3 — measure the natural aspect for a true-ratio preview.
-    const list = [...files];
+    let list = [...files];
     if (!list.length) return;
+
+    // v4.1.2 — catch oversized files HERE, where we can still do something about them, instead of letting
+    // them 413 at the edge on Apply and surface as "Couldn't set gallery — try Apply again."
+    const bigVideos = list.filter((f) => /video\//.test(f.type) && f.size > MAX_UPLOAD_BYTES);
+    if (bigVideos.length) {
+      // We can't re-encode video in the browser. But the by-link field is fetched SERVER-side, so it has
+      // no such limit — that's the honest way out, not a dead end.
+      list = list.filter((f) => !bigVideos.includes(f));
+      P.toast(
+        bigVideos.length === 1
+          ? `${bigVideos[0].name} is ${mb(bigVideos[0].size)} MB — too big to upload directly. Put it on Drive or Dropbox and paste the link instead.`
+          : `${bigVideos.length} videos are too big to upload directly. Put them on Drive or Dropbox and paste the links instead.`,
+        { kind: "danger" },
+      );
+    }
+
+    const bigPhotos = list.filter((f) => !/video\//.test(f.type) && f.size > MAX_UPLOAD_BYTES);
+    if (bigPhotos.length) {
+      const one = bigPhotos.length === 1;
+      const ok = await askDialog(
+        one ? "This photo is too large to upload" : `${bigPhotos.length} photos are too large to upload`,
+        one
+          ? `${bigPhotos[0].name} is ${mb(bigPhotos[0].size)} MB, and the upload limit is 4.3 MB. I can resize it to fit — it won't change how it looks on the site, because every image the site uses is at most 1200px wide anyway.`
+          : `They're over the 4.3 MB upload limit. I can resize them to fit — it won't change how they look on the site, because every image the site uses is at most 1200px wide anyway.`,
+        one ? "Resize and add" : "Resize them and add",
+      );
+      if (!ok) {
+        list = list.filter((f) => !bigPhotos.includes(f));
+      } else {
+        const shrunk = await Promise.all(list.map(async (f) => (bigPhotos.includes(f) ? (await shrinkToFit(f)) : f)));
+        const lost = list.filter((f, i) => shrunk[i] == null);
+        if (lost.length) P.toast(`Couldn't resize ${lost.map((f) => f.name).join(", ")}`, { kind: "danger" });
+        list = shrunk.filter(Boolean);
+      }
+    }
+    if (!list.length) return;
+
     list.forEach((file) => {
       const isVideo = /video\//.test(file.type);
       const it = {
@@ -1370,7 +1482,16 @@
     let heroEntry = null;         // hero pinned to images[0]
     let seoUrl = p.seo_thumbnail; // share column — preserve unless the maker adds/removes share
     let checkoutUrl = p.checkout_image;
-    let failedRole = null;        // name of a role whose upload failed (for the toast)
+    // v4.1.2 — was a single `failedRole` set with `failedRole || …`, so with a concurrent pool the FIRST
+    // job to fail won the message. With two bad files that named whichever role lost the race, not the
+    // file that actually failed ("Couldn't set gallery" when the oversized one was the hero). Collect
+    // per-FILE failures instead: the maker needs to know WHICH photo and WHY.
+    const failures = [];          // { name, role, message }
+    const noteFail = (it, role, err) => failures.push({
+      name: (it && it.name) || "media",
+      role,
+      message: (err && err.message) || "upload failed",
+    });
 
     // --- (A) PLAN — added/removed diff per item; reserve gallery-NN (and video-NN) deterministically now ---
     const imageItems = mItems.filter((m) => m.kind === "image" && m.roles && m.roles.size > 0); // zero-role images dropped
@@ -1421,20 +1542,20 @@
       const it = plan.it;
       if (plan.arrayRole) {
         try { plan.arrUrl = (await uploadRole(it, plan.arrayRole)).url; it.url = plan.arrUrl; tick(); }
-        catch (err) { plan.failed = true; failedRole = failedRole || (plan.isHero ? "hero" : "gallery"); return; }
+        catch (err) { plan.failed = true; noteFail(it, plan.isHero ? "hero" : "gallery", err); return; }
       }
       if (plan.share) {
         try { plan.seoUrl = (await uploadRole(it, "seo_thumbnail")).url; tick(); }
-        catch (err) { plan.failed = true; failedRole = failedRole || "thumbnail"; return; }
+        catch (err) { plan.failed = true; noteFail(it, "thumbnail", err); return; }
       }
       if (plan.checkout) {
         try { plan.checkoutUrl = (await uploadRole(it, "checkout_image")).url; tick(); }
-        catch (err) { plan.failed = true; failedRole = failedRole || "checkout"; return; }
+        catch (err) { plan.failed = true; noteFail(it, "checkout", err); return; }
       }
     };
     const videoJob = async (v) => {
       try { v.url = (await uploadMedia({ file: v.file, slug, role: v._uprole, isVideo: true })).url; delete v.file; v._local = false; tick(); }
-      catch (err) { v._viderror = true; failedRole = failedRole || "video"; }
+      catch (err) { v._viderror = true; noteFail(v, "video", err); }
     };
     setApplyBusy(true, total ? `Uploading 0 of ${total}…` : "Saving media…", total ? 0 : null);
     // v4.1.2 — image pool 5 -> 8. MEASURED on the preview, 13 files: pool 5 = 8.6s, pool 8 = 6.3s with
@@ -1500,7 +1621,15 @@
       // modal open, show the errored item, and toast the role that failed so retry re-runs only what's left.
       setApplyBusy(false);
       renderMedia();
-      P.toast("Couldn't set " + (failedRole || "media") + " — try Apply again.", { kind: "danger" });
+      // Name the FILE and the REASON. "try Apply again" is useless advice for a file that is simply
+      // too big — retrying will fail identically.
+      const f0 = failures[0];
+      P.toast(
+        failures.length === 1
+          ? `Couldn't upload ${f0.name} — ${f0.message}`
+          : `Couldn't upload ${failures.length} files — ${f0.name}: ${f0.message}`,
+        { kind: "danger" },
+      );
       return;
     }
     setApplyBusy(false);
