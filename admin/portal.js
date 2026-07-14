@@ -7,6 +7,34 @@
   "use strict";
   const P = (window.PORTAL = window.PORTAL || {});
 
+  /* ---- the build ----------------------------------------------------------
+     One source of truth for what this portal IS, and — just as importantly — what it
+     ISN'T. Surfaced on the Account page so the owner can say "we need X, and this build
+     only does Y" without anyone having to read the code. Bump `version` on release. */
+  P.BUILD = {
+    version: "v4.1.5",
+    released: "2026-07-14",
+    // Every hard number a person could run into. Sourced from the real limits, not from hope:
+    // the 4.3 MB drop ceiling is Vercel's 4.5 MB request-body cap at the edge (minus multipart
+    // overhead) — it is NOT ours and cannot be raised. The link limits are ours.
+    media: {
+      photoDropMB: 4.3,
+      photoLinkMB: 10,
+      videoDropMB: 4.3,
+      videoLinkMB: 200,
+      photoTypes: "JPEG, PNG, WebP, GIF",
+      videoTypes: "MP4, WebM",
+    },
+    // Known shortcomings. Keep these HONEST — the point of listing them is that nobody
+    // discovers them the hard way, mid-upload, on a deadline.
+    limits: [
+      "iPhone HEIC photos aren't supported yet. Turn HEIC off (Settings → Camera → Formats → Most Compatible), or export as JPEG.",
+      "Video isn't converted for you. iPhone records .MOV, which many browsers won't play — export as .mp4, or use YouTube.",
+      "Video isn't compressed for you. A rendered 3-minute clip is usually under 20 MB; a raw phone clip can be 10× that.",
+      "A video's poster still comes from an image you give the Thumbnail role — it isn't pulled from the clip automatically.",
+    ],
+  };
+
   /* ---- environment chip: derived from the hostname, never hardcoded --------
      *.vercel.app / localhost / file:// → TEST ; everlastingsbyemaline.com → Live
      (Integration: this is exactly window.location.hostname — see INTEGRATION.md) */

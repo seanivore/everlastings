@@ -31,6 +31,18 @@
 .env-dot.live{background:var(--live); box-shadow:0 0 6px color-mix(in oklch,var(--live),transparent 40%);}
 .kv{font-size:var(--t-xs); color:var(--ink-muted); font-family:var(--font-data); margin-top:3px; word-break:break-all;}
 
+/* v4.1.5 — media specs + what this build can't do. The version rides in the cap's hint slot, so the
+   owner can always answer "which build am I on, and does it do X?" without asking anyone. */
+.speccard .spec{padding-top:13px; margin-top:13px; border-top:1px solid color-mix(in oklch,var(--hairline),var(--surface) 45%);}
+.speccard .spec:first-of-type{padding-top:0; margin-top:0; border-top:none;}
+.speccard h4{margin:0 0 7px; font-size:var(--t-sm); font-weight:600; color:var(--ink);}
+.speccard ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px;}
+.speccard li{position:relative; padding-left:15px; font-size:var(--t-sm); line-height:1.5; color:var(--ink-muted);}
+.speccard li::before{content:""; position:absolute; left:0; top:.62em; width:5px; height:5px; border-radius:50%; background:var(--hairline);}
+.speccard li b{color:var(--ink); font-weight:600;}
+.spec--limits li::before{background:color-mix(in oklch,var(--waiting),var(--surface) 25%);}
+.spec--limits h4{color:var(--ink-muted);}
+
 /* activity log */
 .logcard__cap{display:flex; align-items:center; gap:8px; font-size:var(--t-xs); font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:12px;}
 .logcard__cap svg{width:16px; height:16px;}

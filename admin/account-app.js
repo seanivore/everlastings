@@ -18,6 +18,7 @@
     in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
     log: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.2"/><circle cx="3.5" cy="12" r="1.2"/><circle cx="3.5" cy="18" r="1.2"/></svg>',
+    spec: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 9 3 3-3 3"/><path d="M14 15h3"/></svg>',
   };
 
   /* deterministic 5×5 mirrored identicon from the email — unique per account, no name needed */
@@ -77,6 +78,8 @@
           <div class="kv" style="margin-top:10px">Stripe key · ${esc(maskKey((P.config || cfg).publishableKey))}</div>
         </div>
 
+        ${specCard()}
+
         <div class="acard logcard">
           <div class="logcard__cap">${IC.log}<span>Activity log</span><span class="logcard__hint">Newest first</span></div>
           ${log.length ? `<ul class="loglist">${log.map((e) => `<li class="logitem">
@@ -115,6 +118,42 @@
     }
   }
   function maskKey(k) { if (!k) return "—"; return k.length > 12 ? k.slice(0, 8) + "…" + k.slice(-4) : k; }
+
+  /* ---- what this build can and can't do -------------------------------------------------------
+     One honest page. The media numbers are the ones a person actually hits — the 4.3 MB drop
+     ceiling is Vercel's request-body cap at the edge, not a choice — and the shortcomings are
+     listed on purpose, so nobody discovers them mid-upload on a deadline. Fed from PORTAL.BUILD. */
+  function specCard() {
+    const B = P.BUILD, M = B.media;
+    const li = (s) => `<li>${s}</li>`;
+    return `
+      <div class="acard speccard">
+        <div class="logcard__cap">${IC.spec}<span>Media &amp; what this build does</span><span class="logcard__hint">${esc(B.version)}</span></div>
+
+        <div class="spec">
+          <h4>Photos</h4>
+          <ul>
+            ${li(`<b>Drag in or upload:</b> any size — anything over ${M.photoDropMB} MB is resized to fit automatically. It won't change how it looks, because every image the site shows is at most 1200px wide.`)}
+            ${li(`<b>Paste a link:</b> up to ${M.photoLinkMB} MB (Google Drive, Dropbox, or a direct image URL).`)}
+            ${li(`<b>${esc(M.photoTypes)}.</b>`)}
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h4>Video</h4>
+          <ul>
+            ${li(`<b>Paste a link:</b> up to ${M.videoLinkMB} MB (Google Drive, Dropbox, or a direct .mp4). <b>This is the way to add video</b> — dragging one in only works up to ${M.videoDropMB} MB, which no real clip is.`)}
+            ${li(`<b>YouTube:</b> paste any YouTube link — no size limit at all. Best for anything long or large.`)}
+            ${li(`<b>${esc(M.videoTypes)}.</b> A rendered 3-minute clip is usually under 20 MB. If a file is hundreds of MB, it's raw footage — render it down, or put it on YouTube.`)}
+          </ul>
+        </div>
+
+        <div class="spec spec--limits">
+          <h4>What ${esc(B.version)} doesn't do</h4>
+          <ul>${B.limits.map((s) => li(esc(s))).join("")}</ul>
+        </div>
+      </div>`;
+  }
 
   /* ---- activity-card data layer: real GET /api/products?_action=activity → { activityLog:[newest 25] }
      (rows shape { at, actor, action, summary }; actor is stored but NOT rendered — single-admin). The
