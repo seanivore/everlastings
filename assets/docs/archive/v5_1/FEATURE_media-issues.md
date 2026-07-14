@@ -79,11 +79,11 @@ Related: a Drive/Dropbox URL has **no file extension**, so the client cannot cla
 
 ### 4 · Screen recordings don't stream — `moov` at the end
 
-Screen recorders write the MP4 index (`moov`) *after* the video data, so a browser must download the **entire file** before showing frame one. All 12 walkthrough videos had this; the fix was an `ffmpeg -movflags +faststart` remux.
+Some encoders write the MP4 index (`moov`) *after* the video data, so a browser must download the **entire file** before showing frame one. All 12 walkthrough videos had this; the fix was an `ffmpeg -movflags +faststart` remux.
 
-**Phone and camera video is fine** (`ftyp,moov,moof,mdat` — verified). So this only bites on screen-captured content — which is exactly what a *software* product's owner is most likely to upload. If any user ever uploads a screen recording, it will appear to hang.
+**This is NOT just screen recorders.** Phone/camera video is usually fine (`ftyp,moov,moof,mdat` — verified), but the first real product video that went through the pipeline — a *rendered* mp4 from a Drive link — came out `ftyp,free,mdat,moov`, i.e. index last. It's only 500 KB, so nobody noticed. **At 54 MB it would be a long stare at a black box**, and the owner would have no idea why.
 
-Nothing in the pipeline checks or fixes this today. It must be part of transcoding.
+You cannot predict this from the source. Nothing in the pipeline checks it, and nothing fixes it. It must be part of transcoding (§5) — Cloudinary emits faststart mp4 by default, which is one more reason that is the right move.
 
 ### 5 · **The real fix: run video through Cloudinary, like images**
 
