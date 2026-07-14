@@ -346,14 +346,39 @@
 .mitem__thumb{align-self:flex-start;}
 /* M-4 — the role rides faintly beside the filename in the type line */
 .mitem__role{color:var(--ink-faint); font-weight:400;}
-/* M-5 — Apply "thinking" overlay + spinner so uploads never look frozen */
 .modal__card{position:relative;}
-.modal__busy{position:absolute; inset:0; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-  background:color-mix(in oklch,var(--surface),transparent 14%); backdrop-filter:blur(2px); border-radius:inherit;}
-.modal__busy-msg{font-size:var(--t-sm); font-weight:600; color:var(--ink-muted);}
 .spin{width:26px; height:26px; border-radius:50%; border:2.5px solid var(--hairline); border-top-color:var(--accent); animation:spin .7s linear infinite;}
 .btn.is-busy{opacity:.85;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* v4.1.2 — upload progress lives in the STICKY head, not in the scrolling body.
+   The old .modal__busy was position:absolute inside .modal__card, and .modal__card is itself the
+   scroll container — so the overlay pinned to the top of the SCROLLED CONTENT and slid out of view.
+   You are at the bottom of the modal when you finish assigning roles, which is exactly where the
+   count was invisible. .modal__head is position:sticky, so anything in here cannot scroll away. */
+.modal__prog{display:none; flex-direction:column; gap:6px; width:100%;}
+.modal__prog.is-on{display:flex;}
+.modal__prog-top{display:flex; align-items:center; gap:8px;}
+.modal__prog-msg{font-size:var(--t-sm); font-weight:600; color:var(--ink-muted); flex:1;}
+.modal__prog-spin{width:14px; height:14px; border-radius:50%; border:2px solid var(--hairline); border-top-color:var(--accent); animation:spin .7s linear infinite; flex:none;}
+.modal__prog-bar{height:3px; border-radius:2px; background:var(--hairline); overflow:hidden;}
+.modal__prog-fill{height:100%; width:0; border-radius:2px; background:var(--accent); transition:width var(--dur-base) var(--ease-weight);}
+/* while a batch runs, the head is ONLY the progress — the title and X would just be noise */
+.modal__head.is-busy h3, .modal__head.is-busy .btn-icon{display:none;}
+
+/* v4.1.2 — if you close the modal mid-upload the job keeps going, so the progress has to follow you
+   out. Sits with the toasts. */
+.mediapill{position:fixed; z-index:61; right:18px; bottom:18px; display:flex; flex-direction:column; gap:6px;
+  min-width:210px; padding:11px 13px; border-radius:var(--r-md); background:var(--surface); box-shadow:var(--sh-2);
+  border:1px solid var(--hairline); opacity:0; transform:translateY(6px); pointer-events:none;
+  transition:opacity var(--dur-base) var(--ease-weight), transform var(--dur-base) var(--ease-weight);}
+.mediapill.is-on{opacity:1; transform:none;}
+.mediapill__top{display:flex; align-items:center; gap:8px;}
+.mediapill__msg{font-size:var(--t-sm); font-weight:600; color:var(--ink); flex:1;}
+.mediapill__spin{width:13px; height:13px; border-radius:50%; border:2px solid var(--hairline); border-top-color:var(--accent); animation:spin .7s linear infinite; flex:none;}
+.mediapill__bar{height:3px; border-radius:2px; background:var(--hairline); overflow:hidden;}
+.mediapill__fill{height:100%; width:0; border-radius:2px; background:var(--accent); transition:width var(--dur-base) var(--ease-weight);}
+@media (prefers-reduced-motion:reduce){.modal__prog-spin,.mediapill__spin{animation:none;}}
 .modal__foot{position:sticky; bottom:0; display:flex; align-items:center; gap:10px; padding:13px 16px; background:var(--surface); border-top:1px solid var(--hairline);}
 .modal__foot .grow{flex:1;}
 .fallback-note{font-size:var(--t-xs); color:var(--ink-muted); display:flex; align-items:center; gap:6px;}

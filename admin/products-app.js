@@ -980,7 +980,16 @@
 
   /* ============================ MEDIA MODAL ============================ */
   let mItems = [], mProductId = null;
+  // v4.1.2 — set while an upload batch is in flight. A running batch DETACHES from the modal: close it
+  // and the uploads still finish, a page-level pill takes over, and the product is still written. The one
+  // thing that must not happen is mItems/mProductId being rebuilt underneath a job that is reading them,
+  // so while this is set the media modal will not re-open.
+  let mediaJob = null;
   function openMedia(id) {
+    // v4.1.2 — a detached upload job is READING mItems/mProductId. Re-opening would rebuild both
+    // underneath it, and the terminal write would then persist a half-shuffled product. Cheaper to
+    // say "one moment" than to reconcile two writers.
+    if (mediaJob) { P.toast("Still uploading media — one moment", { kind: "danger" }); return; }
     mProductId = id; const p = find(id);
     mItems = [];
     // FIX #4 — seed from the EFFECTIVE model (draft over live). On a published piece the media PUT stages
@@ -1278,17 +1287,61 @@
   }
   // M-5 — Apply feedback. Toggle a "thinking" state: disabled + spinner button, plus a modal overlay with
   // a live message, so the maker isn't left staring at a frozen modal while uploads + the persist run.
-  function setApplyBusy(on, msg) {
+  // v4.1.2 — progress goes in the STICKY head (can't scroll away) AND in a page-level pill (so it
+  // follows you out if you close the modal mid-upload). `frac` is 0..1, or null for indeterminate.
+  function setApplyBusy(on, msg, frac) {
     const btn = document.getElementById("mediaApply");
     if (btn) { btn.disabled = on; btn.textContent = on ? "Applying…" : "Apply"; btn.classList.toggle("is-busy", on); }
-    const card = document.querySelector("#mediaModal .modal__card"); if (!card) return;
-    let ov = card.querySelector(".modal__busy");
-    if (on) {
-      if (!ov) { ov = document.createElement("div"); ov.className = "modal__busy"; ov.innerHTML = `<span class="spin" aria-hidden="true"></span><span class="modal__busy-msg"></span>`; card.appendChild(ov); }
-      ov.querySelector(".modal__busy-msg").textContent = msg || "Working…";
-    } else if (ov) { ov.remove(); }
+
+    const head = document.querySelector("#mediaModal .modal__head");
+    if (head) {
+      head.classList.toggle("is-busy", on);
+      let strip = head.querySelector(".modal__prog");
+      if (on) {
+        if (!strip) {
+          strip = document.createElement("div");
+          strip.className = "modal__prog";
+          strip.innerHTML = `<div class="modal__prog-top"><span class="modal__prog-spin" aria-hidden="true"></span><span class="modal__prog-msg" role="status"></span></div><div class="modal__prog-bar"><span class="modal__prog-fill"></span></div>`;
+          head.appendChild(strip);
+        }
+        strip.classList.add("is-on");
+        strip.querySelector(".modal__prog-msg").textContent = msg || "Working…";
+        strip.querySelector(".modal__prog-fill").style.width = frac == null ? "0%" : Math.round(frac * 100) + "%";
+      } else if (strip) {
+        strip.classList.remove("is-on");
+      }
+    }
+    setMediaPill(on, msg, frac);
+  }
+
+  // The pill only actually shows when the modal is NOT on screen — otherwise the sticky strip has it.
+  function setMediaPill(on, msg, frac) {
+    let pill = document.getElementById("mediaPill");
+    const modalOpen = document.getElementById("mediaModal")?.classList.contains("is-on");
+    if (!on || modalOpen) { if (pill) pill.classList.remove("is-on"); return; }
+    if (!pill) {
+      pill = document.createElement("div");
+      pill.id = "mediaPill";
+      pill.className = "mediapill";
+      pill.innerHTML = `<div class="mediapill__top"><span class="mediapill__spin" aria-hidden="true"></span><span class="mediapill__msg" role="status"></span></div><div class="mediapill__bar"><span class="mediapill__fill"></span></div>`;
+      document.body.appendChild(pill);
+    }
+    pill.querySelector(".mediapill__msg").textContent = msg || "Uploading…";
+    pill.querySelector(".mediapill__fill").style.width = frac == null ? "0%" : Math.round(frac * 100) + "%";
+    pill.classList.add("is-on");
   }
   async function applyMedia() {
+    if (mediaJob) { P.toast("Still uploading media — one moment", { kind: "danger" }); return; }
+    mediaJob = { productId: mProductId };
+    try {
+      await applyMediaRun();
+    } finally {
+      mediaJob = null;
+      setMediaPill(false);
+    }
+  }
+
+  async function applyMediaRun() {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // avoid iOS focus-zoom lingering
     const p = find(mProductId);
     const missingAlt = mItems.some((m) => !String(m.alt || "").trim());
@@ -1357,7 +1410,7 @@
     // --- (B) UPLOAD — bounded-concurrency pool across items; each item's roles stay in sequence ---
     const total = plans.reduce((n, pl) => n + (pl.arrayRole ? 1 : 0) + (pl.share ? 1 : 0) + (pl.checkout ? 1 : 0), 0) + localVideos.length;
     let done = 0;
-    const tick = () => { done++; setApplyBusy(true, `Uploading ${Math.min(done, total)} of ${total}…`); };
+    const tick = () => { done++; const n = Math.min(done, total); setApplyBusy(true, `Uploading ${n} of ${total}…`, total ? n / total : null); };
     const runPool = async (items, worker, limit) => {
       let i = 0;
       await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -1383,10 +1436,14 @@
       try { v.url = (await uploadMedia({ file: v.file, slug, role: v._uprole, isVideo: true })).url; delete v.file; v._local = false; tick(); }
       catch (err) { v._viderror = true; failedRole = failedRole || "video"; }
     };
-    setApplyBusy(true, total ? `Uploading 0 of ${total}…` : "Saving media…");
+    setApplyBusy(true, total ? `Uploading 0 of ${total}…` : "Saving media…", total ? 0 : null);
+    // v4.1.2 — image pool 5 -> 8. MEASURED on the preview, 13 files: pool 5 = 8.6s, pool 8 = 6.3s with
+    // ZERO cold starts, pool 13 = 4.8s but spins up 5 cold instances. 8 is the knee: it takes the batch
+    // down by a third and still leaves headroom. Videos stay low (3) — they are big and untransformed,
+    // and the two pools run concurrently, so this is ~11 requests in flight at the very most.
     await Promise.all([
-      runPool(plans.filter((pl) => pl.arrayRole || pl.share || pl.checkout), imageJob, 5),
-      runPool(localVideos, videoJob, 5),
+      runPool(plans.filter((pl) => pl.arrayRole || pl.share || pl.checkout), imageJob, 8),
+      runPool(localVideos, videoJob, 3),
     ]);
 
     // --- (C) ASSEMBLE — in mItems order (hero pins first, last-share-wins) + per-item baseline bookkeeping ---
