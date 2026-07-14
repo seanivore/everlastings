@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createClient } from '@supabase/supabase-js';
+import { waitUntil } from '@vercel/functions';
 import { corsHeaders, preflight } from './_lib/cors';
 import { isTest, env } from './_lib/env';
 
@@ -169,7 +170,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   let finalBuffer: Buffer;
   let contentType: string;
   let extension: string;
-  let destroyPromise: Promise<void> | null = null; // Cloudinary cleanup — runs concurrently with the R2 put
+  let destroyPromise: Promise<void> | null = null; // Cloudinary cleanup — handed to waitUntil, never on the critical path
 
   const t: Timing = {};
   const mark = (() => { let last = Date.now(); return (k: string) => { const now = Date.now(); t[k] = now - last; last = now; }; })();
@@ -180,16 +181,31 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       const imageBuffer = Buffer.from(await file.arrayBuffer());
       mark('readBody');
 
-      // Signed upload: Cloudinary verifies api_key + timestamp + signature
-      // against the account secret. Avoids any dependency on dashboard-side
-      // upload presets (the destroy call below uses the same signature pattern).
+      // The crop for THIS role. Every role is cropped from the ORIGINAL, full-frame bytes —
+      // never from another role's derivative. That invariant is why each role is its own
+      // upload, and it is unchanged here.
+      let aspectRatio = '4:5';
+      let width = role.startsWith('thumbnail') ? 600 : 1200;
+      if (role === 'seo_thumbnail') { aspectRatio = '16:9'; width = 1200; } // OG / Twitter card — 16:9 (NOT 1.91:1: a decimal-in-a-ratio like ar_1.91:1 is invalid Cloudinary syntax → transform 502s; every working role uses an integer ratio)
+      else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
+      const crop = `c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto`;
+
+      // Signed upload: Cloudinary verifies api_key + timestamp + signature against the account
+      // secret. Avoids any dependency on dashboard-side upload presets (destroy signs the same way).
+      //
+      // v4.1.2 — `eager` asks Cloudinary to RENDER the crop during this upload call and hand back
+      // its URL. Measured: fetching the crop from a plain transform URL cost ~814ms, because that
+      // first GET is what triggers the render. Eager folds the render into a call we are already
+      // making, so the follow-up GET is a warm CDN hit instead of a cold render.
+      // Signature covers every param except file/api_key/resource_type/cloud_name, sorted by key.
       const uploadTimestamp = Math.floor(Date.now() / 1000);
-      const uploadSigString = `timestamp=${uploadTimestamp}${cloud.apiSecret}`;
+      const uploadSigString = `eager=${crop}&timestamp=${uploadTimestamp}${cloud.apiSecret}`;
       const uploadSignature = await sha1Hex(uploadSigString);
 
       const uploadForm = new FormData();
       uploadForm.append('file', new Blob([imageBuffer], { type: file.type }));
       uploadForm.append('api_key', cloud.apiKey);
+      uploadForm.append('eager', crop);
       uploadForm.append('timestamp', String(uploadTimestamp));
       uploadForm.append('signature', uploadSignature);
 
@@ -203,18 +219,22 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
         console.error('Cloudinary upload failed:', detail);
         return { ok: false, error: 'Cloudinary upload failed', status: 502 };
       }
-      const uploadData = (await uploadRes.json()) as { public_id?: string };
+      const uploadData = (await uploadRes.json()) as {
+        public_id?: string;
+        eager?: Array<{ secure_url?: string }>;
+      };
       mark('cloudinaryUpload');
       const publicId = uploadData.public_id;
       if (!publicId) {
         return { ok: false, error: 'Cloudinary upload returned no public_id', status: 502 };
       }
 
-      let aspectRatio = '4:5';
-      let width = role.startsWith('thumbnail') ? 600 : 1200;
-      if (role === 'seo_thumbnail') { aspectRatio = '16:9'; width = 1200; } // OG / Twitter card — 16:9 (NOT 1.91:1: a decimal-in-a-ratio like ar_1.91:1 is invalid Cloudinary syntax → transform 502s; every working role uses an integer ratio)
-      else if (role === 'checkout_image') { aspectRatio = '1:1'; width = 600; } // Stripe product image
-      const transformUrl = `https://res.cloudinary.com/${cloud.cloudName}/image/upload/c_fill,ar_${aspectRatio},w_${width},f_webp,q_auto,g_auto/${publicId}`;
+      // Prefer the eagerly-rendered derivative. Fall back to the on-demand transform URL if the
+      // eager payload is missing for any reason — same bytes, just the slower cold render.
+      const eagerUrl = uploadData.eager?.[0]?.secure_url;
+      t.eagerHit = Boolean(eagerUrl);
+      const transformUrl =
+        eagerUrl ?? `https://res.cloudinary.com/${cloud.cloudName}/image/upload/${crop}/${publicId}`;
 
       const transformedRes = await fetchWithTimeout(transformUrl, {}, 30000);
       if (!transformedRes.ok) {
@@ -222,7 +242,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
         return { ok: false, error: 'Cloudinary transform failed', status: 502 };
       }
       finalBuffer = Buffer.from(await transformedRes.arrayBuffer());
-      mark('cloudinaryTransform'); // the derivative is GENERATED on this first GET — expected to be the slow one
+      mark('cloudinaryTransform');
       contentType = 'image/webp';
       extension = 'webp';
 
@@ -235,18 +255,21 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       destroyForm.append('timestamp', String(timestamp));
       destroyForm.append('signature', signature);
 
-      // Non-fatal cleanup — DON'T await here on the critical path. Kick it off and await it CONCURRENTLY with
-      // the R2 put below (total = max(destroy, put), not destroy + put). It still runs, so no orphaned
-      // Cloudinary originals; it just no longer serializes before the response.
-      const destroyStart = Date.now();
+      // Non-fatal cleanup of the Cloudinary original. v4.1.1 overlapped it with the R2 put, but
+      // MEASURED: destroy ~740ms vs put ~361ms, so `Promise.all([put, destroy])` = max(...) meant
+      // the user still waited ~740ms — on a call whose result they never see. Hand it to
+      // waitUntil() instead: the documented Vercel mechanism for work that must finish AFTER the
+      // response is sent. The original still gets deleted (no orphans); it just stops being on the
+      // critical path. Deliberately not an un-awaited floating promise — that only works by
+      // accident of the runtime not tearing down first.
       destroyPromise = fetchWithTimeout(
         `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`,
         { method: 'POST', body: destroyForm },
         15000,
       )
         .then(async (destroyRes) => { if (!destroyRes.ok) console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text()); })
-        .catch((err) => { console.error('Cloudinary destroy error (non-fatal):', err); })
-        .finally(() => { t.destroyOnly = Date.now() - destroyStart; });
+        .catch((err) => { console.error('Cloudinary destroy error (non-fatal):', err); });
+      waitUntil(destroyPromise);
     } else {
       finalBuffer = Buffer.from(await file.arrayBuffer());
       contentType = file.type;
@@ -261,21 +284,17 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       ? `test/${slug}/${filename}`
       : `products/${slug}/${filename}`;
 
-    const putStart = Date.now();
-    const putPromise = s3.send(
+    // The write is the ONLY thing left on the critical path. The Cloudinary destroy is already
+    // handed to waitUntil above and finishes after the response goes out.
+    await s3.send(
       new PutObjectCommand({
         Bucket: env('R2_BUCKET_NAME'),
         Key: key,
         Body: finalBuffer,
         ContentType: contentType,
       }),
-    ).then((r) => { t.putOnly = Date.now() - putStart; return r; });
-
-    await Promise.all([
-      putPromise,
-      ...(destroyPromise ? [destroyPromise] : []), // overlaps the cleanup with the write; never rejects (caught above)
-    ]);
-    mark('r2PutAndDestroy'); // = max(put, destroy) — putOnly/destroyOnly break it apart
+    );
+    mark('r2Put');
     t.bytesOut = finalBuffer.length;
 
     const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
