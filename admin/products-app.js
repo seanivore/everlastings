@@ -1022,6 +1022,15 @@
     document.getElementById("mediaScrim").classList.add("is-on");
   }
   function closeMedia() { document.getElementById("mediaModal").classList.remove("is-on"); document.getElementById("mediaScrim").classList.remove("is-on"); }
+  // v4.1.5 — is this media already living on OUR CDN? Anything else (a Drive/Dropbox share, a foreign
+  // .mp4) still has to be uploaded before it can be a product's media. Hardcoding the host matches the
+  // rest of the codebase (assets/js/main.js:5, admin/data.js:26); test and live share the one host and
+  // differ only by key prefix (test/… vs products/…).
+  const OUR_MEDIA_HOST = "cdn.everlastingsbyemaline.com";
+  function isHostedByUs(u) {
+    try { return new URL(u).hostname === OUR_MEDIA_HOST; } catch { return false; }
+  }
+
   function detectKind(url) {
     if (/youtu\.be|youtube\.com/i.test(url)) return "youtube";
     if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) return "video";
@@ -1566,14 +1575,20 @@
       else if (removed.includes("checkout") && !everPublished) plan.dropCheckout = true;
       return plan;
     });
-    const localVideos = mItems.filter((m) => m.kind === "video" && m.file);
+    // v4.1.5 — a video needs uploading if it's a local File OR its url isn't on our CDN yet. The old
+    // filter was `m.file` alone, so a video added BY LINK (a Drive/Dropbox share, any foreign .mp4)
+    // was never uploaded at all — and the assemble step below still wrote it into p.media, so the raw
+    // Google Drive share URL got stored as the video's src and the storefront rendered
+    // <video src="a Drive web page">. Images never had this bug because uploadRole already re-fetches
+    // a by-link image server-side; video simply never got the same treatment.
+    const videosToUpload = mItems.filter((m) => m.kind === "video" && (m.file || !isHostedByUs(m.url)));
     const vidScan = (p.media || []).map((m) => m.url).filter(Boolean)
       .concat(mItems.filter((m) => m.kind === "video" && m.url && !m.file).map((m) => m.url));
     const vidReserved = [];
-    localVideos.forEach((v) => { v._uprole = nextNumberedRole("video", vidScan.concat(vidReserved)); vidReserved.push("/" + v._uprole + "-x.webp"); });
+    videosToUpload.forEach((v) => { v._uprole = nextNumberedRole("video", vidScan.concat(vidReserved)); vidReserved.push("/" + v._uprole + "-x.webp"); });
 
     // --- (B) UPLOAD — bounded-concurrency pool across items; each item's roles stay in sequence ---
-    const total = plans.reduce((n, pl) => n + (pl.arrayRole ? 1 : 0) + (pl.share ? 1 : 0) + (pl.checkout ? 1 : 0), 0) + localVideos.length;
+    const total = plans.reduce((n, pl) => n + (pl.arrayRole ? 1 : 0) + (pl.share ? 1 : 0) + (pl.checkout ? 1 : 0), 0) + videosToUpload.length;
     let done = 0;
     const tick = () => { done++; const n = Math.min(done, total); setApplyBusy(true, `Uploading ${n} of ${total}…`, total ? n / total : null); };
     const runPool = async (items, worker, limit) => {
@@ -1597,9 +1612,16 @@
         catch (err) { plan.failed = true; noteFail(it, "checkout", err); return; }
       }
     };
+    // A local File uploads multipart; a pasted link is re-fetched SERVER-side and re-hosted on our CDN
+    // (the same by-link path the GPT uses, and the same one uploadRole already uses for images).
     const videoJob = async (v) => {
-      try { v.url = (await uploadMedia({ file: v.file, slug, role: v._uprole, isVideo: true })).url; delete v.file; v._local = false; tick(); }
-      catch (err) { v._viderror = true; noteFail(v, "video", err); }
+      try {
+        const src = v.file
+          ? { file: v.file, slug, role: v._uprole, isVideo: true }
+          : { url: v.url, slug, role: v._uprole, isVideo: true };
+        v.url = (await uploadMedia(src)).url;
+        delete v.file; v._local = false; tick();
+      } catch (err) { v._viderror = true; noteFail(v, "video", err); }
     };
     setApplyBusy(true, total ? `Uploading 0 of ${total}…` : "Saving media…", total ? 0 : null);
     // v4.1.2 — image pool 5 -> 8. MEASURED on the preview, 13 files: pool 5 = 8.6s, pool 8 = 6.3s with
@@ -1608,7 +1630,7 @@
     // and the two pools run concurrently, so this is ~11 requests in flight at the very most.
     await Promise.all([
       runPool(plans.filter((pl) => pl.arrayRole || pl.share || pl.checkout), imageJob, 8),
-      runPool(localVideos, videoJob, 3),
+      runPool(videosToUpload, videoJob, 3),
     ]);
 
     // --- (C) ASSEMBLE — in mItems order (hero pins first, last-share-wins) + per-item baseline bookkeeping ---
@@ -1627,7 +1649,7 @@
       if (plan.failed) { it.errored = true; }
       else { it.openedRoles = new Set(it.roles); it.errored = false; delete it.file; it._local = false; } // M-2 — local File consumed once its role(s) uploaded
     }
-    const anyFailed = plans.some((pl) => pl.failed) || localVideos.some((v) => v._viderror);
+    const anyFailed = plans.some((pl) => pl.failed) || videosToUpload.some((v) => v._viderror);
 
     // rebuild images (hero pinned first); honors deletes + reorder (mItems order) + re-roles
     p.images = heroEntry ? [heroEntry, ...nextImages] : nextImages.slice();
@@ -1637,7 +1659,11 @@
     if (!everPublished) p.checkout_image = checkoutUrl;
     // §5.2c — emit the exact keys the storefront reads: rename mute→muted, add poster; YouTube stays {type,url,alt}.
     // A still-local (failed/skipped) video is EXCLUDED so a blob: URL never persists — it stays in mItems for retry.
-    p.media = mItems.filter((m) => (m.kind === "video" && !m.file) || m.kind === "youtube").map((m) =>
+    // v4.1.5 — and it must be HOSTED BY US. `!m.file` alone was true for a by-link video that had never
+    // been uploaded, which is how a Google Drive share URL ended up stored as a product's video src.
+    // A video that failed to upload is now dropped here rather than persisted as a foreign link; it stays
+    // in mItems, the modal stays open, and the toast names it.
+    p.media = mItems.filter((m) => (m.kind === "video" && !m.file && isHostedByUs(m.url)) || m.kind === "youtube").map((m) =>
       m.kind === "youtube"
         ? { type: "youtube", url: m.url, alt: m.alt }
         : { type: "video", url: m.url, alt: m.alt, loop: !!m.loop, autoplay: !!m.autoplay, controls: !!m.controls, muted: !!m.mute, ...(m.poster ? { poster: m.poster } : {}) });
