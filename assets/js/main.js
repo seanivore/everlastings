@@ -299,8 +299,11 @@ function mountSaleChrome(sale) {
   const bar = document.createElement('div');
   bar.className = 'sale-bar' + (sale.active ? ' sale-bar--on' : '');
   bar.setAttribute('role', 'status');
+  // "no code needed" reads as a contradiction: a code DOES land in the promo field at
+  // checkout (autoApplyStoreWideSale, checkout.js), so the shopper sees one. Say it's
+  // pre-applied — which is what actually happens.
   bar.textContent = (sale.active && sale.type === 'percent')
-    ? `${sale.value}% off everything — applied automatically at checkout, no code needed.`
+    ? `${sale.value}% off everything — code pre-applied at checkout.`
     : 'Free shipping on every order.';
   document.body.insertBefore(bar, document.body.firstChild);
 
@@ -342,7 +345,7 @@ function mountSaleChrome(sale) {
   const h = document.createElement('strong');
   h.textContent = `${sale.value}% off, storewide`;
   const p = document.createElement('p');
-  p.textContent = 'The discount is applied automatically at checkout — no code to remember.';
+  p.textContent = 'The code is pre-applied at checkout — nothing to remember.';
   body.append(h, p);
   pop.append(close, body);
   const dismiss = () => { localStorage.setItem(SEEN_KEY, sale.code); pop.remove(); };

@@ -34,7 +34,7 @@
       el.innerHTML = `<div class="storewide__top">
         <span class="storewide__icon">${IC.globe}</span>
         <span class="storewide__txt"><h3>Running — <span class="storewide__big">${sw.percent_off}% off</span> everything</h3>
-          <p>Automatic at checkout · <b>no code needed</b>${sw.created ? " · since " + fmtDate(sw.created * 1000) : ""}</p></span>
+          <p>Code <b>pre-applied at checkout</b>${sw.created ? " · since " + fmtDate(sw.created * 1000) : ""}</p></span>
         <button class="btn btn--refund btn--sm" id="endStoreWide">End sale</button></div>`;
       el.querySelector("#endStoreWide").onclick = () => confirmDialog("End the store-wide sale?", "The automatic discount will stop applying at checkout right away.", "End sale", async () => {
         try {
@@ -47,7 +47,7 @@
       el.className = "storewide";
       el.innerHTML = `<div class="storewide__top">
         <span class="storewide__icon">${IC.globe}</span>
-        <span class="storewide__txt"><h3>No store-wide sale running</h3><p>Apply a discount to <b>everything</b>, automatically, with no code — the holiday-sale case.</p></span></div>
+        <span class="storewide__txt"><h3>No store-wide sale running</h3><p>Discount <b>everything</b> — the code is pre-applied for every shopper at checkout. The holiday-sale case.</p></span></div>
       <div class="storewide__form">
         <div class="field"><div class="field__top"><span class="field__label">Percent off everything</span></div>
           <input class="input mono" id="sw-val" inputmode="decimal" placeholder="15" value="15"></div>
