@@ -16,6 +16,10 @@ let lastCanConfirm = false;
 let confirmBtnRef = null;
 function syncConfirmGate() {
   if (confirmBtnRef) confirmBtnRef.disabled = !lastCanConfirm || salePending;
+  // Only explain the hold to someone it is actually holding up — i.e. they've filled everything in
+  // and Pay is greyed out purely because the discount hasn't landed. Otherwise it's noise.
+  const note = document.querySelector('[data-sale-pending-note]');
+  if (note) note.classList.toggle('hidden', !(salePending && lastCanConfirm));
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

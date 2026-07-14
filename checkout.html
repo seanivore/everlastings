@@ -221,6 +221,12 @@
       <!-- Confirm & Pay -->
       <button type="button" class="btn btn-primary btn-lg btn-block" data-checkout-confirm disabled style="margin-top: var(--space-xl);">Confirm &amp; Pay</button>
 
+      <!-- v4.1.2 — shown only while a known discount is still being applied and Pay is being held.
+           Without this, a fast shopper stares at a greyed-out button for no visible reason. -->
+      <p data-sale-pending-note class="hidden" style="margin-top: var(--space-sm); text-align: center; font-size: var(--text-sm); color: var(--text-secondary);">
+        Applying your discount — one moment.
+      </p>
+
       <!-- Generic checkout error (decline, intent fail, network) -->
       <div data-checkout-error class="hidden error-state" style="margin-top: var(--space-md);">
         <p data-checkout-error-message>Something went awry. Please try again.</p>
