@@ -31,7 +31,7 @@
       "iPhone HEIC photos aren't supported yet. Turn HEIC off (Settings → Camera → Formats → Most Compatible), or export as JPEG.",
       "Video isn't converted for you. iPhone records .MOV, which many browsers won't play — export as .mp4, or use YouTube.",
       "Video isn't compressed for you. A rendered 3-minute clip is usually under 20 MB; a raw phone clip can be 10× that.",
-      "A video's poster still comes from an image you give the Thumbnail role — it isn't pulled from the clip automatically.",
+      "A video's thumbnail — the still it shows before you press play — isn't taken from the clip for you. Upload an image and give it the \"Video poster\" role in the media window.",
     ],
   };
 
