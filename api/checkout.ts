@@ -272,7 +272,15 @@ async function handleSessionStatus(request: Request): Promise<Response> {
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['line_items', 'payment_intent'],
+      // total_details.breakdown.discounts + discounts.promotion_code are what let the
+      // confirmation page show the discount the shopper actually got. Without them the
+      // receipt silently reads as if they paid full price (v4.1.2).
+      expand: [
+        'line_items',
+        'payment_intent',
+        'total_details.breakdown.discounts',
+        'discounts.promotion_code',
+      ],
     });
 
     // Pair metadata.items (creation order) with line_items.data (same order)
@@ -287,8 +295,24 @@ async function handleSessionStatus(request: Request): Promise<Response> {
     const items = lines.map((li, i) => ({
       slug: metaItems[i]?.slug ?? null,
       title: li.description ?? null,
-      price: li.amount_total ?? 0,
+      // amount_SUBTOTAL, not amount_total. Stripe reports a line's amount_total already NET of
+      // that line's share of the discount, so pairing it with a discount row below would
+      // subtract the discount twice. Subtotal is the pre-discount line price, which is what a
+      // receipt line is supposed to say.
+      price: li.amount_subtotal ?? 0,
     }));
+
+    // The human-facing code ("SPRING15"), not the Stripe id. Prefer the promotion code the
+    // shopper actually saw; fall back to the coupon's name for a bare-coupon discount.
+    let promo_code: string | null = null;
+    const applied = session.discounts?.[0];
+    if (applied && applied.promotion_code && typeof applied.promotion_code !== 'string') {
+      promo_code = applied.promotion_code.code ?? null;
+    }
+    if (!promo_code) {
+      const breakdown = session.total_details?.breakdown?.discounts?.[0];
+      promo_code = breakdown?.discount?.coupon?.name ?? null;
+    }
 
     return Response.json(
       {
@@ -296,7 +320,11 @@ async function handleSessionStatus(request: Request): Promise<Response> {
         payment_status: session.payment_status,
         customer_email: session.customer_details?.email ?? session.customer_email ?? null,
         customer_name: session.customer_details?.name ?? null,
+        amount_subtotal: session.amount_subtotal ?? 0,
+        amount_discount: session.total_details?.amount_discount ?? 0,
+        amount_tax: session.total_details?.amount_tax ?? 0,
         amount_total: session.amount_total ?? 0,
+        promo_code,
         shipping_cost: { amount_total: session.shipping_cost?.amount_total ?? 0 },
         items,
         stripe_event_id: session.id,

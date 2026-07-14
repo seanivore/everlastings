@@ -185,7 +185,9 @@ function paintSummary(checkout) {
     if (input) input.readOnly = false;
     if (clearBtn) clearBtn.style.display = 'none';
     if (dealEl) dealEl.textContent = '';
-    if (amtEl) amtEl.textContent = '';
+    // $0.00 rather than blank, so this row reads the same as the confirmation page's
+    // discount row and a shopper can tell "no discount" from "not loaded yet" (v4.1.2).
+    if (amtEl) amtEl.textContent = '$0.00';
   }
 
   // Total — the discounted grand total, already a formatted string.

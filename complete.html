@@ -183,8 +183,26 @@
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1);">
+            <span>Subtotal</span>
+            <span data-complete-subtotal>$0.00</span>
+          </div>
+          <!-- Discount is ALWAYS shown, $0.00 when there is none, so the receipt reads the same
+               way every time and a shopper who used a code can see that it landed. -->
+          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm);">
+            <span>
+              Discount
+              <span data-complete-promo style="color: var(--text-muted); font-size: var(--text-sm);"></span>
+            </span>
+            <span data-complete-discount>$0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm);">
             <span>Shipping</span>
             <span data-complete-shipping>$0.00</span>
+          </div>
+          <!-- Tax only appears when there is any, so the arithmetic always reconciles on screen. -->
+          <div data-complete-tax-row hidden style="justify-content: space-between; padding-top: var(--space-sm);">
+            <span>Tax</span>
+            <span data-complete-tax>$0.00</span>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: var(--space-sm); margin-top: var(--space-sm); border-top: 1px solid rgba(0,0,0,0.1); font-weight: 600; font-size: var(--text-lg);">
             <span>Total</span>

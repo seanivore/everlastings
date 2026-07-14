@@ -40,6 +40,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     : 0;
   setText('[data-complete-shipping]', formatPrice(shippingCost));
 
+  // Subtotal / Discount / Tax (v4.1.2). The line items above are amount_subtotal (pre-discount),
+  // so these four lines and the total reconcile exactly:
+  //   subtotal − discount + shipping + tax = total
+  const subtotal = Number.isFinite(data.amount_subtotal) ? data.amount_subtotal : 0;
+  const discount = Number.isFinite(data.amount_discount) ? data.amount_discount : 0;
+  const tax = Number.isFinite(data.amount_tax) ? data.amount_tax : 0;
+
+  setText('[data-complete-subtotal]', formatPrice(subtotal));
+
+  // Always present, even at zero — a shopper who used a code needs to see it landed, and a
+  // shopper who didn't should see the same receipt shape.
+  setText('[data-complete-discount]', discount > 0 ? `−${formatPrice(discount)}` : formatPrice(0));
+  setText('[data-complete-promo]', data.promo_code ? `(${data.promo_code})` : '');
+
+  const taxRow = document.querySelector('[data-complete-tax-row]');
+  if (taxRow) {
+    taxRow.hidden = tax <= 0;
+    if (tax > 0) taxRow.style.display = 'flex';
+  }
+  setText('[data-complete-tax]', formatPrice(tax));
+
   // Line items: replace the placeholder rows.
   const lineEl = document.querySelector('[data-complete-line-items]');
   if (lineEl && Array.isArray(data.items)) {
