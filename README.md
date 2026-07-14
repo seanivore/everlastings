@@ -2,7 +2,9 @@
 
 **Handcrafted havens for the stories that stay** — a custom e-commerce store for artisan miniature dioramas, built so a non-technical owner can run the *entire* thing — catalog, pricing, sales, inventory, refunds, fulfillment — mostly from her phone: by chatting with a Custom GPT, **or** from a purpose-built browser portal that does everything the chat does.
 
-**Status:** v4.0.0 — built and verified on the `dev` preview; production cutover pending. This release lands the **Content Creator Portal** (a mobile-first store-management surface at `/admin`) at **full parity** with the by-chat Custom GPT, and adds **automatic store-wide sales**, a rebuilt **media modal**, **scheduled publish**, an **activity log**, sibling-aware **refunds with restock**, and end-to-end **money-integrity** fixes — all over the draft → preview → publish safety net that already lets the owner create, edit, price, discount, and inventory the whole catalog by chat. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v4.0 build packet](/assets/docs/archive/v4_0/).
+**Status:** **v4.1.6 — live in production** at [everlastingsbyemaline.com](https://www.everlastingsbyemaline.com). The **Content Creator Portal** (a mobile-first store-management surface at `/admin`) runs at **full parity** with the by-chat Custom GPT, over **automatic store-wide sales**, **scheduled publish**, an **activity log**, sibling-aware **refunds with restock**, and the draft → preview → publish safety net that lets the owner create, edit, price, discount, and inventory the whole catalog by chat. See the [Architecture reference](/assets/docs/EVERLASTINGS_STORE.md) and the [v4.0 build packet](/assets/docs/archive/v4_0/).
+
+The owner is currently testing against the dev preview; the Custom GPT's Action still points at the test store and flips to production on her go-ahead.
 
 ---
 
@@ -86,6 +88,15 @@ So a person with **no technical knowledge** can stand up and maintain a robust, 
   + **Archive / resurface** (no hard delete) and truthful **order status**
   + Runs the same draft → preview → publish path as the portal, at full parity
 
+## New in v4.1 — media ingress, and a checkout money bug
+
+  + **Nobody can pay full price during a sale.** Stripe defers `applyPromotionCode` until the whole checkout is mounted — measured at **~570 ms warm but ~18 s on a cold load**. For those seconds the promo field was empty and the summary showed full price, while the Pay button only checked "is the form valid" — so a shopper on autofill could complete a purchase *before the advertised discount applied*. Pay is now held until the discount actually lands (with a safety release, because a missed discount still beats a checkout nobody can finish).
+  + **The confirmation page shows the discount** it previously hid — subtotal, discount, shipping, tax, total, reconciled against Stripe.
+  + **Media that behaves like real media.** Oversized photos are resized in the browser (the full frame, never a crop) instead of failing at Vercel's 4.5 MB edge cap; Google Drive and Dropbox share links actually resolve to the file; a linked video is fetched server-side and re-hosted on the CDN; and errors name the file, the reason, and the way out.
+  + **The Account page tells you what the build can't do** — version, every real media limit, and an honest list of the shortcomings, so nobody discovers them mid-upload.
+
+Known media gaps (HEIC, video transcoding, presigned uploads) are tracked in [FEATURE_media-issues](/assets/docs/archive/v5_1/FEATURE_media-issues.md).
+
 ## New in v4.0 — the Content Creator Portal + store-wide sales
 
   + **A purpose-built store-management portal at `/admin`** — mobile-first (the maker runs her store from her phone), organized around *intent* ("put this up," "take it down," "run a sale," "send a refund," "mark it shipped") rather than the data model. Products are a **spreadsheet of rows** with a **per-row state LED** (five colors: live · staged-edits · draft · sold · archived), edits **preview anytime** before they go live, and any control that's disabled says *why*. It's a deliberately **brand-neutral template** — cool indigo-slate, distinct from the storefront's warm-plum brand — so it re-skins for the next client. Four static pages (Products · Orders · Sales · Account); no SPA, no framework.
@@ -158,6 +169,7 @@ Vercel auto-scopes environment variables per branch, so the same codebase runs a
 | [v2.0 Store-Management Build](/assets/docs/archive/v2_0/)                                   | The by-chat management layer — IMPLEMENT, design/testing addenda, build report                                                    |
 | [v3.3 Build Packet](/assets/docs/archive/v3_3/)                                             | Management parity (refunds + coupons), chat-attach upload, inventory, admin polish, homepage — IMPLEMENT + addenda + build report |
 | [v4.0 Build Packet](/assets/docs/archive/v4_0/)                                             | Content Creator Portal + store-wide sales + media modal + scheduled publish + activity log + refund-restock + money integrity — IMPLEMENT + addenda + build report |
+| [Media issues — must-fix](/assets/docs/archive/v5_1/FEATURE_media-issues.md)                 | What still hurts in the media pipeline, and what has to be fixed before this is sellable to anyone else |
 
 ---
 

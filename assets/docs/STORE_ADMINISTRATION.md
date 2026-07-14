@@ -65,6 +65,26 @@ Just tell it what to change — "change the Lantern Cottage's story to…", "swa
 - **Stock / "it sold":** "restock to 3" sets the count. A piece with **0 left shows as _Sold_** and moves to the **Sold** tab — still browsable, still on its page, until you archive it. A real purchase drops the count for you, so a one-of-a-kind piece flips to Sold on its own. Setting the count is immediate (no preview).
 - **Take it off the shop for now (Available):** flip **Available** off and the piece moves to **Drafts** (hidden) — *not* Sold. It's the "not right now" shelf. Flip Available back on and it re-runs the publish check to go live again. (Sold only ever means "someone bought it," never a switch you throw.)
 - **Photos (the media box):** open a piece's media to add, replace, or reorder images and video. Drop files in, paste links (Google Drive, a direct URL, or a **YouTube** link for video), and **drag gallery photos to reorder** — the order you set is the order shoppers see, and it **saves with the piece** (the little number on each thumb is just a name tag, not its position). Mark one photo the **hero** (the main shot), the rest **gallery**; you can also set a **share** image (for links / social) and a **checkout** image. Every photo needs **alt text**. Heads-up: the **checkout image locks** the first time a piece publishes (like its checkout name) — the gallery and share image you can still change anytime.
+
+### What photos and video can be
+
+The portal's **Account** page always shows these for the build you're on. The short version:
+
+| | Drop it in / upload | Paste a link |
+|---|---|---|
+| **Photos** | Any size — anything over **4.3 MB** is **resized to fit automatically**. It won't change how it looks; every image the site shows is at most 1200px wide. | Up to **10 MB** (Google Drive, Dropbox, or a direct image link) |
+| **Video** | Only up to **4.3 MB**, which no real clip is — **use a link instead** | Up to **200 MB** (Google Drive, Dropbox, or a direct `.mp4`) |
+| **YouTube** | — | Any YouTube link. **No size limit at all** — best for anything long or large |
+
+**Photos:** JPEG, PNG, WebP, GIF. **Video:** MP4 or WebM.
+
+Three things that will otherwise waste your afternoon:
+
+- **iPhone photos need to be JPEG, not HEIC.** HEIC is the iPhone's own format and the site can't read it yet. Fix it once and forget it: **Settings → Camera → Formats → Most Compatible**. (Photos you already took can be exported as JPEG.)
+- **iPhone video is `.MOV`, and the site needs `.mp4`.** Many browsers won't play a `.MOV`, so it's refused rather than quietly showing your shoppers a broken player. Convert it, or **put it on YouTube and paste the link** — that always works.
+- **A big file usually means it hasn't been rendered.** A properly exported 3-minute clip is under **20 MB**; raw phone footage can be **ten times that** for thirty seconds. If a video is hundreds of MB, don't fight the uploader — put it on YouTube, or ask Sean to render it down.
+
+**A video's thumbnail** (the still it shows before you press play) isn't taken from the clip for you — upload an image and give it the **Video poster** role in the media box.
 - **Schedule a publish:** on a piece that's *ready to go live*, you'll see **"Schedule publish…"** — pick a **date** and it goes live on its own that morning. (It only appears once a piece passes the publish checklist, so a scheduled piece always actually publishes; it's by the day, not the minute.) Ask the Sunkeeper "schedule the Cottage for Friday morning" and it does the same — it reads the date back to you first.
 
 ## Sales & coupons

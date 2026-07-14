@@ -1,6 +1,6 @@
 # Everlastings by Emaline — Brand Guide
 
-**Created**: 2026-03-16 **Updated**: 2026-07-07 (v4.0.0 as-built) **Source**: Consolidated from v0 brand docs, v1 planning, client input (2026-06-10: restored Origin & Positioning from the OG strategy docs; 2026-07-07: added the storefront sale/scarcity chrome + the Content Creator Portal as a deliberately-separate second brand)
+**Created**: 2026-03-16 **Updated**: 2026-07-07 (v4.0.0 as-built — the brand is unchanged through v4.1.6) **Source**: Consolidated from v0 brand docs, v1 planning, client input (2026-06-10: restored Origin & Positioning from the OG strategy docs; 2026-07-07: added the storefront sale/scarcity chrome + the Content Creator Portal as a deliberately-separate second brand)
 
 > **Scope — two brands, one repo.** Everything in this guide governs the **storefront** (warm-plum, Cormorant serif, cream + firelight — Emy's brand). The **Content Creator Portal** at `/admin` is a **deliberately DISTINCT second brand** — a cool indigo-slate, neutral, reusable template — documented in its own section at the end (["The Content Creator Portal"](#the-content-creator-portal--a-second-separate-brand-admin-v40)). The two never mix; that separation is load-bearing.
 
