@@ -5,6 +5,19 @@
 // One Pay button → checkout.confirm(). 410 (hold expired) → bounce to /cart.
 // 409 is owned by cart.js and never reached here.
 
+// v4.1.2 — the sale gate. We cannot make Stripe apply a promotion code any sooner: measured, the call
+// takes ~570ms on a warm session but ~18s on a cold load, because Stripe defers it until every element
+// is mounted and ready. What we CAN do is refuse to let anyone pay while a known discount is still in
+// flight — otherwise a shopper on autofill reaches the bottom before the code lands and is charged full
+// price in the middle of an advertised sale. Pay requires a confirmable session AND no pending discount.
+let salePending = false;
+let salePendingTimer = null;
+let lastCanConfirm = false;
+let confirmBtnRef = null;
+function syncConfirmGate() {
+  if (confirmBtnRef) confirmBtnRef.disabled = !lastCanConfirm || salePending;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const cart = getCart();
   if (cart.length === 0) {
@@ -81,11 +94,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     .mount('[data-stripe-payment]');
 
   const confirmBtn = document.querySelector('[data-checkout-confirm]');
+  confirmBtnRef = confirmBtn; // v4.1.2 — so the sale gate can hold Pay from outside this closure
 
   // Read-only listener: gate the Pay button, repaint the summary, surface US-only state.
   // NEVER write back to the session here — paintSummary only reads + paints our own DOM.
   checkout.on('change', (session) => {
-    if (confirmBtn) confirmBtn.disabled = !session.canConfirm;
+    lastCanConfirm = !!session.canConfirm;
+    syncConfirmGate(); // Pay needs BOTH a confirmable session AND any incoming discount settled
     paintSummary(checkout);
     // US-only messaging (server enforces allowed_countries; this is just UX).
     const country = session.shippingAddress?.address?.country;
@@ -181,6 +196,13 @@ function paintSummary(checkout) {
     if (terms && terms.min_display) deal += ' · min ' + terms.min_display;
     if (dealEl) dealEl.textContent = '(' + deal + ')';
     if (amtEl) amtEl.textContent = '−' + disc.amount; // amount is already "$10.00"
+  } else if (salePending) {
+    // A known discount is on its way in (see beginSalePending). Stripe hasn't settled it yet, so the
+    // session still reads as undiscounted — but blanking the field here would wipe the code we just
+    // put in it and flash "$0.00" at a shopper who IS getting a discount. Hold the pending state.
+    if (input) input.readOnly = true;
+    if (clearBtn) clearBtn.style.display = 'none';
+    if (amtEl) amtEl.textContent = '…';
   } else {
     if (input) input.readOnly = false;
     if (clearBtn) clearBtn.style.display = 'none';
@@ -270,19 +292,47 @@ async function autoApplyStoreWideSale(checkout) {
   if (!sale || !sale.active || sale.type !== 'percent' || !sale.code) return;
   const apply = checkout.applyPromotionCode; // Phase 0/4.0: the verified call on this bundle
   if (typeof apply !== 'function') return;
+
+  // v4.1.2 — MEASURED: applyPromotionCode resolves in ~570ms on a warm session but takes ~18s on a
+  // cold page load, because Stripe defers it until the whole checkout is ready (all elements, hCaptcha,
+  // Maps). That gap is dangerous, not just ugly: for ~18s the promo box is EMPTY and the summary shows
+  // FULL PRICE, so a shopper on autofill with a saved card can reach the bottom and pay full price in
+  // the middle of an advertised sale. (Confirmed by hand: "using autofill I was getting to the bottom
+  // and it was empty still".)
+  //
+  // So: claim the field the instant we know a sale is on, and HOLD the Pay button until the discount
+  // has actually landed. Nobody can be charged full price during a sale.
+  beginSalePending(sale);
   try {
     const r = await apply.call(checkout, sale.code);
-    if (r && r.type === 'error') {
-      // Fallback: prefill the visible field so the shopper can one-tap apply.
-      const input = document.getElementById('promo-code');
-      if (input) input.value = sale.code;
-    } else {
-      checkout.__syncPromo?.(); // show the discount line + applied state on load
-    }
+    // On error, leave the code prefilled so the shopper can one-tap Apply themselves.
+    if (!r || r.type !== 'error') checkout.__syncPromo?.();
   } catch (err) {
-    const input = document.getElementById('promo-code');
-    if (input) input.value = sale.code;
+    /* prefilled above — manual Apply still works */
+  } finally {
+    endSalePending(checkout);
   }
+}
+
+// The promo field is claimed by the incoming sale, and Pay is held, until the discount lands.
+function beginSalePending(sale) {
+  salePending = true;
+  syncConfirmGate();
+  const input = document.getElementById('promo-code');
+  if (input) { input.value = sale.code; input.readOnly = true; }
+  const dealEl = document.querySelector('[data-checkout-discount-deal]');
+  if (dealEl && sale.amount_display) dealEl.textContent = '(' + sale.amount_display + ' — applying…)';
+  // Safety valve: if Stripe never settles the call, the shopper must still be able to buy. Release the
+  // gate rather than leaving the store unpurchasable — a missed discount beats a dead checkout.
+  clearTimeout(salePendingTimer);
+  salePendingTimer = setTimeout(() => { salePending = false; syncConfirmGate(); }, 30000);
+}
+
+function endSalePending(checkout) {
+  clearTimeout(salePendingTimer);
+  salePending = false;
+  syncConfirmGate();
+  paintSummary(checkout); // repaint: either the applied state, or back to a plain empty promo row
 }
 
 // v3.5 — resolve a "Copy share link" code from the main.js stash (§4.7.0 — set when the shopper landed
@@ -303,11 +353,18 @@ async function applyShareLinkCode(checkout) {
   const code = readShareCode();
   if (!code) return;
   try { sessionStorage.removeItem('everlastings.shareCode'); } catch {} // one-shot — consumed
-  const input = document.getElementById('promo-code');
-  if (input) input.value = code;
   const apply = checkout.applyPromotionCode; // Phase 4.0: the verified call on this bundle
-  if (typeof apply !== 'function') return;   // fallback: field is prefilled; shopper taps Apply
-  try { await apply.call(checkout, code); checkout.__syncPromo?.(); } catch (err) { /* prefilled for manual retry */ }
+  if (typeof apply !== 'function') {
+    const input = document.getElementById('promo-code');
+    if (input) input.value = code;           // fallback: field is prefilled; shopper taps Apply
+    return;
+  }
+  // Same cold-start deferral as the store-wide sale (see autoApplyStoreWideSale): hold Pay until the
+  // shopper's own share code has actually landed, so they can't be charged full price with a valid code.
+  beginSalePending({ code });
+  try { await apply.call(checkout, code); checkout.__syncPromo?.(); }
+  catch (err) { /* prefilled for manual retry */ }
+  finally { endSalePending(checkout); }
 }
 
 function setText(sel, val) {
