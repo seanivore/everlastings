@@ -287,6 +287,14 @@
         <!-- Artist's note — product.js populateDetails() reveals + fills from p.artist_note when set. -->
         <p class="product-artist-note hidden" data-product-artist-note style="margin-top: var(--space-md); font-style: italic; color: var(--text-secondary);"></p>
         </section>
+
+        <!-- CRAFT NOTE (desktop copy) — rides inside the sticky column, under Details.
+             Static copy: no product data, no JS, survives the sold state.
+             ⚠ The mobile copy below (before </div> of .product-layout) is WORD-FOR-WORD
+             identical by design — edit both or neither. -->
+        <p class="craft-note craft-note--desktop">
+          <strong>Handmade, never generated.</strong> Every photograph on this website is of the physical piece and taken by a human. <a href="/about#craft">Craft &amp; creation transparency &rarr;</a>
+        </p>
         <!-- /product-aside -->
         </div>
 
@@ -307,6 +315,14 @@
 
         <!-- v1.5: optional media (MP4 / YouTube) — product.js populateMedia fills it; hidden when none. -->
         <div class="product-gallery__media hidden" data-product-media></div>
+
+        <!-- CRAFT NOTE (mobile copy) — last thing before Related Havens. No grid-area, so it
+             auto-places into an implicit final row; on desktop it is display:none and therefore
+             not a grid item at all, so it can't land in the empty "media ." cell.
+             ⚠ Word-for-word identical to the desktop copy above — edit both or neither. -->
+        <p class="craft-note craft-note--mobile">
+          <strong>Handmade, never generated.</strong> Every photograph on this website is of the physical piece and taken by a human. <a href="/about#craft">Craft &amp; creation transparency &rarr;</a>
+        </p>
 
       </div>
 
@@ -389,6 +405,13 @@
       .product-layout > .product-aside          { grid-area: aside; }
       .product-layout > .story-card             { grid-area: story; }
       .product-layout > .product-gallery__media { grid-area: media; }
+
+      /* Craft note — same sentence, two homes. Mobile: last row of .product-layout, after the
+         story card. Desktop: inside the sticky .product-aside, under Details. Exactly one is
+         ever in the DOM's layout; the other is display:none. */
+      .craft-note--desktop { display: none; }
+      .craft-note--mobile  { margin-top: 0; }
+
       @media (min-width: 768px) {
         .product-layout {
           grid-template-columns: minmax(0, 1fr) 360px;
@@ -404,6 +427,9 @@
           top: calc(var(--header-height) + var(--space-lg));
         }
         .product-layout > .product-aside > .product-sticky-card { position: static; }
+
+        .craft-note--mobile  { display: none; }
+        .craft-note--desktop { display: block; }
       }
       @media (min-width: 1024px) {
         .product-layout { grid-template-columns: minmax(0, 1fr) 400px; gap: var(--space-3xl); }

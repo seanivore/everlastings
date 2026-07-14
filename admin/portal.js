@@ -12,7 +12,7 @@
      ISN'T. Surfaced on the Account page so the owner can say "we need X, and this build
      only does Y" without anyone having to read the code. Bump `version` on release. */
   P.BUILD = {
-    version: "v4.1.6",
+    version: "v4.2.0",
     released: "2026-07-14",
     // Every hard number a person could run into. Sourced from the real limits, not from hope:
     // the 4.3 MB drop ceiling is Vercel's 4.5 MB request-body cap at the edge (minus multipart

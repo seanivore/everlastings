@@ -66,6 +66,14 @@ Everlastings by Emaline creates miniature sanctuaries — handcrafted havens whe
 |                          | Vulnerable without being heavy.                    |
 | ------------------------ | -------------------------------------------------- |
 
+### Craft & creation (v4.2.0)
+
+The public stance lives at `/about#craft` and is echoed on every product page. Copy anywhere on the site — including story cards written with the GPT — must not contradict it:
+
+- **The pieces are physical, built by hand. The photographs are of the actual piece, taken by a human.** These are the two load-bearing claims. Never publish a generated image as product media, and never describe a piece the studio did not build.
+- **Modern tools are used, and owned, without apology** — for language and for running the shop. That is stated plainly, once, on the about page.
+- **Tone is assertion, not confession.** Do not write defensive "assisted vs. generated" hedging, and do not stage the brand as a disclosure notice. A professional uses the tools within reach; the copy should sound like someone who knows that.
+
 ### Tone by Context
 
 | Context          | Tone                         | Example                                    |

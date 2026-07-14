@@ -115,6 +115,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Anchor targets clear the sticky header (v4.2.0). Without this every #anchor on the site
+   — /about#philosophy from the footer, /policies#returns, /shipping#timeline — lands
+   UNDERNEATH the header. --header-offset is the header's real bottom (main.js sets it; the
+   sale bar pushes the header down), same expression the sticky sale-bar rule already uses.
+   Scoped to main so recovery.js's scrollIntoView({block:'center'}) is untouched. */
+main article[id],
+main section[id] {
+  scroll-margin-top: calc(var(--header-offset, var(--header-height)) + var(--space-lg));
+}
+
 body {
   margin: 0;
   background: var(--bg-primary);
@@ -919,6 +929,26 @@ select:focus {
   text-align: center;
 }
 .availability-note a { color: inherit; }
+
+/* Craft & creation transparency (v4.2.0) — the maker's mark, linking to /about#craft.
+   product.html carries TWO copies (desktop sits inside the sticky aside, mobile sits
+   last before Related Havens) and shows exactly one. Keep the wording identical. */
+.craft-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+  margin: var(--space-lg) 0 0 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-fog);
+}
+.craft-note strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.craft-note a {
+  color: var(--accent-primary);
+  white-space: nowrap;
+}
 
 /* Product feature list */
 .feature-list {
