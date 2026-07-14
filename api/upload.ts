@@ -114,7 +114,23 @@ export async function OPTIONS(request: Request) {
   return preflight(request)!;
 }
 
-type UploadResult = { ok: true; url: string; filename: string } | { ok: false; error: string; status: number };
+// ── v4.1.2 instrumentation ────────────────────────────────────────────────────────────
+// The admin batch upload is slow while the GPT hitting the SAME endpoint is not, and the
+// files in the slow batch were small — so it is fixed per-request overhead, not bytes.
+// Rather than guess which hop, measure every hop and let the numbers decide.
+//
+// A serverless instance starts cold: the first request it serves pays the import cost of
+// @aws-sdk/client-s3 + @supabase/supabase-js before doing any work. The admin fires 5 at
+// once (5 instances, 5 cold starts); the GPT sends one at a time and reuses a warm one.
+// INSTANCE_BOOT is set when the module is first evaluated, i.e. on a cold start.
+const INSTANCE_BOOT = Date.now();
+let INSTANCE_SERVED = 0;
+
+type Timing = Record<string, number | boolean>;
+
+type UploadResult =
+  | { ok: true; url: string; filename: string; timing?: Timing }
+  | { ok: false; error: string; status: number; timing?: Timing };
 
 // The per-file validation + Cloudinary/R2 pipeline, returning a result object (not a Response) so both
 // the single-file POST path and the chat-attach batch path can drive it. Moved verbatim from the old
@@ -155,10 +171,14 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   let extension: string;
   let destroyPromise: Promise<void> | null = null; // Cloudinary cleanup — runs concurrently with the R2 put
 
+  const t: Timing = {};
+  const mark = (() => { let last = Date.now(); return (k: string) => { const now = Date.now(); t[k] = now - last; last = now; }; })();
+
   try {
     if (shouldTransform) {
       const cloud = getCloudinaryConfig();
       const imageBuffer = Buffer.from(await file.arrayBuffer());
+      mark('readBody');
 
       // Signed upload: Cloudinary verifies api_key + timestamp + signature
       // against the account secret. Avoids any dependency on dashboard-side
@@ -184,6 +204,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
         return { ok: false, error: 'Cloudinary upload failed', status: 502 };
       }
       const uploadData = (await uploadRes.json()) as { public_id?: string };
+      mark('cloudinaryUpload');
       const publicId = uploadData.public_id;
       if (!publicId) {
         return { ok: false, error: 'Cloudinary upload returned no public_id', status: 502 };
@@ -201,6 +222,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
         return { ok: false, error: 'Cloudinary transform failed', status: 502 };
       }
       finalBuffer = Buffer.from(await transformedRes.arrayBuffer());
+      mark('cloudinaryTransform'); // the derivative is GENERATED on this first GET — expected to be the slow one
       contentType = 'image/webp';
       extension = 'webp';
 
@@ -227,6 +249,7 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       finalBuffer = Buffer.from(await file.arrayBuffer());
       contentType = file.type;
       extension = MIME_TO_EXT[file.type] ?? 'bin';
+      mark('readBody');
     }
 
     const filename = isTest
@@ -247,12 +270,13 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       ),
       ...(destroyPromise ? [destroyPromise] : []), // overlaps the cleanup with the write; never rejects (caught above)
     ]);
+    mark('r2Put');
 
     const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
-    return { ok: true, url: publicUrl, filename };
+    return { ok: true, url: publicUrl, filename, timing: t };
   } catch (err) {
     console.error('Upload error:', err);
-    return { ok: false, error: 'Upload failed', status: 500 };
+    return { ok: false, error: 'Upload failed', status: 500, timing: t };
   }
 }
 
@@ -320,7 +344,15 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
 }
 
 export async function POST(request: Request) {
-  if (!(await authorize(request))) {
+  // v4.1.2: is this the first request this instance has served? (i.e. did it cold-start for us)
+  const cold = INSTANCE_SERVED === 0;
+  const sinceBoot = Date.now() - INSTANCE_BOOT;
+  INSTANCE_SERVED += 1;
+
+  const authStart = Date.now();
+  const authed = await authorize(request);
+  const authMs = Date.now() - authStart;
+  if (!authed) {
     return jsonResponse(request, { error: 'Unauthorized' }, 401);
   }
 
@@ -406,7 +438,19 @@ export async function POST(request: Request) {
   }
 
   const r = await processOne(file, slug, role, skipTransformField);
+
+  // Per-hop timings ride along on every response. `authorize` is the interesting one: the GPT
+  // sends Bearer PRODUCT_API_KEY (a string compare, 0ms) while the admin sends a Supabase JWT,
+  // which costs a network round-trip to Supabase on EVERY upload.
+  const timing = {
+    ...(r.timing ?? {}),
+    authorize: authMs,
+    coldStart: cold,
+    msSinceInstanceBoot: sinceBoot,
+    served: INSTANCE_SERVED,
+  };
+
   return r.ok
-    ? jsonResponse(request, { url: r.url, filename: r.filename })
-    : jsonResponse(request, { error: r.error }, r.status);
+    ? jsonResponse(request, { url: r.url, filename: r.filename, timing })
+    : jsonResponse(request, { error: r.error, timing }, r.status);
 }
