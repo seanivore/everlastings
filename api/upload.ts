@@ -179,9 +179,19 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   }
 
   const isVideo = file.type.startsWith('video/');
-  const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+  // v4.1.2 — the 50 MB video cap was set on an assumption this file wrote down out loud ("Em's typical
+  // product clips are small"). It is wrong: Emy's own miniature clip is 54 MB and a 90-second phone
+  // video is 150 MB+. A cap that rejects the client's actual footage is not a safety limit, it's a bug.
+  // Raised to 200 MB. This only ever binds on the BY-LINK path — a multipart upload dies at Vercel's
+  // 4.5 MB edge cap long before it reaches here, so a direct drop can never get near this number.
+  const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024;
   if (file.size > maxSize) {
-    return { ok: false, error: `File too large. Max: ${isVideo ? '50MB' : '10MB'}`, status: 400 };
+    const limit = isVideo ? '200MB' : '10MB';
+    return {
+      ok: false,
+      error: `That ${isVideo ? 'video' : 'image'} is ${(file.size / (1024 * 1024)).toFixed(0)}MB — over the ${limit} limit.`,
+      status: 400,
+    };
   }
 
   const skipTransform =
@@ -440,9 +450,12 @@ export async function POST(request: Request) {
     }
     let mediaRes: Response;
     try {
-      mediaRes = await fetchWithTimeout(safeUrl, { redirect: 'follow' }, 20000);
+      // 20s was sized for photos. A real product video is 50–200 MB, and pulling that from Drive or
+      // Dropbox does not finish in 20 seconds — it would abort and report "could not fetch that link",
+      // which reads as a broken link rather than a timeout. 90s, well inside the function budget.
+      mediaRes = await fetchWithTimeout(safeUrl, { redirect: 'follow' }, 90000);
     } catch {
-      return jsonResponse(request, { error: 'Could not fetch that media link' }, 400);
+      return jsonResponse(request, { error: 'Could not fetch that media link — it may be too slow or too large to pull in.' }, 400);
     }
     if (!mediaRes.ok) {
       return jsonResponse(
