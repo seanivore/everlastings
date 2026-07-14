@@ -1100,7 +1100,7 @@
       <div class="dropzone" id="dropzone">${IC.upload}
         <p><b>Drop images and video</b></p>
         <button class="btn btn--sm" id="pickBtn">Upload</button>
-        <p class="dz-limits">Photos over 4.3 MB are resized to fit — it won't change how they look.<br>Video over 4.3 MB can't be uploaded directly: paste a Drive, Dropbox or .mp4 link below.</p>
+        <p class="dz-limits">Photos over 4.3 MB are resized to fit — it won't change how they look.<br>Video over 4.3 MB can't be dropped here: paste a Drive, Dropbox, .mp4 or <b>YouTube</b> link below. A rendered clip is usually only a few MB — if a file is hundreds of MB it's raw footage, so use YouTube.</p>
       </div>
       <div class="urlrow">
         <input class="input" id="urlInput" placeholder="Paste an image / .mp4 / YouTube / Drive / Dropbox link" autocomplete="off">
@@ -1331,10 +1331,12 @@
       // We can't re-encode video in the browser. But the by-link field is fetched SERVER-side, so it has
       // no such limit — that's the honest way out, not a dead end.
       list = list.filter((f) => !bigVideos.includes(f));
+      // A big video is raw footage, not a big video — a rendered 3-minute clip is under 20 MB. Say the
+      // way out (link it), and say the way out for the genuinely huge ones (YouTube).
       P.toast(
         bigVideos.length === 1
-          ? `${bigVideos[0].name} is ${mb(bigVideos[0].size)} MB — too big to upload directly. Put it on Drive or Dropbox and paste the link instead.`
-          : `${bigVideos.length} videos are too big to upload directly. Put them on Drive or Dropbox and paste the links instead.`,
+          ? `${bigVideos[0].name} is ${mb(bigVideos[0].size)} MB — too big to drop in. Paste it as a Drive, Dropbox or YouTube link instead (that path takes up to 200 MB; anything bigger belongs on YouTube).`
+          : `${bigVideos.length} videos are too big to drop in. Paste them as Drive, Dropbox or YouTube links instead.`,
         { kind: "danger" },
       );
     }

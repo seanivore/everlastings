@@ -186,10 +186,15 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
   // 4.5 MB edge cap long before it reaches here, so a direct drop can never get near this number.
   const maxSize = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024;
   if (file.size > maxSize) {
-    const limit = isVideo ? '200MB' : '10MB';
+    const size = (file.size / (1024 * 1024)).toFixed(0);
+    // Don't just refuse — say what to do instead. A file this big is RAW footage, not a big video:
+    // a properly rendered 3-4 minute clip lands under 20 MB. And the storefront already plays YouTube
+    // (product.js renders type:'youtube' into a nocookie embed), so there is always a way through.
     return {
       ok: false,
-      error: `That ${isVideo ? 'video' : 'image'} is ${(file.size / (1024 * 1024)).toFixed(0)}MB — over the ${limit} limit.`,
+      error: isVideo
+        ? `That video is ${size}MB, which is over the 200MB limit — and that size means it's raw footage, not a big video (a rendered 3-minute clip is usually under 20MB). Put it on YouTube and paste the link, or ask Sean to render it down first.`
+        : `That image is ${size}MB — over the 10MB limit for a linked image.`,
       status: 400,
     };
   }
