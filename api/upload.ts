@@ -50,6 +50,54 @@ const MIME_TO_EXT: Record<string, string> = {
   'video/webm': 'webm',
 };
 
+// v4.1.2 — Google Drive answers EVERY download with `content-type: application/octet-stream`. It never
+// tells you what the file is. So the allow-list check above rejected every Drive link ever pasted —
+// image or video — with "that link didn't return an allowed image/video". The Custom GPT looked like it
+// "worked with Drive" only because ChatGPT ATTACHES the file and hands us OpenAI's own download link,
+// which does carry a real content-type. The paste-a-link path never had that luxury.
+//
+// So don't trust the header: read the file's own first bytes. This is the same container sniffing a
+// browser does, and it is authoritative in a way a header from Google is not.
+function sniffMime(bytes: Buffer, filenameHint?: string | null): string | null {
+  const b = bytes;
+  const ascii = (start: number, len: number) => b.slice(start, start + len).toString('latin1');
+
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b.length >= 8 && ascii(1, 3) === 'PNG') return 'image/png';
+  if (b.length >= 4 && ascii(0, 4) === 'GIF8') return 'image/gif';
+  if (b.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP') return 'image/webp';
+  if (b.length >= 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm';
+
+  // ISO base-media containers: the box at offset 4 is 'ftyp', and the brand at offset 8 says which
+  // flavour. QuickTime (an iPhone .MOV) uses the brand 'qt  ' and is NOT the same thing as an .mp4 —
+  // Chrome and Firefox will not reliably play it, so it must be caught rather than quietly stored.
+  if (b.length >= 12 && ascii(4, 4) === 'ftyp') {
+    const brand = ascii(8, 4);
+    return brand === 'qt  ' ? 'video/quicktime' : 'video/mp4';
+  }
+
+  // Last resort: believe the filename Drive DID give us (content-disposition).
+  const ext = (filenameHint ?? '').toLowerCase().match(/\.([a-z0-9]+)$/)?.[1];
+  const BY_EXT: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+  };
+  return (ext && BY_EXT[ext]) || null;
+}
+
+// Drive hides the type but does send `content-disposition: attachment; filename="IMG_6265.MOV"`.
+function filenameFromDisposition(res: Response): string | null {
+  const cd = res.headers.get('content-disposition') ?? '';
+  return cd.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1] ?? null;
+}
+
+// Resolve what a fetched link ACTUALLY is: trust a usable content-type, otherwise sniff the bytes.
+function resolveFetchedType(res: Response, bytes: Buffer): string | null {
+  const header = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+  if (ALLOWED_MIME.has(header)) return header;
+  return sniffMime(bytes, filenameFromDisposition(res));
+}
+
 const ROLE_PATTERN =
   /^(hero|thumbnail|gallery-(0[1-9]|1[0-5])|video-0[1-5]|detail-0[1-5]|gif-0[1-5]|checkout_image|seo_thumbnail)$/;
 
@@ -381,9 +429,17 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
     let mediaRes: Response;
     try { mediaRes = await fetchWithTimeout(link, { redirect: 'follow' }, 20000); }
     catch { failures.push({ index: i + 1, error: 'could not fetch the attached file' }); continue; }
-    const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
-    if (!mediaRes.ok || !ALLOWED_MIME.has(fetchedType)) {
-      failures.push({ index: i + 1, error: `not an allowed image (got "${fetchedType || 'unknown'}")` });
+    if (!mediaRes.ok) {
+      failures.push({ index: i + 1, error: `could not fetch the attached file (HTTP ${mediaRes.status})` });
+      continue;
+    }
+    // Same byte-sniffing as the by-link path: OpenAI's download links DO carry a real content-type, but
+    // there is no reason for the two paths to disagree about what a file is.
+    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    const fetchedType = resolveFetchedType(mediaRes, bytes);
+    if (!fetchedType || !ALLOWED_MIME.has(fetchedType)) {
+      const header = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+      failures.push({ index: i + 1, error: `not an allowed image (got "${header || 'unknown'}")` });
       continue;
     }
     // Attach is IMAGES-ONLY. A video routed here would be named with an image role (positional default
@@ -394,7 +450,6 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
       failures.push({ index: i + 1, error: 'video must be sent as a LINK, not attached — ask Em for a Drive share or direct URL and use uploadImage' });
       continue;
     }
-    const bytes = Buffer.from(await mediaRes.arrayBuffer());
     const file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
     const r = await processOne(file, slug, role, null); // attach is images-only → never skip_transform
     if (!r.ok) { failures.push({ index: i + 1, error: r.error }); continue; }
@@ -403,6 +458,48 @@ async function handleAttachedRefs(request: Request, refs: unknown[], slugRaw: un
   }
   // 200 with both arrays — partial success IS success: the GPT uses uploads[] and surfaces failures[].
   return jsonResponse(request, { uploads, failures });
+}
+
+// GET /api/upload?probe=<url> — "what is this link, actually?"
+//
+// A pasted Drive or Dropbox URL carries no extension, so the media modal could only guess, and it
+// guessed "image" — which is why a Drive VIDEO came back offering Hero/Gallery/Thumbnail toggles.
+// The client cannot resolve this itself: it can't read Drive's headers cross-origin, and it certainly
+// can't sniff the bytes. So it asks us. Single purpose: classify, never store.
+//
+// Cheap on purpose — a Range request for the first 64 bytes is enough to read the container's magic
+// number, so probing a 200 MB video costs 64 bytes, not 200 MB.
+export async function GET(request: Request) {
+  if (!(await authorize(request))) {
+    return jsonResponse(request, { error: 'Unauthorized' }, 401);
+  }
+  const raw = new URL(request.url).searchParams.get('probe');
+  if (!raw) return jsonResponse(request, { error: 'Missing probe url' }, 400);
+
+  const safeUrl = normalizeMediaUrl(raw.trim());
+  if (!isPublicHttpUrl(safeUrl)) {
+    return jsonResponse(request, { error: 'Media link must be a public https URL.' }, 400);
+  }
+
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(safeUrl, { redirect: 'follow', headers: { Range: 'bytes=0-63' } }, 20000);
+  } catch {
+    return jsonResponse(request, { error: 'Could not reach that link' }, 400);
+  }
+  if (!res.ok) {
+    return jsonResponse(request, { error: `That link isn't directly downloadable (HTTP ${res.status}).` }, 400);
+  }
+
+  const head = Buffer.from(await res.arrayBuffer());
+  const type = resolveFetchedType(res, head);
+  const kind = type?.startsWith('video/') ? 'video' : type?.startsWith('image/') ? 'image' : null;
+
+  return jsonResponse(request, {
+    kind,                                   // 'image' | 'video' | null
+    contentType: type,                      // includes video/quicktime, so the client can warn early
+    filename: filenameFromDisposition(res), // e.g. IMG_6265.MOV
+  });
 }
 
 export async function POST(request: Request) {
@@ -469,15 +566,29 @@ export async function POST(request: Request) {
         400,
       );
     }
-    const fetchedType = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
-    if (!ALLOWED_MIME.has(fetchedType)) {
+    // Read the bytes BEFORE deciding what this is. Drive sends application/octet-stream for
+    // everything, so the header alone can only ever say "no".
+    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    const fetchedType = resolveFetchedType(mediaRes, bytes);
+
+    if (fetchedType === 'video/quicktime') {
+      // An iPhone .MOV. We could store it, but Chrome and Firefox won't reliably play a QuickTime
+      // container, so it would look fine to the owner and be broken for a chunk of her shoppers.
+      // Refuse it honestly, and say the two ways through.
       return jsonResponse(
         request,
-        { error: `That link didn't return an allowed image/video (got "${fetchedType || 'unknown'}") — it may be a share page, not the file itself. Share it as "anyone with the link," or send a direct file URL.` },
+        { error: `That's a QuickTime .MOV (an iPhone recording). The site needs .mp4 — many browsers won't play a .MOV. Export or convert it to .mp4, or put it on YouTube and paste that link instead.` },
         400,
       );
     }
-    const bytes = Buffer.from(await mediaRes.arrayBuffer());
+    if (!fetchedType || !ALLOWED_MIME.has(fetchedType)) {
+      const header = (mediaRes.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+      return jsonResponse(
+        request,
+        { error: `That link didn't return an image or video we can use (got "${header || 'unknown'}"). It may be a share page rather than the file itself — set it to "anyone with the link," or paste a direct file URL.` },
+        400,
+      );
+    }
     file = new File([bytes], `upload.${MIME_TO_EXT[fetchedType] ?? 'bin'}`, { type: fetchedType });
     slug = body.slug.trim();
     role = body.role.trim();

@@ -1025,8 +1025,25 @@
   function detectKind(url) {
     if (/youtu\.be|youtube\.com/i.test(url)) return "youtube";
     if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) return "video";
-    if (/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(url) || /drive\.google|dropbox/i.test(url)) return "image";
+    if (/\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(url)) return "image";
+    // v4.1.2 — a Drive/Dropbox share URL carries NO extension, so this used to fall through and call it
+    // an "image". Paste a Drive VIDEO and you got Hero/Gallery/Thumbnail toggles for a clip. The client
+    // genuinely cannot know (it can't read Drive's headers cross-origin, let alone sniff the bytes) —
+    // so say "unknown" honestly and let the server tell us. See probeLink().
+    if (/drive\.google|dropbox/i.test(url)) return "unknown";
     return "image";
+  }
+
+  // Ask the server what a link actually is. Costs a 64-byte Range request, not the whole file.
+  async function probeLink(url) {
+    try {
+      const res = await fetch("/api/upload?probe=" + encodeURIComponent(url), { headers: { ...P.authHeader() } });
+      const b = await res.json().catch(() => ({}));
+      if (!res.ok) return { error: b.error || "Couldn't read that link" };
+      return b; // { kind, contentType, filename }
+    } catch {
+      return { error: "Couldn't reach that link" };
+    }
   }
   /* ---- WS5: real uploads + role numbering + persist-first (§5.1 / §5.4c.i) ---- */
   function padNN(n) { return String(n).padStart(2, "0"); }
@@ -1213,9 +1230,34 @@
       mItems.unshift(it); inp.value = ""; renderMedia(); clearNewFlag();
       return;
     }
+    // v4.1.2 — a Drive/Dropbox link has no extension, so ask the server what it is before we label it.
+    // Guessing "image" is what handed a video the Hero/Gallery/Thumbnail toggles.
+    let resolved = kind;
+    if (kind === "unknown") {
+      const addBtn = document.getElementById("urlAdd");
+      const was = addBtn ? addBtn.textContent : "";
+      if (addBtn) { addBtn.disabled = true; addBtn.textContent = "Checking…"; }
+      const probe = await probeLink(url);
+      if (addBtn) { addBtn.disabled = false; addBtn.textContent = was; }
+
+      if (probe.error) { P.toast(probe.error, { kind: "danger" }); return; }
+      if (probe.contentType === "video/quicktime") {
+        P.toast(
+          `${probe.filename || "That file"} is a QuickTime .MOV (an iPhone recording) — many browsers won't play it. Export it as .mp4, or put it on YouTube and paste that link.`,
+          { kind: "danger" },
+        );
+        return;
+      }
+      if (!probe.kind) {
+        P.toast("That link doesn't open an image or video — set it to \"anyone with the link\", or paste a direct file URL.", { kind: "danger" });
+        return;
+      }
+      resolved = probe.kind;
+    }
+
     // M-2 — image/.mp4/Drive/Dropbox link: preview by URL now, UPLOAD ON APPLY (no POST on add). Its role
     // starts empty of applied uploads (openedRoles empty) so applyMedia's diff uploads whatever role it ends on.
-    const isVideo = kind === "video";
+    const isVideo = resolved === "video";
     const it = { kind: isVideo ? "video" : "image", url, alt: "", _new: true, roles: new Set(isVideo ? [] : ["gallery"]) };
     if (isVideo) Object.assign(it, { loop: true, mute: true, controls: false, autoplay: true });
     it.openedRoles = new Set();
