@@ -238,13 +238,15 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       // Non-fatal cleanup — DON'T await here on the critical path. Kick it off and await it CONCURRENTLY with
       // the R2 put below (total = max(destroy, put), not destroy + put). It still runs, so no orphaned
       // Cloudinary originals; it just no longer serializes before the response.
+      const destroyStart = Date.now();
       destroyPromise = fetchWithTimeout(
         `https://api.cloudinary.com/v1_1/${cloud.cloudName}/image/destroy`,
         { method: 'POST', body: destroyForm },
         15000,
       )
         .then(async (destroyRes) => { if (!destroyRes.ok) console.error('Cloudinary destroy failed (non-fatal):', await destroyRes.text()); })
-        .catch((err) => { console.error('Cloudinary destroy error (non-fatal):', err); });
+        .catch((err) => { console.error('Cloudinary destroy error (non-fatal):', err); })
+        .finally(() => { t.destroyOnly = Date.now() - destroyStart; });
     } else {
       finalBuffer = Buffer.from(await file.arrayBuffer());
       contentType = file.type;
@@ -259,18 +261,22 @@ async function processOne(file: File, slug: string, role: string, skipTransformF
       ? `test/${slug}/${filename}`
       : `products/${slug}/${filename}`;
 
+    const putStart = Date.now();
+    const putPromise = s3.send(
+      new PutObjectCommand({
+        Bucket: env('R2_BUCKET_NAME'),
+        Key: key,
+        Body: finalBuffer,
+        ContentType: contentType,
+      }),
+    ).then((r) => { t.putOnly = Date.now() - putStart; return r; });
+
     await Promise.all([
-      s3.send(
-        new PutObjectCommand({
-          Bucket: env('R2_BUCKET_NAME'),
-          Key: key,
-          Body: finalBuffer,
-          ContentType: contentType,
-        }),
-      ),
+      putPromise,
       ...(destroyPromise ? [destroyPromise] : []), // overlaps the cleanup with the write; never rejects (caught above)
     ]);
-    mark('r2Put');
+    mark('r2PutAndDestroy'); // = max(put, destroy) — putOnly/destroyOnly break it apart
+    t.bytesOut = finalBuffer.length;
 
     const publicUrl = `${env('R2_PUBLIC_URL')}/${key}`;
     return { ok: true, url: publicUrl, filename, timing: t };
